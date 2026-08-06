@@ -30,3 +30,5 @@
 - `data/metrics.csv`: 公開後の数値
 - `reports/latest.md`: 数値から生成される改善案
 - `.github/workflows/`: 無料自動化
+
+初期自動化の構築日: 2026-08-06
