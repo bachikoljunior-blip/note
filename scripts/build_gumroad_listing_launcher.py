@@ -16,6 +16,7 @@ TAGS_PATH = ROOT / "content" / "gumroad" / "tags.txt"
 STATE_PATH = ROOT / "state" / "gumroad_listing.json"
 OUTPUT = ROOT / "dist" / "gumroad_listing_launcher.html"
 REPORT = ROOT / "reports" / "gumroad_listing.json"
+VISUAL_LAUNCHER = ROOT / "dist" / "gumroad_visual_pack.html"
 GUMROAD_NEW_PRODUCT = "https://app.gumroad.com/products/new"
 PRICE_USD = 12.0
 PLATFORM_RATE = 0.10
@@ -27,6 +28,7 @@ OFFICIAL_SOURCES = [
     "https://gumroad.com/help/article/66-gumroads-fees.html",
     "https://gumroad.com/help/article/289-file-size-limits-on-gumroad.html",
     "https://gumroad.com/help/article/149-adding-a-product",
+    "https://gumroad.com/help/article/60-adding-a-cover-image",
     "https://gumroad.com/terms",
     "https://gumroad.com/prohibited",
 ]
@@ -70,6 +72,8 @@ def main() -> int:
         errors.append("product_sha_mismatch")
     if member_count != product["zip_members"]:
         errors.append("product_member_count_mismatch")
+    if not VISUAL_LAUNCHER.is_file():
+        errors.append("gumroad_visual_launcher_missing")
 
     direct_fee = PRICE_USD * PLATFORM_RATE + PLATFORM_FIXED + PRICE_USD * CARD_RATE + CARD_FIXED
     direct_net = PRICE_USD - direct_fee
@@ -90,6 +94,7 @@ def main() -> int:
 <style>body{{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0}}main{{max-width:760px;margin:auto;padding:20px}}section{{border:1px solid #8885;border-radius:16px;padding:16px;margin:14px 0}}input,textarea,button,a{{box-sizing:border-box;width:100%;padding:13px;margin:6px 0;border-radius:11px;font:inherit}}textarea{{min-height:280px}}button,a{{display:block;text-align:center;font-weight:700;text-decoration:none}}small{{line-height:1.55}}</style></head><body><main>
 <h1>Gumroad English listing launcher</h1><p>Listing copy, pricing estimates, ZIP validation, and official-source checks are prepared. Authentication, payout settings, upload, and final publication remain with the seller.</p>
 <section><strong>Price: ${PRICE_USD:.2f}</strong><p>Estimated direct-sale remainder: ${direct_net:.3f}<br>Estimated Discover remainder: ${discover_net:.2f}<br>Upload: <code>{html.escape(product["output"])}</code></p><small>Estimates exclude tax, refunds, payout differences, PayPal differences, and currency conversion.</small></section>
+<section><strong>Product images</strong><p>Three landscape covers and one square thumbnail are generated and validated for this listing.</p><a href="gumroad_visual_pack.html">Open image preview and download pack</a></section>
 <section><label>Title</label><input id="title"><label>Description</label><textarea id="description"></textarea><label>Tags</label><textarea id="tags" style="min-height:160px"></textarea><button id="copy">Copy all listing data</button><a href="{GUMROAD_NEW_PRODUCT}" target="_blank" rel="noopener">Open Gumroad new product</a><p id="status"></p></section>
 <section><strong>Official sources checked</strong><ul>{source_links}</ul></section>
 <script id="data" type="application/json">{payload}</script><script>(()=>{{const d=JSON.parse(document.getElementById('data').textContent),t=document.getElementById('title'),x=document.getElementById('description'),g=document.getElementById('tags'),s=document.getElementById('status');t.value=d.title;x.value=d.description;g.value=d.tags.join('\n');document.getElementById('copy').onclick=async()=>{{const v=`Title\n${{t.value}}\n\nPrice\nUSD ${{d.price}}\n\nDescription\n${{x.value}}\n\nTags\n${{g.value}}\n\nZIP\n${{d.product}}`;try{{await navigator.clipboard.writeText(v);s.textContent='Copied.'}}catch{{s.textContent='Copy failed. Long-press the fields.'}}}}}})();</script>
@@ -111,6 +116,8 @@ def main() -> int:
         "product_zip_members": member_count,
         "official_sources": OFFICIAL_SOURCES,
         "output": str(OUTPUT.relative_to(ROOT)),
+        "visual_launcher": str(VISUAL_LAUNCHER.relative_to(ROOT)),
+        "visual_launcher_present": VISUAL_LAUNCHER.is_file(),
         "cost_yen": 0,
         "credentials_used": False,
         "errors": errors,
