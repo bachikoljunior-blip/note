@@ -14,16 +14,26 @@ MANIFEST = ROOT / "artifacts" / "manifest.json"
 REPORT = ROOT / "reports" / "artifacts.json"
 
 
+def read_encoded_source(item: dict[str, object]) -> str:
+    if "source_base64_parts" in item:
+        paths = [ROOT / str(path) for path in item["source_base64_parts"]]
+    else:
+        paths = [ROOT / str(item["source_base64"])]
+    return "".join(
+        "".join(path.read_text(encoding="ascii").split())
+        for path in paths
+    )
+
+
 def main() -> int:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     results: list[dict[str, object]] = []
     errors: list[str] = []
 
     for item in manifest["artifacts"]:
-        source = ROOT / item["source_base64"]
         output = ROOT / item["output"]
         try:
-            encoded = "".join(source.read_text(encoding="ascii").split())
+            encoded = read_encoded_source(item)
             data = base64.b64decode(encoded, validate=True)
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_bytes(data)
