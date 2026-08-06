@@ -7,11 +7,13 @@
 - 商品: 量産に見せないAI雑学Shorts｜100企画＋台本・分析テンプレ【スマホ対応】
 - 公開URL: https://note.com/mobile_ai_studio/n/n779329665155
 - 初回価格: 1,480円
-- 状態: 公開URL受領済み（公開ページ内容の外部検証は別途）
+- 状態: 公開済み・外部検証済み（HTTP 200、記事ID・発行者ID・タイトル・価格表示を確認）
 
 ## 自動化
 
-- push・PR・手動実行時に設定・本文・状態・計測表を自動検証
+- push・PR・毎日の定期実行時に設定・本文・状態・計測表を自動検証
+- 公開noteページを毎日取得し、URL・記事ID・発行者ID・タイトル・価格表示の破損を検知
+- 購入者用商品ZIPと無料サンプルZIPをprivateリポジトリから再生成し、バイト数・SHA-256・ZIP内件数・破損を検証
 - 計測値を `data/metrics.csv` に入れると改善レポートを自動生成
 - 公開後48時間・7日の時点で、計測依頼Issueを自動作成
 - 恒久指示、判断記録、次の作業を会話外にも保持
@@ -27,6 +29,7 @@
 - `OPERATIONS/CORE_DIRECTIVE.md`: 恒久方針
 - `state/current.json`: 現在地と次の作業
 - `config/campaign.json`: 商品・価格・公開URLの正本
+- `artifacts/manifest.json`: 商品ZIPと無料サンプルの正本・検証値
 - `data/metrics.csv`: 公開後の数値
 - `reports/latest.md`: 数値から生成される改善案
 - `.github/workflows/`: 無料自動化
