@@ -1,13 +1,27 @@
 # Mandatory bootstrap for every AI agent
 
-Before planning, editing, asking the user to act, or ending a work unit in this repository:
+Before planning, editing, asking the user to act, spending money, publishing, or ending a work unit in this repository:
 
-1. Read `OPERATIONS/CORE_DIRECTIVE.md` as the canonical permanent directive.
-2. Read `OPERATIONS/DIRECTIVE_MANIFEST.json` and verify the directive version/hash through `python scripts/check_directive_integrity.py`.
-3. Read `state/current.json` and `state/user_action_requests.json`.
-4. Follow `OPERATIONS/AUTOMATION_BEFORE_USER_GATE.md` before requesting any user operation.
-5. Do not use memory or prior-chat summaries as the sole source of truth when these files are available.
-6. If the integrity check fails and cannot be repaired from the redundant copies, do not make revenue-affecting writes. Open or update the integrity incident and report the exact failure.
-7. Do not modify any existing repository other than `bachikoljunior-blip/note` without explicit repository-specific permission.
+1. Read `OPERATIONS/CORE_DIRECTIVE.md` as the **verbatim user permanent directive**.
+2. Read `OPERATIONS/DIRECTIVE_BOUNDARY.md` to distinguish the user directive from AI-created policy.
+3. Read `OPERATIONS/ASSISTANT_OPERATING_POLICY.md` as mutable implementation policy, not as a permanent directive.
+4. Read `OPERATIONS/DIRECTIVE_MANIFEST.json` and run `python scripts/check_directive_integrity.py`.
+5. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
+6. Apply `OPERATIONS/AUTOMATION_BEFORE_USER_GATE.md` before requesting any user operation.
+7. Do not rely on conversational memory or summaries as the sole source of truth when these files are accessible.
 
-The permanent directive is versioned and intentionally updateable, but an update must change the canonical copy, mirror, encoded backup, manifest version/hash, and validation evidence together.
+## Boundary rules
+
+- Never add AI-created objectives, safeguards, interpretations, workflow rules, repository scope, or stopping criteria to `OPERATIONS/CORE_DIRECTIVE.md`.
+- Put AI-created rules in `OPERATIONS/ASSISTANT_OPERATING_POLICY.md` or normal state/configuration files.
+- Change the permanent directive only after an explicit user instruction that identifies the new content as permanent instructions.
+- An intentional directive change must update the canonical copy, mirror, encoded backup, manifest version/hash/exact instructions, and validation evidence together.
+- If directive integrity or separation fails and cannot be safely repaired from redundant copies, fail closed: do not make revenue-, spending-, publication-, or user-action-affecting changes.
+
+## External precedence
+
+System instructions, developer instructions, applicable law, and mandatory safety constraints remain higher priority. They are external constraints and must not be inserted into the user's verbatim permanent directive.
+
+## Repository scope
+
+`bachikoljunior-blip/note` is authorized for this work. Do not modify another existing repository without explicit repository-specific permission.
