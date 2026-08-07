@@ -100,6 +100,13 @@ def main() -> int:
     candidate = copy.deepcopy(control)
     candidate["yield_requested"] = True
     candidate["latest_decision"] = "yield"
+    candidate["active_work_units"].append({
+        "id": "synthetic_actionable_work",
+        "status": "arbitrary_status_name",
+        "assistant_executable": True,
+        "user_blocked": False,
+        "actionable_now": True,
+    })
     tests.append(expect_error(
         "yield_while_actionable_work_exists_is_rejected",
         config, candidate, current, policy, agents,
@@ -110,7 +117,7 @@ def main() -> int:
     candidate["yield_requested"] = True
     candidate["next_automation_verified"] = False
     candidate["active_work_units"] = [
-        {"id": "future", "status": "future_trigger_verified", "assistant_executable": False, "user_blocked": False}
+        {"id": "future", "status": "future_trigger_verified", "assistant_executable": False, "user_blocked": False, "actionable_now": False}
     ]
     tests.append(expect_error(
         "yield_without_verified_continuation_is_rejected",
