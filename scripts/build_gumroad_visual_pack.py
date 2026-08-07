@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
+import io
 import json
 import struct
 import sys
+import zipfile
 import zlib
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,10 +25,34 @@ LAUNCHER = ROOT / "dist" / "gumroad_visual_pack.html"
 REPORT = ROOT / "reports" / "gumroad_visual_pack.json"
 TITLE_PATH = ROOT / "content" / "gumroad" / "title.txt"
 DESCRIPTION_PATH = ROOT / "content" / "gumroad" / "description.md"
+PRODUCT_PATH = ROOT / "dist" / "Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip"
 
 COVER_SIZE = (1280, 720)
 THUMBNAIL_SIZE = (1200, 1200)
 PRODUCT_MARKER = "NON-REPETITIVE AI TRIVIA SHORTS KIT"
+SAMPLE_TOPIC_SPECS = [
+    {
+        "id": "T004",
+        "question": "Why are airplane windows rounded instead of square?",
+        "format_id": "F04",
+        "title_lines": ["T004 ROUND AIRPLANE", "WINDOWS"],
+        "format_label": "F04 THREE STEP REVEAL",
+    },
+    {
+        "id": "T066",
+        "question": "How did standardized shipping-container dimensions change global logistics?",
+        "format_id": "F06",
+        "title_lines": ["T066 SHIPPING CONTAINER", "STANDARD"],
+        "format_label": "F06 ONE STANDARD",
+    },
+    {
+        "id": "T093",
+        "question": "Why can a traffic jam form on a highway even when there is no accident?",
+        "format_id": "F09",
+        "title_lines": ["T093 TRAFFIC JAM", "NO ACCIDENT"],
+        "format_label": "F09 START WITH MISCONCEPTION",
+    },
+]
 
 ASSETS = [
     {
@@ -34,19 +61,22 @@ ASSETS = [
         "kind": "cover",
         "eyebrow": "ENGLISH CREATOR KIT",
         "headline": ["NON-REPETITIVE", "AI TRIVIA", "SHORTS KIT"],
-        "metrics": ["100 TOPICS", "12 FORMATS", "30-DAY PLAN"],
+        "metrics": ["100 PROMPTS", "12 FORMATS", "30-DAY PLAN"],
         "footer": "RESEARCH  SCRIPT  VISUAL  ANALYZE",
         "purpose": "Main Gumroad product cover",
     },
     {
-        "id": "cover_contents",
-        "filename": "gumroad_cover_contents.png",
+        "id": "cover_sample",
+        "filename": "gumroad_cover_sample.png",
         "kind": "cover",
-        "eyebrow": "WHAT YOU GET",
-        "headline": ["BUILT TO TEST", "NOT JUST POST"],
-        "metrics": ["PROMPT LIBRARY", "SOURCE LOG", "ANALYTICS"],
-        "footer": "TOPICS  FORMATS  CALENDAR  WORKED EXAMPLE",
-        "purpose": "Gumroad cover showing included resources",
+        "eyebrow": "SAMPLE TOPIC PROMPTS",
+        "headline": ["3 REAL ROWS", "FROM THE CSV"],
+        "metrics": [
+            {"title_lines": item["title_lines"], "subtitle": item["format_label"]}
+            for item in SAMPLE_TOPIC_SPECS
+        ],
+        "footer": "STARTING POINTS  VERIFY SOURCES",
+        "purpose": "Gumroad cover showing three real topic rows",
     },
     {
         "id": "cover_workflow",
@@ -62,7 +92,7 @@ ASSETS = [
         "id": "thumbnail",
         "filename": "gumroad_thumbnail.png",
         "kind": "thumbnail",
-        "eyebrow": "100 TOPICS",
+        "eyebrow": "100 PROMPTS",
         "headline": ["AI TRIVIA", "SHORTS KIT"],
         "metrics": ["12 FORMATS", "30-DAY PLAN"],
         "footer": "ENGLISH  DIGITAL DOWNLOAD",
@@ -168,7 +198,7 @@ class Canvas:
 
     def fitting_scale(self, text: str, maximum: int, start: int, spacing: int = 4) -> int:
         scale = start
-        while scale > 3 and self.text_width(text, scale, spacing) > maximum:
+        while scale > 2 and self.text_width(text, scale, spacing) > maximum:
             scale -= 1
         return scale
 
@@ -225,10 +255,35 @@ def draw_cover(asset: dict[str, object], variant: int) -> tuple[Canvas, int]:
     for index, metric in enumerate(metrics):
         x = card_x + index * (card_width + gap)
         canvas.rounded_rect(x, card_y, card_width, 105, 20, soft)
-        label = str(metric)
-        scale = canvas.fitting_scale(label, card_width - 28, 7, 3)
-        label_width = canvas.text_width(label, scale, 3)
-        canvas.draw_text(label, x + (card_width - label_width) // 2, card_y + 38, scale, white, spacing=3)
+        if isinstance(metric, dict):
+            title_lines = [str(line) for line in metric["title_lines"]]
+            subtitle = str(metric["subtitle"])
+            for line, y in zip(title_lines, [card_y + 14, card_y + 40]):
+                title_scale = canvas.fitting_scale(line, card_width - 28, 4, 1)
+                title_width = canvas.text_width(line, title_scale, 1)
+                canvas.draw_text(
+                    line,
+                    x + (card_width - title_width) // 2,
+                    y,
+                    title_scale,
+                    white,
+                    spacing=1,
+                )
+            subtitle_scale = canvas.fitting_scale(subtitle, card_width - 28, 4, 1)
+            subtitle_width = canvas.text_width(subtitle, subtitle_scale, 1)
+            canvas.draw_text(
+                subtitle,
+                x + (card_width - subtitle_width) // 2,
+                card_y + 74,
+                subtitle_scale,
+                accent,
+                spacing=1,
+            )
+        else:
+            label = str(metric)
+            scale = canvas.fitting_scale(label, card_width - 28, 7, 3)
+            label_width = canvas.text_width(label, scale, 3)
+            canvas.draw_text(label, x + (card_width - label_width) // 2, card_y + 38, scale, white, spacing=3)
 
     canvas.rounded_rect(82, 615, width - 164, 66, 20, (22, 28, 42))
     footer = str(asset["footer"])
@@ -342,23 +397,62 @@ def main() -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
     results: list[dict[str, object]] = []
+    sample_topics: list[dict[str, str]] = []
+    expected_filenames = {str(asset["filename"]) for asset in ASSETS}
+    for old_output in OUTPUT_DIR.glob("gumroad_*.png"):
+        if old_output.name not in expected_filenames:
+            old_output.unlink()
 
     title = TITLE_PATH.read_text(encoding="utf-8").strip()
     description = DESCRIPTION_PATH.read_text(encoding="utf-8").strip()
     if PRODUCT_MARKER not in title.upper():
         errors.append("product_title_marker_missing")
-    for marker in ("100", "12", "30-day", "prompt", "source", "analytics"):
+    for marker in ("100", "12", "25", "30-day", "prompt", "source", "analytics"):
         if marker.lower() not in description.lower():
             errors.append(f"product_description_fact_missing:{marker}")
+
+    try:
+        with zipfile.ZipFile(PRODUCT_PATH) as archive:
+            topics = {
+                row["id"]: row
+                for row in csv.DictReader(
+                    io.StringIO(archive.read("100_topics.csv").decode("utf-8-sig"))
+                )
+            }
+        for spec in SAMPLE_TOPIC_SPECS:
+            row = topics.get(str(spec["id"]))
+            if row is None:
+                errors.append(f"sample_topic_missing:{spec['id']}")
+                continue
+            if row.get("core_question") != spec["question"]:
+                errors.append(f"sample_topic_question_drift:{spec['id']}")
+            if row.get("recommended_format") != spec["format_id"]:
+                errors.append(f"sample_topic_format_drift:{spec['id']}")
+            sample_topics.append({
+                "id": row.get("id", ""),
+                "core_question": row.get("core_question", ""),
+                "format_id": row.get("recommended_format", ""),
+                "rendered_title_lines": [str(line) for line in spec["title_lines"]],
+                "rendered_format": str(spec["format_label"]),
+            })
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"sample_topics_load:{type(exc).__name__}:{exc}")
 
     if len(ASSETS) != 4:
         errors.append("asset_count_must_be_4")
 
     for index, asset in enumerate(ASSETS):
+        metric_strings: list[str] = []
+        for item in asset["metrics"]:
+            if isinstance(item, dict):
+                metric_strings.extend([str(line) for line in item["title_lines"]])
+                metric_strings.append(str(item["subtitle"]))
+            else:
+                metric_strings.append(str(item))
         rendered_strings = [
             str(asset["eyebrow"]),
             *[str(item) for item in asset["headline"]],
-            *[str(item) for item in asset["metrics"]],
+            *metric_strings,
             str(asset["footer"]),
         ]
         unsupported = sorted({
@@ -423,6 +517,7 @@ def main() -> int:
         "cost_yen": 0,
         "launcher": str(LAUNCHER.relative_to(ROOT)),
         "launcher_sha256": hashlib.sha256(launcher.encode("utf-8")).hexdigest(),
+        "sample_topics": sample_topics,
         "assets": results,
         "errors": errors,
     }
