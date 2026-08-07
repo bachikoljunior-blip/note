@@ -10,11 +10,16 @@ This is the fallback path after the official CLI device OAuth token exchange ret
 - Do not send passwords, one-time codes, cookies, callback URLs, access tokens, tax data, banking data, or identity documents in chat or GitHub.
 - Final publication remains a user-only action.
 
-## Current screen: New product
+## Current screen: Price required
 
-1. Name: `Non-Repetitive AI Trivia Shorts Kit: 100 Topic Prompts + 12 Formats`
-2. Product type: `Digital product`
-3. Continue to `Next: Customize`.
+The product name and `Digital product` selection are already complete. Do not re-enter the product name.
+
+1. Enter `12` in the USD price field.
+2. Tap the keyboard checkmark / Done control.
+3. Scroll to the top and tap `Next: Customize`.
+4. Send only a screenshot of the Customize screen, without passwords, codes, tax, payout, or identity information.
+
+Repository checkpoint: `state/gumroad_manual_checkpoint.json`.
 
 ## Canonical prepared values
 
