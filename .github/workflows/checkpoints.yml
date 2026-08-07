@@ -1,9 +1,24 @@
 name: Revenue checkpoints
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/checkpoints.yml"
+      - "scripts/check_checkpoints.py"
+      - "scripts/test_checkpoint_workflow.py"
   schedule:
-    - cron: "17 0,12 * * *"
+    # Both revenue checkpoints are due at 11:33 UTC. This run evaluates them
+    # one minute later instead of waiting for the 12:17 UTC backup.
+    - cron: "34 11 * * *"
+    # Non-top-of-hour heartbeats provide redundant evidence if a scheduled
+    # event is delayed or dropped. 12:17 remains the post-deadline fallback.
+    - cron: "17 0,6,12,18 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: revenue-checkpoints-${{ github.repository }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -14,19 +29,79 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - id: due
-        name: Evaluate 48-hour and 7-day checkpoints
-        run: python scripts/check_checkpoints.py
-      - name: Create due checkpoint issues
-        uses: actions/github-script@v7
+      - id: heartbeat_start
+        name: Record checkpoint run start before checkout
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
+            const marker = '<!-- revenue-checkpoints-heartbeat:v1 -->';
+            const issueNumber = 17;
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+            });
+            if (issue.data.state !== 'open') {
+              core.setOutput('started_at', 'issue-closed');
+              return;
+            }
+            const startedAt = new Date().toISOString();
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              '## Revenue checkpoints heartbeat',
+              '',
+              '- observed_phase: running_before_checkout',
+              `- started_at_utc: ${startedAt}`,
+              `- event: ${context.eventName}`,
+              `- sha: ${context.sha}`,
+              `- run_attempt: ${process.env.GITHUB_RUN_ATTEMPT || '1'}`,
+              `- run: [${context.runId}](${runUrl})`,
+              '',
+              'This single bot comment is updated in place and does not claim that note dashboard metrics were read.',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+            }
+            core.setOutput('started_at', startedAt);
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - id: due
+        name: Evaluate 48-hour and 7-day checkpoints
+        run: python3 scripts/check_checkpoints.py
+      - name: Create due checkpoint issues
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const crypto = require('crypto');
             const fs = require('fs');
             const state = JSON.parse(fs.readFileSync('state/current.json', 'utf8'));
+            const publicationKey = crypto.createHash('sha256').update([
+              state.publication.article_url,
+              state.publication.published_at_estimate_utc,
+            ].join('\n')).digest('hex').slice(0, 16);
             const due = [
               { key: '48h', active: '${{ steps.due.outputs.due_48h }}' === 'true', title: '計測: note公開48時間後', checkpoint: '48h' },
               { key: '7d', active: '${{ steps.due.outputs.due_7d }}' === 'true', title: '計測: note公開7日後', checkpoint: '7d' },
@@ -38,12 +113,20 @@ jobs:
               per_page: 100,
             });
             for (const item of due) {
-              if (!item.active || existing.some(issue => issue.title === item.title)) continue;
+              const marker = `<!-- revenue-checkpoint:${item.checkpoint}:${publicationKey} -->`;
+              const alreadyExists = existing.some(issue =>
+                !issue.pull_request && (
+                  issue.body?.includes(marker) ||
+                  (issue.title === item.title && issue.body?.includes(state.publication.article_url))
+                )
+              );
+              if (!item.active || alreadyExists) continue;
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: item.title,
                 body: [
+                  marker,
                   `商品: ${state.publication.title}`,
                   `URL: ${state.publication.article_url}`,
                   '',
@@ -57,5 +140,68 @@ jobs:
                   '',
                   `値は data/metrics.csv に checkpoint=${item.checkpoint} として追加します。`,
                 ].join('\n'),
+              });
+            }
+      - name: Attempt to record checkpoint step result
+        if: always()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        env:
+          CHECKPOINT_STARTED_AT: ${{ steps.heartbeat_start.outputs.started_at }}
+          CHECKPOINT_JOB_STATUS: ${{ job.status }}
+          CHECKED_AT_UTC: ${{ steps.due.outputs.checked_at_utc }}
+          DUE_48H: ${{ steps.due.outputs.due_48h }}
+          DUE_7D: ${{ steps.due.outputs.due_7d }}
+        with:
+          script: |
+            const marker = '<!-- revenue-checkpoints-heartbeat:v1 -->';
+            const issueNumber = 17;
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+            });
+            if (issue.data.state !== 'open') return;
+            const checkedAt = process.env.CHECKED_AT_UTC || 'unavailable';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              '## Revenue checkpoints heartbeat',
+              '',
+              `- checkpoint_steps_status_before_heartbeat_update: ${process.env.CHECKPOINT_JOB_STATUS || 'unknown'}`,
+              `- started_at_utc: ${process.env.CHECKPOINT_STARTED_AT || 'unavailable'}`,
+              `- heartbeat_update_attempted_at_utc: ${new Date().toISOString()}`,
+              `- checked_at_utc: ${checkedAt}`,
+              `- event: ${context.eventName}`,
+              `- sha: ${context.sha}`,
+              `- run_attempt: ${process.env.GITHUB_RUN_ATTEMPT || '1'}`,
+              `- due_48h: ${process.env.DUE_48H || 'unknown'}`,
+              `- due_7d: ${process.env.DUE_7D || 'unknown'}`,
+              `- run: [${context.runId}](${runUrl})`,
+              '',
+              'This single bot comment is updated in place and does not claim that note dashboard metrics were read.',
+              'The linked run page is authoritative for the final job conclusion; this comment records the status observed before the heartbeat update attempt.',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
               });
             }
