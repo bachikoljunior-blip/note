@@ -65,6 +65,7 @@ def main() -> int:
     ))
 
     candidate = copy.deepcopy(control)
+    candidate["user_presence"]["observed_active_in_current_turn"] = True
     candidate["authentication_handoff"]["status"] = "not_presented"
     tests.append(expect_error(
         "active_user_authentication_handoff_is_required",
