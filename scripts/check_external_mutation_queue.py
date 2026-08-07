@@ -70,7 +70,7 @@ def main() -> int:
         "secrets_committed_to_github": False,
         "paid_artifact_publicly_accessible": False,
         "site_v13_deployed": True,
-        "stripe_webhook_secret_configured": True,
+        "stripe_webhook_signature_ready": True,
         "enabled_stripe_webhook_count": 1,
         "target_payment_link_exists": False,
     }
