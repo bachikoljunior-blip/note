@@ -133,13 +133,16 @@ def validate_data(
     if not isinstance(work_units, list) or not work_units:
         errors.append("active_work_units_required")
         work_units = []
+    for item in work_units:
+        if not isinstance(item, dict) or not isinstance(item.get("actionable_now"), bool):
+            errors.append("work_unit_actionable_now_required")
     actionable = [
         item
         for item in work_units
         if isinstance(item, dict)
+        and item.get("actionable_now") is True
         and item.get("assistant_executable") is True
         and item.get("user_blocked") is not True
-        and item.get("status") in {"in_progress", "actionable", "actionable_after_gate", "ready"}
     ]
     if actionable and control.get("latest_decision") != "continue":
         errors.append("actionable_work_requires_continue_decision")
