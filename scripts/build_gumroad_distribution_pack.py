@@ -461,7 +461,13 @@ def validate(cfg: dict[str, object], rows: list[dict[str, object]], launcher: st
     if float(facts["price_usd"]) != float(state["sales_channels"]["gumroad"]["price_usd"]):
         errors.append("state_fact_mismatch:price_usd")
     description = LISTING_DESCRIPTION.read_text(encoding="utf-8").lower()
-    for phrase in ("does not guarantee views", "100 research-ready", "12 distinct", "9 copy-ready"):
+    for phrase in (
+        "does not guarantee views",
+        "100 research-ready",
+        "12 format-specific hook approaches",
+        "25 category-specific visual-planning patterns",
+        "9 copy-ready",
+    ):
         if phrase not in description:
             errors.append(f"listing_fact_missing:{phrase}")
 
