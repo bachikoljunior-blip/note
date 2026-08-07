@@ -30,5 +30,7 @@ System instructions, developer instructions, applicable law, and mandatory safet
 ## Continuation boundary
 
 - A user-only authentication, identity, contract, payment, or final-publication blocker applies only to that workstream; continue independent authorized work.
+- When authentication is the only blocker to high-value work and the user is actively present, immediately present the minimum complete handoff in chat: target, exact action, secret-handling warning, and non-secret completion signal. Do not silently defer it.
+- Issue expiring authentication codes only while the user is actively present, and resume the blocked workstream immediately after its completion signal.
 - Do not mark the project stopped because a response, work unit, app session, or usage window ended.
 - The project ends only after an explicit user instruction to end it. Otherwise use `continue` or `blocked_monitoring` and preserve a verified next trigger.
