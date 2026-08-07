@@ -13,8 +13,8 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "handoff/note_iPhone_handoff.zip"
 README = ROOT / "handoff/README.md"
-EXPECTED_BYTES = 137187
-EXPECTED_SHA256 = "82b8177bdd9ad40c3ec940d7cfe592693d73ab5c817f91e9ceed601fdf899d68"
+EXPECTED_BYTES = 137186
+EXPECTED_SHA256 = "c30b585cca55a0f9d59b0c40224e4eb5499c5c0d85816d2abe4b96e8278893cc"
 EXPECTED_MEMBERS = {
     "AI_trivia_shorts_creator_kit_v1.1.zip",
     "README_iPhone.txt",
@@ -119,6 +119,11 @@ with zipfile.ZipFile(OUTPUT) as archive:
                 fail(f"handoff_tracking_contract:{target}:{fragment}")
     if "fallback: その他の共有／コピー（媒体別UTMなし）" not in start:
         fail("handoff_untracked_fallback_must_be_labeled")
+    booth_title = archive.read("copy/booth_title.txt")
+    if len(booth_title) != 101 or hashlib.sha256(booth_title).hexdigest() != (
+        "214edee3ec4aced27781b5caad541495289ab39fc3ab571aada22c5c7f86cfaf"
+    ):
+        fail("handoff_authoritative_booth_title_bytes")
 
 readme = README.read_text(encoding="utf-8")
 for fragment in (
