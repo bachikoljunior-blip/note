@@ -34,3 +34,11 @@ System instructions, developer instructions, applicable law, and mandatory safet
 - Issue expiring authentication codes only while the user is actively present, and resume the blocked workstream immediately after its completion signal.
 - Do not mark the project stopped because a response, work unit, app session, or usage window ended.
 - The project ends only after an explicit user instruction to end it. Otherwise use `continue` or `blocked_monitoring` and preserve a verified next trigger.
+
+## Scheduled automation continuity
+
+- At the beginning and immediately before the end of every scheduled revenue run, read `state/automation_continuity.json` and privately verify the 定期実行の有効状態 through the connected automation manager when available.
+- Do not disable, delete, or mark either continuity task complete unless the user issued an 明示的な停止指示 or explicitly ended the project.
+- No new user message, unread output, a user-only blocker, one completed unit, no reportable change, or a transient failure is not a stop condition.
+- If the primary continuation task is disabled without an explicit stop, immediately 再開を試みる, verify the result, record the repair, and keep independent repository work continuing.
+- Do not expose internal automation identifiers or secrets in user-facing reports or repository records.
