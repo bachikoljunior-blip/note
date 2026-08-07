@@ -81,6 +81,41 @@ def validate_data(
     if control.get("user_authentication_pending_is_global_stop") is not False:
         errors.append("authentication_wait_must_not_be_global_stop")
 
+    auth_gate = config.get("authentication_handoff_gate", {})
+    if auth_gate.get("silent_indefinite_deferral_forbidden") is not True:
+        errors.append("silent_authentication_deferral_must_be_forbidden")
+    if auth_gate.get("resume_same_workstream_after_completion_signal") is not True:
+        errors.append("authentication_workstream_must_resume_after_completion")
+    if auth_gate.get("expiring_code_may_be_issued_only_when_user_present") is not True:
+        errors.append("expiring_auth_code_presence_guard_required")
+    required_handoff_fields = set(auth_gate.get("required_fields", []))
+    if required_handoff_fields != {
+        "target_site", "exact_user_action", "secret_handling", "completion_signal"
+    }:
+        errors.append("authentication_handoff_required_fields_invalid")
+
+    user_present = control.get("user_presence", {}).get("observed_active_in_current_turn") is True
+    auth_blocked = any(
+        isinstance(item, dict)
+        and item.get("user_blocked") is True
+        and "authentication" in str(item.get("status", ""))
+        for item in control.get("active_work_units", [])
+    )
+    handoff = control.get("authentication_handoff", {})
+    if user_present and auth_blocked:
+        if handoff.get("status") not in {
+            "website_login_steps_presented_awaiting_user_completion",
+            "device_authorization_presented_awaiting_user_completion",
+            "user_completion_reported_resuming",
+            "completed",
+        }:
+            errors.append("active_user_authentication_handoff_not_presented")
+        for field in required_handoff_fields:
+            if not handoff.get(field):
+                errors.append(f"authentication_handoff_field_missing:{field}")
+    if handoff.get("expiring_code_issued") is True and not user_present:
+        errors.append("expiring_auth_code_issued_without_active_user")
+
     capacity = control.get("capacity", {})
     current_capacity = current.get("operating_context", {}).get("chatgpt_work_capacity", {})
     if capacity.get("remaining_percent") != current_capacity.get("remaining_percent"):
@@ -128,6 +163,7 @@ def validate_data(
         "本人操作待ちは対象作業だけのブロッカー",
         "5経路をすべて評価",
         "残量を無意味に消費すること自体は目標にしない",
+        "認証依頼を無期限に先送りしない",
     ):
         if phrase not in policy_text:
             errors.append(f"assistant_policy_continuation_phrase_missing:{phrase}")
@@ -135,6 +171,7 @@ def validate_data(
         "OPERATIONS/CONTINUATION_GATE.md",
         "scripts/check_continuation_gate.py",
         "state/continuation_control.json",
+        "Do not silently defer it",
     ):
         if phrase not in agents_text:
             errors.append(f"agents_continuation_pointer_missing:{phrase}")
