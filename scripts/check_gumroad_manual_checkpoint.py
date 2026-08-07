@@ -74,6 +74,13 @@ def main() -> int:
         "Next: Customize",
         "Do not re-enter the product name",
         "Final publication remains a user-only action",
+        "Finish without waiting for another chat reply",
+        "Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip",
+        "Gumroad_iPhone_Listing_Pack_v1.1.zip",
+        "Content screen",
+        "7-day refund period",
+        "Test purchase",
+        "Copy URL",
     ):
         if fragment not in handoff:
             errors.append(f"handoff_fragment_missing:{fragment}")
