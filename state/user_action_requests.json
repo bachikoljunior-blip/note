@@ -1,7 +1,7 @@
 {
   "schema_version": "1.5",
   "policy": "automation_before_user_request",
-  "updated_at_utc": "2026-08-07T10:27:00Z",
+  "updated_at_utc": "2026-08-07T23:29:34Z",
   "delivery_preference": {
     "classification": "current_user_operational_preference_not_permanent_directive",
     "recorded_at_utc": "2026-08-07T00:36:14Z",
@@ -497,6 +497,123 @@
         ".github/workflows/checkpoints.yml",
         "scripts/check_checkpoints.py",
         "scripts/analyze_metrics.py"
+      ]
+    },
+    {
+      "id": "stripe_webhook_secret_recovery_v1",
+      "description": "Stripe決済Webhookを重複なしで1件へ置換し、署名検証用の一回表示値をSitesへ安全に設定する",
+      "status": "automation_evaluated_blocked_by_external_auto_review",
+      "priority": "P0",
+      "currently_requested": true,
+      "automation_review": {
+        "completed": true,
+        "completed_at_utc": "2026-08-07T23:29:34Z",
+        "connected_tools": {
+          "status": "implemented_where_available",
+          "result": "Cloudflare Worker、D1冪等処理、R2非公開納品、署名検証、金額・通貨・商品照合、fail-closed設定を実装済み。既存Stripe Webhookは読み取りで1件有効と確認し、直接販売は無効のまま維持した。"
+        },
+        "official_api_or_webhook": {
+          "status": "single_replacement_preflight_complete_external_approval_pending",
+          "result": "既存Endpointの署名値は再取得不能。重複Webhookを作らず、既存1件の無効化、置換1件の作成、一回表示値のSites注入、再配備、1件だけ有効であることの再確認を単一の統合変更として準備した。"
+        },
+        "github_actions_or_scheduler": {
+          "status": "state_and_contract_validation_implemented",
+          "result": "保留操作、現在の安全状態、再実行禁止、再開条件をstate/external_mutation_queue.jsonへ保存し、整合性チェッカーを主要CIへ追加した。"
+        },
+        "browser_share_or_shortcut": {
+          "status": "not_used_for_secret_transfer",
+          "result": "署名値、認証情報、確認コードをチャットや共有リンクへ出さず、接続済みSitesの秘密設定へ直接渡す設計に限定した。"
+        },
+        "batching_and_prefill": {
+          "status": "single_consolidated_mutation_prepared",
+          "result": "承認対象を既存Endpoint置換から事後検証までの1件へ統合し、個別の高リスク操作を並列に起動しない。"
+        },
+        "verification_and_logging": {
+          "status": "preflight_complete_post_change_readback_required",
+          "result": "実行直前にEndpoint一覧を再取得し、冪等性と重複を検査する。実行後はWebhook応答と有効Endpointが1件だけであることを読み取りで確認し、秘密値を記録しない。"
+        }
+      },
+      "implemented_automation": [
+        "Stripe署名検証を含むWebhook受信処理",
+        "D1によるイベント・注文の冪等性",
+        "支払済み状態、金額、通貨、商品照合",
+        "R2非公開商品の期限・回数制限付き納品",
+        "Webhook置換の単一操作化と再試行禁止",
+        "直接販売を無効にしたままBOOTHを維持するfail-closed制御"
+      ],
+      "not_implemented": [
+        {
+          "item": "既存Webhookの置換と一回表示署名値のSites設定",
+          "reason": "外部リソース変更の自動レビューが保留・拒否となり、同義操作の反復を禁止している。"
+        }
+      ],
+      "residual_user_steps": [
+        "統合されたWebhook置換の外部変更が提示された時だけ内容を確認して承認する"
+      ],
+      "residual_step_count": 1,
+      "user_only_reason": "外部決済リソースの無効化・再作成は承認対象。署名値や認証情報をユーザーが転記する必要はない。",
+      "fallback": "承認しない場合も直接販売は無効のまま、公開済みBOOTH販売を継続する。",
+      "evidence": [
+        "state/external_mutation_queue.json",
+        "OPERATIONS/AUTONOMOUS_REVENUE_SITE_V13_VALIDATION_2026-08-08.json"
+      ]
+    },
+    {
+      "id": "stripe_legal_disclosure_gate_v1",
+      "description": "Stripe直接販売前に必要な販売者情報を本人のプライバシー選択に基づいて法定表示へ設定する",
+      "status": "automation_evaluated_waiting_for_privacy_sensitive_user_choice",
+      "priority": "P0",
+      "currently_requested": true,
+      "automation_review": {
+        "completed": true,
+        "completed_at_utc": "2026-08-07T23:29:34Z",
+        "connected_tools": {
+          "status": "implementation_complete_without_personal_values",
+          "result": "法定表示ページと購入前の即時開示経路を実装済み。氏名、住所、電話、メールの実値は推測・公開・GitHub保存していない。"
+        },
+        "official_api_or_webhook": {
+          "status": "not_suitable_for_identity_or_privacy_consent",
+          "result": "StripeやCloudflare APIは本人の販売者情報や公開同意を代行決定できない。本人が承認した値だけを安全な設定経路へ渡す必要がある。"
+        },
+        "github_actions_or_scheduler": {
+          "status": "fail_closed_contract_implemented",
+          "result": "法定表示が未完成の間はCOMMERCE_ENABLED=0、Payment Link非公開、BOOTHを購入経路とする状態を整合性チェッカーで固定した。"
+        },
+        "browser_share_or_shortcut": {
+          "status": "secure_authenticated_entry_required",
+          "result": "氏名、住所、電話、メールを公開チャット、Issue、リポジトリへ貼らせない。本人が選んだ安全な認証済み入力経路だけを使用する。"
+        },
+        "batching_and_prefill": {
+          "status": "single_privacy_choice_prepared",
+          "result": "必要項目、公開範囲、直接販売を有効にしない選択肢を1件へ集約し、入力後の表示確認と有効化判断を同じ手順へまとめる。"
+        },
+        "verification_and_logging": {
+          "status": "nonsecret_state_only",
+          "result": "GitHubには同意の有無、完了状態、表示検査結果だけを記録し、個人情報の実値は保存しない。購入前表示と直接販売無効状態を自動検査する。"
+        }
+      },
+      "implemented_automation": [
+        "法定表示ページ",
+        "購入前の即時開示経路",
+        "個人情報未設定時のfail-closed直接販売停止",
+        "BOOTHへの安全な購入fallback",
+        "個人情報のGitHub・チャット非保存"
+      ],
+      "not_implemented": [
+        {
+          "item": "販売者氏名、運営住所、連絡可能な電話、連絡メールの実値と公開同意",
+          "reason": "本人固有の個人情報とプライバシー判断を伴い、推測や代理同意ができない。"
+        }
+      ],
+      "residual_user_steps": [
+        "直接販売を使う場合だけ、安全な認証済み入力画面で販売者4項目を入力し、購入前表示への使用を承認する"
+      ],
+      "residual_step_count": 1,
+      "user_only_reason": "販売者情報は本人固有かつ公開範囲を伴うため、本人の入力と明示同意が必要。",
+      "fallback": "個人情報を追加公開しない場合はStripe直接販売を有効化せず、BOOTH販売を継続する。",
+      "evidence": [
+        "state/external_mutation_queue.json",
+        "OPERATIONS/AUTONOMOUS_REVENUE_SITE_V13_VALIDATION_2026-08-08.json"
       ]
     }
   ]
