@@ -106,6 +106,7 @@ def validate_data(
         if handoff.get("status") not in {
             "website_login_steps_presented_awaiting_user_completion",
             "device_authorization_presented_awaiting_user_completion",
+            "browser_oauth_presented_awaiting_user_completion",
             "user_completion_reported_resuming",
             "completed",
         }:
