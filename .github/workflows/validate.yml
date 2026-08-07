@@ -27,8 +27,15 @@ jobs:
         run: python scripts/test_directive_integrity.py
       - name: Rebuild and verify artifacts
         run: python scripts/rebuild_artifacts.py
-      - name: Build and verify English product
-        run: python scripts/build_english_product.py
+      - name: Build and verify deterministic English product v1.1
+        run: |
+          python scripts/build_english_product.py
+          sha256sum dist/Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip > /tmp/english-product-before.sha256
+          python scripts/build_english_product.py
+          sha256sum dist/Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip > /tmp/english-product-after.sha256
+          diff -u /tmp/english-product-before.sha256 /tmp/english-product-after.sha256
+      - name: Validate English product v1.1 before downstream builds
+        run: python scripts/check_english_product_quality.py
       - name: Build zero-cost share launcher
         run: python scripts/build_share_launcher.py
       - name: Build channel-specific distribution pack
@@ -41,6 +48,8 @@ jobs:
         run: python scripts/build_booth_visual_pack.py
       - name: Build Gumroad conversion visual pack
         run: python scripts/build_gumroad_visual_pack.py
+      - name: Revalidate English product v1.1 with visual evidence
+        run: python scripts/check_english_product_quality.py --require-visual-report
       - name: Build Gumroad English sales-channel pack
         run: python scripts/build_gumroad_listing_launcher.py
       - name: Build deterministic Gumroad English distribution pack
@@ -64,13 +73,19 @@ jobs:
         run: python scripts/analyze_metrics.py
       - name: Validate revenue checkpoint timing
         run: python scripts/check_checkpoints.py
-      - name: Upload reports and outputs
+      - name: Upload validation reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: note-validation-${{ github.sha }}
+          name: note-validation-reports-${{ github.sha }}
+          path: reports/
+          retention-days: 7
+      - name: Upload validated outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: note-validated-outputs-${{ github.sha }}
           path: |
-            reports/
             dist/*.zip
             dist/*.html
             dist/*.md
