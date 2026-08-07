@@ -65,6 +65,31 @@ def main() -> int:
     ))
 
     candidate = copy.deepcopy(control)
+    candidate["authentication_handoff"]["status"] = "not_presented"
+    tests.append(expect_error(
+        "active_user_authentication_handoff_is_required",
+        config, candidate, current, policy, agents,
+        "active_user_authentication_handoff_not_presented",
+    ))
+
+    candidate = copy.deepcopy(control)
+    candidate["user_presence"]["observed_active_in_current_turn"] = False
+    candidate["authentication_handoff"]["expiring_code_issued"] = True
+    tests.append(expect_error(
+        "expiring_code_without_active_user_is_rejected",
+        config, candidate, current, policy, agents,
+        "expiring_auth_code_issued_without_active_user",
+    ))
+
+    candidate_config = copy.deepcopy(config)
+    candidate_config["authentication_handoff_gate"]["resume_same_workstream_after_completion_signal"] = False
+    tests.append(expect_error(
+        "authentication_workstream_resume_is_required",
+        candidate_config, control, current, policy, agents,
+        "authentication_workstream_must_resume_after_completion",
+    ))
+
+    candidate = copy.deepcopy(control)
     candidate["capacity"]["strategy"] = "ignore"
     tests.append(expect_error(
         "available_capacity_cannot_be_ignored",
