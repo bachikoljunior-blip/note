@@ -31,6 +31,9 @@ def main() -> int:
         "price_entry_observed_remote_ci_pending",
         "remote_ci_validated_pending_merge",
         "merged_main_remote_ci_validated",
+        "end_to_end_handoff_remote_ci_pending",
+        "end_to_end_handoff_remote_ci_validated",
+        "end_to_end_handoff_merged_main",
     }:
         errors.append("checkpoint_status_invalid")
 
@@ -59,6 +62,11 @@ def main() -> int:
         errors.append("exact_next_action_incomplete")
     if resume.get("final_publication") != "human_only":
         errors.append("final_publication_boundary_invalid")
+    continuous = resume.get("end_to_end_handoff", {})
+    if continuous.get("interaction_model") != "continue_through_ordinary_listing_screens_without_waiting_for_chat":
+        errors.append("continuous_handoff_missing")
+    if continuous.get("final_completion_signal") != "public Gumroad product URL only":
+        errors.append("continuous_completion_signal_invalid")
 
     manual = listing.get("manual_fallback", {})
     if manual.get("observed_screen") != "new_product_price_entry" or manual.get("next_price_usd") != 12:
@@ -69,11 +77,18 @@ def main() -> int:
         errors.append("control_checkpoint_pointer_missing")
 
     for fragment in (
-        "Current screen: Price required",
+        "Current Price screen",
         "Enter `12`",
         "Next: Customize",
-        "Do not re-enter the product name",
+        "Do not re-enter the name",
         "Final publication remains a user-only action",
+        "Finish without waiting for another chat reply",
+        "Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip",
+        "Gumroad_iPhone_Listing_Pack_v1.1.zip",
+        "Content screen",
+        "7-day refund period",
+        "Test purchase",
+        "Copy URL",
     ):
         if fragment not in handoff:
             errors.append(f"handoff_fragment_missing:{fragment}")
