@@ -59,7 +59,7 @@ def tracked_url(base: str, source: str, medium: str, campaign: str, content: str
     )
 
 
-def prefilled_url(target: str, text: str, url: str) -> str:
+def prefilled_url(target: str, title: str, text: str, url: str) -> str:
     if target == "x":
         return "https://twitter.com/intent/tweet?" + urllib.parse.urlencode(
             {"text": text, "url": url}
@@ -67,6 +67,14 @@ def prefilled_url(target: str, text: str, url: str) -> str:
     if target == "bluesky":
         return "https://bsky.app/intent/compose?" + urllib.parse.urlencode(
             {"text": f"{text}\n{url}"}
+        )
+    if target == "line":
+        return "https://social-plugins.line.me/lineit/share?" + urllib.parse.urlencode(
+            {"url": url}
+        )
+    if target == "email":
+        return "mailto:?" + urllib.parse.urlencode(
+            {"subject": title, "body": f"{text}\n{url}"}
         )
     raise ValueError(f"unsupported_target:{target}")
 
@@ -79,7 +87,7 @@ def conservative_x_weight(text: str) -> int:
 def verify_distribution_rows(rows: list[dict[str, str]], campaign: str) -> dict[str, int]:
     errors: list[str] = []
     combinations = {(row["target"], row["variant"]) for row in rows}
-    if len(rows) != 6 or len(combinations) != 6:
+    if len(rows) != 12 or len(combinations) != 12:
         errors.append(f"combination_count:{len(rows)}:{len(combinations)}")
 
     max_x_weight = 0
@@ -88,8 +96,8 @@ def verify_distribution_rows(rows: list[dict[str, str]], campaign: str) -> dict[
         parsed = urllib.parse.urlsplit(row["tracked_url"])
         query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
         expected = {
-            "utm_source": row["target"],
-            "utm_medium": "social",
+            "utm_source": row["utm_source"],
+            "utm_medium": row["utm_medium"],
             "utm_campaign": campaign,
             "utm_content": row["variant"],
         }
@@ -107,6 +115,20 @@ def verify_distribution_rows(rows: list[dict[str, str]], campaign: str) -> dict[
             max_bluesky_length = max(max_bluesky_length, length)
             if length > 300:
                 errors.append(f"bluesky_length:{row['variant']}:{length}")
+        elif row["target"] == "line":
+            intent = urllib.parse.urlsplit(row["prefilled_url"])
+            intent_query = dict(urllib.parse.parse_qsl(intent.query, keep_blank_values=True))
+            if intent.scheme != "https" or intent.netloc != "social-plugins.line.me":
+                errors.append(f"line_intent_origin:{row['variant']}")
+            if intent_query.get("url") != row["tracked_url"]:
+                errors.append(f"line_intent_url:{row['variant']}")
+        elif row["target"] == "email":
+            intent = urllib.parse.urlsplit(row["prefilled_url"])
+            intent_query = dict(urllib.parse.parse_qsl(intent.query, keep_blank_values=True))
+            if intent.scheme != "mailto" or intent.path:
+                errors.append(f"email_intent_recipient:{row['variant']}")
+            if not intent_query.get("subject") or row["tracked_url"] not in intent_query.get("body", ""):
+                errors.append(f"email_intent_content:{row['variant']}")
 
     if errors:
         raise ValueError(";".join(errors))
@@ -129,7 +151,7 @@ def verify_config(config: dict[str, Any]) -> None:
     if product.get("price_yen") != 1480 or product.get("type") != "download":
         raise ValueError("product_price_or_type")
     target_ids = [item.get("id") for item in config.get("targets", [])]
-    if target_ids != ["x", "bluesky"]:
+    if target_ids != ["x", "bluesky", "line", "email"]:
         raise ValueError("target_contract")
     variant_ids = [item.get("id") for item in config.get("variants", [])]
     if variant_ids != ["contents", "smartphone", "non_repetitive"]:
@@ -254,11 +276,15 @@ def build_handoff(config: dict[str, Any]) -> tuple[str, list[dict[str, str]]]:
                 {
                     "target": target["id"],
                     "target_label": target["label"],
+                    "utm_source": target["utm_source"],
+                    "utm_medium": target["utm_medium"],
                     "variant": variant["id"],
                     "variant_label": variant["label"],
                     "text": variant["text"],
                     "tracked_url": tracked,
-                    "prefilled_url": prefilled_url(target["id"], variant["text"], tracked),
+                    "prefilled_url": prefilled_url(
+                        target["id"], product["title"], variant["text"], tracked
+                    ),
                 }
             )
 
