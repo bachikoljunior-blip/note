@@ -29,5 +29,6 @@ out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encodin
 print(json.dumps(payload, ensure_ascii=False))
 if output := os.environ.get("GITHUB_OUTPUT"):
     with open(output, "a", encoding="utf-8") as fh:
+        fh.write(f"checked_at_utc={payload['checked_at_utc']}\n")
         fh.write(f"due_48h={str(due_48h).lower()}\n")
         fh.write(f"due_7d={str(due_7d).lower()}\n")
