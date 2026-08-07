@@ -38,6 +38,7 @@ for fragment in required:
 
 for forbidden in (
     "pull_request:",
+    "issue.data.state !== 'open'",
     "actions/checkout@",
     "contents: write",
     "actions: write",
