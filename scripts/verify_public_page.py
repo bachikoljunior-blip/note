@@ -6,14 +6,23 @@ import html
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "reports" / "public_page.json"
+RETRYABLE_HTTP_STATUSES = {403, 408, 425, 429, 500, 502, 503, 504}
+RETRY_DELAYS_SECONDS = (1, 2)
+REQUEST_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
+    "Accept-Language": "ja,en-US;q=0.8,en;q=0.6",
+    "Accept": "text/html,application/xhtml+xml",
+}
 
 
 class MetaParser(HTMLParser):
@@ -46,34 +55,87 @@ def normalize(value: str) -> str:
     return re.sub(r"\s+", "", html.unescape(value)).lower()
 
 
+def fetch_public_page(
+    url: str,
+    *,
+    opener: Any = urllib.request.urlopen,
+    sleeper: Any = time.sleep,
+    delays: tuple[int, ...] = RETRY_DELAYS_SECONDS,
+) -> dict[str, Any]:
+    attempts: list[dict[str, Any]] = []
+    max_attempts = len(delays) + 1
+    status: int | None = None
+    final_url = url
+    body = b""
+    terminal_error: str | None = None
+
+    for index in range(max_attempts):
+        request = urllib.request.Request(url, headers=REQUEST_HEADERS)
+        attempt_error: str | None = None
+        try:
+            with opener(request, timeout=25) as response:
+                status = response.status
+                final_url = response.geturl()
+                body = response.read(3_000_000)
+        except urllib.error.HTTPError as exc:
+            status = exc.code
+            final_url = exc.geturl() or url
+            body = exc.read(200_000)
+            attempt_error = f"http_error:{exc.code}"
+        except Exception as exc:  # noqa: BLE001
+            status = None
+            final_url = url
+            body = b""
+            attempt_error = f"fetch_error:{type(exc).__name__}:{exc}"
+
+        retryable = (
+            status in RETRYABLE_HTTP_STATUSES
+            if status is not None
+            else isinstance(attempt_error, str)
+        )
+        attempts.append(
+            {
+                "attempt": index + 1,
+                "status": status,
+                "final_url": final_url,
+                "response_bytes": len(body),
+                "error": attempt_error,
+                "retryable": retryable,
+            }
+        )
+        if attempt_error is None and status == 200:
+            terminal_error = None
+            break
+        if not retryable or index == max_attempts - 1:
+            terminal_error = attempt_error or f"unexpected_status:{status}"
+            break
+        sleeper(delays[index])
+
+    return {
+        "status": status,
+        "final_url": final_url,
+        "body": body,
+        "attempts": attempts,
+        "terminal_error": terminal_error,
+    }
+
+
 def main() -> int:
     campaign = json.loads((ROOT / "config/campaign.json").read_text(encoding="utf-8"))
     url = campaign["channels"]["note_product_url"]
     expected_title = campaign["product"]["title"]
-    request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
-            "Accept-Language": "ja,en-US;q=0.8,en;q=0.6",
-            "Accept": "text/html,application/xhtml+xml",
-        },
-    )
+    fetched = fetch_public_page(url)
+    status = fetched["status"]
+    final_url = fetched["final_url"]
+    body = fetched["body"]
+    attempts = fetched["attempts"]
+
     errors: list[str] = []
     warnings: list[str] = []
-    status: int | None = None
-    final_url = url
-    body = b""
-    try:
-        with urllib.request.urlopen(request, timeout=25) as response:
-            status = response.status
-            final_url = response.geturl()
-            body = response.read(3_000_000)
-    except urllib.error.HTTPError as exc:
-        status = exc.code
-        errors.append(f"http_error:{exc.code}")
-        body = exc.read(200_000)
-    except Exception as exc:  # noqa: BLE001
-        errors.append(f"fetch_error:{type(exc).__name__}:{exc}")
+    if fetched["terminal_error"]:
+        errors.append(fetched["terminal_error"])
+    elif len(attempts) > 1:
+        warnings.append(f"transient_fetch_recovered_after:{len(attempts)}_attempts")
 
     text = body.decode("utf-8", errors="replace")
     parser = MetaParser()
@@ -98,6 +160,13 @@ def main() -> int:
         "requested_url": url,
         "final_url": final_url,
         "status": status,
+        "fetch_attempt_count": len(attempts),
+        "fetch_attempts": attempts,
+        "retry_policy": {
+            "max_attempts": len(RETRY_DELAYS_SECONDS) + 1,
+            "delays_seconds": list(RETRY_DELAYS_SECONDS),
+            "retryable_http_statuses": sorted(RETRYABLE_HTTP_STATUSES),
+        },
         "page_title": page_title,
         "description_excerpt": description[:300],
         "response_bytes": len(body),
