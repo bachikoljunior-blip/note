@@ -188,7 +188,7 @@ def main() -> int:
   const status = document.getElementById('status');
   title.value = data.title;
   description.value = data.description;
-  tags.value = data.tags.join('\n');
+  tags.value = data.tags.join('\\n');
 
   async function copyText(text) {{
     if (navigator.clipboard && window.isSecureContext) {{
