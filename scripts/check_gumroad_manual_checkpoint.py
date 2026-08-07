@@ -77,10 +77,10 @@ def main() -> int:
         errors.append("control_checkpoint_pointer_missing")
 
     for fragment in (
-        "Current screen: Price required",
+        "Current Price screen",
         "Enter `12`",
         "Next: Customize",
-        "Do not re-enter the product name",
+        "Do not re-enter the name",
         "Final publication remains a user-only action",
         "Finish without waiting for another chat reply",
         "Non_Repetitive_AI_Trivia_Shorts_Kit_EN_v1.1.zip",
