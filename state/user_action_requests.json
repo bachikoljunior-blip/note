@@ -1,7 +1,7 @@
 {
   "schema_version": "1.5",
   "policy": "automation_before_user_request",
-  "updated_at_utc": "2026-08-07T02:02:09Z",
+  "updated_at_utc": "2026-08-07T04:34:26Z",
   "delivery_preference": {
     "classification": "current_user_operational_preference_not_permanent_directive",
     "recorded_at_utc": "2026-08-07T00:36:14Z",
@@ -11,7 +11,7 @@
   "requests": [
     {
       "id": "launch_distribution_v2",
-      "description": "広告費0円でnote商品を既存の発信先へ告知する",
+      "description": "広告費0円で公開済みnote・BOOTH商品を既存の発信先へ告知する",
       "status": "automation_evaluated_and_reduced",
       "priority": "P0",
       "automation_review": {
@@ -19,7 +19,7 @@
         "completed_at_utc": "2026-08-06T13:07:00Z",
         "connected_tools": {
           "status": "implemented_where_available",
-          "result": "GitHubで告知文、商品URL、UTM、媒体別リンク、状態、検証を管理した。現在接続済みツールにはSNS最終投稿機能がない。"
+          "result": "GitHubでnoteと公開済みBOOTHの商品URL、告知文、UTM、媒体別リンク、状態、検証を管理した。現在接続済みツールにはSNS最終投稿機能がない。"
         },
         "official_api_or_webhook": {
           "status": "blocked_pending_target_authorization",
@@ -27,26 +27,28 @@
         },
         "github_actions_or_scheduler": {
           "status": "implemented",
-          "result": "X、Bluesky、LINE、メール、共有シートと3訴求の全15組み合わせをCIで生成・検査する。"
+          "result": "既存note配布15組み合わせに加え、公開済みBOOTHのX・Bluesky×3訴求の6組み合わせ、価格、在庫、画像、カート導線を主要CIで検査する。"
         },
         "browser_share_or_shortcut": {
           "status": "implemented",
-          "result": "媒体別Web Intent、mailto、LINE共有、Web Share API、クリップボード切替を実装した。"
+          "result": "noteの媒体別Web Intent等に加え、BOOTHはiPhoneのGitHub MarkdownからXまたはBlueskyの本文・UTM入力済み画面を1回で開ける。"
         },
         "batching_and_prefill": {
           "status": "implemented",
-          "result": "本文、URL、UTM、媒体、訴求を事前入力し、本人操作を最終公開の1手へ圧縮した。"
+          "result": "noteまたはBOOTHの商品を選び、本文、URL、UTM、媒体、訴求を事前入力して本人操作を最終公開1回へ圧縮した。"
         },
         "verification_and_logging": {
           "status": "partially_implemented",
-          "result": "商品URL、UTM、組み合わせ数は自動検証済み。外部SNSの最終公開成功は投稿権限やコールバックなしには自動判定できない。"
+          "result": "note商品URLと15組み合わせ、BOOTH公開ページと6組み合わせを自動検証する。外部SNSの最終公開成功は投稿権限やコールバックなしには自動判定しない。"
         }
       },
       "implemented_automation": [
         "媒体別の告知文とUTMリンク生成",
         "X・Bluesky・LINE・メールの事前入力リンク",
         "Web Share APIとクリップボード切替",
-        "全15組み合わせのCI検証"
+        "全15組み合わせのCI検証",
+        "公開済みBOOTH向けX・Bluesky×3訴求のUTM付き事前入力リンク",
+        "BOOTH公開状態・価格・在庫・画像3点・カート導線の主要CI検証"
       ],
       "not_implemented": [
         {
@@ -67,13 +69,18 @@
       "evidence": [
         "config/distribution.json",
         "scripts/build_distribution_pack.py",
-        "scripts/build_share_launcher.py"
+        "scripts/build_share_launcher.py",
+        "config/booth_distribution.json",
+        "scripts/build_booth_distribution_handoff.py",
+        "handoff/BOOTH_SHARE.md",
+        "state/booth_distribution.json",
+        "OPERATIONS/BOOTH_PUBLIC_DISTRIBUTION_VALIDATION_2026-08-07.json"
       ]
     },
     {
       "id": "iphone_handoff_v1",
       "description": "失効しないprivate GitHub導線から無料note・BOOTH公開用ファイルをiPhoneへ一括取得する",
-      "status": "automation_evaluated_and_reduced",
+      "status": "completed_after_user_device_execution_and_booth_publication",
       "priority": "P0",
       "automation_review": {
         "completed": true,
@@ -110,17 +117,10 @@
         "private repository fail-closed",
         "決定的ZIP、manifest、release lock、CI検査"
       ],
-      "not_implemented": [
-        {
-          "item": "iPhoneへのダウンロードと外側ZIPの展開",
-          "reason": "private GitHubへの本人ログインと本人端末のFiles操作を伴う。"
-        }
-      ],
-      "residual_user_steps": [
-        "private GitHubのhandoff/README.mdから外側ZIPをダウンロードし、Filesで外側ZIPだけを展開する"
-      ],
-      "residual_step_count": 1,
-      "user_only_reason": "本人のprivate GitHubセッションとiPhone Filesへの保存が必要。生成、照合、梱包、リンク作成は自動化済み。",
+      "not_implemented": [],
+      "residual_user_steps": [],
+      "residual_step_count": 0,
+      "user_only_reason": "本人端末操作は完了済み。private GitHubからの再ダウンロードは不要。",
       "fallback": "HTMLが動かない場合はFilesから同梱ファイルを個別に開くか、main上のcontentファイルをコピーする。BOOTH商品ZIPは展開しない。",
       "evidence": [
         "handoff/README.md",
@@ -128,8 +128,11 @@
         "scripts/build_iphone_handoff.py",
         "scripts/test_iphone_handoff.py",
         "state/iphone_handoff.json",
-        "OPERATIONS/IPHONE_HANDOFF_VALIDATION_2026-08-07.json"
-      ]
+        "OPERATIONS/IPHONE_HANDOFF_VALIDATION_2026-08-07.json",
+        "state/booth_listing.json",
+        "OPERATIONS/BOOTH_PUBLIC_DISTRIBUTION_VALIDATION_2026-08-07.json"
+      ],
+      "currently_requested": false
     },
     {
       "id": "funnel_article_policy_2026",
@@ -193,7 +196,7 @@
     {
       "id": "booth_listing_v1",
       "description": "同一ZIP商品をBOOTHの実体あるダウンロード商品として第二販売チャネルへ出品する",
-      "status": "automation_evaluated_and_reduced",
+      "status": "completed_published_and_publicly_verified",
       "priority": "P1",
       "automation_review": {
         "completed": true,
@@ -219,8 +222,8 @@
           "result": "出品に必要なテキスト、価格、商品ファイル情報、公式リンク、費用見込みを1画面へ統合した。"
         },
         "verification_and_logging": {
-          "status": "implemented_before_publication",
-          "result": "ZIPと出品情報はCIで検証する。公開URL、購入、ダウンロード動作は最終公開後に検証対象へ追加する。"
+          "status": "implemented_after_publication",
+          "result": "公開ページでHTTP 200、商品名、1,480円、InStock、ダウンロード商品、画像3点、カート導線を検証し、継続検証を主要CIへ追加した。購入後ダウンロードは外部支出0円のため未購入。"
         }
       },
       "implemented_automation": [
@@ -231,25 +234,15 @@
         "外部誘導のみの商品にならないための検査",
         "1200×1200の商品画像3枚の自動生成と検査",
         "商品画像のモバイル確認・保存ランチャー",
-        "モバイル出品ランチャー"
+        "モバイル出品ランチャー",
+        "公開商品ページの購入者側検証",
+        "価格・在庫・商品種別・画像・カート導線の継続監視",
+        "X・Bluesky×3訴求のUTM付き事前入力リンク"
       ],
-      "not_implemented": [
-        {
-          "item": "ショップまたは受取先の設定",
-          "reason": "本人確認、契約、PayPalまたは銀行口座など本人固有情報を伴う。"
-        },
-        {
-          "item": "商品ZIPの選択と最終公開",
-          "reason": "認証済みBOOTHアカウント本人の操作と最終確認が必要。"
-        }
-      ],
-      "residual_user_steps": [
-        "BOOTH管理画面でダウンロード商品を作成し、必要ならショップまたは受取先を設定する",
-        "ランチャーの情報を貼り、生成済みZIPを選択する",
-        "表示と条件を確認して最終公開する"
-      ],
-      "residual_step_count": 3,
-      "user_only_reason": "ログイン、ショップ・受取先設定、契約、ファイル選択、最終公開は本人の認証情報と意思を伴う。出品内容と検証は自動化済み。",
+      "not_implemented": [],
+      "residual_user_steps": [],
+      "residual_step_count": 0,
+      "user_only_reason": "本人固有のログイン、設定、ファイル選択、最終公開はユーザーにより完了済み。",
       "fallback": "BOOTH出品を行わない場合でもnote販売は継続する。ショップが既にある場合は1手目の設定を省略できる。",
       "evidence": [
         "content/booth/title.txt",
@@ -260,8 +253,14 @@
         "state/booth_listing.json",
         "state/booth_visual_pack.json",
         "OPERATIONS/BOOTH_VISUAL_PACK_RESEARCH_2026-08-07.md",
-        "OPERATIONS/BOOTH_CHANNEL_RESEARCH_2026-08-07.md"
-      ]
+        "OPERATIONS/BOOTH_CHANNEL_RESEARCH_2026-08-07.md",
+        "config/booth_distribution.json",
+        "scripts/build_booth_distribution_handoff.py",
+        "handoff/BOOTH_SHARE.md",
+        "state/booth_distribution.json",
+        "OPERATIONS/BOOTH_PUBLIC_DISTRIBUTION_VALIDATION_2026-08-07.json"
+      ],
+      "currently_requested": false
     },
     {
       "id": "gumroad_listing_v1",
