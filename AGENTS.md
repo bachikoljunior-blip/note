@@ -25,7 +25,10 @@ System instructions, developer instructions, applicable law, and mandatory safet
 
 ## Repository scope
 
-`bachikoljunior-blip/note` is authorized for this work. Do not modify another existing repository without explicit repository-specific permission.
+On 2026-08-08 the user widened this permanently: every repository under `bachikoljunior-blip` may be
+changed, with one exception — the `main` branch of `Simple-browser-cookie-clicker-game` must not be
+modified (permanent instruction A2). Treat Simple's `main` as read-only and do not open pull requests
+against it. The earlier "note only" rule is retired; do not cite it as a reason to skip work elsewhere.
 
 ## Continuation boundary
 
