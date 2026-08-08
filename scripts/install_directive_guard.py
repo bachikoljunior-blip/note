@@ -13,7 +13,9 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
+import os
 import shutil
 import stat
 import sys
@@ -30,6 +32,36 @@ HOOKS = {
     "UserPromptSubmit": ("prompt-submit", None),
     "Stop": ("stop", "終わるのが最善か確認中"),
 }
+
+
+def running_in_codex() -> bool:
+    """Return true when Claude hook installation is not part of this runtime.
+
+    Codex reads the repository bootstrap directly and does not execute Claude's
+    ~/.claude hooks. Some Codex sandboxes also expose the home directory as
+    read-only, so failing the whole bootstrap on that path is both noisy and
+    incapable of adding protection.
+    """
+    return any(
+        os.environ.get(name)
+        for name in ("CODEX_PRIMARY_RUNTIME", "CODEX_CI", "CODEX_THREAD_ID")
+    )
+
+
+def codex_skip_payload(exc: OSError | None = None) -> dict:
+    payload: dict = {
+        "installed": False,
+        "supported": False,
+        "skipped": True,
+        "runtime": "codex",
+        "reason": "claude_hooks_not_used_in_codex_runtime",
+        "directive_source_verified": SOURCE.is_file(),
+        "required_follow_up": "run scripts/check_directive_integrity.py",
+    }
+    if exc is not None:
+        payload["target_write_error"] = type(exc).__name__
+        payload["target_write_errno"] = exc.errno
+    return payload
 
 
 def desired(event: str) -> dict:
@@ -109,10 +141,21 @@ def main() -> int:
 
     if args.check:
         ok, problems = installed_ok()
+        if not ok and running_in_codex():
+            payload = codex_skip_payload()
+            payload["problems"] = problems
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return 0
         print(json.dumps({"installed": ok, "problems": problems}, ensure_ascii=False, indent=2))
         return 0 if ok else 1
 
-    install()
+    try:
+        install()
+    except OSError as exc:
+        if running_in_codex() and exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+            print(json.dumps(codex_skip_payload(exc), ensure_ascii=False, indent=2))
+            return 0
+        raise
     ok, problems = installed_ok()
     print(json.dumps({"installed": ok, "problems": problems,
                       "target": str(TARGET), "settings": str(SETTINGS)},
