@@ -80,6 +80,32 @@ def main() -> int:
         else:
             print("  ok  移行済みコードと threading には反応しない")
 
+    # codemod: 1対1で決まるものだけ直し、判断が要るものは触らないこと。
+    # ここが逆だと「たぶん動く」書き換えが混ざり、壊れたことに気づけなくなる。
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from codemod import process  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as d:
+        tmp = write(Path(d), {"app.py": USING["app.py"]})
+        r = process(tmp, apply=True)
+        body = (tmp / "app.py").read_text(encoding="utf-8")
+        if r["rewritten_sites"] == 0:
+            failures.append("codemod が1件も書き換えなかった")
+        for gone in ("beta.threads.create", "beta.threads.runs.create", "thread_id="):
+            if gone in body:
+                failures.append(f"codemod が {gone} を残した")
+        for kept in ("beta.assistants.create", "assistant_id"):
+            if kept not in body:
+                failures.append(
+                    f"codemod が {kept} を勝手に書き換えた。**判断が要る箇所は触ってはいけない**")
+        if not (tmp / "app.py.bak").is_file():
+            failures.append("codemod が .bak を残していない")
+        if not r["needs_human"]:
+            failures.append("codemod が『人が判断する箇所』を1件も挙げなかった")
+        if not failures:
+            print(f"  ok  codemod は機械的な{r['rewritten_sites']}箇所だけ直し、"
+                  f"判断が要る{len(r['needs_human'])}箇所は残した")
+
     print()
     if failures:
         for f in failures:

@@ -102,6 +102,14 @@ At the start of every autonomous round, resumed session, or long-session resynch
     failure classes and the goal registry all enumerated existing assets only, so no amount of turning them
     could ever conclude "this portfolio is wrong". Every incumbent carries a kill date. Polishing an incumbent
     while a faster untested option exists is a choice that must be justified, never the default.
+5f. Read `OPERATIONS/NO_PUBLIC_REPO_DISCLOSURE.md`. **The owner instructed on 2026-08-08 that the existence
+    of this account's public repositories must not be revealed to anyone.** No `bachikoljunior-blip.github.io`
+    URL in a product page, video, comment, article, or search-engine submission; no repo or account name in
+    anything read from outside. GitHub Pages is therefore not available as an acquisition surface — the URL
+    is itself the disclosure. Custom domains and `*.gumroad.com` are fine. On that date a demo, an IndexNow
+    key and three submitted URLs violated this and were taken down (`game` `bf4b342`, all three verified 404);
+    **the search-engine submission itself could not be undone**, which is why outward publication must never
+    be decided on the assumption that it can be reversed later.
 6. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 7. Automate, semi-automate, batch, prefill, and verify before requesting user operations.
 

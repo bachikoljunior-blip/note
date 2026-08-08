@@ -23,6 +23,13 @@ Before planning, editing, asking the user to act, spending money, publishing, or
 7. Before yielding, ending a response, or declaring that work is blocked, read `OPERATIONS/CONTINUATION_GATE.md`, update `state/continuation_control.json`, and run `python scripts/check_continuation_gate.py`.
 8. Do not rely on conversational memory or summaries as the sole source of truth when these files are accessible.
 
+## Public-repository disclosure
+
+The owner instructed on 2026-08-08: **do not reveal the existence of this account's public repositories to
+anyone.** Never place a `bachikoljunior-blip.github.io` URL, repo name, or account name anywhere read from
+outside, and never submit such URLs to search engines. GitHub Pages cannot be used for acquisition. Full
+detail and the retraction record: `OPERATIONS/NO_PUBLIC_REPO_DISCLOSURE.md`.
+
 ## Boundary rules
 
 - Never add AI-created objectives, safeguards, interpretations, workflow rules, repository scope, or stopping criteria to `OPERATIONS/CORE_DIRECTIVE.md`.
