@@ -106,6 +106,25 @@ def main() -> int:
     if qa.get("site_content_contains_secrets_or_personal_data") is not False:
         errors.append("site content secret/PII scan must be false")
 
+    optimization_version = asset.get("optimization_version")
+    if not isinstance(optimization_version, int) or optimization_version < 1:
+        errors.append("first_asset optimization_version must be a positive integer")
+    else:
+        latest_key = f"latest_v{optimization_version}_deployment"
+        latest = asset.get(latest_key)
+        if not isinstance(latest, dict):
+            errors.append(f"first_asset.{latest_key} must exist")
+        else:
+            if asset.get("site_source_commit") != latest.get("source_commit"):
+                errors.append("first_asset site_source_commit must match latest deployment")
+            if asset.get("optimization_record") != latest.get("validation_record"):
+                errors.append("first_asset optimization_record must match latest deployment")
+            if qa.get("test_count") != latest.get("test_count"):
+                errors.append("first_asset qa.test_count must match latest deployment")
+            record = latest.get("validation_record")
+            if not record or not (ROOT / str(record)).is_file():
+                errors.append("latest deployment validation record must exist")
+
     forbidden_key_parts = ("password", "token", "cookie", "secret", "credential", "bearer")
     for path, key, value in walk(state):
         lowered = key.lower()
