@@ -31,6 +31,9 @@ def main() -> int:
         "state/funnel_article_policy_2026.json",
         "state/booth_distribution.json",
         "state/brandable_idle.json",
+        "scripts/gumroad_publish.py",
+        "scripts/test_gumroad_publish.py",
+        "OPERATIONS/GUMROAD_ATTACHED_CONTENT_GATE_VALIDATION_2026-08-08.json",
     ]
     missing = [path for path in required if not (ROOT / path).is_file()]
     if missing:
@@ -210,12 +213,27 @@ def main() -> int:
     if "content_upload_unsupported" not in str(gumroad_api_review.get("status", "")):
         errors.append("gumroad_user_gate_api_content_limit_missing")
     if gumroad_request.get("currently_requested") is not False:
-        errors.append("gumroad_secondary_gate_must_not_be_the_active_single_request")
+        errors.append("legacy_gumroad_listing_gate_must_remain_deferred")
+    gumroad_high_request = request_map.get("gumroad_brandable_idle_attachment_v1", {})
+    if gumroad_high_request.get("currently_requested") is not True:
+        errors.append("gumroad_attached_content_single_active_request_missing")
     booth_high_request = request_map.get("booth_brandable_idle_listing_v1", {})
-    if booth_high_request.get("currently_requested") is not True:
-        errors.append("brandable_idle_single_active_request_missing")
-    if current.get("next_actions", {}).get("user_action_request_ids") != ["booth_brandable_idle_listing_v1"]:
+    if booth_high_request.get("currently_requested") is not False:
+        errors.append("booth_high_ticket_gate_must_be_deferred")
+    if current.get("next_actions", {}).get("user_action_request_ids") != ["gumroad_brandable_idle_attachment_v1"]:
         errors.append("current_single_high_leverage_request_drift")
+    owner_text = json.dumps(owner_request, ensure_ascii=False)
+    if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
+        errors.append("gumroad_owner_gate_creator_test_missing")
+    publisher_source = (ROOT / "scripts/gumroad_publish.py").read_text(encoding="utf-8")
+    if "--existing-product-id" not in publisher_source:
+        errors.append("gumroad_publisher_existing_product_gate_missing")
+    if "--test-purchase-confirmed" not in publisher_source:
+        errors.append("gumroad_publisher_creator_test_gate_missing")
+    if "--delivery-url" in publisher_source:
+        errors.append("gumroad_publisher_external_delivery_regression")
+    if 'call(token, "POST", "/products"' in publisher_source:
+        errors.append("gumroad_publisher_new_product_probe_regression")
 
     assistant_actions = " ".join(
         str(value) for value in current.get("next_actions", {}).get("assistant", [])
