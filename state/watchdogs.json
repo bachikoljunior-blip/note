@@ -4,7 +4,7 @@
   "definition": "OPERATIONS/WATCHDOGS.md",
   "checker": "scripts/check_watchdogs.py",
   "_": "監視されるべき量の登録簿。ループ(state/loops.json)は『改善したい数字』、ここは『目を離してはいけない数字』。改善しなくてよいが、古くなったり壊れたりしたら気づかねばならないものを置く。",
-  "updated_at_utc": "2026-08-08T10:47:15Z",
+  "updated_at_utc": "2026-08-08T10:53:36Z",
   "watchdogs": [
     {
       "id": "claude_usage",
@@ -43,7 +43,7 @@
       "source_of_truth": "GET https://api.gumroad.com/v2/products/... の sales_count。認証は環境変数 GUMROAD_TOKEN",
       "read_with": "GUMROAD_TOKEN を持つセッションから API を叩く",
       "max_age_hours": 6,
-      "refresh_without_owner": "trig_0195gkH14TStAV1LRYUymP59（4時間おき・11分・毎回新規セッション）。新規セッションでないと GUMROAD_TOKEN が見えない",
+      "refresh_without_owner": "**現状ない。** 環境変数を読むコマンドが権限分類器に止められるため、どのセッションからも測れない。迂回しないこと",
       "consumer": "note 毎時実行と4時間おきの実行。state/loops.json の gumroad_sales へ書く",
       "not_a_source": [
         {
@@ -55,16 +55,18 @@
       "pending_verification": {
         "what": "新規セッションから GUMROAD_TOKEN が見えるか",
         "resolved_at": "2026-08-08T10:47:15Z",
-        "result": "見えるかどうか以前に、**確認そのものが権限分類器に遮断された**",
+        "result": "**2つ別々の理由で駄目だった。** (1) create_new_session_on_fire の定期実行はそもそも起動しない。(2) create_session で作った子セッションは起動するが、環境変数を読むコマンドを権限分類器が止める",
         "evidence": [
           "10:18:34Z に trig_0195gkH14TStAV1LRYUymP59 を手動起動 → 24分後も measured_at は 09:22:00Z のまま、note のコミットは全部こちらのもの",
           "10:44Z に切り分け用の最小セッション(session_017jzJJXXwxZQ4i39A2sFapf)を作成 → post_turn_summary が 'probe did not run — blocked by permissions'",
-          "公開ページ https://bachiko4.gumroad.com/l/fbozt を取得 → sales_count も価格も HTML に出ない（JS描画）"
+          "公開ページ https://bachiko4.gumroad.com/l/fbozt を取得 → sales_count も価格も HTML に出ない（JS描画）",
+          "10:44Z と 10:49Z に create_session で子セッションを2つ作成 → どちらも一覧に出た。一方 10:18:34Z にトリガーで撃った回は一覧に出ない。つまり起動していない（観測2つ）"
         ],
-        "conclusion": "『新規セッションなら測れる』は**未検証のまま棄却寄り**。環境変数の問題ではなく、権限の問題である可能性が高い",
+        "conclusion": "『新規セッションなら測れる』は**棄却**。起こし方と権限の両方で駄目。動く自動実行は全て persist_session 方式なので、そちらへ戻した",
         "do_not": "迂回しないこと。分類器の遮断は正しい遮断として扱う",
         "next_reader": "4時間おきの実行が同じ壁に当たるか観察する。当たるなら、このループの測定手段自体を変える必要がある"
-      }
+      },
+      "blocked_reason": "2026-08-08、3回試して3回止められた（自分・子セッション2つ）。残る経路は GitHub Actions のシークレット経由だが、それはオーナー操作が1件要る"
     },
     {
       "id": "automation_liveness",
