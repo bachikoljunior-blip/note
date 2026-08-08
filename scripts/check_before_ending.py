@@ -142,12 +142,77 @@ def goal_report(now: datetime) -> tuple[list[str], list[str]]:
     return header + lines, problems
 
 
+def option_report(now: datetime) -> tuple[list[str], list[str]]:
+    """既存のものにとらわれていないか。**最速の非既存案を毎回見せる。**
+
+    2026-08-08 のオーナーの指摘「既存のものにとらわれてない？」。
+    それまでこの検査は、いま在るものの健康診断しかしていなかった。
+    **既存を磨き続けることが、選択ではなく既定になっていた。**
+    """
+    data = load("options.json")
+    if not data:
+        return (["state/options.json が無い"], ["選択肢の登録簿が無い。既存の外側が誰にも見えない"])
+
+    lines: list[str] = []
+    problems: list[str] = []
+
+    def low(o: dict) -> float:
+        v = o.get("days_to_first_yen")
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, dict) and isinstance(v.get("low"), (int, float)):
+            return float(v["low"])
+        return 1e9
+
+    options = data.get("options", [])
+    ranked = sorted(options, key=low)
+    fresh = [o for o in options if not o.get("incumbent") and not o.get("tested")]
+    best_fresh = next((o for o in ranked if not o.get("incumbent")), None)
+    best_inc = next((o for o in ranked if o.get("incumbent")), None)
+
+    lines.append(f"未検証かつ非既存の選択肢: {len(fresh)} 件"
+                 f"（下限 {data.get('min_untested_non_incumbent', 3)}）")
+    if best_fresh:
+        lines.append(f"最速の非既存案 : {best_fresh.get('id')} "
+                     f"（最初の1円まで {low(best_fresh):.0f}日〜 / 本人操作 "
+                     f"{best_fresh.get('owner_actions_required')}）")
+    if best_inc:
+        v = low(best_inc)
+        shown = "到達不能" if v >= 1e9 else f"{v:.0f}日〜"
+        lines.append(f"最速の既存案   : {best_inc.get('id')} （{shown}）")
+
+    if best_fresh and best_inc and low(best_inc) > low(best_fresh):
+        lines.append("")
+        lines.append("  **既存より速い未検証の案がある。既存を磨くのは『選択』であって既定ではない。**")
+        lines.append("  続けるなら、なぜその方が速いのかを言えること。"
+                     "言えないなら資源を移すこと（A14: もう作ってあるから、は理由にならない）")
+
+    today = now.date()
+    for o in options:
+        if not o.get("incumbent"):
+            continue
+        kd = o.get("kill_date")
+        try:
+            when = datetime.fromisoformat(str(kd)[:10]).date() if kd else None
+        except (ValueError, TypeError):
+            when = None
+        if when and when < today and not o.get("kill_decision"):
+            problems.append(
+                f"既存 {o.get('id')} の撤退期限（{kd}）を過ぎているのに判断がない。"
+                "閉じるか、未検証の最良案より速い理由を書くこと")
+
+    return lines, problems
+
+
 def main() -> int:
     now = datetime.now(timezone.utc)
     remaining: list[str] = []
 
     goal_lines, goal_problems = goal_report(now)
     remaining.extend(goal_problems)
+
+    option_lines, option_problems = option_report(now)
+    remaining.extend(option_problems)
 
     usage_lines = read_usage()
     stale_usage = any("STALE" in l for l in usage_lines)
@@ -207,6 +272,10 @@ def main() -> int:
     print("── 1. 目標は達成できているか（A1・実測） ──")
     for line in goal_lines:
         print(line if line.startswith("  ") or not line else "  " + line)
+    print()
+    print("── 1b. 既存にとらわれていないか ──")
+    for line in option_lines:
+        print("  " + line)
     print()
     print("── 2. 使ってよい資源（実測・最新か） ──")
     for line in usage_lines:

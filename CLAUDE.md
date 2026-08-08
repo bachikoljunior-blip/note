@@ -96,6 +96,12 @@ At the start of every autonomous round, resumed session, or long-session resynch
     (1 document / 2 checklist question / 3 machine check / 4 changed tool). **A class that recurred after a
     fix must move up a level — adding another question does not count.** Items called impossible carry a
     recheck date, because on 2026-08-08 two of them were solved the same day they were declared impossible.
+5e. Run `python scripts/check_options.py`. `state/options.json` ranks every path to the goal by days to the
+    first yen, and **must always hold at least three untested non-incumbent options** — otherwise the registry
+    decays into a list of what is already being done, which is what happened on 2026-08-08: loops, watchdogs,
+    failure classes and the goal registry all enumerated existing assets only, so no amount of turning them
+    could ever conclude "this portfolio is wrong". Every incumbent carries a kill date. Polishing an incumbent
+    while a faster untested option exists is a choice that must be justified, never the default.
 6. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 7. Automate, semi-automate, batch, prefill, and verify before requesting user operations.
 
