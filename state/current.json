@@ -1,6 +1,6 @@
 {
   "schema_version": "3.2",
-  "updated_at_utc": "2026-08-08T12:20:00Z",
+  "updated_at_utc": "2026-08-08T12:30:00Z",
   "mission_status": "not_achieved",
   "revenue_generated_yen": 0,
   "revenue_target": {
@@ -1744,6 +1744,34 @@
         "unverified": "設定ページURLの形は、この環境からは403で確認できていない。標準的な経路として記載している"
       },
       "if_never_done": "このセッションの文脈が要約されてトークンが落ちた時点で、売上取得・値付け・新規出品が止まる。商品と無料デモは公開されたまま動き続けるので、売れること自体は止まらない"
+    },
+    "designed_out_the_failure_class": {
+      "owner_instruction": "失敗したと思ったらそこだけ直すんじゃなくて、同じようなことがないように設計して",
+      "the_class": "1つの観測で結論する。書いた結果を読み直さず、応答の success を結果だと思う。",
+      "five_instances_today": [
+        "price=3800 と書いて読み直さず、実際は $38 だった（通貨がUSDのまま）",
+        "channels.list にリンクが無いので「無い」と言った → チャンネルヘッダーに実在",
+        "list_triggers に出ないので毎時実行を「無い」と言った → commitの時刻分布で実在を確認",
+        "トリガーを「作った」と書いて読み直さなかった → 読んだら5本目が見つかった",
+        "送客を「直した」と書いた → 踏めるかを確かめていなかった"
+      ],
+      "structural_fix": {
+        "tools/verified.py": "write_and_verify（書いたら読み直し、食い違えば例外で止まる。反映遅延を考慮して既定5回まで再読）と absent（不在の主張に独立した観測を2つ要求し、足りなければ例外）",
+        "why_a_module": "終了前のフックは最後にしか効かない。誤った断定が書かれた後になる。こちらは書いた瞬間・言い切る瞬間に効く。",
+        "scripts/test_verified.py": "7項目。反映遅延・黙って無視される書き込み・観測1つでの不在主張、いずれも止まることを確認",
+        "ci": "validate.yml へ追加"
+      },
+      "stop_hook_additions": [
+        "5. 「あとで自動実行が拾うから」を終了の理由にしていないか。予定は手を止める理由にならない",
+        "6. 「無い」と言うとき、観測は1つで足りているか。不在の主張には2つ目を当てる"
+      ],
+      "environment_limits_measured": {
+        "ffmpeg": "無い。この環境では動画を作れない。作った直後のトリガーが「YouTubeへ1本出せ」と実行不可能な指示になっていたので直した",
+        "github_actions_secrets": "403（プロキシが遮断）",
+        "browser_to_gumroad_youtube": "ERR_CONNECTION_RESET。ページ描画の確認はできない",
+        "why_recorded": "できないことを試して時間を捨てないため。推測ではなく実測。"
+      },
+      "sales_count_at_this_check": 0
     }
   }
 }
