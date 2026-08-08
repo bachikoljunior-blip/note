@@ -81,6 +81,10 @@ At the start of every autonomous round, resumed session, or long-session resynch
 3. Read `OPERATIONS/DIRECTIVE_BOUNDARY.md`.
 4. Read `OPERATIONS/ASSISTANT_OPERATING_POLICY.md` as mutable AI policy, not user instruction.
 5. Run `python scripts/check_directive_integrity.py` before planning, spending, publishing, ending, or asking the user to act.
+5b. Run `python scripts/check_loops.py` and read `OPERATIONS/IMPROVEMENT_LOOP.md`. Every workstream is one loop:
+    measure with a timestamp, judge against the target, change exactly one thing, verify by reading back,
+    record why. A stale measurement is not a measurement. Three no-move rounds means change the approach,
+    not the parameter.
 6. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 7. Automate, semi-automate, batch, prefill, and verify before requesting user operations.
 

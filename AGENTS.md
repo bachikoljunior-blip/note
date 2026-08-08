@@ -8,6 +8,8 @@ Before planning, editing, asking the user to act, spending money, publishing, or
 2. Read `OPERATIONS/DIRECTIVE_BOUNDARY.md` to distinguish the user directive from AI-created policy.
 3. Read `OPERATIONS/ASSISTANT_OPERATING_POLICY.md` as mutable implementation policy, not as a permanent directive.
 4. Read `OPERATIONS/DIRECTIVE_MANIFEST.json` and run `python scripts/check_directive_integrity.py`.
+4b. Run `python scripts/check_loops.py`. `state/loops.json` is the register of every improvement loop, and
+    `OPERATIONS/IMPROVEMENT_LOOP.md` defines the five steps. The register itself is a loop and is checked too.
 5. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 6. Apply `OPERATIONS/AUTOMATION_BEFORE_USER_GATE.md` before requesting any user operation.
 7. Before yielding, ending a response, or declaring that work is blocked, read `OPERATIONS/CONTINUATION_GATE.md`, update `state/continuation_control.json`, and run `python scripts/check_continuation_gate.py`.
