@@ -1,6 +1,6 @@
 {
   "schema_version": "3.2",
-  "updated_at_utc": "2026-08-08T10:10:00Z",
+  "updated_at_utc": "2026-08-08T10:30:00Z",
   "mission_status": "not_achieved",
   "revenue_generated_yen": 0,
   "revenue_target": {
@@ -1534,11 +1534,13 @@
       "conclusion": "新しい販売口を0操作で開く手段は現時点で存在しない"
     },
     "single_highest_leverage_request": {
-      "what": "Gumroad の access token を GitHub の repository secret に入れる",
-      "why": "Gumroad API v2 は POST /v2/products で作成、PUT /v2/products/:id/enable で公開できる。1回渡せば、以後の出品・値付け・公開・売上取得がすべて0操作になる",
-      "verified": "公式APIリファレンス（mintlify ミラー）でエンドポイントを確認。トークンが無いため実呼び出しでの確認は未実施",
-      "delivered_via": "chat only",
-      "replaces": "BOOTH での手動出品依頼"
+      "what": "Gumroad に受取方法（銀行口座かPayPal）を1回だけ接続する",
+      "url": "https://app.gumroad.com/settings/payments",
+      "why": "これが未接続だから公開APIが弾かれている。接続後は作成・値付け・説明文・購入後メッセージ・公開まで全てAPIで自動化でき、以後の依頼が0件になる。",
+      "measured_evidence": "PUT /v2/products/:id/enable の応答メッセージそのもの",
+      "replaces": "BOOTH手動出品の依頼、および「Gumroadで公開ボタンを押す」という毎回の依頼",
+      "one_time": true,
+      "delivered_via": "chat only"
     },
     "brandable_idle_kit_status": "作成済み・検証済みだが、販売にはオーナー操作が要る経路。0操作の経路を優先し、これは待ち行列に置く。保持コストは0。"
   },
@@ -1554,10 +1556,9 @@
       "DELETE /v2/products/:id": "削除"
     },
     "does_not_work": {
-      "file attachment": "url パラメータは受理されるが無視される。files=[] file_info={} のまま。納品ファイルはAPIで添付できない。",
-      "PUT /v2/products/:id/enable": "HTTP 200 を返すが published は False のまま変わらない。公開はAPIでできない。"
+      "file attachment": "url パラメータは受理されるが無視され files=[] のまま。納品ファイルはAPIで添付できない。代わりに custom_receipt（購入後メッセージ）へリンクを入れる形なら0操作で作れる。"
     },
-    "consequence": "値付け・説明文・購入後メッセージまでは0操作で作れるが、**ファイル添付と公開は本人操作が必要**。つまり Gumroad は「依頼を0件にする」手段にはならなかった。",
+    "consequence": "Gumroad は「依頼を0件にする」手段に **なり得る**。ただし受取方法の接続という一度きりの本人操作が要る。以後は0操作。",
     "existing_draft": {
       "id": "rMqZDCfZHOiaDJO5Iv0aHQ==",
       "name": "Non-Repetitive AI Trivia Shorts Kit",
@@ -1566,6 +1567,16 @@
       "files": 0,
       "note": "中身が空。ファイル0・説明文なし。このまま公開すると$12払って何も届かないので公開しない。"
     },
-    "token_handling": "セッションの一時領域だけで使い、使用後に削除した。リポジトリ・ログ・コミットには出していない。"
+    "token_handling": "セッションの一時領域だけで使い、使用後に削除した。リポジトリ・ログ・コミットには出していない。",
+    "publish_blocker_root_cause": {
+      "measured": "PUT /v2/products/:id/enable が返したメッセージ",
+      "message": "You must connect at least one payment method before you can publish this product for sale.",
+      "meaning": "enable は壊れていない。中身が空だからでもない。Gumroadアカウントに受取方法が未接続なだけ。",
+      "ruled_out": [
+        "PUT published=true（無視される）",
+        "POST /enable（404。存在しない経路）"
+      ],
+      "implication": "受取方法を1回設定すれば、作成・値付け・説明文・購入後メッセージ・**公開**まで全てAPIで0操作になる。"
+    }
   }
 }
