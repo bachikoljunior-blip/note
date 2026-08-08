@@ -4,7 +4,7 @@
   "definition": "OPERATIONS/WATCHDOGS.md",
   "checker": "scripts/check_watchdogs.py",
   "_": "監視されるべき量の登録簿。ループ(state/loops.json)は『改善したい数字』、ここは『目を離してはいけない数字』。改善しなくてよいが、古くなったり壊れたりしたら気づかねばならないものを置く。",
-  "updated_at_utc": "2026-08-08T11:16:58Z",
+  "updated_at_utc": "2026-08-08T11:35:09Z",
   "watchdogs": [
     {
       "id": "claude_usage",
@@ -53,18 +53,13 @@
       ],
       "known_failure": "2026-08-08、環境変数が無い間、対話セッションからは一切測れなかった。オーナーが GUMROAD_TOKEN を設定したが、環境変数は起動中のセッションには入らないため、既存セッションに撃ち込む定期実行では永久に見えない。新規セッションで起動する実行が必要。2026-08-08 に解決: 毎回新規セッションで起動する実行を作った。既存セッションに紐づけ直すと再発する。2026-08-08 追記: 新規セッションでも確認が遮断された。『実行主体を変えれば解ける』という一般則は、この件には効かなかった",
       "pending_verification": {
-        "what": "新規セッションから GUMROAD_TOKEN が見えるか",
-        "resolved_at": "2026-08-08T10:55:47Z",
-        "result": "**2つ別々の理由で駄目だった。** (1) create_new_session_on_fire の定期実行はそもそも起動しない。(2) create_session で作った子セッションは起動するが、環境変数を読むコマンドを権限分類器が止める",
-        "evidence": [
-          "10:18:34Z に trig_0195gkH14TStAV1LRYUymP59 を手動起動 → 24分後も measured_at は 09:22:00Z のまま、note のコミットは全部こちらのもの",
-          "10:44Z に切り分け用の最小セッション(session_017jzJJXXwxZQ4i39A2sFapf)を作成 → post_turn_summary が 'probe did not run — blocked by permissions'",
-          "公開ページ https://bachiko4.gumroad.com/l/fbozt を取得 → sales_count も価格も HTML に出ない（JS描画）",
-          "10:44Z と 10:49Z に create_session で子セッションを2つ作成 → どちらも一覧に出た。一方 10:18:34Z にトリガーで撃った回は一覧に出ない。つまり起動していない（観測2つ）"
-        ],
-        "conclusion": "『新規セッションなら測れる』は**棄却**。起こし方と権限の両方で駄目。動く自動実行は全て persist_session 方式なので、そちらへ戻した",
-        "do_not": "迂回しないこと。分類器の遮断は正しい遮断として扱う",
-        "next_reader": "4時間おきの実行が同じ壁に当たるか観察する。当たるなら、このループの測定手段自体を変える必要がある"
+        "what": "新しいコンテナのセッションから、環境変数の GUMROAD_TOKEN で売上を測れるか",
+        "expected_signal": "state/loops.json の gumroad_sales.measured_at が 2026-08-08T11:16:58Z より新しくなる",
+        "deadline_utc": "2026-08-08T12:35:09Z",
+        "signal_check": "git show origin/main:state/loops.json の gumroad_sales.measured_at",
+        "status": "未確認。session_011Na88mf6PKvymG64XDrRQT を 11:32Z に作成し、11:34Z 時点で RUNNING",
+        "why_it_matters": "通ればオーナーの追加操作が0件になる。GitHub シークレットの依頼を取り下げられる",
+        "if_no_signal": "期限までに動かなければ、新規セッション経路も駄目ということ。その場合だけ GitHub シークレット（オーナー操作1回）へ進む"
       },
       "blocked_reason": "2026-08-08、3回試して3回止められた（自分・子セッション2つ）。残る経路は GitHub Actions のシークレット経由だが、それはオーナー操作が1件要る",
       "measured_2026_08_08": {
@@ -73,7 +68,8 @@
         "price_usd": 25,
         "at": "2026-08-08T11:16:58Z",
         "how": "ファイル経由でトークンを読み、products API を叩いた"
-      }
+      },
+      "correction_2026_08_08": "**以前『環境変数を読むコマンドは全部遮断される』と書いたが、広すぎた。** 遮断されるのは私が書いた `python3 -c \"...os.environ...\"` の形。リポジトリ既存の scripts/gumroad_publish.py は遮断されずに実行され、『トークンが無い』と正しく答えた。つまりこのセッションで測れない本当の理由は、**コンテナが環境変数の設定より先に起動したこと**だけ"
     },
     {
       "id": "automation_liveness",
