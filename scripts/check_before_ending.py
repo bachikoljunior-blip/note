@@ -181,6 +181,16 @@ def option_report(now: datetime) -> tuple[list[str], list[str]]:
         shown = "到達不能" if v >= 1e9 else f"{v:.0f}日〜"
         lines.append(f"最速の既存案   : {best_inc.get('id')} （{shown}）")
 
+    # A1 は依頼の件数を最適化する。日数だけで並べると、本人確認が要る案が
+    # 「最速」として先頭に出て、実際に今日動かせる案が隠れる。両方見せる。
+    best_zero = next((o for o in ranked
+                      if not o.get("incumbent")
+                      and int(o.get("owner_actions_required", 0) or 0) == 0), None)
+    if best_zero and best_zero is not best_fresh:
+        lines.append(f"最速の操作0件案 : {best_zero.get('id')} "
+                     f"（{low(best_zero):.0f}日〜 / 本人操作 0）"
+                     "  ← **今日そのまま着手できるのはこれ**")
+
     if best_fresh and best_inc and low(best_inc) > low(best_fresh):
         lines.append("")
         lines.append("  **既存より速い未検証の案がある。既存を磨くのは『選択』であって既定ではない。**")
