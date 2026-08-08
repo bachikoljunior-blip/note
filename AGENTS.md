@@ -2,6 +2,8 @@
 
 Before planning, editing, asking the user to act, spending money, publishing, or ending a work unit in this repository:
 
+0. Run `python scripts/install_directive_guard.py` — reinstalls the SessionStart/Stop hooks that
+   keep the permanent directive in front of you. `~/.claude/` does not survive a new container.
 1. Read `OPERATIONS/CORE_DIRECTIVE.md` as the **verbatim user permanent directive**.
 2. Read `OPERATIONS/DIRECTIVE_BOUNDARY.md` to distinguish the user directive from AI-created policy.
 3. Read `OPERATIONS/ASSISTANT_OPERATING_POLICY.md` as mutable implementation policy, not as a permanent directive.

@@ -71,6 +71,11 @@ node <checkout>/-chatgpt-usage-monitorPrivate/scripts/ask-chatgpt.mjs "質問"
 
 At the start of every autonomous round, resumed session, or long-session resynchronization:
 
+0. Run `python scripts/install_directive_guard.py`. The container is disposable, so
+   `~/.claude/` does not survive into a new session — this reinstalls the hooks that put the
+   permanent directive back in front of you at SessionStart and stop you once before you end a
+   turn. Writing the directive down was not enough: on 2026-08-08 it was in context the whole
+   time and still got broken three times. Application, not storage, is the failure mode.
 1. Read `AGENTS.md`.
 2. Read `OPERATIONS/CORE_DIRECTIVE.md` as the exact user permanent directive.
 3. Read `OPERATIONS/DIRECTIVE_BOUNDARY.md`.
