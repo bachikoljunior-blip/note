@@ -34,6 +34,7 @@ def main() -> int:
         "scripts/gumroad_publish.py",
         "scripts/test_gumroad_publish.py",
         "OPERATIONS/GUMROAD_ATTACHED_CONTENT_GATE_VALIDATION_2026-08-08.json",
+        "OPERATIONS/GUMROAD_PUBLIC_PRODUCT_READBACK_2026-08-08.json",
     ]
     missing = [path for path in required if not (ROOT / path).is_file()]
     if missing:
@@ -203,6 +204,42 @@ def main() -> int:
     if gumroad_record and not (ROOT / str(gumroad_record)).is_file():
         errors.append("gumroad_delivery_correction_record_missing")
 
+    public_product = current.get("sales_channels", {}).get("gumroad", {}).get(
+        "brandable_idle_public_product", {}
+    )
+    expected_public_product = {
+        "status": "published_public_attached_content_observed",
+        "product_id": "rMqZDCfZHOiaDJO5Iv0aHQ==",
+        "url": "https://bachiko4.gumroad.com/l/fbozt",
+        "currency_code": "usd",
+        "price_cents": 2500,
+        "public_size_display": "31.2 KB",
+        "canonical_artifact_bytes": 31941,
+        "canonical_artifact_sha256": "cdb71a22a1d454fcea89cfef50cee71a84cd19782e47db843e79a36abd4dd93f",
+        "content_attachment_observed": True,
+        "creator_test_purchase_verified": False,
+        "purchaser_download_verified": False,
+        "validation_record": "OPERATIONS/GUMROAD_PUBLIC_PRODUCT_READBACK_2026-08-08.json",
+    }
+    for key, expected in expected_public_product.items():
+        if public_product.get(key) != expected:
+            errors.append(f"gumroad_public_product_drift:{key}")
+    public_record = load("OPERATIONS/GUMROAD_PUBLIC_PRODUCT_READBACK_2026-08-08.json")
+    observed = public_record.get("observed_product", {})
+    bounded = public_record.get("bounded_conclusions", {})
+    if observed.get("id") != public_product.get("product_id"):
+        errors.append("gumroad_public_record_product_id_drift")
+    if observed.get("price_cents") != public_product.get("price_cents"):
+        errors.append("gumroad_public_record_price_drift")
+    if observed.get("currency_code") != public_product.get("currency_code"):
+        errors.append("gumroad_public_record_currency_drift")
+    if observed.get("is_published") is not True:
+        errors.append("gumroad_public_record_not_published")
+    if bounded.get("creator_test_purchase_verified") is not False:
+        errors.append("gumroad_creator_test_must_remain_unverified")
+    if bounded.get("revenue_inference") is not False:
+        errors.append("gumroad_public_readback_must_not_infer_revenue")
+
     request_map = {
         item.get("id"): item
         for item in requests.get("requests", [])
@@ -215,13 +252,22 @@ def main() -> int:
     if gumroad_request.get("currently_requested") is not False:
         errors.append("legacy_gumroad_listing_gate_must_remain_deferred")
     gumroad_high_request = request_map.get("gumroad_brandable_idle_attachment_v1", {})
-    if gumroad_high_request.get("currently_requested") is not True:
-        errors.append("gumroad_attached_content_single_active_request_missing")
+    if gumroad_high_request.get("currently_requested") is not False:
+        errors.append("resolved_gumroad_attachment_request_must_not_remain_active")
+    if "creator_test_optional" not in str(gumroad_high_request.get("status", "")):
+        errors.append("gumroad_creator_test_optional_status_missing")
+    stale_unimplemented = json.dumps(
+        gumroad_high_request.get("not_implemented", []), ensure_ascii=False
+    )
+    if "Contentへの完成ZIP添付" in stale_unimplemented:
+        errors.append("gumroad_attachment_still_marked_unimplemented")
     booth_high_request = request_map.get("booth_brandable_idle_listing_v1", {})
     if booth_high_request.get("currently_requested") is not False:
         errors.append("booth_high_ticket_gate_must_be_deferred")
-    if current.get("next_actions", {}).get("user_action_request_ids") != ["gumroad_brandable_idle_attachment_v1"]:
-        errors.append("current_single_high_leverage_request_drift")
+    if current.get("next_actions", {}).get("user_action_request_ids") != []:
+        errors.append("current_user_action_must_be_empty_after_publication")
+    if owner_request.get("status") != "none_currently_requested":
+        errors.append("current_owner_action_zero_status_missing")
     owner_text = json.dumps(owner_request, ensure_ascii=False)
     if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
         errors.append("gumroad_owner_gate_creator_test_missing")
