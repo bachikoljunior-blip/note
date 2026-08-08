@@ -1,7 +1,7 @@
 {
   "schema_version": "1.5",
   "policy": "automation_before_user_request",
-  "updated_at_utc": "2026-08-08T06:50:00Z",
+  "updated_at_utc": "2026-08-08T07:45:00Z",
   "delivery_preference": {
     "classification": "current_user_operational_preference_not_permanent_directive",
     "recorded_at_utc": "2026-08-07T00:36:14Z",
@@ -326,7 +326,7 @@
     {
       "id": "gumroad_listing_v1",
       "description": "英語版ZIP商品をGumroadで販売し、英語圏の追加売上経路を開く",
-      "status": "automation_evaluated_end_to_end_handoff_merged_main_remote_ci_validated",
+      "status": "automation_evaluated_deferred_payment_method_content_attachment_and_final_publication_gate",
       "priority": "P1",
       "automation_review": {
         "completed": true,
@@ -336,8 +336,8 @@
           "result": "英語商品v1.1、出品文、タグ、価格、商品画像4点、7日返金条件を、iPhoneで1回取得できる外側ZIPとSTART_HEREへ集約した。公式CLI下書き作成は実装済みだが、device OAuthのtoken exchangeがHTTP 429となり、Safari認証をCLIへ引き継げないため手動fallbackを継続する。"
         },
         "official_api_or_webhook": {
-          "status": "official_cli_ready_authentication_rate_limited_manual_fallback_active",
-          "result": "公式Gumroad CLIのdraft-only作成は検証済み。device OAuthはtoken exchange HTTP 429、browser OAuthはlocalhost callbackのためiPhone Safariと接続できなかった。自動再試行や秘密情報要求は行わず、認証済みSafariの新規商品画面を最短fallbackとして使用する。"
+          "status": "metadata_and_enable_verified_content_upload_unsupported",
+          "result": "実測では認証、商品作成、価格・説明・購入後メッセージ、削除、受取方法接続後のenableをAPIで扱える。一方、Gumroad公式ヘルプはAPIで商品やコンテンツを追加できないと明記し、コンテンツなしで外部連絡だけを案内する有料商品を禁止している。受取方法接続だけを0操作納品とは扱わない。"
         },
         "github_actions_or_scheduler": {
           "status": "implemented_price_checkpoint_remote_ci_validated",
@@ -352,8 +352,8 @@
           "result": "商品ZIP1点、画像4点、商品名・説明・タグ・返金条件、出品ランチャーを1つの外側ZIPへ集約し、端末間移動と個別ダウンロードを削減した。"
         },
         "verification_and_logging": {
-          "status": "checkpoint_contract_remote_ci_validated",
-          "result": "画面状態、価格、商品ZIP SHA、外側ZIP SHA、次の操作、秘密情報不保存をCIで検査し、公開URLは公開検索で未確認として記録した。"
+          "status": "fail_closed_until_buyer_accessible_content_attached",
+          "result": "既存下書きはfiles=0のため公開禁止。完成ZIPがGumroad内の購入者向けコンテンツへ添付され、テスト購入で取得できるまでenableしない。"
         }
       },
       "implemented_automation": [
@@ -374,20 +374,24 @@
       ],
       "not_implemented": [
         {
-          "item": "販売者、税務、受取先の設定",
-          "reason": "本人確認、契約、税務情報、銀行口座など本人固有情報を伴う。"
+          "item": "販売者・税務・受取方法の設定",
+          "reason": "本人確認、契約、税務情報、銀行口座またはPayPalなど本人固有情報を伴う。"
         },
         {
-          "item": "最終公開",
-          "reason": "商品内容と返金条件を確認して公開する意思決定は、認証済みGumroadアカウント本人に残す。ZIP、画像、文面、タグ、価格、返金条件の入力はCLIへ移した。"
+          "item": "完成ZIPの商品コンテンツ添付",
+          "reason": "Gumroad APIは商品コンテンツの追加に対応しておらず、認証済み画面での端末内ファイル選択が必要。"
+        },
+        {
+          "item": "最終公開とテスト購入",
+          "reason": "受取方法と購入者向けコンテンツの確認後、本人の公開意思を伴う。空商品は公開しない。"
         }
       ],
       "residual_user_steps": [
-        "連続iPhone手順で価格12入力から商品設定・本人意思による最終公開・テスト購入・公開URL取得まで進める"
+        "Gumroadの認証済みSafariで受取方法を接続し、完成ZIPを商品コンテンツへ添付して、価格US$12・説明・画像を確認後に最終公開し、Gumroadのテスト購入でZIP取得を確認して公開URLを残す"
       ],
       "residual_step_count": 1,
-      "user_only_reason": "Gumroadの認証済みSafariセッション、端末内ファイル選択、契約・本人確認・最終公開は本人固有。商品ZIP・画像4点・文面・価格・タグ・返金条件は1つの外側ZIPへ集約済み。",
-      "fallback": "通常の商品編集画面ではチャット返信を待たず連続手順を続ける。予期しない課金・商品種別変更・エラー・不明な契約または受取設定だけ、個人情報を隠した画面で停止する。",
+      "user_only_reason": "受取方法は本人固有情報を伴い、Gumroad APIは商品コンテンツを追加できない。接続・ZIP添付・公開・テスト購入を認証済みSafariの1回の連続操作へまとめる。",
+      "fallback": "この経路を完了しない場合は空の下書きを非公開のまま維持し、既存BOOTH商品と高単価BOOTH出品を優先する。",
       "evidence": [
         "content/gumroad/title.txt",
         "content/gumroad/description.md",
@@ -413,9 +417,10 @@
         "state/gumroad_manual_checkpoint.json",
         "scripts/check_gumroad_manual_checkpoint.py",
         "OPERATIONS/GUMROAD_MANUAL_CHECKPOINT_VALIDATION_2026-08-07.json",
-        "OPERATIONS/GUMROAD_END_TO_END_HANDOFF_VALIDATION_2026-08-07.json"
+        "OPERATIONS/GUMROAD_END_TO_END_HANDOFF_VALIDATION_2026-08-07.json",
+        "OPERATIONS/GUMROAD_API_DELIVERY_CORRECTION_2026-08-08.json"
       ],
-      "currently_requested": true,
+      "currently_requested": false,
       "request_presented_at_utc": "2026-08-07T06:14:00Z",
       "recurring_residual_step_count": 0,
       "remote_validation": {
@@ -429,7 +434,8 @@
           "merged": true,
           "all_steps_passed": true
         }
-      }
+      },
+      "deferred_reason": "APIで商品コンテンツを追加できず受取方法接続だけでは0操作納品にならない。完成済み38,000円BOOTH商品の1回出品を先に行う方が期待収益寄与÷完了時間が高い。"
     },
     {
       "id": "gumroad_distribution_v1",
@@ -618,7 +624,7 @@
       "description": "Stripe直接販売前に必要な販売者情報を本人のプライバシー選択に基づいて法定表示へ設定する",
       "status": "automation_evaluated_waiting_for_privacy_sensitive_user_choice",
       "priority": "P0",
-      "currently_requested": true,
+      "currently_requested": false,
       "automation_review": {
         "completed": true,
         "completed_at_utc": "2026-08-07T23:29:34Z",
@@ -670,12 +676,13 @@
         "state/external_mutation_queue.json",
         "OPERATIONS/AUTONOMOUS_REVENUE_SITE_V13_VALIDATION_2026-08-08.json",
         "OPERATIONS/STRIPE_WEBHOOK_ROTATION_VALIDATION_2026-08-08.json"
-      ]
+      ],
+      "deferred_reason": "BOOTH販売を継続できるため、個人情報公開を伴うStripe直販は現在の単一最優先依頼にしない。"
     },
     {
       "id": "booth_brandable_idle_listing_v1",
       "description": "ブランド差し替え型放置クリッカーを通常・拡張の2枠でBOOTHへ出品し、高単価の自動ダウンロード販売経路を開く",
-      "status": "automation_evaluated_waiting_for_authenticated_final_listing",
+      "status": "automation_evaluated_single_highest_leverage_authenticated_final_listing",
       "priority": "P0",
       "currently_requested": true,
       "request_presented_at_utc": "2026-08-08T06:50:00Z",
