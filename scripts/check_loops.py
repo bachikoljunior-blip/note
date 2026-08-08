@@ -3,12 +3,19 @@
 
 定義は `OPERATIONS/IMPROVEMENT_LOOP.md`、正本は `state/loops.json`。
 
-落とすのは4つ。どれも 2026-08-08 に実際に起きた失敗から来ている。
+落とすのは5つ。どれも 2026-08-08 に実際に起きた失敗から来ている。
 
   1. 測定が古い（121分前の残量を「実測」と報告した）
   2. 3回続けて指標が動かないのに、同じ層の手を続けている
   3. 本人操作が要るループが、0件の代替を検討した記録を持たない
   4. メタループ自身が測られていない（仕組みを作って放置する）
+  5. 測定を、それで動く相手が読まない場所に書いている（consumer 未記入）
+
+5番目の来歴。尺と再生の関係を測って state/loops.json に書いたが、
+実際に投稿を決めるのはクッキー日次実行で、それが読むのは
+promo/youtube/JOURNAL.md だった。**測定は正しく、置き場所だけが間違っていた。**
+測っただけで届いていないのは、測っていないのとほぼ同じ結果になる。
+だから各ループに「誰が読んで動くか」を必ず書かせる。
 
     python scripts/check_loops.py
 """
@@ -22,7 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LOOPS = ROOT / "state" / "loops.json"
 REQUIRED = ("id", "metric", "how_to_measure", "measured_at",
-            "max_age_hours", "target", "consecutive_no_move")
+            "max_age_hours", "target", "consecutive_no_move", "consumer")
 
 
 def parse_time(value: str) -> datetime | None:
