@@ -81,9 +81,73 @@ def load(name: str) -> dict:
         return {}
 
 
+def goal_report(now: datetime) -> tuple[list[str], list[str]]:
+    """A1 に対していまいくらか。**最初に見る。**
+
+    オーナーの提案（2026-08-08）: 毎回、最後に目標が達成できているかと
+    最新の使用量を確認してから、終わるのが最善かを考える。
+
+    それまでこの検査は使用量と残作業しか見ておらず、
+    **目標への距離を一度も見ずに「終わってよいか」を判断していた。** 順番が逆だった。
+    """
+    goal = load("goal.json")
+    if not goal:
+        return (["state/goal.json が無い。目標への距離を測れない"],
+                ["目標の登録簿が無い。A1 に対する現在地が誰にも分からない状態"])
+
+    target = float(goal.get("target_jpy_per_month") or 0)
+    lines: list[str] = []
+    problems: list[str] = []
+    total = 0.0
+
+    for src in goal.get("sources", []):
+        value = float(src.get("current_jpy_per_month") or 0)
+        total += value
+        aged = age_hours(src.get("measured_at", ""), now)
+        try:
+            limit = float(src.get("max_age_hours") or 0)
+        except (TypeError, ValueError):
+            limit = 0.0
+        stale = aged is not None and limit and aged > limit
+        mark = "  ← 測定が古い" if stale else ""
+        lines.append(f"  {src.get('id'):<20} ¥{value:>10,.0f}/月"
+                     f"  ({aged:.1f}時間前){mark}" if aged is not None
+                     else f"  {src.get('id'):<20} ¥{value:>10,.0f}/月  (測定時刻不明)")
+        if aged is not None and aged < -0.05:
+            problems.append(
+                f"目標の内訳 {src.get('id')} の measured_at が未来（{-aged:.1f}時間先）。"
+                "測っていない時刻を書いている")
+        if stale:
+            problems.append(f"目標の内訳 {src.get('id')} の測定が古い（{aged:.1f}時間前）")
+        if src.get("blocker"):
+            lines.append(f"  {'':<20}   律速: {src['blocker']}")
+
+    pct = (total / target * 100.0) if target else 0.0
+    header = [f"目標（A1）: 月 ¥{target:,.0f}",
+              f"現在      : ¥{total:,.0f}  = {pct:.1f}%",
+              f"残り      : ¥{target - total:,.0f}", ""]
+
+    for gate in goal.get("gates", []):
+        aged = age_hours(gate.get("measured_at", ""), now)
+        cur = gate.get("current", {})
+        lines.append(f"  門 {gate.get('id')}: {json.dumps(cur, ensure_ascii=False)}"
+                     + (f"  ({aged:.1f}時間前)" if aged is not None else ""))
+
+    if total < target:
+        lines.append("")
+        lines.append("  **未達です。終わる理由を目標側から持ってくることはできません。**")
+        if goal.get("honest_note"):
+            lines.append("  " + str(goal["honest_note"]))
+
+    return header + lines, problems
+
+
 def main() -> int:
     now = datetime.now(timezone.utc)
     remaining: list[str] = []
+
+    goal_lines, goal_problems = goal_report(now)
+    remaining.extend(goal_problems)
 
     usage_lines = read_usage()
     stale_usage = any("STALE" in l for l in usage_lines)
@@ -127,19 +191,24 @@ def main() -> int:
             remaining.append(
                 f"「不可能」と判定した {item.get('id')} の再検査期限が過ぎている。測り直すこと")
 
-    print("── 使ってよい資源（実測） ──")
+    print("── 1. 目標は達成できているか（A1・実測） ──")
+    for line in goal_lines:
+        print(line if line.startswith("  ") or not line else "  " + line)
+    print()
+    print("── 2. 使ってよい資源（実測・最新か） ──")
     for line in usage_lines:
         print("  " + line)
     print()
     if remaining:
-        print("── まだ残っているもの ──")
+        print("── 3. まだ残っているもの ──")
         for r in remaining:
             print("  ・" + r)
         print()
+        print("── 4. 判定 ──")
         print("「やることが無い」とは言えません。使うか、測り直すか、確かめるか、段を上げること。")
         print("それでも終えるなら、**残っているものを名指しして、なぜ今やらないかを述べること。**")
     else:
-        print("── まだ残っているもの ──")
+        print("── 3. まだ残っているもの ──")
         print("  （検査が見つけた範囲では無し）")
         print()
         print("この検査が見ているのは4つだけです。**見ていないものが無いことの証明にはなりません。**")

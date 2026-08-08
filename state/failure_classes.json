@@ -4,7 +4,7 @@
   "definition": "OPERATIONS/FAILURE_CLASSES.md",
   "checker": "scripts/check_failure_classes.py",
   "_": "実行したことを『改善できる可能性があるもの』と『物理的に不可能なもの』へ振り分け、前者にはループを、後者には再検査期限を付ける。オーナーの提案（2026-08-08）を採用し、不可の側に期限を足した。",
-  "updated_at_utc": "2026-08-08T10:45:00Z",
+  "updated_at_utc": "2026-08-08T10:42:18Z",
   "mechanism_levels": {
     "1": "文書に書く。最弱。2026-08-08、恒久指示は文脈に在り続けたまま3回破られた",
     "2": "チェックリストに質問を足す。実測で不十分 —— bc168df(09:27Z) で Q5/Q6 を足した後、同じ種類の失敗が3回起きた",
@@ -91,6 +91,21 @@
       "recurred_after_fix": 0,
       "loop_id": "assertion_accuracy",
       "note": "段2のまま。再発したら段3へ上げること（消す前に『相手にしかできないこと』を列挙させる検査）"
+    },
+    {
+      "id": "fabricated_timestamp",
+      "what": "測っていない時刻を measured_at に書く。しばしば未来になる",
+      "improvable": true,
+      "instances": 2,
+      "instances_note": "loops.json で age_hours -3.2 になった。同じ日に goal.json でまた未来（-0.2時間）を書いた。**1回目は手で直しただけで、機械側を塞がなかったので再発した**",
+      "mechanism": "check_loops.py と check_before_ending.py が、measured_at が未来なら落とす。書き込みは datetime.now(timezone.utc) の戻り値だけを使う",
+      "mechanism_level": 3,
+      "mechanism_added_at": "2026-08-08T10:42:18Z",
+      "recurred_after_fix": 1,
+      "escalated_at": "2026-08-08T10:42:18Z",
+      "escalation": "1回目は段0（その場で手直し）だった。2回目で段3（機械が落とす）へ。identifier_fabrication と同じ família —— 読んでいない値を書く問題",
+      "loop_id": "assertion_accuracy",
+      "found_by": "自分で作った check_before_ending.py が初回実行で露出させた"
     }
   ],
   "physically_fixed": [
@@ -132,8 +147,8 @@
   "meta": {
     "id": "failure_class_coverage",
     "metric": "機構を入れた後に再発したクラスのうち、段を上げたものの割合",
-    "current": "3クラス再発 / うち3クラス段上げ済み = 100%",
-    "measured_at": "2026-08-08T10:45:00Z",
+    "current": "4クラス再発 / うち4クラス段上げ済み = 100%",
+    "measured_at": "2026-08-08T10:42:18Z",
     "max_age_hours": 168,
     "target": 1.0,
     "consumer": "全セッション。終了前と、失敗に気づいたとき",
@@ -144,6 +159,12 @@
         "what": "新規作成。オーナーの提案（実行したものを改善可能／不可能に振り分ける）を採用し、不可の側に再検査期限を足した",
         "why": "失敗のたびに終了前フックへ質問を足していた。bc168df(09:27Z) で Q5/Q6 を足した後、同じ種類の失敗が3回起きた。**質問を足すのは直したことにならない**と実測で確定した",
         "numbers_that_moved": "機構の段: assertion_without_measurement 3→4、stopping_while_work_remains 2→3、identifier_fabrication は最初から4"
+      },
+      {
+        "at": "2026-08-08T10:42:18Z",
+        "what": "終了前検査に目標（A1への距離）を最初の項目として追加。fabricated_timestamp を登録",
+        "why": "オーナーの提案。それまで終了前検査は使用量と残作業しか見ておらず、**A1 への距離を一度も見ずに『終わってよいか』を判断していた。** 順番が逆だった。そして目標を入れた直後、その検査自身が私の未来時刻バグを露出させた",
+        "numbers_that_moved": "目標の可視化: ¥0 / ¥200,000 = 0.0% が終了前に必ず出るようになった。fabricated_timestamp の機構: 段0 → 段3"
       }
     ],
     "consecutive_no_move": 0

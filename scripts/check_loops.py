@@ -61,6 +61,12 @@ def check_loop(loop: dict, now: datetime, *, is_meta: bool = False) -> list[str]
     aged = age_hours(loop["measured_at"], now)
     if aged is None:
         problems.append(f"{name}: measured_at を時刻として読めない: {loop['measured_at']!r}")
+    elif aged < -0.05:
+        problems.append(
+            f"{name}: measured_at が未来（{-aged:.1f}時間先）。"
+            "測っていない時刻を書いている。2026-08-08 に2回やった（loops.json と goal.json）。"
+            "datetime.now(timezone.utc) の戻り値を使うこと"
+        )
     elif aged > float(loop["max_age_hours"]):
         problems.append(
             f"{name}: 測定が古い（{aged:.1f}時間前 / 上限 {loop['max_age_hours']}時間）。"
