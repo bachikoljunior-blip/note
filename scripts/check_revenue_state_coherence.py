@@ -30,6 +30,7 @@ def main() -> int:
         "state/booth_visual_pack.json",
         "state/funnel_article_policy_2026.json",
         "state/booth_distribution.json",
+        "state/brandable_idle.json",
     ]
     missing = [path for path in required if not (ROOT / path).is_file()]
     if missing:
@@ -46,6 +47,7 @@ def main() -> int:
     booth_visual = load("state/booth_visual_pack.json")
     funnel = load("state/funnel_article_policy_2026.json")
     distribution = load("state/booth_distribution.json")
+    brandable_idle = load("state/brandable_idle.json")
 
     asset = factory.get("first_asset", {})
     version = asset.get("optimization_version")
@@ -155,6 +157,7 @@ def main() -> int:
     if "funnel_article_structure_2026" not in request_ids:
         errors.append("structure_funnel_user_action_request_missing")
     current_request_ids = set(current.get("next_actions", {}).get("user_action_request_ids", []))
+    current_request_ids.update(current.get("next_actions", {}).get("deferred_user_action_request_ids", []))
     if "funnel_article_structure_2026" not in current_request_ids:
         errors.append("structure_funnel_current_cross_link_missing")
 
@@ -162,6 +165,63 @@ def main() -> int:
         errors.append("booth_distribution_repeat_prompt_guard_missing")
     if distribution.get("user_action_already_presented") is not True:
         errors.append("booth_distribution_presented_state_missing")
+
+    high_ticket_product = current.get("high_ticket_pivot", {}).get("product", {})
+    if high_ticket_product.get("artifact") != brandable_idle.get("output"):
+        errors.append("brandable_idle_artifact_path_drift")
+    if high_ticket_product.get("sha256") != brandable_idle.get("sha256"):
+        errors.append("brandable_idle_artifact_sha_drift")
+    if high_ticket_product.get("bytes") != brandable_idle.get("bytes"):
+        errors.append("brandable_idle_artifact_bytes_drift")
+
+    gumroad_capability = current.get("gumroad_api_capability_2026_08_08", {})
+    gumroad_delivery = gumroad_capability.get("delivery_constraint", {})
+    gumroad_root = gumroad_capability.get("publish_blocker_root_cause", {})
+    owner_request = current.get("owner_action_minimization", {}).get("single_highest_leverage_request", {})
+    zero_touch_claims = " ".join(
+        str(value)
+        for value in (
+            gumroad_capability.get("consequence"),
+            gumroad_root.get("implication"),
+            owner_request.get("why"),
+        )
+    )
+    if "公開まで全てAPI" in zero_touch_claims or "以後は0操作" in zero_touch_claims:
+        errors.append("gumroad_api_zero_touch_delivery_claim_stale")
+    if gumroad_delivery.get("api_content_upload_supported") is not False:
+        errors.append("gumroad_api_content_upload_constraint_missing")
+    if gumroad_delivery.get("payment_method_alone_completes_delivery") is not False:
+        errors.append("gumroad_payment_method_only_gate_incorrect")
+    if gumroad_delivery.get("empty_product_external_message_only_publish_allowed") is not False:
+        errors.append("gumroad_empty_external_delivery_fail_closed_missing")
+    gumroad_record = gumroad_delivery.get("validation_record")
+    if gumroad_record != "OPERATIONS/GUMROAD_API_DELIVERY_CORRECTION_2026-08-08.json":
+        errors.append("gumroad_delivery_correction_record_drift")
+    if gumroad_record and not (ROOT / str(gumroad_record)).is_file():
+        errors.append("gumroad_delivery_correction_record_missing")
+
+    request_map = {
+        item.get("id"): item
+        for item in requests.get("requests", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+    gumroad_request = request_map.get("gumroad_listing_v1", {})
+    gumroad_api_review = gumroad_request.get("automation_review", {}).get("official_api_or_webhook", {})
+    if "content_upload_unsupported" not in str(gumroad_api_review.get("status", "")):
+        errors.append("gumroad_user_gate_api_content_limit_missing")
+    if gumroad_request.get("currently_requested") is not False:
+        errors.append("gumroad_secondary_gate_must_not_be_the_active_single_request")
+    booth_high_request = request_map.get("booth_brandable_idle_listing_v1", {})
+    if booth_high_request.get("currently_requested") is not True:
+        errors.append("brandable_idle_single_active_request_missing")
+    if current.get("next_actions", {}).get("user_action_request_ids") != ["booth_brandable_idle_listing_v1"]:
+        errors.append("current_single_high_leverage_request_drift")
+
+    assistant_actions = " ".join(
+        str(value) for value in current.get("next_actions", {}).get("assistant", [])
+    )
+    if current.get("high_ticket_pivot", {}).get("product") and "Design a 30,000-50,000 JPY offer" in assistant_actions:
+        errors.append("completed_high_ticket_offer_still_planned")
 
     direct_commerce_flags = {
         "current_landing": landing.get("direct_commerce", {}).get("enabled"),

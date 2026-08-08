@@ -99,6 +99,8 @@ def main() -> int:
         if isinstance(item, dict) and item.get("id")
     }
     active_request_ids = set(current.get("next_actions", {}).get("user_action_request_ids", []))
+    cross_linked_request_ids = set(active_request_ids)
+    cross_linked_request_ids.update(current.get("next_actions", {}).get("deferred_user_action_request_ids", []))
     work_units = {
         item.get("id"): item
         for item in continuation.get("active_work_units", [])
@@ -142,8 +144,8 @@ def main() -> int:
                     item_errors.append("user_action_request_not_evaluated")
                 if request.get("automation_review", {}).get("completed") is not True:
                     item_errors.append("user_action_automation_review_incomplete")
-            if operation_id not in active_request_ids:
-                item_errors.append("current_active_request_cross_link_missing")
+            if operation_id not in cross_linked_request_ids:
+                item_errors.append("current_request_cross_link_missing")
             if unit is not None:
                 if unit.get("user_blocked") is not True:
                     item_errors.append("continuation_unit_must_be_user_blocked")
