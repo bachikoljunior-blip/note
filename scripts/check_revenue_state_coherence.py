@@ -30,6 +30,7 @@ def main() -> int:
         "state/booth_visual_pack.json",
         "state/funnel_article_policy_2026.json",
         "state/booth_distribution.json",
+        "state/brandable_idle.json",
     ]
     missing = [path for path in required if not (ROOT / path).is_file()]
     if missing:
@@ -46,6 +47,7 @@ def main() -> int:
     booth_visual = load("state/booth_visual_pack.json")
     funnel = load("state/funnel_article_policy_2026.json")
     distribution = load("state/booth_distribution.json")
+    brandable_idle = load("state/brandable_idle.json")
 
     asset = factory.get("first_asset", {})
     version = asset.get("optimization_version")
@@ -163,6 +165,14 @@ def main() -> int:
         errors.append("booth_distribution_repeat_prompt_guard_missing")
     if distribution.get("user_action_already_presented") is not True:
         errors.append("booth_distribution_presented_state_missing")
+
+    high_ticket_product = current.get("high_ticket_pivot", {}).get("product", {})
+    if high_ticket_product.get("artifact") != brandable_idle.get("output"):
+        errors.append("brandable_idle_artifact_path_drift")
+    if high_ticket_product.get("sha256") != brandable_idle.get("sha256"):
+        errors.append("brandable_idle_artifact_sha_drift")
+    if high_ticket_product.get("bytes") != brandable_idle.get("bytes"):
+        errors.append("brandable_idle_artifact_bytes_drift")
 
     gumroad_capability = current.get("gumroad_api_capability_2026_08_08", {})
     gumroad_delivery = gumroad_capability.get("delivery_constraint", {})
