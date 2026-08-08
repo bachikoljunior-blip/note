@@ -85,6 +85,12 @@ At the start of every autonomous round, resumed session, or long-session resynch
     measure with a timestamp, judge against the target, change exactly one thing, verify by reading back,
     record why. A stale measurement is not a measurement. Three no-move rounds means change the approach,
     not the parameter.
+5c. Run `python scripts/check_watchdogs.py` and read `OPERATIONS/WATCHDOGS.md`. Loops are the numbers you
+    want to improve; watchdogs are the numbers you must not look away from — usage above all. Read usage
+    with `node <checkout>/-chatgpt-usage-monitorPrivate/scripts/show-usage.mjs` before deciding anything
+    on the strength of remaining quota, and never from the transcript-derived estimators in
+    `Simple-browser-cookie-clicker-game` or `youtube`: the owner ruled on 2026-08-08 that they are
+    worthless. A window whose own reset time has passed is expired no matter how fresh the file is.
 6. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 7. Automate, semi-automate, batch, prefill, and verify before requesting user operations.
 

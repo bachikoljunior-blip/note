@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "classification": "assistant_operational_state_not_permanent_directive",
+  "definition": "OPERATIONS/WATCHDOGS.md",
+  "checker": "scripts/check_watchdogs.py",
+  "_": "監視されるべき量の登録簿。ループ(state/loops.json)は『改善したい数字』、ここは『目を離してはいけない数字』。改善しなくてよいが、古くなったり壊れたりしたら気づかねばならないものを置く。",
+  "updated_at_utc": "2026-08-08T10:20:00Z",
+  "watchdogs": [
+    {
+      "id": "claude_usage",
+      "what": "Claude サブスクの残量（セッション枠と週枠）",
+      "source_of_truth": "-chatgpt-usage-monitorPrivate の state/claude-usage.json（claude-token.vault の実トークンで実メーターを読む）",
+      "read_with": "node scripts/show-usage.mjs（-chatgpt-usage-monitorPrivate 内）",
+      "max_age_hours": 2.5,
+      "refresh_without_owner": "claude-usage-monitor.yml を workflow_dispatch。毎時22分にも自動で走る",
+      "consumer": "全セッション。高価な作業に入る前と、残量を理由に何かを決める前",
+      "not_a_source": [
+        {
+          "path": "Simple-browser-cookie-clicker-game の promo/youtube/usage.mjs",
+          "why": "ローカルのトランスクリプトからトークン数を数えて%に換算しているだけ。実メーターを見ていない。ファイル自身のヘッダーが『2つの観測が約10倍食い違う』『正しいレートは存在しない』と書いている"
+        },
+        {
+          "path": "youtube の scripts/usage.py と status.py の print_budget",
+          "why": "同じくトランスクリプト由来。オーナーが 2026-08-08 に『なんの当てにもならない』と明言した"
+        }
+      ],
+      "extra_check": "枠ごとの resets_at_iso を現在時刻と比べること。リセット済みの枠の残量は、ファイルがどれだけ新しくても無効",
+      "known_failure": "2026-08-08 10:10Z に『37% left (resets 09:20Z)』が現在値として印字された。ファイルは63分前で150分の上限内だったので、経過時間だけでは捕まらなかった。セッション枠が上限より短いことが原因"
+    },
+    {
+      "id": "codex_usage",
+      "what": "ChatGPT / Codex と Spark の残量",
+      "source_of_truth": "-chatgpt-usage-monitorPrivate の state/usage.json",
+      "read_with": "node scripts/show-usage.mjs（同上）",
+      "max_age_hours": 2.5,
+      "refresh_without_owner": "usage-monitor.yml を workflow_dispatch。毎時7分にも自動で走る",
+      "consumer": "ChatGPT へ質問を投げる前（recommended_mode が reserve なら控える）",
+      "not_a_source": []
+    },
+    {
+      "id": "gumroad_sales",
+      "what": "Gumroad の売上件数",
+      "source_of_truth": "GET https://api.gumroad.com/v2/products/... の sales_count。認証は環境変数 GUMROAD_TOKEN",
+      "read_with": "GUMROAD_TOKEN を持つセッションから API を叩く",
+      "max_age_hours": 6,
+      "refresh_without_owner": "毎時実行と、新規セッションで起動する4時間おきの実行",
+      "consumer": "note 毎時実行と4時間おきの実行。state/loops.json の gumroad_sales へ書く",
+      "not_a_source": [
+        {
+          "path": "公開ページの HTTP 200 / is_published / 価格 / サイズ属性",
+          "why": "公開されているかは分かるが、売れたかは分からない。売上0と『測っていない』の区別がつかないので、売上の数字としては使わない"
+        }
+      ],
+      "known_failure": "2026-08-08、環境変数が無い間、対話セッションからは一切測れなかった。オーナーが GUMROAD_TOKEN を設定したが、環境変数は起動中のセッションには入らないため、既存セッションに撃ち込む定期実行では永久に見えない。新規セッションで起動する実行が必要"
+    },
+    {
+      "id": "automation_liveness",
+      "what": "定期実行が有効なままか（A10）",
+      "source_of_truth": "list_triggers の enabled と next_run_at",
+      "read_with": "claude-code-remote の list_triggers",
+      "max_age_hours": 24,
+      "refresh_without_owner": "各実行が自分で確認する",
+      "consumer": "全セッション。終了前",
+      "not_a_source": [
+        {
+          "path": "list_triggers の結果だけを見て『実行が無い』と言うこと",
+          "why": "2026-08-08、これで『毎時実行は存在しない』と断定して外した。実際は毎時コミットが残っていた。不在の主張には独立した2つ目の観測（コミット時刻・ワークフロー履歴）を当てること"
+        }
+      ]
+    },
+    {
+      "id": "directive_integrity",
+      "what": "恒久指示の正本・ミラー・符号化バックアップが一致しているか（A4）",
+      "source_of_truth": "note の OPERATIONS/ 一式と DIRECTIVE_MANIFEST.json",
+      "read_with": "python scripts/check_directive_integrity.py",
+      "max_age_hours": 24,
+      "refresh_without_owner": "validate.yml が push ごとに走る",
+      "consumer": "全セッション。計画・支出・公開・終了・依頼の前",
+      "not_a_source": []
+    },
+    {
+      "id": "cookie_channel",
+      "what": "クッキーストラテジャーの登録者と総再生",
+      "source_of_truth": "YouTube Data API の channels.statistics（YT_* 環境変数）",
+      "read_with": "channels.list?part=statistics&mine=true",
+      "max_age_hours": 24,
+      "refresh_without_owner": "4時間おきの実行と、クッキー日次実行",
+      "consumer": "クッキー日次実行。読むのは promo/youtube/JOURNAL.md なので、そちらにも書くこと",
+      "not_a_source": []
+    }
+  ]
+}

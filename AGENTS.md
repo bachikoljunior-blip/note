@@ -10,6 +10,9 @@ Before planning, editing, asking the user to act, spending money, publishing, or
 4. Read `OPERATIONS/DIRECTIVE_MANIFEST.json` and run `python scripts/check_directive_integrity.py`.
 4b. Run `python scripts/check_loops.py`. `state/loops.json` is the register of every improvement loop, and
     `OPERATIONS/IMPROVEMENT_LOOP.md` defines the five steps. The register itself is a loop and is checked too.
+4c. Run `python scripts/check_watchdogs.py`. `state/watchdogs.json` registers every quantity that must stay
+    monitored — subscription usage first — with its source of truth, its owner-free refresh path, and the
+    substitutes that are known not to work. Having a monitor is not the same as the monitor working.
 5. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 6. Apply `OPERATIONS/AUTOMATION_BEFORE_USER_GATE.md` before requesting any user operation.
 7. Before yielding, ending a response, or declaring that work is blocked, read `OPERATIONS/CONTINUATION_GATE.md`, update `state/continuation_control.json`, and run `python scripts/check_continuation_gate.py`.
