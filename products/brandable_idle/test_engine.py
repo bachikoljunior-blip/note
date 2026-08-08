@@ -17,6 +17,8 @@ import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+from validate_config import check as check_config  # noqa: E402
 FAILURES: list[str] = []
 
 
@@ -143,6 +145,25 @@ def main() -> int:
             check("別ブランドの進行は混ざらない（保存キーが別）",
                   amount() == 0, f"{amount()}")
             page.screenshot(path=str(ROOT / "screenshot-cafe.png"))
+
+            # 生成器が出す設定が、そのまま検査を通り、そのまま遊べること
+            page.goto(base + "generator.html", wait_until="networkidle")
+            page.fill("#title", "テスト商店 タップ経営")
+            page.fill("#cur-name", "ポイント")
+            page.click("#presets button:nth-child(3)")
+            generated = json.loads(page.inner_text("#preview"))
+            check("生成器が出す設定が検査を通る", not check_config(generated),
+                  "; ".join(check_config(generated)))
+            check("生成器の色が選んだ見本と一致する",
+                  generated["theme"]["accent"].lower() == "#c79bff", generated["theme"]["accent"])
+            (work / "brand.config.json").write_text(
+                json.dumps(generated, ensure_ascii=False, indent=2), encoding="utf-8")
+            page.goto(base, wait_until="networkidle")
+            page.wait_for_selector("#app:not([hidden])", timeout=10000)
+            check("生成器が出した設定で実際に起動する",
+                  page.title() == "テスト商店 タップ経営", page.title())
+            check("生成器が出した設定で通貨名が反映される",
+                  page.inner_text("#currency-name") == "ポイント", page.inner_text("#currency-name"))
 
             # 壊れた設定はきちんと止まり、直し方が出ること
             (work / "brand.config.json").write_text('{"meta":{}}', encoding="utf-8")

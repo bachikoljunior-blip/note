@@ -26,6 +26,7 @@ MEMBERS = [
     "README.md",
     "LICENSE.txt",
     "index.html",
+    "generator.html",
     "brand.config.json",
     "validate_config.py",
     "test_engine.py",
