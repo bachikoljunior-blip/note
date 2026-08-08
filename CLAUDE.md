@@ -91,6 +91,11 @@ At the start of every autonomous round, resumed session, or long-session resynch
     on the strength of remaining quota, and never from the transcript-derived estimators in
     `Simple-browser-cookie-clicker-game` or `youtube`: the owner ruled on 2026-08-08 that they are
     worthless. A window whose own reset time has passed is expired no matter how fresh the file is.
+5d. Run `python scripts/check_failure_classes.py` and read `OPERATIONS/FAILURE_CLASSES.md`. Every failure
+    gets sorted into improvable or physically fixed; improvable ones carry a mechanism with a level
+    (1 document / 2 checklist question / 3 machine check / 4 changed tool). **A class that recurred after a
+    fix must move up a level — adding another question does not count.** Items called impossible carry a
+    recheck date, because on 2026-08-08 two of them were solved the same day they were declared impossible.
 6. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 7. Automate, semi-automate, batch, prefill, and verify before requesting user operations.
 

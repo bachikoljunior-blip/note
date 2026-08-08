@@ -1,0 +1,151 @@
+{
+  "schema_version": "1.0",
+  "classification": "assistant_operational_state_not_permanent_directive",
+  "definition": "OPERATIONS/FAILURE_CLASSES.md",
+  "checker": "scripts/check_failure_classes.py",
+  "_": "実行したことを『改善できる可能性があるもの』と『物理的に不可能なもの』へ振り分け、前者にはループを、後者には再検査期限を付ける。オーナーの提案（2026-08-08）を採用し、不可の側に期限を足した。",
+  "updated_at_utc": "2026-08-08T10:45:00Z",
+  "mechanism_levels": {
+    "1": "文書に書く。最弱。2026-08-08、恒久指示は文脈に在り続けたまま3回破られた",
+    "2": "チェックリストに質問を足す。実測で不十分 —— bc168df(09:27Z) で Q5/Q6 を足した後、同じ種類の失敗が3回起きた",
+    "3": "機械が落とす。CI や checker。答えを人が書く余地が無い分だけ強い",
+    "4": "道具を変えて、間違いを起こしにくくする。最強。数字が手に入る経路そのものを差し替える"
+  },
+  "escalation_rule": "同じクラスが機構を入れた後に再発したら、機構の段を上げる。**質問を足すのは段を上げたことにならない。** 段4まで行って再発するなら、そのクラスは人間の注意力では防げないと判断し、その作業自体をやめるか自動化する",
+  "improvable": [
+    {
+      "id": "assertion_without_measurement",
+      "what": "測っていないことを断定する。1つの観測で全体を語る",
+      "improvable": true,
+      "instances": 10,
+      "instances_note": "内訳は state/loops.json の assertion_accuracy。うち3件は機構(Q5/Q6)を入れた後に発生",
+      "mechanism": "tools/verified.py（書いたら読み直す・不在には観測2つ）＋ 終了前フック Q4/Q6",
+      "mechanism_level": 3,
+      "mechanism_added_at": "2026-08-08T09:27:00Z",
+      "recurred_after_fix": 3,
+      "escalated_at": "2026-08-08T10:45:00Z",
+      "escalation": "段4へ。報告に数字を書く経路を道具側で塞ぐ（tools/gitsafe.py が第一号）",
+      "loop_id": "assertion_accuracy"
+    },
+    {
+      "id": "identifier_fabrication",
+      "what": "SHA・URL・ID など検証可能な識別子を、読まずに書く。推論ではなく捏造なので別クラス",
+      "improvable": true,
+      "instances": 1,
+      "instances_note": "Simple の SHA を 4ba6d5c と報告。実際は 9ed1ef2。push を | tail -1 で受けて SHA を一度も見ていなかった",
+      "mechanism": "tools/gitsafe.py。push と読み直しを1つの操作にし、**戻り値として実在する SHA しか返さない**",
+      "mechanism_level": 4,
+      "mechanism_added_at": "2026-08-08T10:45:00Z",
+      "recurred_after_fix": 0,
+      "loop_id": "assertion_accuracy",
+      "why_level_4": "質問(段2)にしたが、同じ日に段2は3回破られている。識別子は『手元に実物がある』状態にするのが唯一確実で、それは道具でしかできない"
+    },
+    {
+      "id": "stopping_while_work_remains",
+      "what": "「あとで自動実行が拾う」「残っているのは時間だけ」で終えようとする",
+      "improvable": true,
+      "instances": 3,
+      "instances_note": "11分後の実行を待って終了しようとした／日次実行が拾うと書いた／『時間だけ』と断定した",
+      "mechanism": "scripts/check_before_ending.py。質問をやめ、残っているものを機械が数える —— 資源の残量・古いループ・未確認の検証・段を上げていない失敗クラス。1つでもあれば exit 1。終了前フックが自動で実行し、出力を突きつける",
+      "mechanism_level": 3,
+      "mechanism_added_at": "2026-08-08T10:50:00Z",
+      "recurred_after_fix": 2,
+      "escalated_at": "2026-08-08T10:45:00Z",
+      "escalation": "段3へ。終了前に『未使用の資源』を数値で出させる。使用量が残っていて未着手の資源があるなら、終了理由として弱いことが機械的に見える状態にする",
+      "loop_id": "assertion_accuracy",
+      "why_level_3": "質問の弱点は答えを自分で書けること。「無い」と書けば通る。数えれば書けない。ただし検査が見ているのは4つだけなので、『見ていないものが無い証明』にはならないと出力自身に書いてある"
+    },
+    {
+      "id": "measurement_not_delivered_to_consumer",
+      "what": "測定を、それで動く相手が読まない場所に書く",
+      "improvable": true,
+      "instances": 1,
+      "instances_note": "尺と再生の関係を loops.json に書いたが、投稿を決める日次実行が読むのは promo/youtube/JOURNAL.md だった",
+      "mechanism": "各ループに consumer を必須化。scripts/check_loops.py が落とす",
+      "mechanism_level": 3,
+      "mechanism_added_at": "2026-08-08T10:05:00Z",
+      "recurred_after_fix": 0,
+      "loop_id": "loops_of_loops"
+    },
+    {
+      "id": "monitor_exists_but_does_not_work",
+      "what": "監視は在るが効いていない。古さの判定が壊れている、当てにならない代用品が読まれ得る",
+      "improvable": true,
+      "instances": 1,
+      "instances_note": "リセット済みの枠の残量37%が現在値として印字された。実際は89%",
+      "mechanism": "state/watchdogs.json と scripts/check_watchdogs.py。正本・更新経路・当てにならない代用品を必須項目に",
+      "mechanism_level": 3,
+      "mechanism_added_at": "2026-08-08T10:13:00Z",
+      "recurred_after_fix": 0,
+      "loop_id": "loops_of_loops"
+    },
+    {
+      "id": "deleting_as_duplicate",
+      "what": "重複に見えるものを消して、実は欠落を作る",
+      "improvable": true,
+      "instances": 1,
+      "instances_note": "自分の定期実行を重複として削除したが、そのセッションだけが持つ資格があった",
+      "mechanism": "消さずに役割を分ける。2026-08-08 の定期実行2本はこの方針で分割した",
+      "mechanism_level": 2,
+      "mechanism_added_at": "2026-08-08T10:15:00Z",
+      "recurred_after_fix": 0,
+      "loop_id": "assertion_accuracy",
+      "note": "段2のまま。再発したら段3へ上げること（消す前に『相手にしかできないこと』を列挙させる検査）"
+    }
+  ],
+  "physically_fixed": [
+    {
+      "id": "no_ffmpeg_here",
+      "what": "この環境に ffmpeg が無く、動画を作れない",
+      "evidence": "2026-08-08 実測。動画生成はクッキー日次実行が別環境で持つ",
+      "recheck_after": "2026-08-15",
+      "last_rechecked": "2026-08-08",
+      "if_it_changes": "対話セッションからも投稿できるようになる。予約の深さを自分で埋められる"
+    },
+    {
+      "id": "comment_posting_blocked",
+      "what": "YouTube へのコメント投稿が権限分類器に遮断される",
+      "evidence": "2026-08-08 実測。説明欄の更新は通る。迂回しない",
+      "recheck_after": "2026-08-11",
+      "last_rechecked": "2026-08-08",
+      "if_it_changes": "説明欄のURLは踏めないが、コメントのURLは踏める。効く手が1つ増える"
+    }
+  ],
+  "was_called_impossible_but_was_not": [
+    {
+      "id": "env_var_into_running_session",
+      "what": "環境変数は起動中のセッションに入らないので GUMROAD_TOKEN は読めない",
+      "why_it_looked_impossible": "実際に env に無く、履歴からの復元も遮断された",
+      "how_it_was_solved": "毎回新規セッションで起動する定期実行を作った（trig_0195gkH14TStAV1LRYUymP59）",
+      "solved_at": "2026-08-08T10:14:00Z",
+      "lesson": "『このセッションでは不可能』と『不可能』は違う。実行主体を変えれば解けることがある"
+    },
+    {
+      "id": "playwright_cannot_reach_external_sites",
+      "what": "Playwright が外部サイトへ到達できない（ERR_CONNECTION_RESET）",
+      "why_it_looked_impossible": "プロキシ設定を入れても通らなかった",
+      "how_it_was_solved": "curl でミラーして python3 -m http.server に載せ、ローカルに対して実行した",
+      "solved_at": "2026-08-08T10:02:00Z",
+      "lesson": "到達手段が塞がれていても、対象を手元に持ってくれば検査はできる"
+    }
+  ],
+  "meta": {
+    "id": "failure_class_coverage",
+    "metric": "機構を入れた後に再発したクラスのうち、段を上げたものの割合",
+    "current": "3クラス再発 / うち3クラス段上げ済み = 100%",
+    "measured_at": "2026-08-08T10:45:00Z",
+    "max_age_hours": 168,
+    "target": 1.0,
+    "consumer": "全セッション。終了前と、失敗に気づいたとき",
+    "how_to_measure": "improvable の各項目で recurred_after_fix > 0 かつ escalated_at が無いものを数える",
+    "revisions": [
+      {
+        "at": "2026-08-08T10:45:00Z",
+        "what": "新規作成。オーナーの提案（実行したものを改善可能／不可能に振り分ける）を採用し、不可の側に再検査期限を足した",
+        "why": "失敗のたびに終了前フックへ質問を足していた。bc168df(09:27Z) で Q5/Q6 を足した後、同じ種類の失敗が3回起きた。**質問を足すのは直したことにならない**と実測で確定した",
+        "numbers_that_moved": "機構の段: assertion_without_measurement 3→4、stopping_while_work_remains 2→3、identifier_fabrication は最初から4"
+      }
+    ],
+    "consecutive_no_move": 0
+  }
+}

@@ -13,6 +13,9 @@ Before planning, editing, asking the user to act, spending money, publishing, or
 4c. Run `python scripts/check_watchdogs.py`. `state/watchdogs.json` registers every quantity that must stay
     monitored — subscription usage first — with its source of truth, its owner-free refresh path, and the
     substitutes that are known not to work. Having a monitor is not the same as the monitor working.
+4d. Run `python scripts/check_failure_classes.py`. `state/failure_classes.json` sorts every failure into
+    improvable or physically fixed, and grades each fix 1-4. Recurrence after a fix requires moving up a
+    level; another checklist question is not a level. Impossible items expire and must be retested.
 5. Read `state/current.json`, `state/budget_ledger.json`, and `state/user_action_requests.json`.
 6. Apply `OPERATIONS/AUTOMATION_BEFORE_USER_GATE.md` before requesting any user operation.
 7. Before yielding, ending a response, or declaring that work is blocked, read `OPERATIONS/CONTINUATION_GATE.md`, update `state/continuation_control.json`, and run `python scripts/check_continuation_gate.py`.

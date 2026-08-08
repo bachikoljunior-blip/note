@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
+ROOT = Path("/home/user/note")
 CANONICAL = Path("/home/user/note/OPERATIONS/CORE_DIRECTIVE.md")
 MIRROR = Path("/home/user/note/OPERATIONS/CORE_DIRECTIVE_MIRROR.md")
 STATE_DIR = Path.home() / ".claude" / "directive-guard"
@@ -101,6 +103,19 @@ def stop() -> int:
     except OSError:
         return 0  # 記録できないなら止めない。デッドロックの方が害が大きい
 
+    # 質問だけでは足りないことが実測で分かっている（bc168df 09:27Z に Q5/Q6 を足した後、
+    # 同じ種類の失敗が3回起きた）。だから残っているものを機械に数えさせ、その出力を突きつける。
+    # 検査が落ちても止めない ——「答えられない状態」を作るのが目的で、終了の禁止ではない。
+    remaining = ""
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "check_before_ending.py")],
+            capture_output=True, text=True, timeout=90)
+        if proc.stdout.strip():
+            remaining = "\n\n── 機械が数えた実測（scripts/check_before_ending.py）──\n" + proc.stdout.rstrip()
+    except Exception as exc:  # 検査が壊れていても終了を妨げない
+        remaining = f"\n\n（残作業の検査を実行できなかった: {exc}）"
+
     print(json.dumps({
         "decision": "block",
         "reason":
@@ -126,7 +141,8 @@ def stop() -> int:
             "   push したら `git log origin/<branch> -1 --format=%h` を実行し、\n"
             "   **その出力を写すこと。** 推論ではなく捏造なので、これは別の失敗クラス。\n\n"
             "答えたうえで続ける価値があるなら続ける。無いならその理由を1行で述べて終える。\n"
-            "（この確認は1ユーザーターンにつき1回だけ。次はそのまま終われる）",
+            "（この確認は1ユーザーターンにつき1回だけ。次はそのまま終われる）"
+            + remaining,
     }, ensure_ascii=False))
     return 0
 
