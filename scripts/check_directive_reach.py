@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """恒久指示が「実際に作業が起きるブランチ」に届いているかを測る。
 
+対象は **自動発見** する。手で列挙した一覧は 2026-08-08 に一度失敗している——
+既定ブランチだけを配って、毎日走る自動実行のブランチを取りこぼした。
+列挙し直しても同じ壊れ方をするので、列挙をやめた。
+
 `propagate_directive.py` はチェックアウト済みリポジトリの作業ツリーへ書くだけで、
 **自動実行がどのブランチで走っているかを見ていなかった**。
 2026-08-08 に測ったところ、毎日と6時間おきの収益自動実行はどちらも、
@@ -19,6 +23,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,52 +97,130 @@ def apply_to_branch(repo: Path, branch: str, block: str) -> dict:
         git(repo, "worktree", "remove", "--force", str(worktree), check=False)
 
 
+def discover(repo: Path, default_branch: str, days: int) -> list[str]:
+    """origin のブランチを、最終コミット日で絞って拾う。既定ブランチは必ず入れる。"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    listed = git(
+        repo, "for-each-ref", "--format=%(committerdate:short)\t%(refname:short)",
+        "refs/remotes/origin/", check=False,
+    )
+    branches: list[str] = []
+    for line in listed.stdout.splitlines():
+        if "\t" not in line:
+            continue
+        date, name = line.split("\t", 1)
+        name = name.removeprefix("origin/")
+        if name in {"HEAD", default_branch} or "monthly-income-200k-strategy" in name:
+            continue
+        if date >= cutoff:
+            branches.append(name)
+    return [default_branch, *branches]
+
+
+def default_branch_of(repo: Path) -> str | None:
+    listed = git(repo, "ls-remote", "--symref", "origin", "HEAD", check=False)
+    for line in listed.stdout.splitlines():
+        if line.startswith("ref:"):
+            return line.split()[1].removeprefix("refs/heads/")
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fix", action="store_true")
+    parser.add_argument("--fix", action="store_true",
+                        help="不足しているブランチへ書いて push する")
     parser.add_argument("--root", default="/home/user")
+    parser.add_argument("--report-days", type=int, default=7,
+                        help="この日数以内に更新されたブランチを報告する")
+    parser.add_argument("--fix-days", type=int, default=2,
+                        help="--fix が触るのはこの日数以内に更新されたブランチだけ")
     args = parser.parse_args()
 
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    excluded = {
+        (item["repo"], item["branch"]): item["reason"]
+        for item in config.get("excluded", [])
+    }
+    # 定期実行が使うブランチは、古くても必ず対象にする（止まっていない収益の本体）
+    pinned = {
+        (item["repo"], branch)
+        for item in config.get("scheduled_automation", [])
+        for branch in item["branches"]
+    }
     block = build_block(ROOT)
     expected = manifest(ROOT)["expected_sha256_utf8"]
+    recent_cutoff = (datetime.now(timezone.utc) - timedelta(days=args.fix_days)).strftime("%Y-%m-%d")
 
     results: list[dict] = []
-    for entry in config["targets"]:
-        repo = Path(args.root) / entry["repo"]
-        if entry.get("skip"):
-            results.append({"repo": entry["repo"], "branch": entry.get("branch"),
-                            "status": "skipped", "reason": entry["skip"]})
-            continue
+    for repo in sorted(Path(args.root).iterdir()):
         if not (repo / ".git").exists():
-            results.append({"repo": entry["repo"], "status": "not_checked_out"})
             continue
-        for branch in entry["branches"]:
+        git(repo, "fetch", "origin", "--prune", check=False)
+        default = default_branch_of(repo)
+        if not default:
+            results.append({"repo": repo.name, "status": "no_default_branch"})
+            continue
+        # 既定ブランチへマージ済みのブランチは、もう誰も開き直さない。
+        # note の自動実行は PR ごとに使い捨てブランチを作るので、
+        # 「最近更新された」だけで絞ると 87 件の死んだブランチが対象になった。
+        merged = {
+            line.strip().removeprefix("origin/")
+            for line in git(repo, "branch", "-r", "--merged", f"origin/{default}",
+                            check=False).stdout.splitlines()
+            if line.strip().startswith("origin/")
+        }
+        for branch in discover(repo, default, args.report_days):
+            if (repo.name, branch) in excluded:
+                results.append({"repo": repo.name, "branch": branch, "status": "skipped",
+                                "reason": excluded[(repo.name, branch)]})
+                continue
             text = read_branch_file(repo, branch)
             if text is None:
                 state = "no_claude_md"
             else:
                 version = block_version(text)
                 state = "current" if version == expected else ("stale" if version else "missing_block")
-            row = {"repo": entry["repo"], "branch": branch, "status": state}
-            if args.fix and state != "current":
-                row.update(apply_to_branch(repo, branch, block))
-                row["status"] = row.get("status", state)
+            row = {"repo": repo.name, "branch": branch, "status": state}
+            if state != "current":
+                last = git(repo, "log", "-1", "--format=%cs", f"origin/{branch}", check=False)
+                # 配る対象は2種類だけ。
+                #   1. 既定ブランチ … 新しいセッションはここで開く
+                #   2. 定期実行が使うブランチ … 毎日ここで動いている
+                # それ以外へは配らない。実測すると、残りはほぼ squash-merge 済みの
+                # 使い捨てPRブランチで（祖先判定には出ない）、誰も開き直さない。
+                # 生きている作業ブランチも、main から切り直せば自然に入る。
+                # 78本へ push するのは雑音で、他セッションのブランチを荒らす risk の方が大きい。
+                is_target = branch == default or (repo.name, branch) in pinned
+                row["fix_target"] = is_target
+                row["last_commit"] = last.stdout.strip()
+                row["merged_into_default"] = branch in merged
+                row["fresh"] = last.stdout.strip() >= recent_cutoff
+                if args.fix and is_target:
+                    row.update(apply_to_branch(repo, branch, block))
             results.append(row)
 
-    reached = [r for r in results if r["status"] in {"current", "pushed"}]
-    unreached = [r for r in results if r["status"] not in {"current", "pushed", "skipped"}]
+    def good(row: dict) -> bool:
+        return row["status"] in {"current", "pushed", "skipped"}
+
+    targets_unreached = [r for r in results if not good(r) and r.get("fix_target")]
+    dormant = [r for r in results if not good(r) and not r.get("fix_target")]
     payload = {
-        "checked_at": "see git history",
+        "ok": not targets_unreached,
         "directive_sha256": expected,
-        "reached": len(reached),
-        "unreached": len(unreached),
-        "ok": not unreached,
+        "discovery": f"origin branches updated within {args.report_days} days, plus every default branch",
+        "fix_scope": "default branches and scheduled-automation branches only",
+        "reached": len([r for r in results if r["status"] in {"current", "pushed"}]),
+        "unreached_targets": len(targets_unreached),
+        "not_targeted": len(dormant),
+        "not_targeted_note": "既定ブランチと定期実行ブランチ以外へは配らない。実測では残りのほぼ全部が squash-merge 済みの使い捨てPRブランチで、誰も開き直さない。生きている作業ブランチも main から切り直せば自然に入る。",
         "results": results,
     }
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    print(json.dumps({k: v for k, v in payload.items() if k != "results"}, ensure_ascii=False, indent=2))
+    for row in results:
+        if not good(row) and row.get('fix_target'):
+            print(f"  FIX  {row['repo']}  {row.get('branch')}  {row['status']}")
     return 0 if payload["ok"] else 1
 
 
