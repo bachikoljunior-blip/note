@@ -11,7 +11,8 @@ EPOCH = (2020, 1, 1, 0, 0, 0)
 
 def main() -> int:
     root = Path(__file__).resolve().parent
-    output = root / "assistants-api-sunset-migration-kit-v1.zip"
+    output = root.parents[1] / "dist" / "assistants-api-sunset-migration-kit-v1.zip"
+    output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name in FILES:
             data = (root / name).read_bytes()
