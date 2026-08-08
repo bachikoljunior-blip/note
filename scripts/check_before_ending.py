@@ -168,9 +168,22 @@ def main() -> int:
     watchdogs = load("watchdogs.json")
     for w in watchdogs.get("watchdogs", []):
         pv = w.get("pending_verification")
-        if pv and "未確認" in str(pv.get("status", "")):
+        if not pv or pv.get("resolved_at"):
+            continue
+        wid = w.get("id")
+        deadline = pv.get("deadline_utc")
+        past = age_hours(deadline, now) if deadline else None
+        if past is not None and past > 0:
+            # 期限を過ぎても期待した信号が来ていない。ここを「未確認」で流さない。
             remaining.append(
-                f"ウォッチドッグ {w.get('id')} に未確認の検証がある: {pv.get('what')}")
+                f"**{wid}: 期限（{deadline}）を {past:.1f}時間 過ぎても信号が来ていない。"
+                f"期待した信号は「{pv.get('expected_signal')}」。"
+                "『まだ確認できていない』ではなく**不作動を疑うこと。** "
+                "作った仕組みが動いていない可能性を先に潰す**")
+        elif "未確認" in str(pv.get("status", "")):
+            remaining.append(
+                f"ウォッチドッグ {wid} に未確認の検証がある: {pv.get('what')}"
+                + (f"（期限 {deadline}）" if deadline else ""))
 
     classes = load("failure_classes.json")
     for item in classes.get("improvable", []):

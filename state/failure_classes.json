@@ -4,7 +4,7 @@
   "definition": "OPERATIONS/FAILURE_CLASSES.md",
   "checker": "scripts/check_failure_classes.py",
   "_": "実行したことを『改善できる可能性があるもの』と『物理的に不可能なもの』へ振り分け、前者にはループを、後者には再検査期限を付ける。オーナーの提案（2026-08-08）を採用し、不可の側に期限を足した。",
-  "updated_at_utc": "2026-08-08T10:53:36Z",
+  "updated_at_utc": "2026-08-08T10:56:18Z",
   "mechanism_levels": {
     "1": "文書に書く。最弱。2026-08-08、恒久指示は文脈に在り続けたまま3回破られた",
     "2": "チェックリストに質問を足す。実測で不十分 —— bc168df(09:27Z) で Q5/Q6 を足した後、同じ種類の失敗が3回起きた",
@@ -113,12 +113,12 @@
       "improvable": true,
       "instances": 1,
       "instances_note": "create_new_session_on_fire の定期実行を作り、『これで GUMROAD_TOKEN が測れる』と設計を組み替えた。**実際には一度も起動しなかった** —— 撃っても30分以上セッションが生成されず、list_sessions にも出なかった。オーナーの指摘で気づいた",
-      "mechanism": "新しい仕組みを入れたら watchdogs の pending_verification に『期待する信号』と『見分け方』を書く。check_before_ending.py が未確認のまま残っていれば exit 1 にして終われなくする",
+      "mechanism": "未解決の pending_verification に expected_signal と deadline_utc を必須化（check_watchdogs.py が落とす）。期限を過ぎて信号が来ていなければ、check_before_ending.py が『未確認』ではなく**『不作動を疑え』**へ昇格させる",
       "mechanism_level": 3,
-      "mechanism_added_at": "2026-08-08T10:53:36Z",
+      "mechanism_added_at": "2026-08-08T10:56:18Z",
       "recurred_after_fix": 0,
       "loop_id": "assertion_accuracy",
-      "note": "この仕組みは今回**実際に効いた**。pending_verification に書いておいたので終了前検査が毎回それを挙げ続け、放置できなかった。ただし気づいたのはオーナーの指摘が先で、検査は『未確認』としか言えなかった。**動かないことまでは検出できない。** そこが次の改善点"
+      "note": "最初は pending_verification に期限が無く、『未確認』のままいつまでも置けた。**期限の無い確認中は、永遠に確認中でいられる。** 気づいたのはオーナーの指摘が先だったので、そこを機械側で塞いだ。過去の期限を入れて昇格が発火することを実測で確認済み"
     }
   ],
   "physically_fixed": [
@@ -161,7 +161,7 @@
     "id": "failure_class_coverage",
     "metric": "機構を入れた後に再発したクラスのうち、段を上げたものの割合",
     "current": "4クラス再発 / うち4クラス段上げ済み = 100%",
-    "measured_at": "2026-08-08T10:53:36Z",
+    "measured_at": "2026-08-08T10:56:18Z",
     "max_age_hours": 168,
     "target": 1.0,
     "consumer": "全セッション。終了前と、失敗に気づいたとき",
@@ -178,6 +178,12 @@
         "what": "終了前検査に目標（A1への距離）を最初の項目として追加。fabricated_timestamp を登録",
         "why": "オーナーの提案。それまで終了前検査は使用量と残作業しか見ておらず、**A1 への距離を一度も見ずに『終わってよいか』を判断していた。** 順番が逆だった。そして目標を入れた直後、その検査自身が私の未来時刻バグを露出させた",
         "numbers_that_moved": "目標の可視化: ¥0 / ¥200,000 = 0.0% が終了前に必ず出るようになった。fabricated_timestamp の機構: 段0 → 段3"
+      },
+      {
+        "at": "2026-08-08T10:56:18Z",
+        "what": "pending_verification に期限と期待信号を必須化し、期限切れを『不作動の疑い』へ昇格させた",
+        "why": "create_new_session_on_fire の定期実行が一度も起動していなかったのに、検査は『未確認』としか言えなかった。**動いていないことを検出できなかった。**オーナーの指摘で初めて分かった",
+        "numbers_that_moved": "mechanism_assumed_to_work: 段0 → 段3。過去の期限で昇格が発火することを実測（34.9時間超過を検出、exit 1）"
       }
     ],
     "consecutive_no_move": 0

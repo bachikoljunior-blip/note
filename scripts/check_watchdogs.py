@@ -81,6 +81,21 @@ def check_one(w: dict) -> list[str]:
     except (TypeError, ValueError):
         problems.append(f"{name}: max_age_hours を数として読めない: {w['max_age_hours']!r}")
 
+    # 新しい仕組みを入れたら、期待する信号と期限を書かせる。
+    # 2026-08-08、create_new_session_on_fire の定期実行を作り「これで測れる」と設計を
+    # 組み替えたが、**一度も起動していなかった。** そのとき pending_verification には
+    # 「未確認」としか書けず、期限が無かったので、いつまでも未確認のまま置けてしまった。
+    # 気づいたのはオーナーの指摘が先。**検査は「動いていない」を言えなかった。**
+    pv = w.get("pending_verification")
+    if pv and not pv.get("resolved_at"):
+        for field in ("expected_signal", "deadline_utc"):
+            if not str(pv.get(field) or "").strip():
+                problems.append(
+                    f"{name}: 未解決の pending_verification に {field} がない。"
+                    "**期限の無い『確認中』は、永遠に確認中でいられる。** "
+                    "何がいつまでに起きるはずかを書くこと"
+                )
+
     return problems
 
 
