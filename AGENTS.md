@@ -63,4 +63,5 @@ against it. The earlier "note only" rule is retired; do not cite it as a reason 
 - Do not disable, delete, or mark either continuity task complete unless the user issued an 明示的な停止指示 or explicitly ended the project.
 - No new user message, unread output, a user-only blocker, one completed unit, no reportable change, or a transient failure is not a stop condition.
 - If the primary continuation task is disabled without an explicit stop, immediately 再開を試みる, verify the result, record the repair, and keep independent repository work continuing.
+- **Before repairing any disabled task, read `state/automation_continuity.json` → `explicit_user_stops`.** A task listed there was stopped by the owner and must be left alone; re-enabling it would override an explicit instruction. On 2026-08-08 the owner stopped this conversation's 4-hourly run with 「ここでの定期実行一旦止めて」.
 - Do not expose internal automation identifiers or secrets in user-facing reports or repository records.
