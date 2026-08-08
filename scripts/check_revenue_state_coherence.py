@@ -63,6 +63,21 @@ def main() -> int:
         errors.append("factory_latest_test_count_drift")
     if record and not (ROOT / str(record)).is_file():
         errors.append("factory_latest_validation_record_file_missing")
+    validation = load(str(record)) if record and (ROOT / str(record)).is_file() else {}
+    if validation.get("status") != "public_deployed_verified":
+        errors.append("latest_validation_status_drift")
+    if validation.get("source_commit") != source:
+        errors.append("latest_validation_source_commit_drift")
+    verification = validation.get("verification", {})
+    if verification.get("site_version") != version:
+        errors.append("latest_validation_site_version_drift")
+    if verification.get("automated_test_count") != tests:
+        errors.append("latest_validation_test_count_drift")
+    changes = validation.get("changes", {})
+    if changes.get("commerce_enabled") is not False:
+        errors.append("latest_validation_commerce_must_remain_disabled")
+    if changes.get("public_primary_checkout") != "BOOTH":
+        errors.append("latest_validation_primary_checkout_drift")
 
     landing = current.get("sales_channels", {}).get("autonomous_landing_site", {})
     growth = current.get("latest_growth_asset", {})
@@ -71,6 +86,12 @@ def main() -> int:
         errors.append("current_landing_optimization_version_drift")
     if landing.get("optimization_record") != record:
         errors.append("current_landing_validation_record_drift")
+    if growth.get("validation_record") != record:
+        errors.append("current_growth_validation_record_drift")
+    if current_factory.get("validation_record") != record:
+        errors.append("current_factory_validation_record_drift")
+    if current_factory.get("first_asset", {}).get("optimization_version") != version:
+        errors.append("current_factory_optimization_version_drift")
     for name, value in (
         ("growth_source", growth.get("site_source_commit")),
         ("current_factory_source", current_factory.get("first_asset", {}).get("site_source_commit")),
@@ -84,6 +105,14 @@ def main() -> int:
     remote_site = continuation.get("remote_validation", {}).get(f"site_v{version}", {})
     if remote_site.get("source_commit") != source or remote_site.get("validation_record") != record:
         errors.append("continuation_latest_site_validation_drift")
+
+    safe = queue.get("safe_current_state", {})
+    if safe.get(f"site_v{version}_validation_record") != record:
+        errors.append("queue_latest_site_validation_record_drift")
+    if safe.get(f"site_v{version}_source_commit") != source:
+        errors.append("queue_latest_site_source_commit_drift")
+    if safe.get(f"site_v{version}_commerce_fail_closed_verified") is not True:
+        errors.append("queue_latest_site_fail_closed_evidence_missing")
 
     completed = {item.get("id") for item in queue.get("completed_operations", []) if isinstance(item, dict)}
     pending = {item.get("id") for item in queue.get("pending_operations", []) if isinstance(item, dict)}
@@ -134,8 +163,17 @@ def main() -> int:
     if distribution.get("user_action_already_presented") is not True:
         errors.append("booth_distribution_presented_state_missing")
 
-    if landing.get("direct_commerce", {}).get("enabled") is not False:
-        errors.append("direct_commerce_must_remain_fail_closed")
+    direct_commerce_flags = {
+        "current_landing": landing.get("direct_commerce", {}).get("enabled"),
+        "current_growth": growth.get("direct_commerce_enabled"),
+        "current_factory": current_factory.get("first_asset", {}).get("direct_commerce_enabled"),
+        "factory_asset": asset.get("direct_commerce", {}).get("enabled"),
+        "queue_stripe": safe.get("stripe_direct_checkout_enabled"),
+        "queue_cloudflare": safe.get("cloudflare_commerce_enabled"),
+    }
+    for name, enabled in direct_commerce_flags.items():
+        if enabled is not False:
+            errors.append(f"direct_commerce_must_remain_fail_closed:{name}")
     return finish(errors)
 
 
