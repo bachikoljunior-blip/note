@@ -102,8 +102,36 @@ def goal_report(now: datetime) -> tuple[list[str], list[str]]:
 
     for src in goal.get("sources", []):
         value = float(src.get("current_jpy_per_month") or 0)
+        stamp = src.get("measured_at", "")
+
+        # 自動で集まる源は、手で書いた値ではなく集めた値を読む。
+        # 2026-08-08 まで goal.json の数字は手入力で、更新を忘れれば静かに古くなった。
+        # 毎時のワークフローが書く state を直接読めば、忘れようがない。
+        live = src.get("live_source")
+        if live:
+            data = {}
+            path = Path(live["path"])
+            if path.is_file():
+                try:
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    data = {}
+            if data.get("status") == "ok":
+                count = data.get(live.get("count_key", "total_sales_count"))
+                cents = data.get(live.get("gross_key", "total_sales_usd_cents")) or 0
+                if count is not None:
+                    value = float(cents) / 100.0 * float(live.get("jpy_per_unit", 150))
+                    stamp = data.get("fetched_at", stamp)
+                    src["_live_note"] = f"実測 {count} 件"
+            elif data:
+                problems.append(
+                    f"目標の内訳 {src.get('id')} の自動測定が失敗している"
+                    f"（{str(data.get('error', {}).get('message'))[:80]}）。"
+                    "**失敗を『測れた0』として数えないこと**")
+                src["_live_note"] = "測定失敗（0として数えていない）"
+
         total += value
-        aged = age_hours(src.get("measured_at", ""), now)
+        aged = age_hours(stamp, now)
         try:
             limit = float(src.get("max_age_hours") or 0)
         except (TypeError, ValueError):
@@ -119,6 +147,8 @@ def goal_report(now: datetime) -> tuple[list[str], list[str]]:
                 "測っていない時刻を書いている")
         if stale:
             problems.append(f"目標の内訳 {src.get('id')} の測定が古い（{aged:.1f}時間前）")
+        if src.get("_live_note"):
+            lines.append(f"  {'':<20}   {src['_live_note']}（毎時の自動測定）")
         if src.get("blocker"):
             lines.append(f"  {'':<20}   律速: {src['blocker']}")
 

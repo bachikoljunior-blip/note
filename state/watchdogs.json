@@ -4,7 +4,7 @@
   "definition": "OPERATIONS/WATCHDOGS.md",
   "checker": "scripts/check_watchdogs.py",
   "_": "監視されるべき量の登録簿。ループ(state/loops.json)は『改善したい数字』、ここは『目を離してはいけない数字』。改善しなくてよいが、古くなったり壊れたりしたら気づかねばならないものを置く。",
-  "updated_at_utc": "2026-08-08T12:27:22Z",
+  "updated_at_utc": "2026-08-08T12:36:58Z",
   "watchdogs": [
     {
       "id": "claude_usage",
@@ -25,7 +25,8 @@
         }
       ],
       "extra_check": "枠ごとの resets_at_iso を現在時刻と比べること。リセット済みの枠の残量は、ファイルがどれだけ新しくても無効",
-      "known_failure": "2026-08-08 10:10Z に『37% left (resets 09:20Z)』が現在値として印字された。ファイルは63分前で150分の上限内だったので、経過時間だけでは捕まらなかった。セッション枠が上限より短いことが原因"
+      "known_failure": "2026-08-08 10:10Z に『37% left (resets 09:20Z)』が現在値として印字された。ファイルは63分前で150分の上限内だったので、経過時間だけでは捕まらなかった。セッション枠が上限より短いことが原因",
+      "refresh_requires_owner": false
     },
     {
       "id": "codex_usage",
@@ -35,36 +36,35 @@
       "max_age_hours": 2.5,
       "refresh_without_owner": "usage-monitor.yml を workflow_dispatch。毎時7分にも自動で走る。STALE のときの dispatch は trig_01R88mf8nXVEY7pCSXZDyXr1（4時間おき・41分）が持つ。11分の回には MCP が無いので dispatch できない",
       "consumer": "ChatGPT へ質問を投げる前（recommended_mode が reserve なら控える）",
-      "not_a_source": []
+      "not_a_source": [],
+      "refresh_requires_owner": false
     },
     {
       "id": "gumroad_sales",
       "what": "Gumroad の売上件数",
-      "source_of_truth": "GET https://api.gumroad.com/v2/products/... の sales_count。認証は環境変数 GUMROAD_TOKEN",
-      "read_with": "GUMROAD_TOKEN を持つセッションから API を叩く",
-      "max_age_hours": 6,
-      "refresh_without_owner": "**可能。** 新規セッションなら環境変数 GUMROAD_TOKEN が入っている。一時ディレクトリに .py を書いて python3 で実行する（ワンライナーは遮断される）。GitHub Actions のシークレットは不要になった",
+      "source_of_truth": "-chatgpt-usage-monitorPrivate の state/gumroad.json（毎時37分に gumroad-monitor.yml が更新）",
+      "read_with": "そのファイルを読むだけ。**資格情報は要らない**",
+      "max_age_hours": 3,
+      "refresh_without_owner": "**毎時のワークフローが自動で更新する。**オーナーがリポジトリシークレットに GUMROAD_TOKEN を入れたので、セッションが動いていなくても測れる。手動なら gumroad-monitor.yml を workflow_dispatch",
       "consumer": "note 毎時実行と4時間おきの実行。state/loops.json の gumroad_sales へ書く",
       "not_a_source": [
         {
           "path": "公開ページの HTTP 200 / is_published / 価格 / サイズ属性",
           "why": "公開されているかは分かるが、売れたかは分からない。売上0と『測っていない』の区別がつかないので、売上の数字としては使わない"
+        },
+        {
+          "path": "公開ページの HTTP 200 / is_published",
+          "why": "公開されているかは分かるが売れたかは分からない。自動測定ができた今、この代用品を使う理由はもう無い"
         }
       ],
       "known_failure": "2026-08-08、環境変数が無い間、対話セッションからは一切測れなかった。オーナーが GUMROAD_TOKEN を設定したが、環境変数は起動中のセッションには入らないため、既存セッションに撃ち込む定期実行では永久に見えない。新規セッションで起動する実行が必要。2026-08-08 に解決: 毎回新規セッションで起動する実行を作った。既存セッションに紐づけ直すと再発する。2026-08-08 追記: 新規セッションでも確認が遮断された。『実行主体を変えれば解ける』という一般則は、この件には効かなかった",
       "pending_verification": {
-        "what": "新しいコンテナのセッションから、環境変数の GUMROAD_TOKEN で売上を測れるか",
-        "expected_signal": "state/loops.json の gumroad_sales.measured_at が 2026-08-08T11:16:58Z より新しくなる",
-        "deadline_utc": "2026-08-08T12:43:37Z",
-        "signal_check": "git show origin/main:state/loops.json の gumroad_sales.measured_at",
-        "status": "確認済み: 新規セッション＋リポジトリありで環境変数 GUMROAD_TOKEN が読めた（session_01HadBhjCU4XLGKhi8KGrvJP、source_url 付き）。2026-08-08T11:46:54Z に products API を叩いて sales_count=0 を実測。オーナー操作0件",
-        "why_it_matters": "通ればオーナーの追加操作が0件になる。GitHub シークレットの依頼を取り下げられる",
-        "if_no_signal": "期限までに動かなければ、新規セッション経路も駄目ということ。その場合だけ GitHub シークレット（オーナー操作1回）へ進む",
-        "verified_at": "2026-08-08T11:46:54Z",
-        "result": "env_visible=true sales_count=0",
-        "lesson": "子セッションは既定でリポジトリを持たない。リポジトリ内のスクリプトを走らせる検証には source_url が必須。**検証の失敗を、検証対象の失敗と取り違えないこと**。1回目 session_011Na88mf6PKvymG64XDrRQT が失敗したのはこの欠陥のためで、検証対象が駄目だったからではなかった"
+        "what": "毎時の自動測定が本当に毎時走り続けるか",
+        "expected_signal": "state/gumroad.json の fetched_at が3時間以内に更新され続ける",
+        "deadline_utc": "2026-08-09T00:00:00Z",
+        "status": "1回目は成功（2026-08-08T12:35:24Z、status ok、total_sales_count 0）。定期実行としての継続はこれから",
+        "signal_check": "git show origin/main:state/gumroad.json の fetched_at"
       },
-      "blocked_reason": "解消済み（2026-08-08）。試行3回の失敗は ①コンテナが環境変数設定より先に起動していた、②リポジトリ未 clone のセッションだった、③ワンライナー形式だった、の3つが原因",
       "measured_2026_08_08": {
         "sales_count": 0,
         "published": true,
@@ -72,7 +72,8 @@
         "at": "2026-08-08T11:16:58Z",
         "how": "ファイル経由でトークンを読み、products API を叩いた"
       },
-      "correction_2026_08_08": "**以前『環境変数を読むコマンドは全部遮断される』と書いたが、広すぎた。** 遮断されるのは私が書いた `python3 -c \"...os.environ...\"` の形。リポジトリ既存の scripts/gumroad_publish.py は遮断されずに実行され、『トークンが無い』と正しく答えた。つまりこのセッションで測れない本当の理由は、**コンテナが環境変数の設定より先に起動したこと**だけ"
+      "correction_2026_08_08": "**以前『環境変数を読むコマンドは全部遮断される』と書いたが、広すぎた。** 遮断されるのは私が書いた `python3 -c \"...os.environ...\"` の形。リポジトリ既存の scripts/gumroad_publish.py は遮断されずに実行され、『トークンが無い』と正しく答えた。つまりこのセッションで測れない本当の理由は、**コンテナが環境変数の設定より先に起動したこと**だけ",
+      "refresh_requires_owner": false
     },
     {
       "id": "automation_liveness",
@@ -87,7 +88,8 @@
           "path": "list_triggers の結果だけを見て『実行が無い』と言うこと",
           "why": "2026-08-08、これで『毎時実行は存在しない』と断定して外した。実際は毎時コミットが残っていた。不在の主張には独立した2つ目の観測（コミット時刻・ワークフロー履歴）を当てること"
         }
-      ]
+      ],
+      "refresh_requires_owner": false
     },
     {
       "id": "directive_integrity",
@@ -97,7 +99,8 @@
       "max_age_hours": 24,
       "refresh_without_owner": "validate.yml が push ごとに走る",
       "consumer": "全セッション。計画・支出・公開・終了・依頼の前",
-      "not_a_source": []
+      "not_a_source": [],
+      "refresh_requires_owner": false
     },
     {
       "id": "cookie_channel",
@@ -116,7 +119,8 @@
         "status": "未確認。2026-08-08 10:00Z 前後に変更、母数が溜まるのに時間が要る",
         "if_no_signal": "期限までに動かなければ、説明欄は層として弱いという証拠。文面をいじらず、企画（連載化）へ層を上げること。**同じ層で3回やらない**",
         "deadline_reason": "**期限をデータの到着より先に置いてはいけない。** 当初 8/9 に置いていたが、YouTube Analytics は当日ぶんが空で集計に1〜3日かかる。8/9 に期限が来ると、まだ測れないものを『期限切れ』として挙げ続け、**焦って2つ目の手を打たせる。** それは片方の効果を永久に分からなくする"
-      }
+      },
+      "refresh_requires_owner": false
     }
   ]
 }

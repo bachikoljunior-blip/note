@@ -51,12 +51,22 @@ def check_one(w: dict) -> list[str]:
         return problems
 
     # A1。オーナーが動かないと新しくできない監視は、監視ではない。
-    refresh = str(w["refresh_without_owner"])
-    if any(k in refresh for k in ("オーナー", "本人", "手動で依頼", "頼む")):
+    #
+    # 判定はフラグで行う。**本文の語を探す方式はやめた。**
+    # 2026-08-08 に両方向で壊れたため:
+    #   偽陽性 —— 「オーナーがシークレットを入れたので自動で回る」という
+    #             *過去に済んだ操作* の説明に反応して落ちた
+    #   偽陰性 —— 「現状ない」と書けば、実際に経路が無くても通った
+    # 語を避ければ通る検査は、書き方を調整する遊びにしかならない。
+    if "refresh_requires_owner" not in w:
         problems.append(
-            f"{name}: refresh_without_owner がオーナー操作を含んでいる（{refresh!r}）。"
-            "オーナーは指示を読むとは限らない。操作0件の経路を書くこと"
-        )
+            f"{name}: refresh_requires_owner（真偽値）がない。"
+            "更新にオーナー操作が要るかどうかを、文章ではなく値で書くこと")
+    elif w["refresh_requires_owner"]:
+        problems.append(
+            f"{name}: 更新にオーナー操作が要る（refresh_requires_owner=true）。"
+            "オーナーは指示を読むとは限らない。操作0件の経路を作ること。"
+            f"現在の経路: {str(w.get('refresh_without_owner'))[:120]}")
 
     # 当てにならないと分かっている代用品を、正本に据えていないか。
     truth = str(w["source_of_truth"])

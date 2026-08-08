@@ -58,9 +58,20 @@ def main() -> int:
 
     expect_fail(
         "更新にオーナー操作が要ると落ちる",
-        lambda d: d["watchdogs"][0].__setitem__(
-            "refresh_without_owner", "オーナーにダッシュボードを見てもらう"),
-        "オーナー操作を含んでいる")
+        lambda d: d["watchdogs"][0].__setitem__("refresh_requires_owner", True),
+        "オーナー操作が要る")
+
+    expect_fail(
+        "オーナー操作の要否を書いていないと落ちる",
+        lambda d: d["watchdogs"][0].pop("refresh_requires_owner"),
+        "refresh_requires_owner")
+
+    # 語を避けただけでは通らないこと。**書き方の調整で抜けられる検査は検査ではない。**
+    expect_fail(
+        "本文から「オーナー」を消してもフラグが真なら落ちる",
+        lambda d: (d["watchdogs"][0].__setitem__("refresh_without_owner", "手で入れ直す"),
+                   d["watchdogs"][0].__setitem__("refresh_requires_owner", True)),
+        "オーナー操作が要る")
 
     expect_fail(
         "当てにならない代用品を正本に据えると落ちる",
