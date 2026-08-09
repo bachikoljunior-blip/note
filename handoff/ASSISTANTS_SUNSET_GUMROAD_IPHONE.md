@@ -4,13 +4,13 @@ This handoff reduces the separate US$9 product completion to one private artifac
 
 ## Download once
 
-In the private `note` repository, open the latest successful **Validate and analyze** run for the relevant pull request and download its `note-validated-outputs-*` artifact. Expand that Actions artifact once, then select:
+In the private `note` repository, open the latest successful **Validate and analyze** run and download the dedicated artifact whose name starts with:
 
-`dist/Assistants_API_Sunset_Gumroad_iPhone_Pack_v1.zip`
+`assistants-sunset-gumroad-iphone-pack-`
 
-Expand only this outer iPhone pack once and open `START_HERE.html` in Safari. Keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed; it is the buyer download.
+Do not download the validation reports or the larger validated-outputs artifact. The dedicated Actions download already contains the expanded outer pack. Expand the downloaded artifact once, open `START_HERE.html` in Safari, and keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed because it is the buyer download.
 
-The artifact expires after the configured seven-day retention period. If it has expired, rerun the repository validation workflow to regenerate the same deterministic pack instead of copying a paid ZIP into git.
+The artifact expires after seven days. If it has expired, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
 
 ## One authenticated Gumroad session
 
