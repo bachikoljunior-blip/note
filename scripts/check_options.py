@@ -57,6 +57,12 @@ DATA = ROOT / "state" / "options.json"
 REQUIRED = ("id", "what", "incumbent", "days_to_first_yen",
             "owner_actions_required", "tested")
 
+BOUNTY_CANDIDATE_REQUIRED = (
+    "id", "title", "reward_usd", "status", "available_rewards",
+    "active_solvers", "claims_observed", "estimated_effort_hours",
+    "source_url", "issue_url", "external_repository_mutated",
+)
+
 
 def parse_day(value: str) -> date | None:
     try:
@@ -106,6 +112,91 @@ def check_one(o: dict, today: date) -> list[str]:
     return problems
 
 
+def check_bounty_scan(scan: object, now: datetime) -> list[str]:
+    """有償 Issue を金額だけで選ばないための測定値を検査する。"""
+    problems: list[str] = []
+    if not isinstance(scan, dict):
+        return ["paid_github_issue: latest_market_scan が辞書ではない"]
+
+    measured = scan.get("checked_at_utc")
+    try:
+        measured_at = datetime.fromisoformat(str(measured).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        problems.append("paid_github_issue: checked_at_utc を日時として読めない")
+        measured_at = None
+    max_age = scan.get("max_age_hours")
+    if not isinstance(max_age, (int, float)) or max_age <= 0:
+        problems.append("paid_github_issue: max_age_hours は正数であること")
+    elif measured_at and (now - measured_at).total_seconds() > max_age * 3600:
+        problems.append(
+            "paid_github_issue: 候補測定が期限切れ。報酬・競争人数・公開状態を再測定すること"
+        )
+
+    candidates = scan.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        problems.append("paid_github_issue: candidates が空。金額だけの推測で順位を付けないこと")
+        return problems
+
+    ids: set[str] = set()
+    computed_scores: dict[str, float] = {}
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            problems.append("paid_github_issue: candidate が辞書ではない")
+            continue
+        cid = str(candidate.get("id") or "(id なし)")
+        for field in BOUNTY_CANDIDATE_REQUIRED:
+            if field not in candidate:
+                problems.append(f"paid_github_issue/{cid}: 必須項目がない: {field}")
+        if cid in ids:
+            problems.append(f"paid_github_issue: candidate id が重複: {cid}")
+        ids.add(cid)
+        for field in ("reward_usd", "available_rewards", "active_solvers",
+                      "claims_observed", "estimated_effort_hours"):
+            value = candidate.get(field)
+            if not isinstance(value, (int, float)) or value < 0:
+                problems.append(f"paid_github_issue/{cid}: {field} は0以上の数値であること")
+        reward = candidate.get("reward_usd")
+        available = candidate.get("available_rewards")
+        effort = candidate.get("estimated_effort_hours")
+        solvers = candidate.get("active_solvers")
+        if isinstance(reward, (int, float)) and reward <= 0:
+            problems.append(f"paid_github_issue/{cid}: reward_usd は正数であること")
+        if isinstance(available, (int, float)) and available <= 0:
+            problems.append(f"paid_github_issue/{cid}: available_rewards は正数であること")
+        if (isinstance(reward, (int, float)) and reward > 0
+                and isinstance(effort, (int, float)) and effort > 0
+                and isinstance(solvers, (int, float)) and solvers >= 0):
+            score = reward / (effort * (1 + solvers))
+            computed_scores[cid] = score
+            recorded = candidate.get("planning_score_usd_per_competition_adjusted_hour")
+            if not isinstance(recorded, (int, float)) or abs(recorded - score) > 0.001:
+                problems.append(
+                    f"paid_github_issue/{cid}: 記録スコアが selection_formula と一致しない"
+                )
+        elif isinstance(effort, (int, float)) and effort <= 0:
+            problems.append(f"paid_github_issue/{cid}: estimated_effort_hours は正数であること")
+        for field in ("source_url", "issue_url"):
+            if not str(candidate.get(field) or "").startswith("https://"):
+                problems.append(f"paid_github_issue/{cid}: {field} は https URL であること")
+        if candidate.get("external_repository_mutated") is not False:
+            problems.append(
+                f"paid_github_issue/{cid}: この自動実行では外部リポジトリを変更しないこと"
+            )
+
+    selected = scan.get("selected_candidate_id")
+    if selected not in ids:
+        problems.append("paid_github_issue: selected_candidate_id が candidates に存在しない")
+    elif computed_scores and selected != max(computed_scores, key=computed_scores.get):
+        problems.append("paid_github_issue: selected_candidate_id が再計算した最高スコア候補ではない")
+    if not str(scan.get("selection_formula") or "").strip():
+        problems.append("paid_github_issue: selection_formula がない。順位を再現できない")
+    if not str(scan.get("execution_decision") or "").strip():
+        problems.append("paid_github_issue: execution_decision がない")
+    if scan.get("external_repository_mutated") is not False:
+        problems.append("paid_github_issue: 外部リポジトリを変更した状態は許可範囲外")
+    return problems
+
+
 def main() -> int:
     if not DATA.is_file():
         print(json.dumps({"ok": False, "errors": [f"{DATA} がない"]},
@@ -113,7 +204,8 @@ def main() -> int:
         return 1
 
     data = json.loads(DATA.read_text(encoding="utf-8"))
-    today = datetime.now(timezone.utc).date()
+    now = datetime.now(timezone.utc)
+    today = now.date()
     errors: list[str] = []
 
     options = data.get("options", [])
@@ -126,6 +218,10 @@ def main() -> int:
             errors.append(f"id が重複している: {o.get('id')}")
         seen.add(o.get("id"))
         errors.extend(check_one(o, today))
+
+    paid = next((o for o in options if o.get("id") == "paid_github_issue"), None)
+    if paid:
+        errors.extend(check_bounty_scan(paid.get("latest_market_scan"), now))
 
     # ここがこの検査の存在理由。
     # 未検証かつ非既存の案が一定数ないと、登録簿は「いまやっていること」に退化する。
