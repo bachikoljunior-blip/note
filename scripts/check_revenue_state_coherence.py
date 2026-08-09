@@ -264,10 +264,28 @@ def main() -> int:
     booth_high_request = request_map.get("booth_brandable_idle_listing_v1", {})
     if booth_high_request.get("currently_requested") is not False:
         errors.append("booth_high_ticket_gate_must_be_deferred")
-    if current.get("next_actions", {}).get("user_action_request_ids") != []:
-        errors.append("current_user_action_must_be_empty_after_publication")
-    if owner_request.get("status") != "none_currently_requested":
-        errors.append("current_owner_action_zero_status_missing")
+    expected_active_request_ids = ["assistants_sunset_gumroad_publication_v1"]
+    if current.get("next_actions", {}).get("user_action_request_ids") != expected_active_request_ids:
+        errors.append("assistants_sunset_single_active_request_drift")
+    assistants_request = request_map.get("assistants_sunset_gumroad_publication_v1", {})
+    if assistants_request.get("currently_requested") is not True:
+        errors.append("assistants_sunset_request_must_be_active")
+    if assistants_request.get("residual_step_count") != 1:
+        errors.append("assistants_sunset_request_must_remain_one_step")
+    if assistants_request.get("evidence", [])[:2] != [
+        "state/assistants_sunset_iphone_pack.json",
+        "handoff/ASSISTANTS_SUNSET_GUMROAD_IPHONE.md",
+    ]:
+        errors.append("assistants_sunset_request_evidence_drift")
+    assistants_pack = load("state/assistants_sunset_iphone_pack.json")
+    if assistants_pack.get("status") != "remote_ci_validated_private_artifact_ready":
+        errors.append("assistants_sunset_pack_not_ready")
+    if assistants_pack.get("buyer_zip_attached") is not False:
+        errors.append("assistants_sunset_buyer_zip_attachment_must_remain_unverified")
+    if assistants_pack.get("creator_test_purchase_verified") is not False:
+        errors.append("assistants_sunset_creator_test_must_remain_unverified")
+    if owner_request.get("status") != "automation_evaluated_one_session_requested":
+        errors.append("assistants_sunset_owner_request_status_drift")
     owner_text = json.dumps(owner_request, ensure_ascii=False)
     if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
         errors.append("gumroad_owner_gate_creator_test_missing")
