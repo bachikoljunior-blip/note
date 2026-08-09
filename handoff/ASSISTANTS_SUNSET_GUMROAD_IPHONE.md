@@ -10,7 +10,7 @@ In the private `note` repository, open the latest successful **Validate and anal
 
 Do not download the validation reports or the larger validated-outputs artifact. The dedicated Actions download already contains the expanded outer pack. Expand the downloaded artifact once, open `START_HERE.html` in Safari, and keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed because it is the buyer download.
 
-The artifact expires after seven days. If it has expired, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
+New dedicated artifacts are retained for 30 days. The verified artifact created on 2026-08-09 expires on 2026-09-08, after the 2026-08-26 Assistants API sunset. If it has expired, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
 
 ## One authenticated Gumroad session
 
