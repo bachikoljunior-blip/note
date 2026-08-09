@@ -1,16 +1,20 @@
 # Assistants API Sunset Migration Kit — iPhone Gumroad handoff
 
-This handoff reduces the separate US$9 product completion to one private artifact download and one authenticated Gumroad session. Final publication, identity, tax, payout, banking, and contract decisions remain user-only.
+This handoff reduces the separate US$9 product completion to one private file download and one authenticated Gumroad session. Final publication, identity, tax, payout, banking, and contract decisions remain user-only.
 
 ## Download once
 
-In the private `note` repository, open the latest successful **Validate and analyze** run and download the dedicated artifact whose name starts with:
+Preferred path: open ChatGPT **Library** and download the private file named:
+
+`Assistants_API_Sunset_Gumroad_iPhone_Pack_v1.zip`
+
+Expand it once, open `START_HERE.html` in Safari, and keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed because it is the buyer download. The Library copy is private to the owner and is not committed to git.
+
+Fallback: in the private `note` repository, open the latest successful **Validate and analyze** run and download the dedicated artifact whose name starts with:
 
 `assistants-sunset-gumroad-iphone-pack-`
 
-Do not download the validation reports or the larger validated-outputs artifact. The dedicated Actions download already contains the expanded outer pack. Expand the downloaded artifact once, open `START_HERE.html` in Safari, and keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed because it is the buyer download.
-
-New dedicated artifacts are retained for 30 days. The verified artifact created on 2026-08-09 expires on 2026-09-08, after the 2026-08-26 Assistants API sunset. If it has expired, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
+Do not download the validation reports or the larger validated-outputs artifact. The dedicated Actions download already contains the expanded outer pack. New dedicated artifacts are retained for 30 days. The verified fallback artifact created on 2026-08-09 expires on 2026-09-08, after the 2026-08-26 Assistants API sunset. If it has expired and the Library copy is unavailable, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
 
 ## One authenticated Gumroad session
 
