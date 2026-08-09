@@ -125,6 +125,25 @@ def main() -> int:
             if not record or not (ROOT / str(record)).is_file():
                 errors.append("latest deployment validation record must exist")
 
+    next_cycle = state.get("next_cycle", {})
+    effect_window = next_cycle.get("effect_window_gate", {})
+    required_effect_window = {
+        "minimum_observation_hours": 24,
+        "revenue_measurement_continues_hourly": True,
+        "early_sales_can_trigger_immediate_success_handling": True,
+        "zero_result_before_gate_can_trigger_acquisition_or_price_change": False,
+        "machine_checked_by": "scripts/check_autonomous_revenue_factory.py",
+    }
+    for key, expected in required_effect_window.items():
+        if effect_window.get(key) != expected:
+            errors.append(f"next_cycle.effect_window_gate.{key} must equal {expected!r}")
+    for key in ("baseline_deployment_verified_at_utc", "decision_not_before_utc", "latest_observation_record"):
+        if not str(effect_window.get(key, "")).strip():
+            errors.append(f"next_cycle.effect_window_gate.{key} must be non-empty")
+    observation_record = effect_window.get("latest_observation_record")
+    if observation_record and not (ROOT / str(observation_record)).is_file():
+        errors.append("effect-window latest observation record must exist")
+
     forbidden_key_parts = ("password", "token", "cookie", "secret", "credential", "bearer")
     for path, key, value in walk(state):
         lowered = key.lower()
