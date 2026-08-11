@@ -115,7 +115,12 @@ def check_one(o: dict, today: date) -> list[str]:
     return problems
 
 
-def check_bounty_scan(scan: object, now: datetime) -> list[str]:
+def check_bounty_scan(
+    scan: object,
+    now: datetime,
+    *,
+    valid_fallback_ids: set[str] | None = None,
+) -> list[str]:
     """有償 Issue を金額だけで選ばないための測定値を検査する。"""
     problems: list[str] = []
     if not isinstance(scan, dict):
@@ -242,9 +247,14 @@ def check_bounty_scan(scan: object, now: datetime) -> list[str]:
     elif not computed_scores and selected is not None:
         problems.append("paid_github_issue: rank可能な候補がないのに選定候補がある")
     if selected is None or not execution_ready.get(str(selected), False):
-        if not str(scan.get("fallback_option_id") or "").strip():
+        fallback = str(scan.get("fallback_option_id") or "").strip()
+        if not fallback:
             problems.append(
                 "paid_github_issue: 即実行できる選定候補がないなら fallback_option_id が必要"
+            )
+        elif valid_fallback_ids is not None and fallback not in valid_fallback_ids:
+            problems.append(
+                "paid_github_issue: fallback_option_id は登録済みの非既存案であること"
             )
     if not str(scan.get("selection_formula") or "").strip():
         problems.append("paid_github_issue: selection_formula がない。順位を再現できない")
@@ -279,7 +289,15 @@ def main() -> int:
 
     paid = next((o for o in options if o.get("id") == "paid_github_issue"), None)
     if paid:
-        errors.extend(check_bounty_scan(paid.get("latest_market_scan"), now))
+        valid_fallback_ids = {
+            str(o.get("id")) for o in options
+            if not o.get("incumbent") and o.get("id") != "paid_github_issue"
+        }
+        errors.extend(check_bounty_scan(
+            paid.get("latest_market_scan"),
+            now,
+            valid_fallback_ids=valid_fallback_ids,
+        ))
 
     # ここがこの検査の存在理由。
     # 未検証かつ非既存の案が一定数ないと、登録簿は「いまやっていること」に退化する。
