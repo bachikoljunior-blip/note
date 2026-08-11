@@ -94,6 +94,12 @@ class DemandScanTest(unittest.TestCase):
     def test_below_threshold_scan_passes_without_claiming_demand(self) -> None:
         self.assertEqual(check_demand_scan(demand_scan(), NOW), [])
 
+    def test_zero_qualifying_issues_is_a_valid_measurement(self) -> None:
+        data = demand_scan()
+        data["qualifying_unique_issue_count"] = 0
+        data["qualifying_issues"] = []
+        self.assertEqual(check_demand_scan(data, NOW), [])
+
     def test_count_must_match_unique_issue_list(self) -> None:
         data = demand_scan()
         data["qualifying_unique_issue_count"] = 2
