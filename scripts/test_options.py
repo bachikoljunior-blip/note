@@ -120,7 +120,28 @@ class BountyScanTest(unittest.TestCase):
             item["rejection_reason"] = "upstream could not be independently verified"
         data["selected_candidate_id"] = None
         data["fallback_option_id"] = "demand_first_micro_product"
-        self.assertEqual(check_bounty_scan(data, NOW), [])
+        self.assertEqual(check_bounty_scan(
+            data,
+            NOW,
+            valid_fallback_ids={"demand_first_micro_product"},
+        ), [])
+
+    def test_unknown_fallback_is_rejected(self) -> None:
+        data = scan()
+        for item in data["candidates"]:
+            item["rank_eligible"] = False
+            item["execution_ready"] = False
+            item["upstream_status"] = "unverified"
+            item["upstream_title"] = None
+            item["rejection_reason"] = "upstream could not be independently verified"
+        data["selected_candidate_id"] = None
+        data["fallback_option_id"] = "invented_option"
+        errors = check_bounty_scan(
+            data,
+            NOW,
+            valid_fallback_ids={"demand_first_micro_product"},
+        )
+        self.assertTrue(any("登録済みの非既存案" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
