@@ -144,5 +144,44 @@ class BountyScanTest(unittest.TestCase):
         self.assertTrue(any("登録済みの非既存案" in error for error in errors), errors)
 
 
+    def test_naive_top_level_timestamp_is_rejected_without_exception(self) -> None:
+        data = scan()
+        data["checked_at_utc"] = "2026-08-11T04:32:00"
+        self.assert_rejected(data, "checked_at_utc はタイムゾーン付き日時")
+
+    def test_naive_candidate_timestamps_are_rejected_without_exception(self) -> None:
+        for field in ("source_checked_at_utc", "upstream_checked_at_utc"):
+            with self.subTest(field=field):
+                data = scan()
+                data["candidates"][0][field] = "2026-08-11T04:32:00"
+                self.assert_rejected(
+                    data,
+                    f"{field} はタイムゾーン付き日時",
+                )
+
+    def test_future_top_level_timestamp_is_rejected(self) -> None:
+        data = scan()
+        data["checked_at_utc"] = "2026-08-11T04:43:01Z"
+        self.assert_rejected(data, "checked_at_utc が現在時刻より3分を超えて未来")
+
+    def test_future_candidate_timestamps_are_rejected(self) -> None:
+        for field in ("source_checked_at_utc", "upstream_checked_at_utc"):
+            with self.subTest(field=field):
+                data = scan()
+                data["candidates"][0][field] = "2026-08-11T04:43:01Z"
+                self.assert_rejected(
+                    data,
+                    f"{field} が現在時刻より3分を超えて未来",
+                )
+
+    def test_exact_three_minute_clock_skew_is_allowed(self) -> None:
+        data = scan()
+        data["checked_at_utc"] = "2026-08-11T04:43:00Z"
+        for item in data["candidates"]:
+            item["source_checked_at_utc"] = "2026-08-11T04:43:00Z"
+            item["upstream_checked_at_utc"] = "2026-08-11T04:43:00Z"
+        self.assertEqual(check_bounty_scan(data, NOW), [])
+
+
 if __name__ == "__main__":
     unittest.main()

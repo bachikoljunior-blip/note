@@ -48,6 +48,78 @@ def age_hours(stamp: str, now: datetime) -> float | None:
     return (now - when).total_seconds() / 3600.0
 
 
+
+def check_effect_window(loop: dict, now: datetime) -> list[str]:
+    """判断時刻を過ぎた観測が窓前のまま残らないことを検査する。"""
+    name = loop.get("id", "(id なし)")
+    observation = loop.get("latest_observation")
+    if not isinstance(observation, dict):
+        return []
+    if "decision_not_before_utc" not in observation:
+        return []
+
+    problems: list[str] = []
+    raw_decision = observation.get("decision_not_before_utc")
+    decision = parse_time(raw_decision)
+    if decision is None or decision.tzinfo is None or decision.utcoffset() is None:
+        return [
+            f"{name}: decision_not_before_utc はタイムゾーン付き日時であること"
+        ]
+
+    elapsed = observation.get("effect_window_elapsed")
+    if not isinstance(elapsed, bool):
+        problems.append(f"{name}: effect_window_elapsed は真偽値であること")
+    elif now >= decision and elapsed is not True:
+        problems.append(
+            f"{name}: decision_not_before_utc を過ぎたのに "
+            "effect_window_elapsed=false のまま。期限後の実測へ更新すること"
+        )
+    elif now < decision and elapsed is True:
+        problems.append(
+            f"{name}: decision_not_before_utc より前なのに "
+            "effect_window_elapsed=true。効果窓を先取りしないこと"
+        )
+
+    conclusion_allowed = observation.get("performance_conclusion_allowed")
+    if not isinstance(conclusion_allowed, bool):
+        problems.append(
+            f"{name}: performance_conclusion_allowed は真偽値であること"
+        )
+    elif conclusion_allowed is True and elapsed is not True:
+        problems.append(
+            f"{name}: performance_conclusion_allowed=true には "
+            "effect_window_elapsed=true が必要"
+        )
+
+    raw_observed = observation.get(
+        "observed_at_utc",
+        observation.get("fetched_at", loop.get("measured_at")),
+    )
+    observed = parse_time(raw_observed)
+    measured = parse_time(loop.get("measured_at"))
+    timestamps = (
+        ("latest_observation.observed_at_utc", observed),
+        ("loop.measured_at", measured),
+    )
+    for label, stamp in timestamps:
+        if stamp is None or stamp.tzinfo is None or stamp.utcoffset() is None:
+            problems.append(f"{name}: {label} はタイムゾーン付き日時であること")
+            continue
+        if (stamp - now).total_seconds() > 3 * 60:
+            problems.append(f"{name}: {label} が現在時刻より3分を超えて未来")
+        if elapsed is True and stamp < decision:
+            problems.append(
+                f"{name}: effect_window_elapsed=true だが {label} が "
+                "decision_not_before_utc より前。期限後の実測が必要"
+            )
+        elif now >= decision and stamp < decision:
+            problems.append(
+                f"{name}: decision_not_before_utc を過ぎたが {label} が期限前。"
+                "期限後の実測へ更新すること"
+            )
+    return problems
+
+
 def check_loop(loop: dict, now: datetime, *, is_meta: bool = False) -> list[str]:
     name = loop.get("id", "(id なし)")
     problems: list[str] = []
@@ -72,6 +144,8 @@ def check_loop(loop: dict, now: datetime, *, is_meta: bool = False) -> list[str]
             f"{name}: 測定が古い（{aged:.1f}時間前 / 上限 {loop['max_age_hours']}時間）。"
             "古い測定は測定ではない。測り直してから判断すること"
         )
+
+    problems.extend(check_effect_window(loop, now))
 
     threshold = 3
     if int(loop.get("consecutive_no_move", 0)) >= threshold:
