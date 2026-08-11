@@ -24,6 +24,9 @@ FILES = [
     "CLAUDE.md",
     ".github/copilot-instructions.md",
     "scripts/check_directive_integrity.py",
+    "tools/directive_guard.py",
+    "scripts/test_directive_guard.py",
+    "scripts/check_before_ending.py",
 ]
 
 
