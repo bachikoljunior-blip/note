@@ -110,13 +110,25 @@ def check_demand_scan(scan: object, now: datetime) -> list[str]:
     integers: dict[str, int] = {}
     for field in (
         "lookback_days", "scope_repository_count", "search_query_count",
-        "qualification_threshold", "qualifying_unique_issue_count",
+        "qualification_threshold",
     ):
         value = scan.get(field)
         if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
             problems.append(f"{name}: {field} は正の整数であること")
         else:
             integers[field] = value
+
+    issue_count = scan.get("qualifying_unique_issue_count")
+    if (
+        not isinstance(issue_count, int)
+        or isinstance(issue_count, bool)
+        or issue_count < 0
+    ):
+        problems.append(
+            f"{name}: qualifying_unique_issue_count は0以上の整数であること"
+        )
+    else:
+        integers["qualifying_unique_issue_count"] = issue_count
 
     issues = scan.get("qualifying_issues")
     if not isinstance(issues, list):
