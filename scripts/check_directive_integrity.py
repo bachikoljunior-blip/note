@@ -5,6 +5,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -193,6 +194,40 @@ def inspect(
                 separation_errors.append(
                     f"bootstrap_pointer_missing:{rel}:{phrase}"
                 )
+
+    active_application_files = [
+        "AGENTS.md",
+        "OPERATIONS/ASSISTANT_OPERATING_POLICY.md",
+        "OPERATIONS/DIRECTIVE_BOUNDARY.md",
+        "tools/directive_guard.py",
+        "scripts/test_directive_guard.py",
+        "scripts/check_before_ending.py",
+    ]
+    superseded_tag = re.compile(
+        r"(?<![A-Za-z0-9])A(?:1|2|4|9|10|12|13|14)(?![A-Za-z0-9])"
+    )
+    old_count_markers = ("恒久指示の" + "9項目", "9項目が" + "原文どおり")
+    for rel in active_application_files:
+        path = ROOT / rel
+        if not path.is_file():
+            separation_errors.append(f"missing_active_directive_application:{rel}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        match = superseded_tag.search(text)
+        if match:
+            separation_errors.append(
+                f"superseded_directive_tag_in_active_file:{rel}:{match.group(0)}"
+            )
+        if any(marker in text for marker in old_count_markers):
+            separation_errors.append(
+                f"superseded_directive_count_in_active_file:{rel}"
+            )
+
+    guard_path = ROOT / "tools" / "directive_guard.py"
+    if guard_path.is_file():
+        guard_text = guard_path.read_text(encoding="utf-8")
+        if expected.decode("utf-8").strip() not in guard_text:
+            separation_errors.append("directive_guard_fallback_not_current_exact_text")
 
     return copies, metadata_errors, separation_errors
 
