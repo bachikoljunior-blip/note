@@ -53,6 +53,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "state" / "options.json"
+MAX_FUTURE_SKEW_SECONDS = 3 * 60
 
 REQUIRED = ("id", "what", "incumbent", "days_to_first_yen",
             "owner_actions_required", "tested")
@@ -65,6 +66,17 @@ BOUNTY_CANDIDATE_REQUIRED = (
     "upstream_title", "rank_eligible", "execution_ready",
     "external_repository_mutated",
 )
+
+
+def parse_aware_datetime(value: object) -> datetime | None:
+    """ISO timestampを読み、aware datetimeだけを返す。"""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
 
 
 def parse_day(value: str) -> date | None:
@@ -127,18 +139,26 @@ def check_bounty_scan(
         return ["paid_github_issue: latest_market_scan が辞書ではない"]
 
     measured = scan.get("checked_at_utc")
-    try:
-        measured_at = datetime.fromisoformat(str(measured).replace("Z", "+00:00"))
-    except (TypeError, ValueError):
-        problems.append("paid_github_issue: checked_at_utc を日時として読めない")
-        measured_at = None
-    max_age = scan.get("max_age_hours")
-    if not isinstance(max_age, (int, float)) or max_age <= 0:
-        problems.append("paid_github_issue: max_age_hours は正数であること")
-    elif measured_at and (now - measured_at).total_seconds() > max_age * 3600:
+    measured_at = parse_aware_datetime(measured)
+    if measured_at is None:
         problems.append(
-            "paid_github_issue: 候補測定が期限切れ。報酬・競争人数・公開状態を再測定すること"
+            "paid_github_issue: checked_at_utc はタイムゾーン付き日時であること"
         )
+    max_age = scan.get("max_age_hours")
+    max_age_valid = isinstance(max_age, (int, float)) and max_age > 0
+    if not max_age_valid:
+        problems.append("paid_github_issue: max_age_hours は正数であること")
+    if measured_at is not None:
+        age_seconds = (now - measured_at).total_seconds()
+        if age_seconds < -MAX_FUTURE_SKEW_SECONDS:
+            problems.append(
+                "paid_github_issue: checked_at_utc が現在時刻より3分を超えて未来"
+            )
+        elif max_age_valid and age_seconds > max_age * 3600:
+            problems.append(
+                "paid_github_issue: 候補測定が期限切れ。"
+                "報酬・競争人数・公開状態を再測定すること"
+            )
 
     candidates = scan.get("candidates")
     if not isinstance(candidates, list) or not candidates:
@@ -203,13 +223,20 @@ def check_bounty_scan(
 
         for field in ("source_checked_at_utc", "upstream_checked_at_utc"):
             raw = candidate.get(field)
-            try:
-                checked = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
-            except (TypeError, ValueError):
-                problems.append(f"paid_github_issue/{cid}: {field} を日時として読めない")
+            checked = parse_aware_datetime(raw)
+            if checked is None:
+                problems.append(
+                    f"paid_github_issue/{cid}: "
+                    f"{field} はタイムゾーン付き日時であること"
+                )
                 continue
-            if (isinstance(max_age, (int, float)) and max_age > 0
-                    and (now - checked).total_seconds() > max_age * 3600):
+            age_seconds = (now - checked).total_seconds()
+            if age_seconds < -MAX_FUTURE_SKEW_SECONDS:
+                problems.append(
+                    f"paid_github_issue/{cid}: "
+                    f"{field} が現在時刻より3分を超えて未来"
+                )
+            elif max_age_valid and age_seconds > max_age * 3600:
                 problems.append(f"paid_github_issue/{cid}: {field} が期限切れ")
 
         if candidate.get("source_title") != candidate.get("title"):
