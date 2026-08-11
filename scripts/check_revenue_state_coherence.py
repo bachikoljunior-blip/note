@@ -264,19 +264,33 @@ def main() -> int:
     booth_high_request = request_map.get("booth_brandable_idle_listing_v1", {})
     if booth_high_request.get("currently_requested") is not False:
         errors.append("booth_high_ticket_gate_must_be_deferred")
-    expected_active_request_ids = ["assistants_sunset_gumroad_publication_v1"]
+    forecast_request_id = current.get("income_forecast", {}).get("next_user_operation_id")
+    expected_active_request_ids = [
+        forecast_request_id or "assistants_sunset_gumroad_publication_v1"
+    ]
     if current.get("next_actions", {}).get("user_action_request_ids") != expected_active_request_ids:
-        errors.append("assistants_sunset_single_active_request_drift")
+        errors.append("forecast_single_active_request_drift")
+    selected_request = request_map.get(expected_active_request_ids[0], {})
+    if selected_request.get("currently_requested") is not True:
+        errors.append("forecast_selected_request_must_be_active")
+    active_registry_ids = {
+        request_id
+        for request_id, request in request_map.items()
+        if request.get("currently_requested") is True
+    }
+    if active_registry_ids != set(expected_active_request_ids):
+        errors.append("single_active_request_registry_drift")
     assistants_request = request_map.get("assistants_sunset_gumroad_publication_v1", {})
-    if assistants_request.get("currently_requested") is not True:
-        errors.append("assistants_sunset_request_must_be_active")
-    if assistants_request.get("residual_step_count") != 1:
-        errors.append("assistants_sunset_request_must_remain_one_step")
-    if assistants_request.get("evidence", [])[:2] != [
-        "state/assistants_sunset_iphone_pack.json",
-        "handoff/ASSISTANTS_SUNSET_GUMROAD_IPHONE.md",
-    ]:
-        errors.append("assistants_sunset_request_evidence_drift")
+    if expected_active_request_ids == ["assistants_sunset_gumroad_publication_v1"]:
+        if assistants_request.get("residual_step_count") != 1:
+            errors.append("assistants_sunset_request_must_remain_one_step")
+        if assistants_request.get("evidence", [])[:2] != [
+            "state/assistants_sunset_iphone_pack.json",
+            "handoff/ASSISTANTS_SUNSET_GUMROAD_IPHONE.md",
+        ]:
+            errors.append("assistants_sunset_request_evidence_drift")
+    elif assistants_request.get("currently_requested") is not False:
+        errors.append("assistants_sunset_request_must_be_deferred_when_not_selected")
     assistants_pack = load("state/assistants_sunset_iphone_pack.json")
     if assistants_pack.get("status") != "remote_ci_validated_private_artifact_ready":
         errors.append("assistants_sunset_pack_not_ready")
@@ -285,10 +299,13 @@ def main() -> int:
     if assistants_pack.get("creator_test_purchase_verified") is not False:
         errors.append("assistants_sunset_creator_test_must_remain_unverified")
     if owner_request.get("status") != "automation_evaluated_one_session_requested":
-        errors.append("assistants_sunset_owner_request_status_drift")
+        errors.append("selected_owner_request_status_drift")
+    if owner_request.get("user_action_request_id") != expected_active_request_ids[0]:
+        errors.append("selected_owner_request_id_drift")
     owner_text = json.dumps(owner_request, ensure_ascii=False)
-    if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
-        errors.append("gumroad_owner_gate_creator_test_missing")
+    if expected_active_request_ids == ["assistants_sunset_gumroad_publication_v1"]:
+        if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
+            errors.append("gumroad_owner_gate_creator_test_missing")
     publisher_source = (ROOT / "scripts/gumroad_publish.py").read_text(encoding="utf-8")
     if "--existing-product-id" not in publisher_source:
         errors.append("gumroad_publisher_existing_product_gate_missing")
