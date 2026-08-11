@@ -60,7 +60,10 @@ REQUIRED = ("id", "what", "incumbent", "days_to_first_yen",
 BOUNTY_CANDIDATE_REQUIRED = (
     "id", "title", "reward_usd", "status", "available_rewards",
     "active_solvers", "claims_observed", "estimated_effort_hours",
-    "source_url", "issue_url", "external_repository_mutated",
+    "source_url", "issue_url", "source_checked_at_utc", "source_status",
+    "source_title", "upstream_checked_at_utc", "upstream_status",
+    "upstream_title", "rank_eligible", "execution_ready",
+    "external_repository_mutated",
 )
 
 
@@ -139,6 +142,7 @@ def check_bounty_scan(scan: object, now: datetime) -> list[str]:
 
     ids: set[str] = set()
     computed_scores: dict[str, float] = {}
+    execution_ready: dict[str, bool] = {}
     for candidate in candidates:
         if not isinstance(candidate, dict):
             problems.append("paid_github_issue: candidate が辞書ではない")
@@ -163,7 +167,16 @@ def check_bounty_scan(scan: object, now: datetime) -> list[str]:
             problems.append(f"paid_github_issue/{cid}: reward_usd は正数であること")
         if isinstance(available, (int, float)) and available <= 0:
             problems.append(f"paid_github_issue/{cid}: available_rewards は正数であること")
-        if (isinstance(reward, (int, float)) and reward > 0
+        rank_eligible = candidate.get("rank_eligible")
+        ready = candidate.get("execution_ready")
+        if not isinstance(rank_eligible, bool):
+            problems.append(f"paid_github_issue/{cid}: rank_eligible は真偽値であること")
+        if not isinstance(ready, bool):
+            problems.append(f"paid_github_issue/{cid}: execution_ready は真偽値であること")
+        execution_ready[cid] = ready is True
+
+        if (rank_eligible is True
+                and isinstance(reward, (int, float)) and reward > 0
                 and isinstance(effort, (int, float)) and effort > 0
                 and isinstance(solvers, (int, float)) and solvers >= 0):
             score = reward / (effort * (1 + solvers))
@@ -183,11 +196,56 @@ def check_bounty_scan(scan: object, now: datetime) -> list[str]:
                 f"paid_github_issue/{cid}: この自動実行では外部リポジトリを変更しないこと"
             )
 
+        for field in ("source_checked_at_utc", "upstream_checked_at_utc"):
+            raw = candidate.get(field)
+            try:
+                checked = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                problems.append(f"paid_github_issue/{cid}: {field} を日時として読めない")
+                continue
+            if (isinstance(max_age, (int, float)) and max_age > 0
+                    and (now - checked).total_seconds() > max_age * 3600):
+                problems.append(f"paid_github_issue/{cid}: {field} が期限切れ")
+
+        if candidate.get("source_title") != candidate.get("title"):
+            problems.append(f"paid_github_issue/{cid}: Opire と候補の title が一致しない")
+        upstream_title = candidate.get("upstream_title")
+        if upstream_title is not None and upstream_title != candidate.get("title"):
+            problems.append(f"paid_github_issue/{cid}: 上流 Issue と候補の title が一致しない")
+        if rank_eligible is True:
+            if candidate.get("status") != "open":
+                problems.append(
+                    f"paid_github_issue/{cid}: rank対象は候補status=openが必要"
+                )
+            if candidate.get("source_status") != "verified_open":
+                problems.append(
+                    f"paid_github_issue/{cid}: rank対象はOpireのopen確認が必要"
+                )
+            if candidate.get("upstream_status") != "verified_open":
+                problems.append(
+                    f"paid_github_issue/{cid}: rank対象は上流Issueのopen確認が必要"
+                )
+            if upstream_title is None:
+                problems.append(
+                    f"paid_github_issue/{cid}: rank対象は上流Issueのtitle確認が必要"
+                )
+        elif not str(candidate.get("rejection_reason") or "").strip():
+            problems.append(
+                f"paid_github_issue/{cid}: rank対象外にした根拠 rejection_reason がない"
+            )
+
     selected = scan.get("selected_candidate_id")
-    if selected not in ids:
+    if computed_scores and selected not in ids:
         problems.append("paid_github_issue: selected_candidate_id が candidates に存在しない")
     elif computed_scores and selected != max(computed_scores, key=computed_scores.get):
         problems.append("paid_github_issue: selected_candidate_id が再計算した最高スコア候補ではない")
+    elif not computed_scores and selected is not None:
+        problems.append("paid_github_issue: rank可能な候補がないのに選定候補がある")
+    if selected is None or not execution_ready.get(str(selected), False):
+        if not str(scan.get("fallback_option_id") or "").strip():
+            problems.append(
+                "paid_github_issue: 即実行できる選定候補がないなら fallback_option_id が必要"
+            )
     if not str(scan.get("selection_formula") or "").strip():
         problems.append("paid_github_issue: selection_formula がない。順位を再現できない")
     if not str(scan.get("execution_decision") or "").strip():
