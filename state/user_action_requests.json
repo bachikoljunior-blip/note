@@ -1,7 +1,7 @@
 {
   "schema_version": "1.5",
   "policy": "automation_before_user_request",
-  "updated_at_utc": "2026-08-11T18:27:00Z",
+  "updated_at_utc": "2026-08-11T20:22:00Z",
   "delivery_preference": {
     "classification": "current_user_operational_preference_not_permanent_directive",
     "recorded_at_utc": "2026-08-07T00:36:14Z",
@@ -11,11 +11,11 @@
   "requests": [
     {
       "id": "employment_18_shift_run_rate_v1",
-      "description": "既存雇用の1給与期間18勤務相当を主経路にし、採用済みイベント業務を不足時の補完候補として現在単価だけ確認する",
-      "status": "automation_evaluated_ready_for_single_weekly_session",
+      "description": "既存雇用16日勤と最大2件の安全な既存イベント勤務を組み合わせ、イベント側は認証済み1経路だけを確認する",
+      "status": "automation_evaluated_ready_for_single_weekly_session_hybrid_v3",
       "priority": "P0",
       "currently_requested": true,
-      "forecast_effect": "P20到達34日、P50到達44日、維持確認P50 74日。イベント在庫未確認のため分位点には未算入。",
+      "forecast_effect": "到達P20/P50/P80は44/74/135日。登録済み予備2経路は現在在庫未確認のため分位点へ未算入。",
       "automation_review": {
         "completed": true,
         "completed_at_utc": "2026-08-11T18:27:00Z",
@@ -62,19 +62,22 @@
         "イベントアプリ確認を既存週次セッション内の読取だけに制限",
         "直近14回の給与明細発行通知を探索し、最新支給分の通知を本文まで読取",
         "メール本文・添付・入金通知から総支給額を0操作で取得できないことを確認",
-        "給与明細確認を最新の未読通知から認証済み画面を開く1経路へ短縮"
+        "給与明細確認を最新の未読通知から認証済み画面を開く1経路へ短縮",
+        "過去365日の本人向け応募・採用メールを再探索し、登録スタッフとして直接案件を選べた既存経路2件を特定",
+        "登録完了が確認できない選考会予約だけの候補を除外",
+        "イベント確認を追加ログインではなく認証済み1経路の代替選択へ圧縮"
       ],
       "residual_user_steps": [
-        "通常の次回シフト入力で、体調上可能な範囲だけ8/16開始週を休息込み4〜5日勤希望にする。同じGmailで7/24支給分の未読「給与明細が発行されました」を開き、リンク先で総支給額だけ確認する。EVENT WORKSが既にログイン済みで開ける場合だけ、身体・移動上可能な現在案件の最高日給を読み、応募せず閉じる。"
+        "通常の次回シフト入力で8/16開始週を休息込み4日勤希望にし、同じGmailで7/24給与通知から総支給額だけ確認する。イベントは認証済み1経路だけ確認する（正式採用済みアプリを優先し、それが使えず登録スタッフWeb画面が既にログイン済みなら代替）。再ログイン・再登録はせず、安全かつ現職と重複せず、最大2件の表示総額が合計20,800円以上の場合だけ本人が応募する。"
       ],
       "residual_step_count": 1,
-      "batch_definition": "同じiPhone・同じ週次セッションで連続実施。アプリ未導入・未ログインなら追加登録せず終了。",
-      "estimated_minutes": 4,
+      "batch_definition": "同じiPhone・同じ週次セッションで連続実施。イベントは代替を含めて確認1経路まで。未導入・未認証なら追加登録せず終了。",
+      "estimated_minutes": 6,
       "user_only_reason": "勤務可能日の申告は本人限定。最新給与通知までは自動特定したが、金額はメールや添付になく本人のSmartHR認証内だけにある。イベント在庫も本人の既存ログイン内にあり、接続済み読取面から取得できない。",
-      "safety_rule": "7連続勤務を作らず、4〜5勤務が安全でなければ増やさない。夜勤へ自動置換しない。イベント案件は今回応募せず、現勤務との重複、身体負荷、移動、総支給を後続判定する。",
-      "completion_signal": "個人情報やスクリーンショットを送らず「総支給額=金額／4〜5勤務希望済み／イベント最高日給=金額」または末尾に「イベントアプリ未使用」だけを返す。",
-      "deadline": "次回の通常シフト入力締切まで",
-      "fallback": "18勤務相当が安全に確保できず、EVENT WORKSに現職日勤を補完できる安全な現在案件が見える場合だけ、次回に重複・移動・支払条件を再検証して応募判断する。今回は応募しない。",
+      "safety_rule": "連続過重勤務を作らず、4勤務が安全でなければ増やさない。イベントは現職と日付が重複せず、身体負荷・移動・帰宅・表示総額を本人が確認できた場合だけ最大2件。",
+      "completion_signal": "個人情報やスクリーンショットを送らず「総支給額=金額／現職4勤務希望済み／イベント応募=件数・合計金額」または「イベント対象なし」または「認証済みイベント経路なし」だけを返す。",
+      "deadline": "2026-08-15 20:00 JST",
+      "fallback": "現行アプリが利用不能な場合だけ、既に認証済みの登録スタッフWeb画面を代替する。どちらも認証済みでなければ新規登録せず終了し、別経路の自動探索を継続する。",
       "evidence": [
         "OPERATIONS/INCOME_FORECAST_2026-08-12T1519Z.json",
         "OPERATIONS/PAID_WORK_CANDIDATE_SCAN_2026-08-12T1519Z.json",
@@ -84,7 +87,9 @@
         "OPERATIONS/FORMALLY_HIRED_EVENT_WORK_PATH_2026-08-12T1725Z.json",
         "OPERATIONS/INCOME_FORECAST_2026-08-12T1827Z.json",
         "OPERATIONS/PAYSLIP_READBACK_PATH_2026-08-12T1827Z.json",
-        "OPERATIONS/LOOP_REMEASUREMENT_2026-08-12T1827Z.json"
+        "OPERATIONS/LOOP_REMEASUREMENT_2026-08-12T1827Z.json",
+        "OPERATIONS/WARM_EMPLOYMENT_CONTACT_SCAN_2026-08-12T2022Z.json",
+        "OPERATIONS/INCOME_FORECAST_2026-08-12T2022Z.json"
       ]
     },
     {
