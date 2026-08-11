@@ -25,6 +25,7 @@ def loop_fixture() -> dict:
         "consumer": "test",
         "latest_observation": {
             "decision_not_before_utc": "2026-08-11T04:00:00Z",
+            "observed_at_utc": "2026-08-11T04:30:00Z",
             "effect_window_elapsed": True,
             "performance_conclusion_allowed": True,
         },
@@ -66,6 +67,30 @@ class EffectWindowTest(unittest.TestCase):
             "2026-08-11T04:00:00"
         )
         self.assert_rejected(data, "タイムゾーン付き日時")
+
+
+    def test_elapsed_window_requires_post_deadline_observation(self) -> None:
+        data = loop_fixture()
+        data["latest_observation"]["observed_at_utc"] = "2026-08-11T03:59:59Z"
+        self.assert_rejected(data, "latest_observation.observed_at_utc が decision_not_before_utc より前")
+
+    def test_elapsed_window_requires_post_deadline_loop_measurement(self) -> None:
+        data = loop_fixture()
+        data["measured_at"] = "2026-08-11T03:59:59Z"
+        self.assert_rejected(data, "loop.measured_at が decision_not_before_utc より前")
+
+    def test_conclusion_cannot_precede_effect_window(self) -> None:
+        data = loop_fixture()
+        data["latest_observation"]["decision_not_before_utc"] = (
+            "2026-08-11T06:00:00Z"
+        )
+        data["latest_observation"]["effect_window_elapsed"] = False
+        data["latest_observation"]["performance_conclusion_allowed"] = True
+        self.assert_rejected(
+            data,
+            "performance_conclusion_allowed=true",
+        )
+
 
     def test_conclusion_flag_requires_boolean(self) -> None:
         data = loop_fixture()
