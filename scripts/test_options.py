@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from check_options import check_bounty_scan
+from check_options import check_bounty_scan, check_demand_scan
 
 
 NOW = datetime(2026, 8, 11, 4, 40, tzinfo=timezone.utc)
@@ -53,6 +53,82 @@ def scan() -> dict:
         "execution_decision": "verified fixture",
         "external_repository_mutated": False,
     }
+
+
+def demand_scan() -> dict:
+    return {
+        "checked_at_utc": "2026-08-11T04:32:00Z",
+        "max_age_hours": 168,
+        "lookback_days": 14,
+        "scope_repository_count": 17,
+        "search_query_count": 9,
+        "qualification_threshold": 5,
+        "qualifying_unique_issue_count": 1,
+        "threshold_met": False,
+        "manual_time_cost_over_30_minutes_verified": False,
+        "demand_validated": False,
+        "scope_exhaustive": False,
+        "qualifying_issues": [
+            {
+                "url": "https://github.com/example/project/issues/1",
+                "title": "Migration work before shutdown",
+                "state": "open",
+                "created_at_utc": "2026-08-10T17:19:16Z",
+            }
+        ],
+        "inference_boundary": "selected public repositories only",
+        "product_development_decision": (
+            "freeze_additional_build_until_stronger_signal"
+        ),
+        "validation_record": "OPERATIONS/fixture.json",
+        "external_repository_mutated": False,
+        "external_cost_yen": 0,
+    }
+
+
+class DemandScanTest(unittest.TestCase):
+    def assert_rejected(self, data: dict, fragment: str) -> None:
+        errors = check_demand_scan(data, NOW)
+        self.assertTrue(any(fragment in error for error in errors), errors)
+
+    def test_below_threshold_scan_passes_without_claiming_demand(self) -> None:
+        self.assertEqual(check_demand_scan(demand_scan(), NOW), [])
+
+    def test_zero_qualifying_issues_is_a_valid_measurement(self) -> None:
+        data = demand_scan()
+        data["qualifying_unique_issue_count"] = 0
+        data["qualifying_issues"] = []
+        self.assertEqual(check_demand_scan(data, NOW), [])
+
+    def test_count_must_match_unique_issue_list(self) -> None:
+        data = demand_scan()
+        data["qualifying_unique_issue_count"] = 2
+        self.assert_rejected(data, "Issue件数と一致しない")
+
+    def test_threshold_cannot_be_claimed_early(self) -> None:
+        data = demand_scan()
+        data["threshold_met"] = True
+        self.assert_rejected(data, "再計算に一致しない")
+
+    def test_deadline_alone_cannot_validate_demand(self) -> None:
+        data = demand_scan()
+        data["demand_validated"] = True
+        self.assert_rejected(data, "件数基準と30分超作業の両方")
+
+    def test_old_issue_cannot_count_in_recent_window(self) -> None:
+        data = demand_scan()
+        data["qualifying_issues"][0]["created_at_utc"] = "2026-07-20T00:00:00Z"
+        self.assert_rejected(data, "直近lookback_daysの範囲外")
+
+    def test_unvalidated_demand_freezes_additional_build(self) -> None:
+        data = demand_scan()
+        data["product_development_decision"] = "keep_building"
+        self.assert_rejected(data, "追加開発をfreeze")
+
+    def test_external_mutation_is_rejected_for_demand_scan(self) -> None:
+        data = demand_scan()
+        data["external_repository_mutated"] = True
+        self.assert_rejected(data, "外部リポジトリを変更")
 
 
 class BountyScanTest(unittest.TestCase):

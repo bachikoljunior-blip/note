@@ -48,7 +48,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +84,129 @@ def parse_day(value: str) -> date | None:
         return date.fromisoformat(str(value)[:10])
     except (ValueError, TypeError):
         return None
+
+
+def check_demand_scan(scan: object, now: datetime) -> list[str]:
+    """需要先行案が期限だけで「需要検証済み」にならないことを検査する。"""
+    problems: list[str] = []
+    name = "demand_first_micro_product"
+    if not isinstance(scan, dict):
+        return [f"{name}: latest_demand_scan が辞書ではない"]
+
+    checked = parse_aware_datetime(scan.get("checked_at_utc"))
+    if checked is None:
+        problems.append(f"{name}: checked_at_utc はタイムゾーン付き日時であること")
+    max_age = scan.get("max_age_hours")
+    max_age_valid = isinstance(max_age, (int, float)) and max_age > 0
+    if not max_age_valid:
+        problems.append(f"{name}: max_age_hours は正数であること")
+    if checked is not None:
+        age_seconds = (now - checked).total_seconds()
+        if age_seconds < -MAX_FUTURE_SKEW_SECONDS:
+            problems.append(f"{name}: checked_at_utc が現在時刻より3分を超えて未来")
+        elif max_age_valid and age_seconds > max_age * 3600:
+            problems.append(f"{name}: 需要測定が期限切れ。公開需要を再測定すること")
+
+    integers: dict[str, int] = {}
+    for field in (
+        "lookback_days", "scope_repository_count", "search_query_count",
+        "qualification_threshold",
+    ):
+        value = scan.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            problems.append(f"{name}: {field} は正の整数であること")
+        else:
+            integers[field] = value
+
+    issue_count = scan.get("qualifying_unique_issue_count")
+    if (
+        not isinstance(issue_count, int)
+        or isinstance(issue_count, bool)
+        or issue_count < 0
+    ):
+        problems.append(
+            f"{name}: qualifying_unique_issue_count は0以上の整数であること"
+        )
+    else:
+        integers["qualifying_unique_issue_count"] = issue_count
+
+    issues = scan.get("qualifying_issues")
+    if not isinstance(issues, list):
+        problems.append(f"{name}: qualifying_issues は配列であること")
+        issues = []
+    count = integers.get("qualifying_unique_issue_count")
+    if count is not None and count != len(issues):
+        problems.append(f"{name}: qualifying_unique_issue_count がIssue件数と一致しない")
+
+    urls: set[str] = set()
+    for index, issue in enumerate(issues):
+        label = f"{name}/issue[{index}]"
+        if not isinstance(issue, dict):
+            problems.append(f"{label}: Issueが辞書ではない")
+            continue
+        url = str(issue.get("url") or "")
+        if not url.startswith("https://github.com/"):
+            problems.append(f"{label}: url はGitHubのhttps URLであること")
+        if url in urls:
+            problems.append(f"{label}: url が重複している")
+        urls.add(url)
+        if not str(issue.get("title") or "").strip():
+            problems.append(f"{label}: title がない")
+        if issue.get("state") != "open":
+            problems.append(f"{label}: state=open の公開Issueだけを数えること")
+        created = parse_aware_datetime(issue.get("created_at_utc"))
+        if created is None:
+            problems.append(f"{label}: created_at_utc はタイムゾーン付き日時であること")
+        elif checked is not None:
+            if (created - now).total_seconds() > MAX_FUTURE_SKEW_SECONDS:
+                problems.append(f"{label}: created_at_utc が現在時刻より3分を超えて未来")
+            lookback = integers.get("lookback_days")
+            if lookback is not None and created < checked - timedelta(days=lookback):
+                problems.append(f"{label}: 直近lookback_daysの範囲外")
+
+    threshold = integers.get("qualification_threshold")
+    observed = integers.get("qualifying_unique_issue_count")
+    expected_met = (
+        threshold is not None and observed is not None and observed >= threshold
+    )
+    threshold_met = scan.get("threshold_met")
+    if not isinstance(threshold_met, bool):
+        problems.append(f"{name}: threshold_met は真偽値であること")
+    elif threshold_met is not expected_met:
+        problems.append(f"{name}: threshold_met が件数と基準からの再計算に一致しない")
+
+    time_cost = scan.get("manual_time_cost_over_30_minutes_verified")
+    validated = scan.get("demand_validated")
+    if not isinstance(time_cost, bool):
+        problems.append(
+            f"{name}: manual_time_cost_over_30_minutes_verified は真偽値であること"
+        )
+    if not isinstance(validated, bool):
+        problems.append(f"{name}: demand_validated は真偽値であること")
+    elif isinstance(time_cost, bool):
+        expected_validated = expected_met and time_cost
+        if validated is not expected_validated:
+            problems.append(
+                f"{name}: demand_validated は件数基準と30分超作業の両方が必要"
+            )
+        if not validated and scan.get("product_development_decision") != (
+            "freeze_additional_build_until_stronger_signal"
+        ):
+            problems.append(
+                f"{name}: 需要未検証なら追加開発をfreezeすること"
+            )
+
+    if scan.get("scope_exhaustive") is not False:
+        problems.append(f"{name}: 公開Issue検索を網羅的と断定しないこと")
+    if scan.get("external_repository_mutated") is not False:
+        problems.append(f"{name}: 需要測定で外部リポジトリを変更しないこと")
+    if scan.get("external_cost_yen") != 0:
+        problems.append(f"{name}: 実現収益0の間は外部費用0円であること")
+    if not str(scan.get("inference_boundary") or "").strip():
+        problems.append(f"{name}: inference_boundary がない")
+    if not str(scan.get("validation_record") or "").strip():
+        problems.append(f"{name}: validation_record がない")
+    return problems
 
 
 def check_one(o: dict, today: date) -> list[str]:
@@ -313,6 +436,13 @@ def main() -> int:
             errors.append(f"id が重複している: {o.get('id')}")
         seen.add(o.get("id"))
         errors.extend(check_one(o, today))
+
+    demand = next(
+        (o for o in options if o.get("id") == "demand_first_micro_product"),
+        None,
+    )
+    if demand:
+        errors.extend(check_demand_scan(demand.get("latest_demand_scan"), now))
 
     paid = next((o for o in options if o.get("id") == "paid_github_issue"), None)
     if paid:
