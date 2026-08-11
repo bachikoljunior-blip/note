@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import hashlib
 import json
@@ -225,9 +226,26 @@ def inspect(
 
     guard_path = ROOT / "tools" / "directive_guard.py"
     if guard_path.is_file():
-        guard_text = guard_path.read_text(encoding="utf-8")
-        if expected.decode("utf-8").strip() not in guard_text:
-            separation_errors.append("directive_guard_fallback_not_current_exact_text")
+        try:
+            guard_tree = ast.parse(guard_path.read_text(encoding="utf-8"))
+            fallback_value = next(
+                ast.literal_eval(node.value)
+                for node in guard_tree.body
+                if isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "FALLBACK"
+                    for target in node.targets
+                )
+            )
+        except (OSError, SyntaxError, ValueError, StopIteration) as exc:
+            separation_errors.append(
+                f"directive_guard_fallback_unreadable:{type(exc).__name__}:{exc}"
+            )
+        else:
+            if fallback_value.strip() != expected.decode("utf-8").strip():
+                separation_errors.append(
+                    "directive_guard_fallback_not_current_exact_text"
+                )
 
     return copies, metadata_errors, separation_errors
 
