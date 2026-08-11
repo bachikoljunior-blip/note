@@ -82,7 +82,7 @@ def load(name: str) -> dict:
 
 
 def goal_report(now: datetime) -> tuple[list[str], list[str]]:
-    """A1 に対していまいくらか。**最初に見る。**
+    """現行目標に対していまいくらか。**最初に見る。**
 
     オーナーの提案（2026-08-08）: 毎回、最後に目標が達成できているかと
     最新の使用量を確認してから、終わるのが最善かを考える。
@@ -93,7 +93,7 @@ def goal_report(now: datetime) -> tuple[list[str], list[str]]:
     goal = load("goal.json")
     if not goal:
         return (["state/goal.json が無い。目標への距離を測れない"],
-                ["目標の登録簿が無い。A1 に対する現在地が誰にも分からない状態"])
+                ["目標の登録簿が無い。現行目標に対する現在地が誰にも分からない状態"])
 
     target = float(goal.get("target_jpy_per_month") or 0)
     lines: list[str] = []
@@ -153,7 +153,7 @@ def goal_report(now: datetime) -> tuple[list[str], list[str]]:
             lines.append(f"  {'':<20}   律速: {src['blocker']}")
 
     pct = (total / target * 100.0) if target else 0.0
-    header = [f"目標（A1）: 月 ¥{target:,.0f}",
+    header = [f"現行目標: 月 ¥{target:,.0f}",
               f"現在      : ¥{total:,.0f}  = {pct:.1f}%",
               f"残り      : ¥{target - total:,.0f}", ""]
 
@@ -211,7 +211,7 @@ def option_report(now: datetime) -> tuple[list[str], list[str]]:
         shown = "到達不能" if v >= 1e9 else f"{v:.0f}日〜"
         lines.append(f"最速の既存案   : {best_inc.get('id')} （{shown}）")
 
-    # A1 は依頼の件数を最適化する。日数だけで並べると、本人確認が要る案が
+    # 現行指示は本人操作の件数を最小化する。日数だけで並べると、本人確認が要る案が
     # 「最速」として先頭に出て、実際に今日動かせる案が隠れる。両方見せる。
     best_zero = next((o for o in ranked
                       if not o.get("incumbent")
@@ -225,7 +225,7 @@ def option_report(now: datetime) -> tuple[list[str], list[str]]:
         lines.append("")
         lines.append("  **既存より速い未検証の案がある。既存を磨くのは『選択』であって既定ではない。**")
         lines.append("  続けるなら、なぜその方が速いのかを言えること。"
-                     "言えないなら資源を移すこと（A14: もう作ってあるから、は理由にならない）")
+                     "言えないなら資源を移すこと（もう作ってあることだけは理由にならない）")
 
     today = now.date()
     for o in options:
@@ -309,7 +309,7 @@ def main() -> int:
             remaining.append(
                 f"「不可能」と判定した {item.get('id')} の再検査期限が過ぎている。測り直すこと")
 
-    print("── 1. 目標は達成できているか（A1・実測） ──")
+    print("── 1. 目標は達成できているか（現行指示・実測） ──")
     for line in goal_lines:
         print(line if line.startswith("  ") or not line else "  " + line)
     print()
