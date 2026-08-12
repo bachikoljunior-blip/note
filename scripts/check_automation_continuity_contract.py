@@ -114,12 +114,21 @@ def main() -> int:
 
     automation = current.get("automation", {})
     if automation.get("revenue_continuation") not in {
-        "active_two_layer_verified",
+        "active_two_layer_configuration_verified_runtime_pending",
+        "active_two_layer_runtime_verified",
         "merged_main_remote_ci_validated",
     }:
         errors.append("current_continuity_status_invalid")
     if automation.get("automation_continuity_state") != "state/automation_continuity.json":
         errors.append("current_continuity_pointer_missing")
+    if automation.get("primary_revenue_task_schedule") != state.get("primary", {}).get("schedule"):
+        errors.append("current_primary_schedule_mismatch")
+    if automation.get("revenue_task_watchdog_schedule") != state.get("watchdog", {}).get("schedule"):
+        errors.append("current_watchdog_schedule_mismatch")
+    if automation.get("automation_continuity_fixed_point_contract") != (
+        "required_zero_correctable_issues_and_residual_risk_detection_recovery"
+    ):
+        errors.append("current_fixed_point_contract_missing")
 
     unit = next(
         (item for item in control.get("active_work_units", []) if item.get("id") == "automation_continuity_v1"),
@@ -129,6 +138,14 @@ def main() -> int:
         errors.append("continuation_work_unit_missing")
     elif unit.get("assistant_executable") is not True or unit.get("user_blocked") is not False:
         errors.append("continuation_work_unit_boundary_invalid")
+    elif unit.get("primary_schedule") != state.get("primary", {}).get("schedule"):
+        errors.append("continuation_unit_primary_schedule_mismatch")
+    elif unit.get("watchdog_schedule") != state.get("watchdog", {}).get("schedule"):
+        errors.append("continuation_unit_watchdog_schedule_mismatch")
+    elif unit.get("runtime_evidence_status") != evidence.get("status"):
+        errors.append("continuation_unit_runtime_evidence_mismatch")
+    elif evidence.get("status") == "pending_first_new_run" and unit.get("actionable_now") is not True:
+        errors.append("pending_runtime_evidence_must_remain_actionable")
 
     for phrase in (
         "ユーザーの明示停止だけを停止条件",
