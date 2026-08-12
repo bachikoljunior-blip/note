@@ -6,7 +6,7 @@ Assistants API Sunset Migration Kit
 
 ## Price
 
-$9 launch price
+Solo $29 / Team $149 / Organization $399
 
 ## Short description
 
@@ -21,6 +21,14 @@ You get a read-only scanner, a conservative dry-run codemod with unified diffs a
 No API key is required to scan or preview changes. Python 3.10+ is recommended. Review all changes and run your own application tests before deployment.
 
 This is an independent developer utility and is not an official OpenAI product.
+
+Choose the license that matches your internal use. Every version contains the same self-service download and no consulting or ongoing support:
+
+- Solo: one purchaser, one internal repository.
+- Team: one organization, up to 10 internal repositories.
+- Organization: one legal organization, unlimited internal repositories.
+
+Redistribution, resale, sublicensing, client delivery of the source kit, and use as a competing downloadable product are not included in any version.
 
 Official shutdown and migration references:
 https://developers.openai.com/api/docs/deprecations

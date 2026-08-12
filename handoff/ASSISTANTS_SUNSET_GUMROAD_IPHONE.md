@@ -1,6 +1,6 @@
 # Assistants API Sunset Migration Kit — iPhone Gumroad handoff
 
-This handoff reduces the separate US$9 product completion to one private file download and one authenticated Gumroad session. Final publication, identity, tax, payout, banking, and contract decisions remain user-only.
+This handoff reduces the tiered self-service product completion to one private file download and one authenticated Gumroad session. Final publication, identity, tax, payout, banking, and contract decisions remain user-only.
 
 ## Download once
 
@@ -19,11 +19,12 @@ Do not download the validation reports or the larger validated-outputs artifact.
 ## One authenticated Gumroad session
 
 1. Create a separate digital product named `Assistants API Sunset Migration Kit`.
-2. Set the launch price to `US$9` and the custom permalink to `assistants-api-sunset-migration-kit`.
-3. Copy the summary, description, tags, and refund fine print from the pack.
-4. Upload only `Assistants_API_Sunset_Migration_Kit_v1.zip` as buyer content and wait for the filename to appear.
-5. Add the provided cover. If Gumroad does not accept SVG, open it in Safari, take a screenshot, and crop it square without changing the claims.
-6. Save, then use Gumroad's creator `Test purchase`; do not buy the product with a real card.
-7. Confirm the buyer can download and open the inner ZIP, then make the final publication decision.
+2. Set the base price to `US$29` and the custom permalink to `assistants-api-sunset-migration-kit`.
+3. Add exactly three versions and confirm the buyer-visible total prices: `Solo — US$29`, `Team — US$149`, and `Organization — US$399`. If Gumroad asks for an amount added to the US$29 base, enter `US$0`, `US$120`, and `US$370` respectively.
+4. Copy the summary, description, tags, and refund fine print from the pack.
+5. Upload only `Assistants_API_Sunset_Migration_Kit_v1.zip` as buyer content and wait for the filename to appear. Every version receives the same ZIP; the receipt version controls the license scope written in `LICENSE.txt`.
+6. Add the provided cover. If Gumroad does not accept SVG, open it in Safari, take a screenshot, and crop it square without changing the claims.
+7. Save, then use Gumroad's creator `Test purchase` once for each version; do not buy the product with a real card.
+8. Confirm every version can download and open the inner ZIP and that the three total prices are exact, then make the final publication decision.
 
 Send back only the public product URL after completion. Never send passwords, one-time codes, cookies, access tokens, legal identity, tax, payout, or banking information to chat or GitHub.
