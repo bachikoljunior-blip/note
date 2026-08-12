@@ -49,8 +49,8 @@ def main() -> int:
         errors.append("non_stop_conditions_incomplete")
 
     for key, title, minute in (
-        ("primary", "月20万円最短実行", "20"),
-        ("watchdog", "月20万円継続監視", "35"),
+        ("primary", "月20万円最短実行 v6", "20"),
+        ("watchdog", "月20万円継続監視 v6", "35"),
     ):
         item = state.get(key, {})
         if item.get("title") != title:
