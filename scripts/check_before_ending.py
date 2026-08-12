@@ -194,7 +194,7 @@ def option_report(now: datetime) -> tuple[list[str], list[str]]:
             return float(v["low"])
         return 1e9
 
-    options = data.get("options", [])
+    options = [o for o in data.get("options", []) if not o.get("excluded_by_goal_scope")]
     ranked = sorted(options, key=low)
     fresh = [o for o in options if not o.get("incumbent") and not o.get("tested")]
     best_fresh = next((o for o in ranked if not o.get("incumbent")), None)

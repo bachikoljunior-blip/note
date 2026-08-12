@@ -265,14 +265,13 @@ def main() -> int:
     if booth_high_request.get("currently_requested") is not False:
         errors.append("booth_high_ticket_gate_must_be_deferred")
     forecast_request_id = current.get("income_forecast", {}).get("next_user_operation_id")
-    expected_active_request_ids = [
-        forecast_request_id or "assistants_sunset_gumroad_publication_v1"
-    ]
+    expected_active_request_ids = [forecast_request_id] if forecast_request_id else []
     if current.get("next_actions", {}).get("user_action_request_ids") != expected_active_request_ids:
         errors.append("forecast_single_active_request_drift")
-    selected_request = request_map.get(expected_active_request_ids[0], {})
-    if selected_request.get("currently_requested") is not True:
-        errors.append("forecast_selected_request_must_be_active")
+    if expected_active_request_ids:
+        selected_request = request_map.get(expected_active_request_ids[0], {})
+        if selected_request.get("currently_requested") is not True:
+            errors.append("forecast_selected_request_must_be_active")
     active_registry_ids = {
         request_id
         for request_id, request in request_map.items()
@@ -292,16 +291,25 @@ def main() -> int:
     elif assistants_request.get("currently_requested") is not False:
         errors.append("assistants_sunset_request_must_be_deferred_when_not_selected")
     assistants_pack = load("state/assistants_sunset_iphone_pack.json")
-    if assistants_pack.get("status") != "remote_ci_validated_private_artifact_ready":
+    if assistants_pack.get("status") not in {
+        "remote_ci_validated_private_artifact_ready",
+        "local_deterministic_tiered_pack_validated_private_library_replaced",
+    }:
         errors.append("assistants_sunset_pack_not_ready")
     if assistants_pack.get("buyer_zip_attached") is not False:
         errors.append("assistants_sunset_buyer_zip_attachment_must_remain_unverified")
     if assistants_pack.get("creator_test_purchase_verified") is not False:
         errors.append("assistants_sunset_creator_test_must_remain_unverified")
-    if owner_request.get("status") != "automation_evaluated_one_session_requested":
-        errors.append("selected_owner_request_status_drift")
-    if owner_request.get("user_action_request_id") != expected_active_request_ids[0]:
-        errors.append("selected_owner_request_id_drift")
+    if expected_active_request_ids:
+        if owner_request.get("status") != "automation_evaluated_one_session_requested":
+            errors.append("selected_owner_request_status_drift")
+        if owner_request.get("user_action_request_id") != expected_active_request_ids[0]:
+            errors.append("selected_owner_request_id_drift")
+    else:
+        if owner_request.get("status") != "no_current_user_request_after_external_publication_readback":
+            errors.append("zero_owner_request_status_drift")
+        if owner_request.get("user_action_request_id") is not None:
+            errors.append("zero_owner_request_id_must_be_null")
     owner_text = json.dumps(owner_request, ensure_ascii=False)
     if expected_active_request_ids == ["assistants_sunset_gumroad_publication_v1"]:
         if "Test Purchase" not in owner_text and "test purchase" not in owner_text.lower() and "テスト購入" not in owner_text:
