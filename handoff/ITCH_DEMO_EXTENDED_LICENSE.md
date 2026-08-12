@@ -5,7 +5,7 @@ This handoff turns the existing public product into a three-step self-service fu
 ## Prepared private file
 
 - `Brandable_Idle_Clicker_Itch_Storefront_Pack_v1.zip`
-- SHA-256: `db80c494e9f86626c4029b9891ef89e2e5ae41d54dc744ed19df5d25d6bd46a4`
+- SHA-256: `8779eed3840f0974de845294baa8cf019ba7a5142e18750128e8d3e915ff5e6a`
 - Contains the playable demo ZIP, Extended license certificate, iPhone instructions, exact English storefront copy, tags, and one ready-to-paste devlog.
 
 ## One authenticated iPhone session
@@ -15,8 +15,8 @@ This handoff turns the existing public product into a three-step self-service fu
 3. Upload `Brandable_Idle_Clicker_Playable_Demo_v1.zip` and mark it as a free demo.
 4. Upload `Brandable_Idle_Clicker_Extended_License_v1.txt`, set its individual minimum price to **US$349**, and label it **Extended License — unlimited client projects / multiple own sites**.
 5. Keep the existing source-kit price at US$25. Do not add customization, installation, consulting, or ongoing support.
-6. Open `STORE_COPY_AND_DEVLOG.txt`, add its recommended tags, and create the supplied devlog in this same seller session. Do not add support or revenue claims.
-7. Save/publish, open the page while logged out, and verify the free demo, US$25 regular offer, US$349 Extended file, and devlog are all visible.
+6. Open `STORE_COPY_AND_DEVLOG.txt`, add its recommended tags, delete the existing line `・クライアントの案件へ納品する場合は、別途ご相談ください`, replace it with the supplied self-service license lines, and create the supplied devlog in this same seller session. Do not add support or revenue claims.
+7. Save/publish, open the page while logged out, and verify the free demo, US$25 regular offer, US$349 Extended file, and devlog are all visible, and `別途ご相談ください` is absent.
 8. Return only the public product URL as the non-secret completion signal.
 
 Never send a password, one-time code, identity document, tax detail, payout detail, or payment credential. If any price or file is ambiguous, leave the change unpublished.
