@@ -1,8 +1,8 @@
 {
   "schema_version": "2.0",
   "classification": "assistant_operational_state_not_permanent_directive",
-  "updated_at_utc": "2026-08-12T08:29:55.087Z",
-  "status": "active_two_layer_configuration_verified_runtime_pending",
+  "updated_at_utc": "2026-08-12T08:44:23.550Z",
+  "status": "active_primary_missed_first_run_repair_service_error_fallback_completed",
   "purpose": "Keep one standalone hourly revenue execution task and one independent standalone watchdog active, prove fixed-point compliance from repository evidence, and report separately to the originating chat.",
   "stop_condition": "explicit_user_instruction_to_stop_or_end_project_only",
   "non_stop_conditions": [
@@ -23,8 +23,8 @@
     "creation_readback_conversation_id_null": true,
     "conversation_id_after_run_is_not_failure_by_itself": true,
     "last_run_time": null,
-    "runtime_evidence_status": "pending_first_new_run",
-    "repair_result": "saved prompt repaired and exact read-back passed; scheduled runtime has not yet been observed"
+    "runtime_evidence_status": "missed_first_run",
+    "repair_result": "same-task update attempted twice; automation service returned an error; task remained enabled with the required schedule and timezone"
   },
   "watchdog": {
     "title": "月20万円継続監視",
@@ -35,29 +35,28 @@
     "destination_mode": "standalone",
     "creation_readback_conversation_id_null": true,
     "conversation_id_after_run_is_not_failure_by_itself": true,
-    "last_run_time": null,
-    "runtime_evidence_status": "pending_first_new_run",
-    "repair_result": "saved prompt repaired and exact read-back passed; scheduled runtime has not yet been observed"
+    "last_run_time": "2026-08-12T08:44:23.550Z",
+    "runtime_evidence_status": "current_run_checkpointed",
+    "repair_result": "detected missed_first_run, attempted same-task repair twice, performed fallback revenue read-back, and checkpointed evidence"
   },
   "live_observation": {
-    "checked_at_utc": "2026-08-12T08:25:41.762Z",
-    "source": "connected automation manager private lookup",
+    "checked_at_utc": "2026-08-12T08:44:23.550Z",
+    "source": "connected automation manager private lookup plus GitHub latest main",
     "active_primary_count": 1,
     "active_watchdog_count": 1,
-    "superseded_primary_versions_paused": 1,
-    "superseded_watchdog_versions_paused": 2,
-    "superseded_versions_enabled": 0,
     "primary_enabled": true,
     "watchdog_enabled": true,
     "primary_last_run_time": null,
-    "watchdog_last_run_time": null,
+    "watchdog_last_run_time": "current run; manager field updates after completion",
     "primary_next_run_time_field": null,
     "watchdog_next_run_time_field": null,
     "next_run_time_null_is_failure": false,
-    "cadence_authority": "enabled + hourly RRULE + Asia/Tokyo; after first run, use last_run_time age and a live lock/lease. A null unsupported next_run_time field alone never triggers repair.",
-    "configuration_conclusion": "one enabled standalone main and one enabled standalone watchdog; prompt configuration fixed-point audit passed; first scheduled runtime still not observed",
-    "runtime_evidence_status": "pending_first_new_run",
-    "repair_action": "no further saved-prompt repair required; continue watching for first runtime evidence"
+    "scheduled_primary_occurrence_jst": "2026-08-12T17:20:00+09:00",
+    "scheduler_grace_minutes": 15,
+    "live_run_lock_or_lease_observed": false,
+    "failure_class": "missed_first_run",
+    "repair_action": "same existing task update attempted twice; service error",
+    "repair_readback": "still enabled, unchanged hourly minute-20 schedule, Asia/Tokyo, no runtime"
   },
   "repository_contract": {
     "assistant_policy": "OPERATIONS/ASSISTANT_OPERATING_POLICY.md",
@@ -156,44 +155,53 @@
     "repeat_from_first_requirement_after_each_repair": true
   },
   "runtime_evidence": {
-    "status": "pending_first_new_run",
+    "status": "primary_runtime_missing_watchdog_checkpointed",
     "compliance_pass": false,
-    "audit_iterations": 0,
+    "audit_iterations": 2,
     "issues_found": [
-      "No last_run_time or run record has yet been observed for the newly repaired standalone main task after its scheduled minute-20 occurrence.",
-      "No independent runtime verification has yet been observed from the newly repaired standalone watchdog.",
-      "The minute-20 first run has not been observed; the new watchdog guard will classify it after the 15-minute scheduler grace if no live run/lock/lease appears."
+      "Primary standalone task missed its first post-update minute-20 run after the 15-minute grace.",
+      "Automation service rejected both same-task repair attempts.",
+      "No complete primary runtime or three-checkpoint fixed-point audit evidence exists."
     ],
-    "issues_fixed": [],
+    "issues_fixed": [
+      "The missing first-run condition, repair attempts, read-back, fallback work, and recovery point are durably checkpointed."
+    ],
     "unresolved_correctable_issues": [
-      "Observe the minute-35 watchdog run, confirm missed_first_run handling if the main is still absent, and persist its result.",
-      "Observe a subsequent main run and persist all required runtime and fixed-point audit fields."
+      "Automation service must accept the same-task update or the enabled primary must produce a run.",
+      "A complete primary runtime record with start, after-unit, and before-end fixed-point audits must be observed."
     ],
     "residual_external_risks": [
       {
         "risk": "scheduler or automation service outage",
-        "detection": "watchdog checks elapsed last_run_time and valid lock/lease; report task surfaces missing runs",
-        "alternative": "watchdog performs safe fallback revenue work when the main run is absent and the scheduler still permits execution",
-        "recovery": "retry the enabled hourly task after service recovery without duplicating active tasks"
+        "detection": "hourly watchdog checks enabled state, schedule, last_run_time, and live lock/lease",
+        "alternative": "watchdog performs non-conflicting safe fallback revenue work",
+        "recovery": "retry the same existing task after service recovery; never create a duplicate"
       },
       {
         "risk": "GitHub or connector outage",
-        "detection": "read-back failure is recorded and compliance_pass remains false",
-        "alternative": "use the exact saved directive copy and checkpoint locally within the run when possible",
-        "recovery": "re-read latest main and reconcile the checkpoint on the next available run"
+        "detection": "read-back or write failure keeps compliance_pass false",
+        "alternative": "retain exact prompt copies for comparison only",
+        "recovery": "re-read latest main and reconcile the checkpoint on the next run"
       },
       {
-        "risk": "future platform behavior or permission change",
-        "detection": "standalone provenance, enabled state, cadence evidence, and write/read-back failures are checked every run",
-        "alternative": "switch to an authorized independent persistence or execution path without changing the permanent directive",
-        "recovery": "repair only after private read-back and re-run the full audit from the first requirement"
+        "risk": "authenticated itch publication remains owner-only",
+        "detection": "logged-out page still lacks the free demo and Extended tier or retains the consultation text",
+        "alternative": "keep the existing US$25 Gumroad and itch offers live and continue zero-cost measurement",
+        "recovery": "complete the prepared one-session upload and logged-out verification"
       }
     ],
-    "checked_at_utc": "2026-08-12T08:29:55.087Z",
+    "checked_at_utc": "2026-08-12T08:44:23.550Z",
+    "latest_run_record": "OPERATIONS/AUTOMATION_MONITOR_2026-08-12_T1737JST.json",
+    "completed_units": [
+      "Verified canonical, mirror, encoded backup, saved primary prompt, and watchdog reference as the same 1456-byte SHA-256 body.",
+      "Classified missed_first_run after the 15-minute grace; attempted same-task repair twice and read back the unchanged enabled task.",
+      "Rechecked public itch product indexing and the latest non-labor bounty scan; confirmed the live product still exposes the old consultation text, no eligible bounty exists, and the prepared authenticated itch update remains the highest-value activation."
+    ],
+    "end_reason_code": "external_only_exhausted",
+    "early_stop_violation": false,
+    "safe_work_remaining": false,
     "next_resume_points": [
-      "poll the automation manager and latest main for the minute-20 main run",
-      "poll again after the minute-35 watchdog run",
-      "keep the current-chat report task read-only at minute 50"
+      "At the next watchdog run, re-read the same primary task and latest main; if no live run exists, retry the same-task update once, then continue fallback work without creating a duplicate."
     ]
   },
   "historical_remote_validation": {
@@ -304,5 +312,6 @@
     "last_run_time_present_rule": "With an existing last_run_time, retain the 90-minute stale-run rule.",
     "unsupported_next_run_time_null_is_failure": false,
     "post_run_conversation_reference_nonnull_is_failure_by_itself": false
-  }
+  },
+  "latest_watchdog_run_record": "OPERATIONS/AUTOMATION_MONITOR_2026-08-12_T1737JST.json"
 }
