@@ -2,7 +2,7 @@
 
 > このファイルはAIが考えた可変方針です。ユーザー恒久指示ではありません。成果・費用・環境・規約・安全性に応じて変更できます。
 
-現行の恒久指示は `OPERATIONS/CORE_DIRECTIVE.md` の原文（`2026-08-12.user-verbatim.5`）です。
+現行の恒久指示は `OPERATIONS/CORE_DIRECTIVE.md` の原文（`2026-08-12.user-verbatim.6`）です。
 
 ## 恒久指示から外れた運用前提（2026-08-08）
 
