@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "classification": "assistant_operational_state_not_permanent_directive",
-  "updated_at_utc": "2026-08-12T08:25:41.762Z",
+  "updated_at_utc": "2026-08-12T08:29:55.087Z",
   "status": "active_two_layer_configuration_verified_runtime_pending",
   "purpose": "Keep one standalone hourly revenue execution task and one independent standalone watchdog active, prove fixed-point compliance from repository evidence, and report separately to the originating chat.",
   "stop_condition": "explicit_user_instruction_to_stop_or_end_project_only",
@@ -161,12 +161,13 @@
     "audit_iterations": 0,
     "issues_found": [
       "No last_run_time or run record has yet been observed for the newly repaired standalone main task after its scheduled minute-20 occurrence.",
-      "No independent runtime verification has yet been observed from the newly repaired standalone watchdog."
+      "No independent runtime verification has yet been observed from the newly repaired standalone watchdog.",
+      "The minute-20 first run has not been observed; the new watchdog guard will classify it after the 15-minute scheduler grace if no live run/lock/lease appears."
     ],
     "issues_fixed": [],
     "unresolved_correctable_issues": [
-      "Observe the first main run, persist all required runtime and fixed-point audit fields, and repair any runtime noncompliance found.",
-      "Observe the next watchdog run and independently verify or repair the main runtime evidence."
+      "Observe the minute-35 watchdog run, confirm missed_first_run handling if the main is still absent, and persist its result.",
+      "Observe a subsequent main run and persist all required runtime and fixed-point audit fields."
     ],
     "residual_external_risks": [
       {
@@ -188,7 +189,7 @@
         "recovery": "repair only after private read-back and re-run the full audit from the first requirement"
       }
     ],
-    "checked_at_utc": "2026-08-12T08:25:41.762Z",
+    "checked_at_utc": "2026-08-12T08:29:55.087Z",
     "next_resume_points": [
       "poll the automation manager and latest main for the minute-20 main run",
       "poll again after the minute-35 watchdog run",
@@ -254,18 +255,18 @@
     "external_cost_yen": 0,
     "saved_prompt_readback": {
       "status": "passed",
-      "checked_at_utc": "2026-08-12T08:25:41.762Z",
-      "audit_iterations": 4,
-      "issues_found": 11,
-      "issues_fixed": 11,
+      "checked_at_utc": "2026-08-12T08:29:55.087Z",
+      "audit_iterations": 5,
+      "issues_found": 12,
+      "issues_fixed": 12,
       "unresolved_correctable_issues": 0
     }
   },
   "saved_prompt_fixed_point_audit": {
-    "checked_at_utc": "2026-08-12T08:25:41.762Z",
-    "audit_iterations": 4,
-    "issues_found": 11,
-    "issues_fixed": 11,
+    "checked_at_utc": "2026-08-12T08:29:55.087Z",
+    "audit_iterations": 5,
+    "issues_found": 12,
+    "issues_fixed": 12,
     "unresolved_correctable_issues": [],
     "compliance_pass": true,
     "scope": "saved automation prompts and automation configuration only; not runtime behavior",
@@ -280,7 +281,28 @@
       "fixed-point audit block exactly matches the watchdog expectation",
       "canonical directive cannot be changed to match a damaged prompt",
       "labor or commissioned work is not prioritized toward the target",
-      "null unsupported next-run and post-run conversation fields do not trigger false repairs"
+      "null unsupported next-run and post-run conversation fields do not trigger false repairs",
+      "watchdog detects a missed first run after a 15-minute scheduler grace period and performs same-task repair or continuous fallback work"
     ]
+  },
+  "first_run_detection_contract": {
+    "scheduled_main_minute_jst": 20,
+    "scheduler_grace_minutes": 15,
+    "classify_missed_first_run_when": [
+      "main last_run_time is null",
+      "at least one scheduled minute-20 occurrence after task creation or last update is at least 15 minutes old",
+      "no valid live run, lock, or lease exists",
+      "no explicit user stop applies"
+    ],
+    "under_grace_is_failure": false,
+    "repair": [
+      "re-register the same existing main task with enabled=true, hourly minute 20, and Asia/Tokyo",
+      "read back the same task and do not create a duplicate",
+      "if repair fails or remains ineffective, the watchdog executes continuous safe fallback revenue work",
+      "persist missed_first_run, attempts, read-back, fallback result, and next recovery point"
+    ],
+    "last_run_time_present_rule": "With an existing last_run_time, retain the 90-minute stale-run rule.",
+    "unsupported_next_run_time_null_is_failure": false,
+    "post_run_conversation_reference_nonnull_is_failure_by_itself": false
   }
 }
