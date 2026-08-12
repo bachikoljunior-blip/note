@@ -73,15 +73,9 @@ def cover_svg() -> bytes:
 
 
 def start_here(title: str, summary: str) -> bytes:
-    html = f'''<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assistants API移行キット iPhone出品パック</title><style>
-body{{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;max-width:760px;margin:auto;padding:18px;line-height:1.65;color:#172033;background:#f3f6fa}}section{{background:#fff;border:1px solid #d8e1ed;border-radius:16px;padding:16px;margin:14px 0}}a.button{{display:block;background:#0f766e;color:#fff;text-decoration:none;padding:13px 15px;border-radius:10px;margin:10px 0;font-weight:700}}.warn{{background:#fff0d5;color:#763b00;padding:11px;border-radius:9px}}code{{word-break:break-all}}</style></head><body>
-<h1>Assistants API移行キット<br>iPhone出品パック</h1><p>外側のこのZIPだけを1回展開し、<code>START_HERE.html</code>をSafariで開きます。</p>
-<section><h2>1. 商品情報</h2><p><strong>Name</strong><br>{title}</p><p><strong>Type</strong>: Digital product<br><strong>Price</strong>: US$9<br><strong>Custom permalink</strong>: {PERMALINK}<br><strong>Refund period</strong>: 7 days</p><p><strong>Summary</strong><br>{summary}</p><p>個別コピー: <a href="copy/title.txt">商品名</a> ／ <a href="copy/summary.txt">短文</a> ／ <a href="copy/description.md">説明</a> ／ <a href="copy/tags.txt">タグ</a> ／ <a href="copy/refund_fine_print.txt">返金条件</a></p></section>
-<section><h2>2. 購入者向けZIP</h2><a class="button" href="Assistants_API_Sunset_Migration_Kit_v1.zip" download>商品ZIPを選ぶ／保存する</a><p class="warn">この内側の商品ZIPは展開せず、そのままGumroadのContentへアップロードします。外側のiPhone出品パックは購入者向けファイルにしません。</p></section>
-<section><h2>3. カバー</h2><a class="button" href="cover/cover.svg">検証済みカバーを開く</a><p>GumroadがSVGを受け付けない場合は、Safariで全画面表示してスクリーンショットを撮り、正方形に切り抜いて使います。内容を誇張する文言は追加しません。</p></section>
-<section><h2>4. Gumroadへ</h2><a class="button" href="https://gumroad.com/products/new">Gumroad新規商品画面を開く</a><p>別商品として作成し、商品ZIPのアップロード完了を確認してからcreator Test Purchaseを実行します。最終公開は本人だけが行います。パスワード、確認コード、Cookie、本人確認・税務・銀行情報はGumroad以外へ送信しません。</p></section>
-</body></html>'''
+    if title != "Assistants API Sunset Migration Kit" or summary != "Audit legacy Assistants API usage, preview conservative code changes, and migrate toward Responses + Conversations before the 2026-08-26 shutdown.":
+        raise SystemExit("assistants_sunset_one_session_copy_contract")
+    html = "<!doctype html>\n<html lang=\"ja\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Gumroad非労働収益化 iPhone一括パック</title><style>\nbody{font-family:-apple-system,BlinkMacSystemFont,\"Hiragino Sans\",sans-serif;max-width:760px;margin:auto;padding:18px;line-height:1.65;color:#172033;background:#f3f6fa}section{background:#fff;border:1px solid #d8e1ed;border-radius:16px;padding:16px;margin:14px 0}a.button{display:block;background:#0f766e;color:#fff;text-decoration:none;padding:13px 15px;border-radius:10px;margin:10px 0;font-weight:700}.warn{background:#fff0d5;color:#763b00;padding:11px;border-radius:9px}.ok{background:#e8f7f2;color:#075c50;padding:11px;border-radius:9px}code{word-break:break-all}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d8e1ed;padding:8px;text-align:left;vertical-align:top}small{color:#55657a}</style></head><body>\n<h1>Gumroad非労働収益化<br>iPhone一括パック</h1><p>外側のこのZIPだけを1回展開し、<code>START_HERE.html</code>をSafariで開きます。1回の認証済みGumroadセッションで、既存商品の高単価ライセンス追加と新商品の公開準備を続けて行います。</p>\n<section><h2>A. 既存商品に高単価版を追加</h2><a class=\"button\" href=\"https://app.gumroad.com/products\">Gumroadの商品一覧を開く</a><p>公開済みの「放置クリッカー制作キット」を選び、Productタブの<strong>Versions</strong>に次の2枠を追加します。既存の購入者向けZIPは削除・差し替えしません。</p>\n<table><tr><th>Version</th><th>追加額</th><th>購入総額</th></tr><tr><td>通常ライセンス / Standard (1 site)</td><td>US$0</td><td>US$25</td></tr><tr><td>拡張ライセンス / Extended (unlimited client work)</td><td>US$324</td><td><strong>US$349</strong></td></tr></table>\n<p>個別コピー: <a href=\"brandable/standard_version.txt\">通常版</a> ／ <a href=\"brandable/extended_version.txt\">拡張版</a> ／ <a href=\"brandable/unit_economics.txt\">単価計算</a></p><p class=\"warn\">拡張版は、購入者が複数の自社サイトおよび件数無制限のクライアント案件へ組み込めるライセンスです。キット自体の再販・再配布は禁止。個別の制作、設置、カスタマイズ、コンサルティングは商品に含めません。</p>\n<p>保存後、creator Test Purchaseで<strong>拡張版</strong>を選べることと、購入者向けZIPを取得できることを確認します。可能ならGumroad Affiliatesをオプトインしますが、手動で他人を追加したりアカウント権限を渡したりしません。</p></section>\n<section><h2>B. Assistants API移行キット</h2><p><strong>Name</strong><br>Assistants API Sunset Migration Kit</p><p><strong>Type</strong>: Digital product<br><strong>Price</strong>: US$9<br><strong>Custom permalink</strong>: assistants-api-sunset-migration-kit<br><strong>Refund period</strong>: 7 days</p><p><strong>Summary</strong><br>Audit legacy Assistants API usage, preview conservative code changes, and migrate toward Responses + Conversations before the 2026-08-26 shutdown.</p><p>個別コピー: <a href=\"copy/title.txt\">商品名</a> ／ <a href=\"copy/summary.txt\">短文</a> ／ <a href=\"copy/description.md\">説明</a> ／ <a href=\"copy/tags.txt\">タグ</a> ／ <a href=\"copy/refund_fine_print.txt\">返金条件</a></p>\n<a class=\"button\" href=\"Assistants_API_Sunset_Migration_Kit_v1.zip\" download>購入者向けZIPを選ぶ／保存する</a><p class=\"warn\">この内側の商品ZIPは展開せず、そのままGumroadのContentへアップロードします。外側のiPhone一括パックは購入者向けファイルにしません。</p><a class=\"button\" href=\"cover/cover.svg\">検証済みカバーを開く</a><a class=\"button\" href=\"https://gumroad.com/products/new\">Gumroad新規商品画面を開く</a><p>別商品として作成し、ZIPのアップロード完了後にcreator Test Purchaseを実行します。</p></section>\n<section><h2>C. 完了条件</h2><ol><li>既存商品で通常版US$25と拡張版US$349を選べる。</li><li>拡張版のcreator Test PurchaseでZIPを取得できる。</li><li>Assistants商品でもcreator Test Purchaseで内側ZIPを取得できる。</li><li>内容と規約を確認し、公開する商品だけ本人が最終公開する。</li></ol><p class=\"ok\">完了後は、公開した商品の公開URLだけをチャットへ返します。</p><p>パスワード、確認コード、Cookie、本人確認・税務・銀行情報はGumroad以外へ送信しません。</p></section>\n<section><h2>根拠</h2><p><small>Gumroad公式: <a href=\"https://gumroad.com/help/article/126-setting-up-versions-on-a-digital-product.html\">Versions設定</a> ／ <a href=\"https://gumroad.com/help/article/66-gumroads-fees.html\">手数料</a> ／ <a href=\"https://gumroad.com/help/article/333-affiliates-on-gumroad.html\">Affiliates</a>。為替は計画時点の1米ドル=159.29円、ストレス計算は145円を使用しています。税・為替・振込費用は実測値で後から再計算します。</small></p></section>\n</body></html>\n"
     return html.encode("utf-8")
 
 
@@ -107,15 +101,11 @@ def build_iphone_pack(product: bytes) -> bytes:
 
     entries = {
         "Assistants_API_Sunset_Migration_Kit_v1.zip": product,
-        "README_iPhone.txt": (
-            "Assistants API Sunset Migration Kit - Gumroad iPhone pack\n\n"
-            "1. Open START_HERE.html in Safari.\n"
-            "2. Create a separate US$9 digital product.\n"
-            "3. Keep Assistants_API_Sunset_Migration_Kit_v1.zip compressed and upload it as the only buyer download.\n"
-            "4. Run creator Test Purchase and verify the inner ZIP before final publication.\n"
-            "5. Enter credentials, identity, tax, payout and banking information only on Gumroad.\n"
-        ).encode("utf-8"),
+        "README_iPhone.txt": "Gumroad non-labor income - one-session iPhone pack\n\n1. Open START_HERE.html in Safari.\n2. On the existing idle-clicker product, add Standard ($0 extra, $25 total) and Extended ($324 extra, $349 total) versions without replacing the buyer ZIP.\n3. Creator Test Purchase the Extended version and verify the buyer ZIP.\n4. Create the separate US$9 Assistants API Sunset Migration Kit, upload the inner ZIP, and run creator Test Purchase.\n5. Make the final publication decisions on Gumroad. Enter credentials, identity, tax, payout and banking information only on Gumroad.\n".encode("utf-8"),
         "START_HERE.html": start_here(title, summary),
+        "brandable/standard_version.txt": "Version name:\n通常ライセンス / Standard (1 site)\n\nAdditional amount above the existing US$25 base price:\nUS$0\n\nDescription:\nUse for one site owned or operated by the purchaser. Commercial use and modification are allowed. Client delivery, resale, and redistribution of the kit are not allowed.\n".encode("utf-8"),
+        "brandable/extended_version.txt": "Version name:\n拡張ライセンス / Extended (unlimited client work)\n\nAdditional amount above the existing US$25 base price:\nUS$324\n\nTotal customer price:\nUS$349\n\nDescription:\nUse on multiple sites owned or operated by the purchaser and in unlimited client projects. Modified deliverables may be handed to clients. Resale or redistribution of the kit itself is prohibited. Self-service download only; bespoke development, installation, customization, consulting, and ongoing support are not included.\n".encode("utf-8"),
+        "brandable/unit_economics.txt": "Extended version unit economics (planning assumptions, 2026-08-12)\n\nCustomer price: US$349\nCurrent planning FX: 159.29 JPY/USD\nStress FX: 145 JPY/USD\n\nDirect sale after 10% + US$0.50 platform fee:\nUS$313.60 = about JPY49,953 at 159.29, or JPY45,472 at 145.\n\nDiscover-style 30% platform fee:\nUS$244.30 = about JPY38,915 at 159.29, or JPY35,424 at 145.\n\nOperational target: 7 Extended sales per month.\nAt the stress FX and 30% fee, 7 sales are about JPY247,965 before taxes, currency-conversion, payout, refund, and other costs. Use verified platform net revenue for the final JPY200,000 decision.\n".encode("utf-8"),
         "copy/title.txt": (title + "\n").encode("utf-8"),
         "copy/summary.txt": (summary + "\n").encode("utf-8"),
         "copy/description.md": (description + "\n").encode("utf-8"),
@@ -124,15 +114,29 @@ def build_iphone_pack(product: bytes) -> bytes:
         "cover/cover.svg": cover_svg(),
     }
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "classification": "private_repository_authenticated_user_handoff",
-        "product": title,
-        "price_usd": 9,
-        "permalink": PERMALINK,
-        "refund_period_days": 7,
-        "sunset_date": "2026-08-26",
-        "product_zip_must_remain_unextracted": True,
-        "creator_test_purchase_required": True,
+        "purpose": "one_authenticated_gumroad_session_for_two_non_labor_income_changes",
+        "one_authenticated_session": True,
+        "assistants_product": {
+            "product": title,
+            "price_usd": 9,
+            "permalink": PERMALINK,
+            "refund_period_days": 7,
+            "sunset_date": "2026-08-26",
+            "product_zip_must_remain_unextracted": True,
+        },
+        "brandable_product_upgrade": {
+            "existing_base_price_usd": 25,
+            "standard_additional_usd": 0,
+            "extended_additional_usd": 324,
+            "extended_total_usd": 349,
+            "monthly_extended_sales_target": 7,
+            "current_planning_usd_jpy": 159.29,
+            "stress_usd_jpy": 145,
+            "buyer_zip_must_not_be_replaced": True,
+        },
+        "creator_test_purchase_required_for_both_products": True,
         "final_publication": "human_only",
         "credentials_used": False,
         "cost_yen": 0,
@@ -154,6 +158,7 @@ def verify(product: bytes, pack: bytes) -> None:
             raise SystemExit("assistants_sunset_product_zip_contract")
     expected = {
         "Assistants_API_Sunset_Migration_Kit_v1.zip", "README_iPhone.txt", "START_HERE.html", "manifest.json",
+        "brandable/standard_version.txt", "brandable/extended_version.txt", "brandable/unit_economics.txt",
         "copy/title.txt", "copy/summary.txt", "copy/description.md", "copy/tags.txt", "copy/refund_fine_print.txt", "cover/cover.svg",
     }
     with zipfile.ZipFile(IPHONE_OUTPUT) as archive:
@@ -171,7 +176,13 @@ def verify(product: bytes, pack: bytes) -> None:
             if not stat.S_ISREG(mode) or stat.S_IMODE(mode) != 0o644:
                 raise SystemExit(f"assistants_sunset_iphone_mode:{info.filename}")
         manifest = json.loads(archive.read("manifest.json"))
-        if manifest["price_usd"] != 9 or manifest["final_publication"] != "human_only" or not manifest["creator_test_purchase_required"]:
+        if (
+            manifest["assistants_product"]["price_usd"] != 9
+            or manifest["brandable_product_upgrade"]["extended_total_usd"] != 349
+            or manifest["brandable_product_upgrade"]["monthly_extended_sales_target"] != 7
+            or manifest["final_publication"] != "human_only"
+            or not manifest["creator_test_purchase_required_for_both_products"]
+        ):
             raise SystemExit("assistants_sunset_iphone_listing_contract")
         for name in expected - {"manifest.json"}:
             data = archive.read(name)
@@ -180,7 +191,7 @@ def verify(product: bytes, pack: bytes) -> None:
         if archive.read("Assistants_API_Sunset_Migration_Kit_v1.zip") != product:
             raise SystemExit("assistants_sunset_iphone_nested_product")
         start = archive.read("START_HERE.html").decode("utf-8")
-        for fragment in ("Assistants API Sunset Migration Kit", "US$9", "2026-08-26", "https://gumroad.com/products/new", "商品ZIPは展開せず", "creator Test Purchase", "最終公開は本人"):
+        for fragment in ("Assistants API Sunset Migration Kit", "US$9", "2026-08-26", "US$349", "US$324", "https://app.gumroad.com/products", "https://gumroad.com/products/new", "creator Test Purchase", "最終公開"):
             if fragment not in start:
                 raise SystemExit(f"assistants_sunset_iphone_start:{fragment}")
         svg = archive.read("cover/cover.svg")
@@ -208,7 +219,7 @@ def main() -> int:
         "iphone_output": str(IPHONE_OUTPUT.relative_to(ROOT)),
         "iphone_bytes": len(second_pack),
         "iphone_sha256": sha256(second_pack),
-        "iphone_zip_members": 10,
+        "iphone_zip_members": 13,
         "deterministic_rebuild_verified": True,
         "credentials_used": False,
         "cost_yen": 0,
