@@ -1,29 +1,40 @@
-# Assistants API Sunset Migration Kit — iPhone Gumroad handoff
+# Gumroad 1回セッション：US$349拡張版＋US$9 Assistants商品
 
-This handoff reduces the separate US$9 product completion to one private file download and one authenticated Gumroad session. Final publication, identity, tax, payout, banking, and contract decisions remain user-only.
+状態: **準備完了。残りは認証済みGumroadで1回の連続操作だけです。**
 
-## Download once
+## 開始
 
-Preferred path: open ChatGPT **Library** and download the private file named:
+1. ChatGPT Libraryで `Assistants_API_Sunset_Gumroad_iPhone_Pack_v1.zip` を開く。
+2. 1回だけ展開し、`START_HERE.html` をSafariで開く。
+3. 同じGumroadセッションで、下のA→Bを続けて行う。
 
-`Assistants_API_Sunset_Gumroad_iPhone_Pack_v1.zip`
+## A. 既存の放置クリッカー商品
 
-Expand it once, open `START_HERE.html` in Safari, and keep `Assistants_API_Sunset_Migration_Kit_v1.zip` compressed because it is the buyer download. The Library copy is private to the owner and is not committed to git.
+既存のbase price **US$25** とbuyer ZIPを保ったまま、Versionsを追加する。
 
-Fallback: in the private `note` repository, open the latest successful **Validate and analyze** run and download the dedicated artifact whose name starts with:
+- `通常ライセンス / Standard (1 site)`: Additional amount **US$0**（合計US$25）
+- `拡張ライセンス / Extended (unlimited client work)`: Additional amount **US$324**（合計US$349）
 
-`assistants-sunset-gumroad-iphone-pack-`
+正確な説明文はpack内の `brandable/standard_version.txt` と `brandable/extended_version.txt` を使う。Extendedは自動ダウンロードのみで、個別開発・導入・カスタマイズ・相談・継続サポートを含めない。
 
-Do not download the validation reports or the larger validated-outputs artifact. The dedicated Actions download already contains the expanded outer pack. New dedicated artifacts are retained for 30 days. The verified fallback artifact created on 2026-08-09 expires on 2026-09-08, after the 2026-08-26 Assistants API sunset. If it has expired and the Library copy is unavailable, rerun **Validate and analyze** to regenerate the same deterministic files. Paid files remain private and are never committed to git.
+保存後、creator Test PurchaseでExtendedを選び、購入者側から既存buyer ZIPを取得できることを確認する。確認できなければ公開設定を増やさず停止する。
 
-## One authenticated Gumroad session
+## B. Assistants API Sunset Migration Kit
 
-1. Create a separate digital product named `Assistants API Sunset Migration Kit`.
-2. Set the launch price to `US$9` and the custom permalink to `assistants-api-sunset-migration-kit`.
-3. Copy the summary, description, tags, and refund fine print from the pack.
-4. Upload only `Assistants_API_Sunset_Migration_Kit_v1.zip` as buyer content and wait for the filename to appear.
-5. Add the provided cover. If Gumroad does not accept SVG, open it in Safari, take a screenshot, and crop it square without changing the claims.
-6. Save, then use Gumroad's creator `Test purchase`; do not buy the product with a real card.
-7. Confirm the buyer can download and open the inner ZIP, then make the final publication decision.
+pack内の文面・coverを使い、別商品を **US$9** で作る。buyer contentには外側packではなく、内側の `Assistants_API_Sunset_Migration_Kit_v1.zip` を添付する。
 
-Send back only the public product URL after completion. Never send passwords, one-time codes, cookies, access tokens, legal identity, tax, payout, or banking information to chat or GitHub.
+creator Test Purchaseで内側ZIPを取得できることを確認する。最終公開は本人が選んだ場合だけ行う。
+
+## 安全
+
+- パスワード、ワンタイムコード、本人確認、税、振込先、銀行情報はGumroad以外へ入力しない。
+- 秘密情報をチャットやリポジトリへ貼らない。
+- Test Purchaseでbuyer ZIPを取得できるまで公開しない。
+- 既存buyer ZIPを別ファイルへ置き換えない。
+- Extendedへ個別サービスや継続対応を追加しない。
+
+## 完了の返答
+
+`拡張版設定完了` と返す。Assistants商品を公開した場合は公開URL、公開しない場合は `非公開` とだけ添える。秘密情報は送らない。
+
+計画上の外部費用: **0円**。達成判定は価格設定ではなく、検証済みの非労働プラットフォーム純収益が月20万円以上になった時点で行う。
