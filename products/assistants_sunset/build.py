@@ -77,7 +77,7 @@ def start_here(title: str, summary: str) -> bytes:
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assistants API移行キット iPhone出品パック</title><style>
 body{{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;max-width:760px;margin:auto;padding:18px;line-height:1.65;color:#172033;background:#f3f6fa}}section{{background:#fff;border:1px solid #d8e1ed;border-radius:16px;padding:16px;margin:14px 0}}a.button{{display:block;background:#0f766e;color:#fff;text-decoration:none;padding:13px 15px;border-radius:10px;margin:10px 0;font-weight:700}}.warn{{background:#fff0d5;color:#763b00;padding:11px;border-radius:9px}}code{{word-break:break-all}}</style></head><body>
 <h1>Assistants API移行キット<br>iPhone出品パック</h1><p>外側のこのZIPだけを1回展開し、<code>START_HERE.html</code>をSafariで開きます。</p>
-<section><h2>1. 商品情報</h2><p><strong>Name</strong><br>{title}</p><p><strong>Type</strong>: Digital product<br><strong>Price</strong>: US$9<br><strong>Custom permalink</strong>: {PERMALINK}<br><strong>Refund period</strong>: 7 days</p><p><strong>Summary</strong><br>{summary}</p><p>個別コピー: <a href="copy/title.txt">商品名</a> ／ <a href="copy/summary.txt">短文</a> ／ <a href="copy/description.md">説明</a> ／ <a href="copy/tags.txt">タグ</a> ／ <a href="copy/refund_fine_print.txt">返金条件</a></p></section>
+<section><h2>1. 商品情報</h2><p><strong>Name</strong><br>{title}</p><p><strong>Type</strong>: Digital product<br><strong>Base price</strong>: US$29<br><strong>Versions</strong>: Solo US$29 / Team US$149 / Organization US$399<br><strong>Custom permalink</strong>: {PERMALINK}<br><strong>Refund period</strong>: 7 days</p><p><strong>Summary</strong><br>{summary}</p><p>個別コピー: <a href="copy/title.txt">商品名</a> ／ <a href="copy/summary.txt">短文</a> ／ <a href="copy/description.md">説明</a> ／ <a href="copy/tags.txt">タグ</a> ／ <a href="copy/refund_fine_print.txt">返金条件</a></p></section>
 <section><h2>2. 購入者向けZIP</h2><a class="button" href="Assistants_API_Sunset_Migration_Kit_v1.zip" download>商品ZIPを選ぶ／保存する</a><p class="warn">この内側の商品ZIPは展開せず、そのままGumroadのContentへアップロードします。外側のiPhone出品パックは購入者向けファイルにしません。</p></section>
 <section><h2>3. カバー</h2><a class="button" href="cover/cover.svg">検証済みカバーを開く</a><p>GumroadがSVGを受け付けない場合は、Safariで全画面表示してスクリーンショットを撮り、正方形に切り抜いて使います。内容を誇張する文言は追加しません。</p></section>
 <section><h2>4. Gumroadへ</h2><a class="button" href="https://gumroad.com/products/new">Gumroad新規商品画面を開く</a><p>別商品として作成し、商品ZIPのアップロード完了を確認してからcreator Test Purchaseを実行します。最終公開は本人だけが行います。パスワード、確認コード、Cookie、本人確認・税務・銀行情報はGumroad以外へ送信しません。</p></section>
@@ -99,7 +99,7 @@ def build_iphone_pack(product: bytes) -> bytes:
     price = section(listing, "Price")
     summary = section(listing, "Short description")
     description = section(listing, "Description")
-    if title != "Assistants API Sunset Migration Kit" or price != "$9 launch price":
+    if title != "Assistants API Sunset Migration Kit" or price != "Solo $29 / Team $149 / Organization $399":
         raise SystemExit("assistants_sunset_listing_contract")
     for required in ("2026-08-26", "Responses + Conversations", "independent developer utility", "not an official OpenAI product"):
         if required not in listing:
@@ -110,7 +110,7 @@ def build_iphone_pack(product: bytes) -> bytes:
         "README_iPhone.txt": (
             "Assistants API Sunset Migration Kit - Gumroad iPhone pack\n\n"
             "1. Open START_HERE.html in Safari.\n"
-            "2. Create a separate US$9 digital product.\n"
+            "2. Create a separate tiered digital product: Solo US$29, Team US$149, Organization US$399.\n"
             "3. Keep Assistants_API_Sunset_Migration_Kit_v1.zip compressed and upload it as the only buyer download.\n"
             "4. Run creator Test Purchase and verify the inner ZIP before final publication.\n"
             "5. Enter credentials, identity, tax, payout and banking information only on Gumroad.\n"
@@ -127,7 +127,7 @@ def build_iphone_pack(product: bytes) -> bytes:
         "schema_version": "1.0",
         "classification": "private_repository_authenticated_user_handoff",
         "product": title,
-        "price_usd": 9,
+        "price_tiers_usd": {"solo": 29, "team": 149, "organization": 399},
         "permalink": PERMALINK,
         "refund_period_days": 7,
         "sunset_date": "2026-08-26",
@@ -171,7 +171,7 @@ def verify(product: bytes, pack: bytes) -> None:
             if not stat.S_ISREG(mode) or stat.S_IMODE(mode) != 0o644:
                 raise SystemExit(f"assistants_sunset_iphone_mode:{info.filename}")
         manifest = json.loads(archive.read("manifest.json"))
-        if manifest["price_usd"] != 9 or manifest["final_publication"] != "human_only" or not manifest["creator_test_purchase_required"]:
+        if manifest["price_tiers_usd"] != {"solo": 29, "team": 149, "organization": 399} or manifest["final_publication"] != "human_only" or not manifest["creator_test_purchase_required"]:
             raise SystemExit("assistants_sunset_iphone_listing_contract")
         for name in expected - {"manifest.json"}:
             data = archive.read(name)
@@ -180,7 +180,7 @@ def verify(product: bytes, pack: bytes) -> None:
         if archive.read("Assistants_API_Sunset_Migration_Kit_v1.zip") != product:
             raise SystemExit("assistants_sunset_iphone_nested_product")
         start = archive.read("START_HERE.html").decode("utf-8")
-        for fragment in ("Assistants API Sunset Migration Kit", "US$9", "2026-08-26", "https://gumroad.com/products/new", "商品ZIPは展開せず", "creator Test Purchase", "最終公開は本人"):
+        for fragment in ("Assistants API Sunset Migration Kit", "Solo US$29", "Team US$149", "Organization US$399", "2026-08-26", "https://gumroad.com/products/new", "商品ZIPは展開せず", "creator Test Purchase", "最終公開は本人"):
             if fragment not in start:
                 raise SystemExit(f"assistants_sunset_iphone_start:{fragment}")
         svg = archive.read("cover/cover.svg")
