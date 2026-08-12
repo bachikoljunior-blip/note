@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -27,7 +28,11 @@ def main() -> int:
 
     if state.get("classification") != "assistant_operational_state_not_permanent_directive":
         errors.append("continuity_state_classification_invalid")
-    if state.get("status") not in {"active_two_layer_verified", "merged_main_remote_ci_validated"}:
+    if state.get("status") not in {
+        "active_two_layer_configuration_verified_runtime_pending",
+        "active_two_layer_runtime_verified",
+        "merged_main_remote_ci_validated",
+    }:
         errors.append("continuity_state_not_active")
     if state.get("stop_condition") != "explicit_user_instruction_to_stop_or_end_project_only":
         errors.append("explicit_stop_contract_missing")
@@ -43,9 +48,9 @@ def main() -> int:
     if not required_non_stop.issubset(set(state.get("non_stop_conditions", []))):
         errors.append("non_stop_conditions_incomplete")
 
-    for key, title in (
-        ("primary", "収益プロジェクト継続"),
-        ("watchdog", "収益タスク監視"),
+    for key, title, minute in (
+        ("primary", "月20万円最短実行", "20"),
+        ("watchdog", "月20万円継続監視", "35"),
     ):
         item = state.get(key, {})
         if item.get("title") != title:
@@ -56,21 +61,74 @@ def main() -> int:
             errors.append(f"{key}_not_hourly")
         if item.get("timezone") != "Asia/Tokyo":
             errors.append(f"{key}_timezone_invalid")
+        if item.get("destination_mode") != "standalone":
+            errors.append(f"{key}_destination_not_standalone")
+        if item.get("creation_readback_conversation_id_null") is not True:
+            errors.append(f"{key}_standalone_creation_readback_missing")
+        if item.get("conversation_id_after_run_is_not_failure_by_itself") is not True:
+            errors.append(f"{key}_conversation_id_semantics_missing")
+        match = re.search(r"DTSTART:\d{8}T\d{2}(\d{2})00", str(item.get("schedule", "")))
+        if not match or match.group(1) != minute:
+            errors.append(f"{key}_schedule_minute_invalid")
 
     live = state.get("live_observation", {})
     if live.get("primary_enabled") is not True or live.get("watchdog_enabled") is not True:
         errors.append("live_enabled_observation_missing")
-    if live.get("paused_count") != 0:
-        errors.append("paused_automation_observed")
+    if live.get("active_primary_count") != 1 or live.get("active_watchdog_count") != 1:
+        errors.append("active_task_count_invalid")
+    if live.get("superseded_versions_enabled") != 0:
+        errors.append("superseded_continuity_task_still_enabled")
+    if live.get("next_run_time_null_is_failure") is not False:
+        errors.append("unsupported_next_run_field_must_not_trigger_repair")
+
+    evidence = state.get("runtime_evidence", {})
+    if evidence.get("status") not in {"pending_first_new_run", "verified"}:
+        errors.append("runtime_evidence_status_invalid")
+    if evidence.get("status") == "pending_first_new_run":
+        if evidence.get("compliance_pass") is not False:
+            errors.append("pending_runtime_evidence_cannot_pass")
+        if not evidence.get("unresolved_correctable_issues"):
+            errors.append("pending_runtime_gap_must_be_recorded")
+    else:
+        required_runtime = {
+            "run_started_at", "run_ended_at", "completed_units", "end_reason_code",
+            "early_stop_violation", "audit_iterations", "issues_found", "issues_fixed",
+            "unresolved_correctable_issues", "residual_external_risks", "compliance_pass",
+        }
+        if not required_runtime.issubset(evidence):
+            errors.append("verified_runtime_evidence_fields_missing")
+        if evidence.get("compliance_pass") is True and evidence.get("unresolved_correctable_issues"):
+            errors.append("runtime_pass_with_unresolved_correctable_issue")
+
+    audit = state.get("fixed_point_audit_contract", {})
+    required_audit_fields = {
+        "audit_iterations", "issues_found", "issues_fixed",
+        "unresolved_correctable_issues", "residual_external_risks", "compliance_pass",
+    }
+    if set(audit.get("required_fields", [])) != required_audit_fields:
+        errors.append("fixed_point_audit_fields_invalid")
+    if audit.get("pass_requires_zero_correctable_issues") is not True:
+        errors.append("fixed_point_zero_correctable_gate_missing")
+    if audit.get("all_residual_risks_require_detection_and_recovery") is not True:
+        errors.append("fixed_point_residual_risk_gate_missing")
 
     automation = current.get("automation", {})
     if automation.get("revenue_continuation") not in {
-        "active_two_layer_verified",
+        "active_two_layer_configuration_verified_runtime_pending",
+        "active_two_layer_runtime_verified",
         "merged_main_remote_ci_validated",
     }:
         errors.append("current_continuity_status_invalid")
     if automation.get("automation_continuity_state") != "state/automation_continuity.json":
         errors.append("current_continuity_pointer_missing")
+    if automation.get("primary_revenue_task_schedule") != state.get("primary", {}).get("schedule"):
+        errors.append("current_primary_schedule_mismatch")
+    if automation.get("revenue_task_watchdog_schedule") != state.get("watchdog", {}).get("schedule"):
+        errors.append("current_watchdog_schedule_mismatch")
+    if automation.get("automation_continuity_fixed_point_contract") != (
+        "required_zero_correctable_issues_and_residual_risk_detection_recovery"
+    ):
+        errors.append("current_fixed_point_contract_missing")
 
     unit = next(
         (item for item in control.get("active_work_units", []) if item.get("id") == "automation_continuity_v1"),
@@ -80,6 +138,14 @@ def main() -> int:
         errors.append("continuation_work_unit_missing")
     elif unit.get("assistant_executable") is not True or unit.get("user_blocked") is not False:
         errors.append("continuation_work_unit_boundary_invalid")
+    elif unit.get("primary_schedule") != state.get("primary", {}).get("schedule"):
+        errors.append("continuation_unit_primary_schedule_mismatch")
+    elif unit.get("watchdog_schedule") != state.get("watchdog", {}).get("schedule"):
+        errors.append("continuation_unit_watchdog_schedule_mismatch")
+    elif unit.get("runtime_evidence_status") != evidence.get("status"):
+        errors.append("continuation_unit_runtime_evidence_mismatch")
+    elif evidence.get("status") == "pending_first_new_run" and unit.get("actionable_now") is not True:
+        errors.append("pending_runtime_evidence_must_remain_actionable")
 
     for phrase in (
         "ユーザーの明示停止だけを停止条件",
