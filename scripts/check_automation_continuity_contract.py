@@ -67,7 +67,7 @@ def main() -> int:
             errors.append(f"{key}_standalone_creation_readback_missing")
         if item.get("conversation_id_after_run_is_not_failure_by_itself") is not True:
             errors.append(f"{key}_conversation_id_semantics_missing")
-        match = re.search(r"DTSTART:\\d{8}T\\d{2}(\\d{2})00", str(item.get("schedule", "")))
+        match = re.search(r"DTSTART:\d{8}T\d{2}(\d{2})00", str(item.get("schedule", "")))
         if not match or match.group(1) != minute:
             errors.append(f"{key}_schedule_minute_invalid")
 
