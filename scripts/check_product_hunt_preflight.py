@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import re
+import struct
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -22,6 +23,14 @@ def svg_dimension(value: str | None) -> int | None:
         return None
     match = re.fullmatch(r"([0-9]+)(?:px)?", value.strip())
     return int(match.group(1)) if match else None
+
+
+def png_dimensions(path: Path) -> tuple[int, int] | None:
+    """Return PNG IHDR dimensions without third-party image dependencies."""
+    data = path.read_bytes()[:24]
+    if len(data) != 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        return None
+    return struct.unpack(">II", data[16:24])
 
 
 def main() -> int:
@@ -124,6 +133,30 @@ def main() -> int:
             continue
         require((width, height) == (asset.get("width"), asset.get("height")), f"asset dimensions changed: {rel}")
 
+    upload_assets = config.get("upload_assets", [])
+    require(len(upload_assets) == 3, "exactly one thumbnail and two upload-ready gallery PNGs are required")
+    roles = [asset.get("role") for asset in upload_assets]
+    require(roles.count("thumbnail") == 1, "exactly one upload-ready thumbnail is required")
+    require(roles.count("gallery") == 2, "exactly two upload-ready gallery images are required")
+    upload_paths: set[str] = set()
+    for asset in upload_assets:
+        rel = asset.get("path", "")
+        require(bool(rel) and rel not in upload_paths, f"duplicate upload asset path: {rel}")
+        upload_paths.add(rel)
+        path = root / rel
+        if not path.is_file():
+            errors.append(f"upload asset unavailable: {rel}")
+            continue
+        require(path.suffix.lower() == ".png", f"upload asset must be PNG: {rel}")
+        require(sha256(path) == asset.get("sha256"), f"upload asset SHA-256 mismatch: {rel}")
+        try:
+            dimensions = png_dimensions(path)
+        except OSError as exc:
+            errors.append(f"upload asset unreadable: {rel}: {exc}")
+            continue
+        require(dimensions is not None, f"invalid PNG: {rel}")
+        require(dimensions == (asset.get("width"), asset.get("height")), f"upload asset dimensions changed: {rel}")
+
     for source in config.get("primary_sources", []):
         parsed_source = urlparse(source)
         require(parsed_source.scheme == "https" and bool(parsed_source.netloc), f"invalid source URL: {source}")
@@ -134,6 +167,7 @@ def main() -> int:
         "tagline_characters": len(tagline),
         "description_characters": len(description),
         "gallery_asset_count": len(assets),
+        "upload_asset_count": len(upload_assets),
         "launch_state": launch_state,
         "errors": errors,
     }
