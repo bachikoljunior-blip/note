@@ -37,6 +37,14 @@ I would especially value feedback on false positives, missed migration traps, an
 - Mention the optional paid kit only after the free utility and disclose that it excludes consulting, implementation, and ongoing support.
 - Do not ask for upvotes, coordinate votes, send unsolicited messages, or drop promotional links into unrelated discussions.
 
+## Prepared visual assets
+
+- Square thumbnail: `product-hunt-migration-checker-thumbnail.png` — 1254×1254, saved, not attached.
+- Gallery image 1: `product-hunt-gallery-01.png` — 1270×760, 124,306 bytes, SHA-256 `813c88d3754086d493e682bd958d86db76e1ccf9954c829195ed869132a084dd`, saved, not attached.
+- Gallery image 2: `product-hunt-gallery-02.png` — 1270×760, 124,778 bytes, SHA-256 `5d1720ea2e84b610ab07e4dc50e3f229f49dbd468aa42759d7f282c22a4f6044`, saved, not attached.
+- The two gallery images use only the verified claims already in this draft. They are explanatory graphics, not screenshots or evidence of customers, results, endorsements, or official affiliation.
+- Product Hunt's current official recommendation is 1270×760 for gallery images, and at least two images are required before the gallery is viewable. Source checked 2026-08-13: https://help.producthunt.com/en/articles/479557-how-to-post-a-product
+
 ## Submission preflight
 
 1. The account holder creates or uses a personal Product Hunt account and completes onboarding.
