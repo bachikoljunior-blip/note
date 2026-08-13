@@ -2,6 +2,8 @@
 
 These SVG files are the reconstructible source of the two 1270×760 Product Hunt gallery graphics. They preserve only claims verified in `handoff/PRODUCT_HUNT_ASSISTANTS_MIGRATION_DRAFT.md`.
 
+The same directory also contains the upload-ready 240×240 PNG thumbnail and two 1270×760 PNG gallery images. Keep these versioned binaries private until the account holder authorizes a draft attachment or final launch.
+
 ## Render
 
 ```sh
@@ -18,7 +20,8 @@ Expected output dimensions: 1270×760 PNG.
 - `gallery-02.svg`: SHA-256 `fa1845470c0f5737f588034621fb72c232ac3378067f8f2ef892e46b58324229`
 - rendered `gallery-02.png`: SHA-256 `be9d034cd90d977cd2be271102baf1e00687d62a9ced4406effb63b63a5316e9`
 - Both rendered images were visually inspected after one clipping correction.
-- These are fallback reconstruction sources. They do not replace or invalidate the separately saved PNG assets recorded in the launch draft.
+- `thumbnail-240.png`: SHA-256 `f8c331e283df736d0c61d0df4dc37ddc7b0e5fe331496194f3c9bdd9d623d6a5`
+- The upload-ready PNG assets and their dimensions/hashes are fail-closed inputs to `scripts/check_product_hunt_preflight.py`.
 
 ## Truth constraints
 
