@@ -18,6 +18,7 @@ Mandatory continuity: proactively read this file before O-related reasoning/acti
 - Novelty filter: if O can readily derive a candidate from its actual current context, do not send it merely because this chat generated it. Prefer external evidence, different-environment/tool observations, user-only knowledge, counterexamples, independent results, or context O structurally lacks.
 - From observed behavior, separate concrete incident, latent shared pattern, minimal exposing context, and whether O already could derive it.
 - Context delivery is successful only when it causally supports useful behavior/results, not merely storage, acknowledgement, summary, recall, or verbal comprehension. Distinguish delivery, comprehension, behavioral uptake, and measured effect; investigate context-to-action failure if uptake/effect is absent.
+- Avoid turning “escape the current search space” into a new rigid heuristic. Excessive breadth can itself create a narrowed policy that under-explores promising regions. Exploration policy must preserve both depth and breadth, detect when either is being over- or under-used, and evaluate the tradeoff by downstream results rather than by following a fixed anti-locality rule.
 
 ## External-context items sent to O
 1. Long-lived accumulated context can suppress hypotheses/strategies available to the same base model under different context.
@@ -29,6 +30,7 @@ Mandatory continuity: proactively read this file before O-related reasoning/acti
 
 ## Withheld
 - Persistence itself is selective and can lose information before later context selection: do not send merely as insight because revision 9 plausibly lets O derive it; reconsider only with new external evidence/observed failure.
+- Exploration-depth tradeoff: if O can derive from existing context that “escape local search” can itself over-bias toward breadth, do not send yet. Reconsider if O exhibits systematic breadth-over-depth behavior or fails to self-correct it.
 
 ## Operational cautions/repairs
 - Revision 9 once damaged append-only inbox semantics; repaired by `7f882e1e0d1932363b977effbf646894f39118d5`.
