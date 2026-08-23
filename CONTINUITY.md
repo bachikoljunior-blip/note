@@ -8,9 +8,11 @@ This is the sole content of the note repository main branch and the compact cont
 
 - Do not wait for the user to mention this note. For O-related questions, decisions, repository actions, or references to prior discussion where historical context could matter, proactively read this file before reasoning or acting.
 - Proactively update this file when conversation history adds, corrects, supersedes, or clarifies an important standing assumption, decision, distinction, workflow rule, pending proposal, or external-context item. Do not wait for the user to request an update.
+- If, while answering, the assistant explicitly recognizes something as an important standing rule, distinction, correction, or future selection criterion that belongs in this continuity source, update this file in the same turn rather than merely saying it should be saved.
 - The purpose is to survive chat-context truncation. Repeatedly using this read/update loop should keep the existence and role of this note represented in recent conversation/tool activity while the durable file remains the recovery source.
 - Keep the file compact enough to reread. Preserve semantic distinctions that have caused repeated confusion; compress derivable reasoning rather than accumulating transcripts.
 - When carrying an insight from this chat to O, prefer the minimal context difference that caused this chat to reach a useful conclusion, rather than sending the entire derived solution or reasoning chain. O uses the same base model for this purpose, so the missing context is often more valuable than duplicating reasoning.
+- Before proposing or sending an external-context item, apply a novelty filter: ask whether O, given its actual current context including previously sent items, could readily derive the candidate itself. If there is no concrete reason it is missing from or difficult to derive within O's context, do not send it merely because this chat generated it. Prefer information arising from a real context asymmetry: external evidence/research, different environment or tool observations, user-only knowledge, counterexamples, independent experiment results, or framing that O's execution context structurally suppresses.
 - Before writing a new external-context item or directive into O, show the proposed wording to the user and wait for approval.
 - Distinguish new context from operational repair: if there is a clear non-semantic integrity/automation/state-machine defect that can be safely repaired without choosing a new strategy or impersonating another live writer, fix it immediately without waiting for approval. Do not mutate another live writer's lease/heartbeat or identity-bound work merely to make state look fresh.
 
@@ -36,6 +38,10 @@ Before proposing an O improvement, ask whether it is merely something the same m
 1. Long-running accumulated context can suppress hypotheses/strategies that the same base model could generate under different context, and may make that bias hard to notice internally.
 2. Durable plans, continuation, heartbeat, user-input acknowledgement, repository/CI/PR state, and actual execution can advance on different clocks; freshness/provenance/invalidation/reconciliation and decision-time context selection are therefore structural concerns.
 3. Minimal context-selection seed approved and sent as revision 9: "In long-running execution, the choice of what enters the current context can itself change the resulting judgment, and that context-selection decision is itself conditioned by the contexts selected before it."
+
+## Rejected/withheld candidate
+
+- "Information can be lost before later context selection because persistence itself is selective." Do not send merely as a new insight: given revision 9, the same base model can plausibly derive that selection also occurs at persistence time. Reconsider only if new external evidence or an observed O failure makes it a genuine context asymmetry.
 
 ## Recent operational repairs
 
