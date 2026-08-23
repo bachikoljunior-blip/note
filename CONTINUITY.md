@@ -24,7 +24,8 @@ Mandatory continuity: proactively read this file before O-related reasoning/acti
 2. Durable state and live execution advance on different clocks; freshness/provenance/invalidation/reconciliation/decision-time context selection are structural concerns.
 3. Revision 9: context selection changes judgment and is itself conditioned by previously selected context.
 4. Revision 10: same-family model repeatedly failed to apply explicitly present, understood constraints in later actions; availability/retrievability is not equivalent to behavioral control. Commit `48cdbe227e1c81f0f5fbd0c1ae6c85b25194b3ce`.
-5. Revision 11 approved and sent 2026-08-23: successful context integration should be evaluated by whether it actually produces useful behavioral and outcome changes, not merely storage/recall/explanation. Commit `cc0d17a032d0b32846f904a444145ece26fcc2e5`.
+5. Revision 11: successful context integration should be evaluated by whether it actually produces useful behavioral and outcome changes, not merely storage/recall/explanation. Repaired append-only representation commit `496c1bb57e5cf89b3dbf9776964274d8fb355ae7`.
+6. Revision 12 approved and sent 2026-08-23: autonomous scientist-agent systems with closed loops over hypothesis generation, experimentation, evaluation, and research-result inheritance have externally evaluated outputs/measured improvements; use them as external baselines and compare/test mechanisms rather than designing only from O's current internal approach. Commit `1e2ceeb86825af9f883d561071b4f231bdd1f6fc`.
 
 ## Withheld
 - Persistence itself is selective and can lose information before later context selection: do not send merely as insight because revision 9 plausibly lets O derive it; reconsider only with new external evidence/observed failure.
