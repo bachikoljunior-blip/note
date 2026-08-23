@@ -39,12 +39,7 @@ Before proposing an O improvement, ask whether it is merely something the same m
 1. Long-running accumulated context can suppress hypotheses/strategies that the same base model could generate under different context, and may make that bias hard to notice internally.
 2. Durable plans, continuation, heartbeat, user-input acknowledgement, repository/CI/PR state, and actual execution can advance on different clocks; freshness/provenance/invalidation/reconciliation and decision-time context selection are therefore structural concerns.
 3. Minimal context-selection seed approved and sent as revision 9: "In long-running execution, the choice of what enters the current context can itself change the resulting judgment, and that context-selection decision is itself conditioned by the contexts selected before it."
-
-## Approved external-context item pending delivery
-
-- Constraint-to-action gap: "External observation: a same-family model repeatedly failed to apply constraints that were explicitly present in its context and that it had demonstrated understanding of when generating later concrete actions. Information being present or retrievable in context is therefore not equivalent to that information actually exerting control over behavior at action time."
-- This was approved by the user on 2026-08-23. Attempted write to O revision 10 was blocked by the platform safety layer, so do not falsely mark it as delivered. Retry only via a supported safe path without altering its semantic content.
-- Concrete evidence in this chat included: damaging append-only inbox semantics while the rule was present, failing to proactively update Note immediately after adopting that rule, and prematurely sending external context before user approval. The value is the generalized observed pattern, not those incidents individually.
+4. Constraint-to-action gap approved and delivered as revision 10 on 2026-08-23: "External observation: a same-family model repeatedly failed to apply constraints that were explicitly present in its context and that it had demonstrated understanding of when generating later concrete actions. Information being present or retrievable in context is therefore not equivalent to that information actually exerting control over behavior at action time." Commit: `48cdbe227e1c81f0f5fbd0c1ae6c85b25194b3ce`.
 
 ## Rejected/withheld candidate
 
