@@ -18,6 +18,7 @@ Mandatory continuity: proactively read this file before O-related reasoning/acti
 - Novelty filter: if O can readily derive a candidate from its actual current context, do not send it merely because this chat generated it. Prefer external evidence, different-environment/tool observations, user-only knowledge, counterexamples, independent results, or context O structurally lacks.
 - From observed behavior, separate concrete incident, latent shared pattern, minimal exposing context, and whether O already could derive it.
 - Context delivery is successful only when it causally supports useful behavior/results, not merely storage, acknowledgement, summary, recall, or verbal comprehension. Distinguish delivery, comprehension, behavioral uptake, and measured effect; investigate context-to-action failure if uptake/effect is absent.
+- Context is an intervention with both information value and interference cost. More context is not monotonically better: irrelevant, redundant, conflicting, or over-salient context can dilute important constraints, anchor search, consume attention/context budget, or create new rigid heuristics. Prefer minimal/gated/on-demand routing and, where consequential, compare downstream outcomes with and without the added context.
 - Avoid turning “escape the current search space” into a new rigid heuristic. Excessive breadth can itself create a narrowed policy that under-explores promising regions. Exploration policy must preserve both depth and breadth, detect when either is being over- or under-used, and evaluate the tradeoff by downstream results rather than by following a fixed anti-locality rule.
 
 ## External-context items sent to O
@@ -37,11 +38,12 @@ Mandatory continuity: proactively read this file before O-related reasoning/acti
 - Revision 4's gate correction is reflected in `WORK_EXECUTION_STATE.primary_run_contract` and the watchdog prompt, but `agi/WORK_STRATEGY.json` is materially stale and still says the objective is reaching the unchanged strict gate, treats zero independent external evidence as the main bottleneck, and contains an obsolete PR-254 immediate sequence. This can conflict with the currently valid user objective and must not be treated as an authoritative current strategy without reconciliation.
 - Revision 5 smartphone-first delegation is operationally reflected: repository/Work/automation paths do the work and user-only requests are separated into a durable queue/monitor.
 - Revision 3's anti-indefinite-deferral intent is represented by finite reevaluation/unbounded-deferral prohibitions; illustrative durations are not encoded as the user objective.
-- PR 263 exact-head CI has completed successfully, but the PR remains open. Main execution state heartbeat/last_progress is 2026-08-23T06:39:06Z with a 900s stale window, so the durable `running` state is stale. Do not impersonate the writer heartbeat from this chat.
+- GitHub durable state still shows heartbeat/last_progress 2026-08-23T06:39:06Z and PR 263 open, but the user states there is an execution at 16:40 JST. Do not infer that live execution stopped solely from the older durable heartbeat; identify and inspect the 16:40 execution itself when judging recent behavioral reflection.
 
 ## Withheld
 - Persistence itself is selective and can lose information before later context selection: do not send merely as insight because revision 9 plausibly lets O derive it; reconsider only with new external evidence/observed failure.
 - Exploration-depth tradeoff: if O can derive from existing context that “escape local search” can itself over-bias toward breadth, do not send yet. Reconsider if O exhibits systematic breadth-over-depth behavior or fails to self-correct it.
+- Context-interference principle above is retained in chat continuity for selection discipline; do not automatically send it to O unless a concrete failure/experiment makes it externally informative rather than redundant with revisions 7-11.
 
 ## Operational cautions/repairs
 - Revision 9 once damaged append-only inbox semantics; repaired by `7f882e1e0d1932363b977effbf646894f39118d5`.
