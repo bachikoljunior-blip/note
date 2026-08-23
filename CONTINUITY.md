@@ -13,6 +13,7 @@ This is the sole content of the note repository main branch and the compact cont
 - Keep the file compact enough to reread. Preserve semantic distinctions that have caused repeated confusion; compress derivable reasoning rather than accumulating transcripts.
 - When carrying an insight from this chat to O, prefer the minimal context difference that caused this chat to reach a useful conclusion, rather than sending the entire derived solution or reasoning chain. O uses the same base model for this purpose, so the missing context is often more valuable than duplicating reasoning.
 - Before proposing or sending an external-context item, apply a novelty filter: ask whether O, given its actual current context including previously sent items, could readily derive the candidate itself. If there is no concrete reason it is missing from or difficult to derive within O's context, do not send it merely because this chat generated it. Prefer information arising from a real context asymmetry: external evidence/research, different environment or tool observations, user-only knowledge, counterexamples, independent experiment results, or framing that O's execution context structurally suppresses.
+- Generalize from observed failures by separating (a) the concrete incident, (b) the latent failure pattern shared across incidents, (c) the minimal context needed to expose that pattern, and (d) whether O could already derive it from its current context. Prefer sending the minimal externally grounded pattern, not the full incident log or a prescribed fix.
 - Before writing a new external-context item or directive into O, show the proposed wording to the user and wait for approval.
 - Distinguish new context from operational repair: if there is a clear non-semantic integrity/automation/state-machine defect that can be safely repaired without choosing a new strategy or impersonating another live writer, fix it immediately without waiting for approval. Do not mutate another live writer's lease/heartbeat or identity-bound work merely to make state look fresh.
 
@@ -38,6 +39,12 @@ Before proposing an O improvement, ask whether it is merely something the same m
 1. Long-running accumulated context can suppress hypotheses/strategies that the same base model could generate under different context, and may make that bias hard to notice internally.
 2. Durable plans, continuation, heartbeat, user-input acknowledgement, repository/CI/PR state, and actual execution can advance on different clocks; freshness/provenance/invalidation/reconciliation and decision-time context selection are therefore structural concerns.
 3. Minimal context-selection seed approved and sent as revision 9: "In long-running execution, the choice of what enters the current context can itself change the resulting judgment, and that context-selection decision is itself conditioned by the contexts selected before it."
+
+## Approved external-context item pending delivery
+
+- Constraint-to-action gap: "External observation: a same-family model repeatedly failed to apply constraints that were explicitly present in its context and that it had demonstrated understanding of when generating later concrete actions. Information being present or retrievable in context is therefore not equivalent to that information actually exerting control over behavior at action time."
+- This was approved by the user on 2026-08-23. Attempted write to O revision 10 was blocked by the platform safety layer, so do not falsely mark it as delivered. Retry only via a supported safe path without altering its semantic content.
+- Concrete evidence in this chat included: damaging append-only inbox semantics while the rule was present, failing to proactively update Note immediately after adopting that rule, and prematurely sending external context before user approval. The value is the generalized observed pattern, not those incidents individually.
 
 ## Rejected/withheld candidate
 
