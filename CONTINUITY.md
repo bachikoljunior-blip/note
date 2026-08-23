@@ -11,7 +11,8 @@ This is the sole content of the note repository main branch and the compact cont
 - The purpose is to survive chat-context truncation. Repeatedly using this read/update loop should keep the existence and role of this note represented in recent conversation/tool activity while the durable file remains the recovery source.
 - Keep the file compact enough to reread. Preserve semantic distinctions that have caused repeated confusion; compress derivable reasoning rather than accumulating transcripts.
 - When carrying an insight from this chat to O, prefer the minimal context difference that caused this chat to reach a useful conclusion, rather than sending the entire derived solution or reasoning chain. O uses the same base model for this purpose, so the missing context is often more valuable than duplicating reasoning.
-- Before writing a new external-context item or directive into O, show the proposed wording to the user and wait for approval. Note maintenance itself is proactive and does not require approval.
+- Before writing a new external-context item or directive into O, show the proposed wording to the user and wait for approval.
+- Distinguish new context from operational repair: if there is a clear non-semantic integrity/automation/state-machine defect that can be safely repaired without choosing a new strategy or impersonating another live writer, fix it immediately without waiting for approval. Do not mutate another live writer's lease/heartbeat or identity-bound work merely to make state look fresh.
 
 ## Standing context
 
@@ -36,6 +37,8 @@ Before proposing an O improvement, ask whether it is merely something the same m
 2. Durable plans, continuation, heartbeat, user-input acknowledgement, repository/CI/PR state, and actual execution can advance on different clocks; freshness/provenance/invalidation/reconciliation and decision-time context selection are therefore structural concerns.
 3. Minimal context-selection seed approved and sent as revision 9: "In long-running execution, the choice of what enters the current context can itself change the resulting judgment, and that context-selection decision is itself conditioned by the contexts selected before it."
 
-## Current integrity issue
+## Recent operational repairs
 
-When revision 9 was written, this chat mistakenly replaced the full bodies of inbox entries 1-8 with `preserve_from_prior_revision:true` placeholders even though the file declares append-only semantics. The exact revision-8 full content remains recoverable from parent commit `88972f5e807df81d59a0361893884b7fc27f9f6d`. Treat restoration of full entries 1-8 plus the approved revision-9 entry as a repair, not as a new external-context directive. Do not add further O context until this integrity issue is repaired or deliberately superseded.
+- Revision 9 initially damaged append-only semantics by replacing full inbox entries 1-8 with placeholders. This was repaired on main by commit `7f882e1e0d1932363b977effbf646894f39118d5`, restoring the full revision-8 history and appending revision 9 intact.
+- The `O Work監視・復旧` automation still used the obsolete automation-created strict external evidence gate as the project/monitor completion condition. It was updated to treat the user's actual upper-level objective plus truthful reporting as the completion condition, while keeping the strict gate optional. It also continues to suppress duplicate recovery when fresh owner commits/PR/workflow/tool activity prove liveness.
+- Do not "repair" the generation-4 primary heartbeat by writing it from this chat: recent primary commits prove the primary is active, and falsifying or impersonating its heartbeat would violate writer identity. The monitor should use those fresh commits as liveness evidence until the primary writes its own state update.
