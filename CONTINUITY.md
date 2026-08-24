@@ -7,7 +7,7 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 ## Standing context
 - Goal: materially accelerate genuine real-world AGI; O is instrumental/replaceable.
 - User-side work should be minimized; repository/tool work belongs on the automated/Work side.
-- Treat O and this chat as same-base-model for idea-generation overlap. Before proposing a new idea to send to O, explicitly ask whether O could readily derive it from its actual current context. Prefer genuine context asymmetries, user-originated design choices, external evidence/observations, or concrete failures over duplicating reasoning O can readily do itself.
+- Treat O and this chat as same-base-model for idea-generation overlap. Before proposing a new idea to send to O, ask whether O could readily derive it from its actual current context. Prefer genuine context asymmetries, user-originated design choices, external evidence/observations, or concrete failures over duplicating reasoning O can readily do itself.
 - External ideas and user proposals are hypotheses, not automatic truth.
 - Context is an intervention with information value and interference cost; more context is not monotonically better. Prefer minimal, gated, on-demand context and judge usefulness by downstream behavior/results.
 - Evaluation itself is fallible. Distinguish measured improvement from metric validity; evaluator design may itself need falsification/calibration.
@@ -17,52 +17,52 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 - Revision 13: ChatGPT Work primary; Claude stopped as executor.
 - Revision 14: recurring durable-authority reconciliation, not one-time cleanup.
 - Revision 15: O-centered context kernel. Context management/retention and the work loop should be centered in O Engine; prevent externally known information from silently disappearing from O decision context; compare architectures rather than assuming raw full-context copying is optimal.
-- Revision 15 is acknowledged. O selected an authoritative-source-referenced DecisionContextManifest/Event-Ledger direction rather than copying all raw external data into every prompt.
-- The malformed revision-16 write was not reconstructed semantically. Generation 7 records revision 16 as withdrawn integrity quarantine bound to the malformed blob and preserves it as negative evidence.
-- Revision 17 is now acknowledged, but in the current authoritative inbox it corresponds to the user's explicit `再開して` resume direction. The earlier Skill-in-Skill proposal and scientist-agent positive-control criticism remain preserved in recovery/note context and should not be falsely claimed as ingested unless restored as authoritative semantic revisions.
+- Revision 16 is a withdrawn integrity-quarantine record for the malformed/truncated write; no missing semantics were reconstructed.
+- Revision 17 resumed generation 7.
+- Revision 18 is the user-approved recursive Skill-in-Skill Context Kernel architecture proposal. It was safely appended and acknowledged.
+- Revision 19 is the scientist-agent positive-control/evaluation-scope observation. It was safely appended and acknowledged.
+- PR 289 merged the dedicated future append path `append_remote_user_input_inbox`: expected revision, JSON/schema validation, contiguous sequences, duplicate/secret rejection, one expected-blob CAS, and exact remote readback. PR 290 durably published that native lifecycle.
+- A clarification intended for authoritative Revision 20 has now been observed by the live Work owner but is not yet appended or acknowledged because the current Execute request is frozen. Its meaning: limit negative evidence to the candidate/configuration/conditions actually tested; do not generalize one component or O-adapted variant failure to an entire scientist-agent family or untested mechanisms; do not require redundant positive-control reproduction when equivalent original conditions are already established; interpret Revision 19 as an anti-overgeneralization/evidential-scope rule.
 
-## Current recursive Skill-in-Skill design — user-approved proposal context
-- Desired abstraction: O Engine is a recursive Skill-in-Skill context system. All relevant durable context should be reachable from inside O Engine, but not materialized all at once.
-- Kernel is effectively the always-entered root Skill. This is mainly a useful abstraction, not necessarily a mandatory implementation detail to prescribe. The essential requirement is that an always-entered minimal root context exposes indispensable global invariants and reachable action/context affordances without becoming a giant prompt.
-- Each Skill that has child Skills should itself contain/own child-selection capability; a separate Selector Skill need not be inserted at every level. This is a design simplification/candidate, not an absolute requirement if O finds a better equivalent mechanism.
-- Selection is semantic/model reasoning, not merely a fixed mechanical routing table: at each level the model reasons over currently materialized context, optionally using local Skill guidance/criteria, selects one or multiple useful child Skills, opens them, reasons again with added context, and recursively continues until enough context exists to decide/act.
-- Local Skill judgment criteria are optional and situation-dependent and may guide child selection and substantive local judgment while remaining falsifiable/improvable.
-- Reachable action/context space includes internal reasoning/implementation, experiments, external exploration, user questions/proposals/permission/operation requests, evaluation/evaluator changes, and modification/replacement of O itself.
+## Current recursive Skill-in-Skill design
+- O Engine is a recursive Skill-in-Skill context system candidate. All relevant durable context should be reachable from inside O Engine, but not materialized all at once.
+- Kernel is conceptually the always-entered minimal root context/Skill: indispensable global invariants and reachable action/context affordances, not a giant prompt.
+- Each Skill with children may itself support model-reasoned child selection; a separate Selector Skill at every level is not mandatory.
+- At each level the model reasons over currently materialized context, optionally uses local Skill criteria/checklists/priors, opens one or multiple useful child Skills, reasons again with added context, and recurses until enough context exists to decide/act.
+- Local judgment criteria are optional, situation-dependent, falsifiable, and may guide both local judgment and child selection without accumulating when irrelevant.
+- Reachable action/context space includes implementation, experiments, external exploration, user questions/proposals/permission/operation requests, evaluator changes, and modification/replacement of O itself.
 - Authority/freshness/provenance remain part of the Context Kernel / manifest-event-ledger direction.
 - Routing/context selection itself is improvable and should be evaluated by downstream decision/outcome quality, missed-needed context, unnecessary context load/interference, elapsed time/cost, and comparative interventions.
 
-## Scientist-agent evaluation issue — user-approved external context
-- Current criticism: O extracted/adapted mechanisms from externally successful scientist-agent systems (e.g. checkpoint inheritance) rather than first reproducing the demonstrated successful configuration as a fidelity-preserving positive control.
-- If the demonstrated original part/configuration has not been established as a positive control, failure of an O-adapted/decomposed variant cannot distinguish failure to reproduce the external baseline, effect destroyed by adaptation/ablation, from genuine evidence against the original method.
-- Do not over-specify the derived solution unless needed; O can likely derive reproduction -> adaptation -> ablation sequencing itself once this evaluation flaw is exposed.
+## Scientist-agent evaluation scope
+- Scientist-agent family remains an external baseline/research source, not adopted wholesale or rejected wholesale.
+- Checkpoint inheritance was only one extracted/adapted candidate. Its `INSUFFICIENT_EVIDENCE` result does not disprove the scientist-agent family or untested mechanisms.
+- Positive controls are needed when necessary to distinguish reproduction failure, adaptation/ablation loss, and genuine evidence against the original method. But if materially equivalent original success conditions are already established, do not require redundant reproduction solely as ritual.
+- Core rule: every negative result's scope is limited to what was actually tested. Candidate-level failure may not be promoted to family-level rejection without broader matched evidence.
+- PR 291 merged a precommitted matched comparison protocol for current Context Kernel, recursive Skill routing, and eager-context diagnostic control, plus deterministic routing-receipt validation and scientist-agent causal classification. It remains PRECOMMITTED and unmeasured: zero routing observations and no positive-control result yet.
 
 ## Evaluated mechanism/candidate status so far
-- Scientist-agent family: retained as an external baseline/research source, not adopted wholesale. PR 263 compared AI Scientist-v2 against O with a frozen rubric and selected checkpoint inheritance only as a sandbox experiment.
-- Checkpoint inheritance: harness/provenance machinery built (PRs 263-265), but genuine matched native observations unavailable; `INSUFFICIENT_EVIDENCE`, implementation unauthorized. Not adopted, not disproven in principle.
-- Deterministic recursive history commitment v2: adopted/merged (PR 266); internal engineering, not capability evidence.
-- Lazy recursive Skill context-routing infrastructure: adopted/merged (PR 268); semantic child-selection benefit still unmeasured.
+- Checkpoint inheritance: harness/provenance built in PRs 263-265; genuine matched native observations unavailable; `INSUFFICIENT_EVIDENCE`, implementation unauthorized. Not adopted, not disproven in principle.
+- Deterministic recursive history commitment v2: adopted/merged in PR 266; internal engineering, not capability evidence.
+- Lazy recursive Skill context-routing infrastructure: adopted/merged in PR 268; semantic child-selection benefit still unmeasured.
 - Held-out recursive routing activation: not adopted; zero admissible observations / `INSUFFICIENT_EVIDENCE` because selector contamination invalidated measurement.
-- Four-way CI sharding: adopted/merged (PR 270) and reduced feedback-loop latency; workflow engineering, not capability evidence.
+- Four-way CI sharding: adopted/merged in PR 270 and reduced feedback-loop latency; workflow engineering, not capability evidence.
 - O-centered Context Kernel / DecisionContextManifest + Event-Ledger: selected under revision 15 and actively engineered; not yet proven end-to-end superior.
 - Full-context-everywhere/raw-copy default: not selected; selective authoritative materialization preferred.
+- Public-concepts-v2 evaluator contract exists on open PR 288; historical 11/12 trial remains immutable FAIL and is not retroactively relabeled.
 
 ## Current execution process / latest checkpoint
-- Execution model: Work runtime is outer executor; O Engine owns semantic decision cycles. A single fenced writer holds mutation authority. User inbox is polled at safe semantic/Root boundaries; frozen invocations are immutable.
+- Execution model: Work runtime is outer executor; O Engine owns semantic decision cycles. A single fenced writer holds development mutation authority. User inbox is polled at safe semantic/Root boundaries; frozen invocations are immutable.
 - O semantic cycle: Root -> Candidate/Preflight -> Execute -> Task Evaluate -> Consolidate/Learn -> Root, with immutable request/response records and exact continuation.
 - External effects are fenced/idempotent, exact-head validated, and read back before completion.
 - Context Kernel work adds pre-freeze authoritative observation/freshness/provenance validation.
-- Latest checked at 2026-08-24 16:14 JST: generation 7 is RUNNING, execution `work-recovery-20260824T040019Z-fed49f4a10c39430`, heartbeat/progress 2026-08-24T07:10:23.708Z, fresh under 900-second stale threshold. Highest acknowledged inbox revision is 17. Generation 7 resumed from the generation-6 malformed-input checkpoint under a new fenced CAS owner and did not infer missing revision-16 semantics.
-- Current active unit is `unit-publish-public-concepts-v2`, branch `work/recovery-gen7-public-concepts-v2-v1`.
-- PR 288 `Add opt-in public-concept heldout contract v2` is open at exact head `803d314996c9b3906c1de272e2465ea338a325b7`. It adds an opt-in `PublicConceptContract` / `public-concepts-v2` evaluator while preserving the frozen historical 11/12 trial as immutable FAIL and keeping `legacy-invariant-v1` default. 74 related tests and Work verification passed locally; this is evaluator-contract/publication engineering, not a new behavioral measurement or AGI evidence.
-- Latest persisted CI observation: PR 288 workflow 32698944696 had pytest shards 0,1,2 succeeded; shard 3 in progress; aggregate pending. No rerun, head update, merge, or Candidate promotion yet. Next action is observe unchanged exact-head CI; only after all 4 shards + aggregate succeed should pending Execute `invoke-8c17214637e8334e3e9b2f3c` be submitted exactly once and lifecycle continue. This Execute explicitly must not merge.
-- Historical physically blinded trial remains immutable mechanical FAIL. `public-concepts-v2` is a future-only evaluator-contract repair, not a retroactive reinterpretation of that trial.
+- Latest checked at 2026-08-24 21:15 JST: generation 7 is RUNNING, execution `work-recovery-20260824T040019Z-fed49f4a10c39430`, heartbeat/progress `2026-08-24T12:15:21.585Z`, fresh under the 900-second stale threshold.
+- Highest acknowledged inbox revision is 19. Revision-20 clarification is durably recorded in `WORK_EXECUTION_STATE.user_input_inbox.pending_safe_boundary_input` as observed-not-yet-appended/acknowledged and is scheduled after the current identity-bound frozen Execute completes.
+- PR 291 `Precommit matched context comparison and positive-control gate` merged at 2026-08-24T11:16:11Z. It creates the comparison/evidence-scope protocol, but no matched behavioral observations have been collected yet.
+- Current active unit is native lifecycle publication for that context-comparison work. Superseded PR 292 was closed; replacement PR 293 is open at exact head `e3fe61198fe00079e7def3d52d83124dca3e61be`, containing 82 native-record-only paths.
+- Canonical exact-head CI run `32724168634`: shards 0 and 1 succeeded; shard 2's pytest succeeded and job finalization was still completing; shard 3 pytest was still running; aggregate not yet available. Redundant exact-head runs remain queued and are not merge authority.
+- After all four shards plus aggregate succeed, Work will re-read authority/inbox/main/head, require a conflict-free comparison, precommit merge authorization, expected-head merge PR 293, read back all 82 reviewed blobs, answer the frozen Execute, then safely append/ingest Revision 20 at the next boundary.
 - AGI remains unsupported; internal engineering progress is not AGI evidence.
-
-## Required one-time user action if chat-side GitHub connector cannot safely append
-- The current chat connector only exposes whole-file replacement for repository file writes; no dedicated append/CAS helper exists here. Do not repeat the prior unsafe full-replacement write to `USER_INPUT_INBOX.json`.
-- The two pending semantic inputs are durably preserved in `agi/USER_INPUT_INBOX_RECOVERY.json` and should become new authoritative revisions after current revision 17, without reusing withdrawn revision 16.
-- Minimal user action: send one message to the active ChatGPT Work session: `agi/USER_INPUT_INBOX_RECOVERY.json に保存されている未反映の2件を、現在の authoritative inbox revision 17 の次の新revisionとして安全に取り込み、今後は expected_revision + JSON/schema validation + atomic/CAS + remote readback を行う専用append経路を実装して。取り込みまで自律的に完了して。`
-- After that single Work message, no retyping of the two semantic proposals should be needed; Work should read the recovery file itself and complete the control-plane repair and ingestion.
 
 ## Chat operating policy
 - Before each O-related response, restore from this file first.
