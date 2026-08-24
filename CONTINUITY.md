@@ -18,40 +18,36 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 - Revision 14: recurring durable-authority reconciliation, not one-time cleanup.
 - Revision 15: O-centered context kernel. Context management/retention and the work loop should be centered in O Engine; prevent externally known information from silently disappearing from O decision context; compare architectures rather than assuming raw full-context copying is optimal.
 - Revision 15 is acknowledged. O selected an authoritative-source-referenced DecisionContextManifest/Event-Ledger direction rather than copying all raw external data into every prompt.
+- Revision 16 was intended to carry the recursive Skill-in-Skill proposal, but the main `USER_INPUT_INBOX.json` write was malformed/truncated inside sequence 13. O correctly detected the invalid unacknowledged revision 16 and checkpointed fail-closed instead of guessing or acknowledging it. Revision 16 is therefore NOT safely ingested yet and must be repaired from the last valid revision-15 blob plus the exact approved revision-16 text.
 
-## Current recursive Skill-in-Skill design under discussion — NOT YET SENT AS A NEW REVISION
+## Current recursive Skill-in-Skill design — approved by user for sending as proposal
 - Desired abstraction: O Engine is a recursive Skill-in-Skill context system. All relevant durable context should be reachable from inside O Engine, but not materialized all at once.
 - Kernel is effectively the always-entered root Skill. This is mainly a useful abstraction, not necessarily a mandatory implementation detail to prescribe. The essential requirement is that an always-entered minimal root context exposes indispensable global invariants and reachable action/context affordances without becoming a giant prompt.
 - Each Skill that has child Skills should itself contain/own child-selection capability; a separate Selector Skill need not be inserted at every level. This is a design simplification/candidate, not an absolute requirement if O finds a better equivalent mechanism.
 - Selection is semantic/model reasoning, not merely a fixed mechanical routing table: at each level the model reasons over currently materialized context, optionally using local Skill guidance/criteria, selects one or multiple useful child Skills, opens them, reasons again with added context, and recursively continues until enough context exists to decide/act.
 - Thus the loop is interleaved reasoning <-> context retrieval, not a one-shot tree traversal.
-- Local Skill judgment criteria are OPTIONAL and situation-dependent, not required boilerplate for every Skill. When useful, opening a Skill may materialize its local decision criteria/checklists/priors before the model decides which child Skill(s) to open. Those criteria can guide both the Skill's substantive local judgment and child-Skill selection. When a child opens, that child's own relevant criteria can be added for the next reasoning step. Only relevant criteria should materialize; avoid accumulating every ancestor rule if it no longer matters.
-- Local criteria may include what matters in the domain, when to open which children, when multiple branches are useful, stopping/evaluation criteria. They should guide model reasoning rather than become unquestionable rigid rules; they remain falsifiable/improvable.
-- Reachable action/context space should include at least internal reasoning/implementation, experiments, external exploration, user questions/proposals/permission/operation requests, evaluation/evaluator changes, and modification/replacement of O itself. This prevents an action from disappearing merely because the current semantic prompt omitted that affordance.
+- Local Skill judgment criteria are optional and situation-dependent. When useful, opening a Skill may materialize its local criteria/checklists/priors before child selection. Those criteria can guide both substantive local judgment and child-Skill selection, remain revisable/falsifiable, and should not accumulate when irrelevant.
+- Reachable action/context space includes internal reasoning/implementation, experiments, external exploration, user questions/proposals/permission/operation requests, evaluation/evaluator changes, and modification/replacement of O itself.
 - Authority/freshness/provenance remain part of the Context Kernel / manifest-event-ledger direction. Retrieval should resolve authoritative/fresh sources rather than blindly trust stale local material.
-- Routing/context selection itself is an improvable object. Evaluate downstream decision/outcome quality, missed-needed context, unnecessary context load/interference, elapsed time/cost, and where possible compare routing/context interventions rather than judging by verbal comprehension.
-- Important distinction: "all context is reachable within O" != "all context is always in the prompt".
-- Current candidate wording should present this as an architecture to compare/falsify, not automatic adoption.
+- Routing/context selection itself is improvable and should be evaluated by downstream decision/outcome quality, missed-needed context, unnecessary context load/interference, elapsed time/cost, and comparative context interventions where useful.
+- Important distinction: all context reachable within O != all context always in the prompt.
+- Treat the architecture as a proposal to compare/falsify, not automatic adoption.
 
-## What is actually worth communicating to O
-- Do not over-specify items O can readily derive. The highest-value user-originated semantic delta is: recursive Skill-in-Skill retrieval where model reasoning at each opened Skill can select one/multiple child Skills, with only needed context materialized; local judgment criteria may be carried by Skills when useful and can participate in child selection.
-- "Kernel = root Skill" is mostly conceptual shorthand and may not need to be sent if it would merely restate the already-active O-centered Context Kernel direction.
-- "No separate Selector Skill" is a candidate simplification rather than a necessary invariant; communicate it only if preserving the user's intended per-Skill self-routing architecture matters.
-- "Local judgment criteria inside Skills" is optional mechanism/context, not a requirement for all Skills. The key is that if such criteria exist, they become available to the model before child selection and remain revisable.
-
-## Current proposed wording for O — user has requested proposal text, not yet approved/sent
-Proposal: "Revision 15のO-centered Context Kernelの候補構造として、Skill-in-Skill型の再帰的context retrievalを比較検討してほしい。各Skillでモデル自身が現在materializeされているcontextを使って推論し、必要な子Skillを一つまたは複数選んで開き、追加contextを得て再推論する流れを再帰的に行う。全contextはO Engine内から到達可能にするが一度に全てはmaterializeしない。必要なSkillには局所的な判断基準・checklist・prior等を持たせ、それらも子Skill選択や局所判断に使えるようにするが、固定ルールとして絶対視せず改善・反証可能にする。Kernel=root Skillや各Skill自身が子選択を持つ構造は候補として扱い、より良い等価構造があれば比較してよい。routing/context selection自体も、必要contextの取り逃し、不要context負荷、最終判断/結果、所要時間・コストで評価する。即採用ではなく、現Context Kernel案との比較・検証対象として扱ってほしい。"
+## Exact approved Revision-16 semantic proposal text
+"Revision 15のO-centered Context Kernelの候補構造として、Skill-in-Skill型の再帰的context retrievalを比較検討してほしい。各Skillでモデル自身が現在materializeされているcontextを使って推論し、必要な子Skillを一つまたは複数選んで開き、追加contextを得て再推論する流れを再帰的に行う。全contextはO Engine内から到達可能にするが一度に全てはmaterializeしない。必要なSkillには局所的な判断基準・checklist・prior等を持たせ、それらも子Skill選択や局所判断に使えるようにするが、固定ルールとして絶対視せず改善・反証可能にする。Kernel=root Skillや各Skill自身が子選択を持つ構造は候補として扱い、より良い等価構造があれば比較してよい。routing/context selection自体も、必要contextの取り逃し、不要context負荷、最終判断/結果、所要時間・コストで評価する。即採用ではなく、現Context Kernel案との比較・検証対象として扱ってほしい。"
 
 ## Why this design arose
 - Concrete observed failure: outer Work context can know durable policy/action affordances while a fresh O semantic Root receives only a subset; information existing in the repository is not equivalent to influencing action-time reasoning.
 - Earlier Root requests also retained stale historical entry context alongside newer objectives. Revision 15 began addressing this via an O-centered Context Kernel.
 - The recursive Skill design is intended to solve selective materialization without reverting to full-context overload.
 
-## Current execution checkpoint
-- Latest checked state on 2026-08-24: generation 6 recovery owner is running; Revision 15 acknowledged.
-- O selected DecisionContextManifest/Event-Ledger and discovered a stale-context request-freeze failure itself.
-- PR 282 merged: pre-freeze mandatory Work-state freshness/identity validation, fail-closed before semantic request mutation; protected regression 159 passed. O explicitly retained the limitation that local freshness does not prove latest-remote observation.
-- Current next unit binds authoritative remote Work-state observation request/receipt before semantic request freeze, addressing that remaining provenance/freshness gap.
+## Current execution process / checkpoint
+- Execution model: Work runtime is the outer tool/executor layer; O Engine owns semantic decision cycles. A single fenced writer holds mutation authority. User inbox is polled at safe semantic/Root boundaries; frozen invocations are not mutated mid-flight.
+- O semantic cycle is broadly Root -> Candidate/Preflight -> Execute -> Task Evaluate -> Consolidate/Learn -> Root, with immutable request/response records and exact continuation persisted between boundaries.
+- External effects (GitHub/CI/merge/etc.) are fenced/idempotent, validated at exact heads, and read back before being treated as completed observations.
+- Context Kernel work adds a pre-freeze context stage: gather/verify authoritative source observations, build decision context/manifest, then freeze the semantic request. PR 282 already added fail-closed local freshness/identity validation before semantic request mutation; the next work had been authoritative remote-source observation binding.
+- Latest state checked 2026-08-24: generation 6 is `checkpointed`, not running, because malformed unacknowledged revision 16 was detected. It intentionally blocks PR 286 merge/development mutation until the inbox is repaired exactly. PR 286 exact head had already passed four pytest shards plus aggregate; that success is preserved but not merged while input authority is malformed.
+- Required recovery sequence recorded by O: restore complete valid revision-15 history from the prior valid commit/blob; append the exact authoritative revision-16 proposal without guessing; validate JSON; acquire a new fenced generation by CAS; ingest revision 16 at a safe Root boundary; then revalidate unchanged PR 286 head/CI/mergeability before continuing.
 - AGI remains unsupported; internal engineering progress is not AGI evidence.
 
 ## Chat operating policy
