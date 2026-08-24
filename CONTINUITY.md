@@ -58,6 +58,12 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 - Historical physically blinded trial remains immutable mechanical FAIL. `public-concepts-v2` is a future-only evaluator-contract repair, not a retroactive reinterpretation of that trial.
 - AGI remains unsupported; internal engineering progress is not AGI evidence.
 
+## Required one-time user action if chat-side GitHub connector cannot safely append
+- The current chat connector only exposes whole-file replacement for repository file writes; no dedicated append/CAS helper exists here. Do not repeat the prior unsafe full-replacement write to `USER_INPUT_INBOX.json`.
+- The two pending semantic inputs are durably preserved in `agi/USER_INPUT_INBOX_RECOVERY.json` and should become new authoritative revisions after current revision 17, without reusing withdrawn revision 16.
+- Minimal user action: send one message to the active ChatGPT Work session: `agi/USER_INPUT_INBOX_RECOVERY.json に保存されている未反映の2件を、現在の authoritative inbox revision 17 の次の新revisionとして安全に取り込み、今後は expected_revision + JSON/schema validation + atomic/CAS + remote readback を行う専用append経路を実装して。取り込みまで自律的に完了して。`
+- After that single Work message, no retyping of the two semantic proposals should be needed; Work should read the recovery file itself and complete the control-plane repair and ingestion.
+
 ## Chat operating policy
 - Before each O-related response, restore from this file first.
 - Update this file after each substantive conversational step so the current design can be reconstructed even if old chat context drops.
