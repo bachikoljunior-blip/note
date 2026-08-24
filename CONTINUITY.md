@@ -36,6 +36,17 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 ## Exact approved Revision-16 semantic proposal text
 "Revision 15のO-centered Context Kernelの候補構造として、Skill-in-Skill型の再帰的context retrievalを比較検討してほしい。各Skillでモデル自身が現在materializeされているcontextを使って推論し、必要な子Skillを一つまたは複数選んで開き、追加contextを得て再推論する流れを再帰的に行う。全contextはO Engine内から到達可能にするが一度に全てはmaterializeしない。必要なSkillには局所的な判断基準・checklist・prior等を持たせ、それらも子Skill選択や局所判断に使えるようにするが、固定ルールとして絶対視せず改善・反証可能にする。Kernel=root Skillや各Skill自身が子選択を持つ構造は候補として扱い、より良い等価構造があれば比較してよい。routing/context selection自体も、必要contextの取り逃し、不要context負荷、最終判断/結果、所要時間・コストで評価する。即採用ではなく、現Context Kernel案との比較・検証対象として扱ってほしい。"
 
+## Evaluated mechanism/candidate status so far
+- Scientist-agent family: retained as an external baseline/research source, not adopted wholesale. PR 263 compared AI Scientist-v2 against O with a frozen rubric and selected checkpoint inheritance only as the next sandbox experiment; no AGI/capability claim.
+- Checkpoint inheritance: measurement harness/provenance machinery was built (PRs 263-265), but genuine matched native observations could not be obtained. The native cycle recorded `INSUFFICIENT_EVIDENCE`; implementation remained unauthorized. Treat as not adopted / currently rejected-for-activation rather than disproven in principle.
+- Deterministic recursive history commitment v2: adopted and merged (PR 266) after deterministic/reproducibility regressions; this is internal engineering, not capability evidence.
+- Lazy recursive Skill context-routing infrastructure: adopted as infrastructure and merged (PR 268), with bounded depth/node/fan-out/context budgets and fail-closed manifest/content binding. Semantic child selection benefit was explicitly unmeasured; infrastructure adoption != behavioral validation.
+- Held-out recursive routing activation: not adopted. Later held-out work retained zero admissible observations / `INSUFFICIENT_EVIDENCE` and no activation because selector contamination prevented valid measurement.
+- Four-way CI sharding: adopted and merged (PR 270) to replace the ~50-minute single pytest step; subsequent native cycle treated the bounded CI engineering unit as PASS. This is measured workflow-speed engineering, not capability gain.
+- O-centered Context Kernel / DecisionContextManifest + Event-Ledger: selected under revision 15 over naive raw full-context copying and is actively being engineered/validated. This is a chosen architecture direction, not yet proven end-to-end superior.
+- Full-context-everywhere/raw-copy approach: explicitly not selected as the default under revision 15; O chose authoritative-source references/selective materialization instead. Treat as rejected as default architecture, not universally impossible.
+- Several safety/control mechanisms (authority reconciliation, resume identity drift guards, pre-freeze freshness checks, immutable provenance binding) were adopted after concrete failure modes, but these are correctness infrastructure rather than scientist/self-improvement hypotheses.
+
 ## Why this design arose
 - Concrete observed failure: outer Work context can know durable policy/action affordances while a fresh O semantic Root receives only a subset; information existing in the repository is not equivalent to influencing action-time reasoning.
 - Earlier Root requests also retained stale historical entry context alongside newer objectives. Revision 15 began addressing this via an O-centered Context Kernel.
