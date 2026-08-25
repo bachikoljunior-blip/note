@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "worker": "continual_learning",
+  "observed_at": "2026-08-25T06:02:24Z",
+  "prior_state": {
+    "status": "absent",
+    "note": "research_workers/continual_learning/ did not exist at run start; this is the first durable worker checkpoint."
+  },
+  "findings": [
+    {
+      "id": "zeroflow-forward-only-forgetting-mitigation-2025",
+      "status": "candidate",
+      "mechanism": "Use zeroth-order / forward-pass optimization to reduce forgetting when gradients are unavailable or memory-expensive; perturbation vectors can be regenerated from random seeds instead of stored.",
+      "quantitative_evidence": "On the published ZeroFlow benchmark, naive zeroth-order optimization reduced memory by about 5x versus first-order optimization and runtime per iteration by about 50%. On EASE + OmniBenchmark with SGD-family methods, the Conserve/Forward variants reached average accuracy about 77.07/77.00 versus 74.73 for first-order, with forgetting 14.87/14.99 versus 15.11; results vary by dataset and optimizer, so this is not a universal win.",
+      "evidence_scope": "ICML 2025 continual-learning benchmarks using EASE/APER and CIFAR-100, CUB, ImageNet-A, OmniBenchmark; class-incremental setup and forward/zeroth-order optimizers. Do not generalize to LLM semantic continual learning without matched testing.",
+      "decision_relevance": "Potentially useful when O or a future learner needs adaptation under restricted gradient access or wants lower-memory continual updates. The strongest immediate value is as a resource/optimization baseline, not as proof of better general continual reasoning.",
+      "sources": [
+        "https://proceedings.mlr.press/v267/feng25j.html",
+        "https://zeroflow-bench.github.io/",
+        "https://arxiv.org/abs/2501.01045"
+      ]
+    },
+    {
+      "id": "sfa-in-training-checkpoint-averaging-2025",
+      "status": "candidate",
+      "mechanism": "Sequential Fine-tuning with Averaging repeatedly merges the currently training model with the checkpoint that summarizes previous tasks, rather than merging only after training or replaying old data.",
+      "quantitative_evidence": "Across language-domain sequences (Math/Law/Code) on Pythia-2.8B, Llama-2-7B, and Qwen2.5-1.5B, the paper reports SFA outperforming Task Arithmetic, TIES, WiSE-FT, L2 and EWC; SFA with p=0.25 can match rehearsal in reported Math/Law and three-domain settings. For Qwen2.5 Math->Law, SFA p=0.25 is reported comparable to a 10% replay buffer while storing no previous task data.",
+      "evidence_scope": "Sequential domain fine-tuning and vision task sequences in the reported models/datasets. Performance depends on averaging frequency p and weight beta; not established as a universal continual-learning optimizer.",
+      "decision_relevance": "A low-complexity candidate for O-side model-update experiments if parameter updates become part of the architecture: it compresses prior-task retention into a rolling checkpoint rather than a growing replay store.",
+      "sources": [
+        "https://arxiv.org/abs/2501.05559",
+        "https://openreview.net/forum?id=n2EU4PUrJP"
+      ]
+    },
+    {
+      "id": "online-world-model-planning-crl-2025",
+      "status": "high_priority_candidate",
+      "mechanism": "Separate continually updated environment dynamics from task rewards: learn a shallow Follow-The-Leader online world model, then solve any current reward/task by model-predictive-control planning against the latest dynamics model.",
+      "quantitative_evidence": "The ICML 2025 paper proves an online-model regret bound of O(sqrt(K^2 D log T)) under its assumptions and reports the FTL Online Agent learning new tasks without forgetting old skills while outperforming deep-world-model continual-learning baselines in Continual Bench.",
+      "evidence_scope": "Continual reinforcement learning where tasks share state space/dynamics but differ in reward functions; shallow online model plus MPC. The no-forgetting claim is by construction within that model class/assumptions and should not be generalized to arbitrary changing dynamics or LLM knowledge updates.",
+      "decision_relevance": "Architecturally important: when multiple tasks share latent world dynamics, keeping world-model learning reward-agnostic and moving task adaptation into planning may avoid destructive policy rewriting. This is a concrete separation-of-concerns hypothesis worth testing against O's current context/action architecture rather than assuming continual parameter editing is necessary.",
+      "open_implementation": "https://github.com/sail-sg/ContinualBench",
+      "sources": [
+        "https://proceedings.mlr.press/v267/liu25p.html",
+        "https://arxiv.org/abs/2507.09177",
+        "https://github.com/sail-sg/ContinualBench"
+      ]
+    },
+    {
+      "id": "longcl-task-core-memory-consolidation-2025",
+      "status": "candidate",
+      "mechanism": "Maintain a task-core memory index and selectively consolidate hard/discriminative samples rather than replaying or preserving all prior data uniformly.",
+      "quantitative_evidence": "Long-CL reports +7.4 AP and +6.5 AP over prior state of the art on its released multimodal MMLongCL-Bench and textual TextLongCL-Bench respectively.",
+      "evidence_scope": "Long-term continual-learning benchmarks created by the same work; the result supports selective memory management but does not establish transfer to autonomous-agent durable memory without matched evaluation.",
+      "decision_relevance": "Directly relevant to O's context kernel: a memory-retention policy should prioritize hard/discriminative/task-core evidence instead of uniformly preserving all observations. This should be tested as a routing/retention intervention, not imported wholesale.",
+      "sources": [
+        "https://arxiv.org/abs/2505.09952"
+      ]
+    },
+    {
+      "id": "continual-confounders-evaluation-warning-2025",
+      "status": "evaluation_warning",
+      "mechanism": "Sequential learners can preserve prior-task scores yet increasingly exploit time-varying spurious correlations; forgetting metrics alone can therefore certify the wrong thing.",
+      "quantitative_evidence": "ICML 2025 ConCon experiments show standard continual-learning methods struggle to ignore confounders that change across sequential tasks, while joint training can more easily avoid them.",
+      "evidence_scope": "CLEVR-derived continually confounded benchmark and tested CL methods; this is an evaluation failure mode, not a claim that all continual-learning benchmarks are invalid.",
+      "decision_relevance": "For O evaluations, retention/forward-transfer metrics should be paired with confounder/shortcut checks when task distributions evolve. This can prevent selecting a mechanism that appears stable only because it learned a changing shortcut.",
+      "open_implementation": "https://github.com/ml-research/concon",
+      "sources": [
+        "https://proceedings.mlr.press/v267/busch25a.html",
+        "https://github.com/ml-research/concon"
+      ]
+    }
+  ],
+  "dead_ends": [
+    {
+      "query": "Tokenized Transformer World Models for Continual Reinforcement Learning",
+      "reason": "Interesting mechanism (LoRA localized to world model, stable policy, uncertainty-guided imagination) but the ICLR 2026 submission was withdrawn; keep as low-confidence follow-up rather than promote over accepted ICML 2025 evidence."
+    }
+  ],
+  "next_queries": [
+    "Find accepted 2025-2026 work that directly measures selective memory consolidation or replay in LLM/agent settings rather than image-classification CL.",
+    "Find matched ablations separating replay quantity, sample hardness/discriminativeness, and memory-index quality in long-horizon agents.",
+    "Find continual-learning methods that update external memory/world models while freezing the base policy/model, with quantitative transfer/forgetting results.",
+    "Find active-learning or curriculum-selection results where ordering improves long-term retention rather than only sample efficiency.",
+    "Check whether O already tests checkpoint averaging, world-model/task separation, or hard-sample memory retention before proposing duplication."
+  ],
+  "continuation": {
+    "frontier": "Prioritize accepted/reproducible external-memory and world-model separation mechanisms, then active sample/curriculum selection. Treat withdrawn submissions as hypothesis sources only.",
+    "dedupe_keys": [
+      "zeroflow-forward-only-forgetting-mitigation-2025",
+      "sfa-in-training-checkpoint-averaging-2025",
+      "online-world-model-planning-crl-2025",
+      "longcl-task-core-memory-consolidation-2025",
+      "continual-confounders-evaluation-warning-2025"
+    ]
+  }
+}
