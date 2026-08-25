@@ -1,11 +1,12 @@
 {
   "schema_version": 2,
-  "observed_at": "2026-08-26T01:39:05+09:00",
+  "observed_at": "2026-08-26T01:40:21+09:00",
   "control": {
     "desired_state_control_revision": 5,
     "role": "work_delegation_gate",
     "role_config_revision": 4,
     "enabled_desired": false,
+    "physical_enabled_observed": false,
     "physical_disable_recommended": true,
     "class": "work_routing"
   },
@@ -28,23 +29,25 @@
     "duplicate_writer_created": false,
     "frozen_work_interrupted": false,
     "control_boundary_changed_since_prior_run": true,
-    "receipt": "automation_control/receipts/work_delegation_gate/20260826T013905+0900.json"
+    "logical_disable_receipt": "automation_control/receipts/work_delegation_gate/20260826T013905+0900.json",
+    "physical_disable_receipt": "automation_control/receipts/work_delegation_gate/20260826T014021+0900-physical-disable.json"
   },
   "routing_policy": {
-    "status": "logically_disabled",
+    "status": "disabled",
     "applies_only_to_tasks_owned_by_this_gate": true,
     "rule_if_reenabled": "Only if a concrete separate gate-owned queue/source is introduced and enabled_desired becomes true: prefer ordinary reasoning, connected tools/APIs, automations, or repository/GitHub actions before Work; never export this policy into primary O."
   },
   "action_this_run": {
-    "type": "logical_disable_noop",
-    "reason": "DESIRED_STATE control revision 5 sets enabled_desired=false and physical_disable_recommended=true. There is no gate-owned work and primary O is outside this policy's target boundary.",
-    "result": "No O read/mutation, no Work handoff, durable receipt/state updated; scheduler physical disable is the only remaining control-plane action."
+    "type": "logical_and_physical_disable",
+    "reason": "DESIRED_STATE control revision 5 sets enabled_desired=false and physical_disable_recommended=true after consecutive no-work runs and the authoritative O boundary correction.",
+    "result": "No O read/mutation and no Work handoff. Role-local receipts/state were updated and the scheduler entry was physically disabled, freeing its active slot."
   },
   "safety": {
     "single_writer_fence_preserved": true,
     "primary_o_untouched": true,
     "repository_defined_boundary_respected": true,
-    "least_work_not_exported_to_primary_o": true
+    "least_work_not_exported_to_primary_o": true,
+    "unrelated_automations_untouched": true
   },
-  "next_check": "No scheduled check is needed while enabled_desired=false. Re-enable only after repository control introduces a concrete separate gate-owned queue/source and explicitly sets enabled_desired=true."
+  "next_check": "None while disabled. Re-enable only after a future repository control revision introduces a concrete separate gate-owned queue/source and explicitly sets enabled_desired=true; physical re-enable requires the automation control plane."
 }
