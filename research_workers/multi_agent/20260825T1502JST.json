@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "worker": "multi_agent",
+  "checkpoint_at": "2026-08-25T15:02:00+09:00",
+  "prior_state": {
+    "found": false,
+    "note": "research_workers/multi_agent/ returned 404 at run start; this is the first durable frontier checkpoint."
+  },
+  "covered_sources": [
+    {
+      "id": "kim2026-capability-saturation",
+      "title": "Capable language models can outgrow the benefits of collaboration",
+      "date": "2026-07-24",
+      "source": "https://www.nature.com/articles/s42256-026-01268-y",
+      "primary": true
+    },
+    {
+      "id": "li2024-agent-forest",
+      "title": "More Agents Is All You Need",
+      "date": "2024-02-03",
+      "source": "https://arxiv.org/abs/2402.05120",
+      "primary": true
+    },
+    {
+      "id": "qian2025-macnet",
+      "title": "Scaling Large Language Model-based Multi-Agent Collaboration",
+      "date": "2025",
+      "source": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/66a026c0d17040889b50f0dfa650e5e0-Abstract-Conference.html",
+      "primary": true
+    },
+    {
+      "id": "kraidia2026-adversarial-persuasion",
+      "title": "When collaboration fails: persuasion driven adversarial influence in multi agent large language model debate",
+      "date": "2026-04-08",
+      "source": "https://www.nature.com/articles/s41598-026-42705-7",
+      "primary": true
+    },
+    {
+      "id": "wang2024-moa",
+      "title": "Mixture-of-Agents Enhances Large Language Model Capabilities",
+      "date": "2024-06-07",
+      "source": "https://arxiv.org/abs/2406.04692",
+      "primary": true
+    },
+    {
+      "id": "li2025-self-moa",
+      "title": "Rethinking Mixture-of-Agents: Is Mixing Different Large Language Models Beneficial?",
+      "date": "2025-02-02",
+      "source": "https://arxiv.org/abs/2502.00674",
+      "primary": true
+    },
+    {
+      "id": "jaderberg2017-pbt",
+      "title": "Population Based Training of Neural Networks",
+      "date": "2017-11-27",
+      "source": "https://deepmind.google/blog/population-based-training-of-neural-networks/",
+      "primary": true
+    }
+  ],
+  "mechanism_findings": [
+    {
+      "mechanism": "task-aligned coordination gating",
+      "evidence": "Across 260 matched-compute configurations spanning six agentic benchmarks, five architectures and three LLM families, the 2026 Nature Machine Intelligence study found MAS gains ranged from +80.8% on structured financial reasoning to -70.0% on sequential planning. Single-agent baseline performance was the strongest robust predictor; an approximately 45% baseline threshold predicted zero-to-negative MAS gains and matched the sign of MAS gain in 94% of 16 SWE-bench Verified and Terminal-Bench validation configurations. Centralized verification reduced error amplification to 4.4x versus 17.2x for independent MAS.",
+      "decision_relevance": "Do not treat parallelism as a universal default. Route tasks to multi-agent only when decomposable/parallelizable or when single-agent baseline is weak; preserve a centralized validation bottleneck when agents share conclusions.",
+      "scope": "Empirical rule validated within the tested model families, benchmarks and matched per-system compute ceilings; authors explicitly caution against treating the ~45% threshold as universal."
+    },
+    {
+      "mechanism": "independent sampling plus aggregation",
+      "evidence": "Agent Forest reports monotonic performance gains as ensemble size increases across GSM8K, MATH, MMLU, Chess and HumanEval. On GSM8K, a 40-sample Llama2-13B ensemble reached 59% versus 35% for a single sample and exceeded a single Llama2-70B at 54%; gains were larger on harder tasks and weaker models.",
+      "decision_relevance": "For separable candidate generation, cheap independent parallel samples with a simple aggregator can outperform a more complex interactive debate, especially when base-model accuracy is modest.",
+      "scope": "Mostly static/non-agentic benchmarks; should not be generalized to long-horizon tool-using workflows because 2026 controlled agentic evidence shows qualitatively different scaling."
+    },
+    {
+      "mechanism": "centralized / irregular collaboration topology",
+      "evidence": "MacNet supports collaboration among more than 1,000 agents and reports irregular/small-world-like DAG topologies outperforming regular ones, with normalized solution quality following a logistic growth curve as agent count scales.",
+      "decision_relevance": "If large parallel populations are used, topology matters; avoid assuming fully connected debate or isolated workers are optimal. Test sparse irregular DAGs with bounded communication and an explicit aggregator.",
+      "scope": "ICLR 2025 evaluation context; exact transfer to O requires matched ablation under O tasks and budget."
+    },
+    {
+      "mechanism": "persuasion-resistant validation",
+      "evidence": "A 2026 Scientific Reports study found one persuasion-optimized adversarial agent could reduce group accuracy by 10-40% and increase incorrect consensus by >30%. More agents or debate rounds did not reliably fix the problem; RAG and Best-of-N could amplify attack credibility. Retrieval-config ablations still showed average accuracy drops around 18-24%.",
+      "decision_relevance": "Do not allow peer consensus or rhetorical confidence to directly determine adoption. Evidence/provenance checks and a verifier insulated from peer persuasion are more important than adding debate rounds.",
+      "scope": "Adversarial debate settings on TruthfulQA, MMLU, MedMCQA and SCALR; this is a robustness result, not evidence that all debate is harmful."
+    },
+    {
+      "mechanism": "quality-first homogeneous ensembling",
+      "evidence": "Self-MoA reports that using multiple outputs from the single strongest model outperformed mixed-model MoA by 6.6% on AlpacaEval 2.0 and by 3.8% on average across MMLU, CRUX and MATH. The paper attributes this to a quality-diversity trade-off: mixing weaker heterogeneous proposers can lower ensemble quality.",
+      "decision_relevance": "Diversity should not be bought by injecting weaker agents indiscriminately. Prefer independent contexts/prompts/seeds from a strong model, and add heterogeneous agents only when they contribute demonstrably complementary competence.",
+      "scope": "MoA-style static inference benchmarks; not yet evidence for persistent autonomous research workers."
+    },
+    {
+      "mechanism": "population exploit-explore during training",
+      "evidence": "DeepMind PBT trains populations in parallel while periodically copying promising parameters and mutating hyperparameters. Reported examples include DM Lab human-normalized 0.93->1.06, Atari 1.47->1.81, StarCraft II 0.36->0.39, WMT14 En-De BLEU 22.30->22.65 and CIFAR-10 GAN Inception 6.45->6.89, while running in the time of a single training run rather than sequential tuning.",
+      "decision_relevance": "For expensive adaptive experiments, exploit/explore with periodic inheritance can turn otherwise wasted parallel runs into a directed search process. Candidate for research-strategy optimization, but requires careful contamination controls when applied to scientific agents.",
+      "scope": "Training/hyperparameter optimization, not inference-time LLM agent collaboration."
+    }
+  ],
+  "dead_ends_or_cautions": [
+    "Static benchmark agent-count scaling is not sufficient evidence for long-horizon autonomous agent scaling.",
+    "More debate rounds and more agents are not reliable robustness mechanisms under persuasive/adversarial influence.",
+    "Heterogeneous model mixing can hurt if diversity comes from lower-quality proposers.",
+    "The Nature 2026 ~45% capability threshold is a validated within-domain selection rule, not a universal law."
+  ],
+  "next_queries": [
+    "Open the ICLR 2025 MacNet paper and extract topology/agent-count ablations and compute-normalized comparisons.",
+    "Inspect MultiAgentBench agent-count and iteration-count ablations to quantify non-monotonic scaling.",
+    "Compare centralized verifier/orchestrator architectures against independent and debate systems under matched token budgets.",
+    "Search quality-diversity / MAP-Elites / novelty-search evidence for discovery tasks where archive diversity yields stepping stones unavailable to single-objective search.",
+    "Search population-based and evolutionary agent-optimization methods with wall-clock or sample-efficiency comparisons against sequential search.",
+    "Find recent replications or failures of Agent Forest / MoA on agentic tasks and quantify crossover conditions."
+  ],
+  "exact_continuation": "Continue from 2026 Nature capability-saturation result as the current highest-value finding. Next prioritize matched-compute topology ablations (MacNet, MultiAgentBench, centralized verifier) and then quality-diversity/evolutionary search evidence. Avoid re-reading covered abstracts unless needed for exact tables."
+}
