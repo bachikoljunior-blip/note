@@ -16,43 +16,41 @@ Latest checkpoints in order:
 13. `2026-08-26T0302JST-followup.md`
 14. `2026-08-26T0302JST-followup2.md`
 15. `2026-08-26T0302JST-followup3.md`
+16. `2026-08-26T0302JST-followup4.md`
 
-Read `STATE.md` for accumulated findings through 18:15 JST, then read the source-qualified checkpoints above in order for the newest evidence and exact continuation.
+Read `STATE.md` for accumulated findings through 18:15 JST, then read the source-qualified checkpoints above in order for newest evidence and exact continuation.
 
 Top unresolved frontier:
-1. matched Lean controller comparison: fixed deterministic workflow vs free-form coding-agent tool choice vs learned typed heterogeneous policy using the same tools/actions/verifier and real compute budget;
-2. hierarchical controller-of-controllers under a global resource constraint: learn both local proof action and whether to buy more thinking, extra agents, specialized prover, population/evolution, global retrieval or replan;
-3. calibrated prospective action/value-of-computation under theorem/backbone/search-policy shift: Brier/ECE/reliability/selective-risk for attempt, repair, retrieve, decompose, replan, backtrack, tool/agent escalation and stop;
-4. compact sufficient online memory: self-managed notes vs learned Delta/progress/error/retrieval summaries vs raw history, evaluated by downstream action value and proof success;
-5. backbone/difficulty-conditioned compute purchase: predict when a cheap iterative/queue loop suffices and when feedback, semantic search, extra thinking or rich orchestration has positive marginal value;
-6. stateful constrained policy optimization from logged formal-agent trajectories, with reusable cache/DAG state and action-specific substrate costs;
-7. matched subgoal scheduling: ordered first-stuck focus vs hardest-branch vs independent parallelism vs total-work/tail-risk scheduling under equal real compute;
-8. variable branching/search purchase: learn when greedy scheduling suffices and when MCTS/beam/semantic branching pays for itself;
-9. coverage-aware routing and calibrated abstention under partial/OOD observations;
-10. triggered global re-retrieval after local failure/decomposition change;
-11. execution-substrate-aware cost: generation, retrieval, verifier/tactic/checking, snapshot/state reconstruction, downstream savings and wall-clock;
-12. exact Lean composite of snapshot/forking + semantic tactic diversity + compiler repair + typed/calibrated hierarchical routing under equal real compute;
-13. benchmark-audited robustness with pinned Lean/mathlib/repository/harness versions and candidate/retrieval-access sensitivity.
+1. **matched Lean controller comparison:** same action/tool/verifier/memory substrate under the same real budget, comparing fixed/rule control, free-form LLM planning and a learned typed heterogeneous policy;
+2. **logged formal-agent policy learning:** contextual-bandit/offline-RL/value learning over multi-action Lean traces (`continue/repair/retrieve/decompose/replan/backtrack/spawn/escalate/stop`) rather than only tactic prediction;
+3. **hierarchical controller-of-controllers:** decide both local proof action and whether to buy more thinking, stronger model, more workers, specialized prover, global retrieval, population/evolution or replan;
+4. **calibrated prospective action/value-of-computation:** Brier/ECE/reliability/selective-risk under theorem/backbone/search-policy shift, especially near expensive-action boundaries;
+5. **compact sufficient online memory/context isolation:** self-managed notes or compact Whiteboard + selective repository retrieval + branch-local workers versus raw history, evaluated by downstream action quality and solve/cost;
+6. **backbone/difficulty-conditioned compute purchase:** predict when cheap iterative loops suffice and when feedback, search, additional thinking or richer orchestration has positive marginal value;
+7. **stateful constrained optimization:** extend one-shot global-budget allocation to Markov/partial-observation Lean trajectories with verified reusable cache/DAG state and action-specific substrate cost;
+8. **matched subgoal scheduling:** ordered first-stuck focus vs hardest-branch vs independent parallelism vs total-work/tail-risk under equal real compute;
+9. **variable branching/search purchase:** learn when greedy scheduling suffices and when MCTS/beam/semantic branching pays for itself;
+10. **coverage-aware routing/abstention, triggered global re-retrieval, execution-substrate-aware cost, snapshot+semantic-selection+compiler repair, and benchmark-audited robustness** remain open.
 
 Important updates from the newest checkpoints:
-- AxProverBase gives direct Lean evidence against raw-history accumulation: on its 100-problem PutnamBench ablation subset, a self-managed compact notebook proves 7% more theorems on average than the `n=5` full-attempt history while costing 20% less in total (10% less at equal iterations) and roughly halving run dispersion. Iterative refinement remains the largest gain, but all full evaluations still use a fixed 50-iteration cap.
-- AxProverBase also shows model-specific substitution between thinking budget and iteration count: Opus benefits steadily from 10k→32k thinking and can match doubling iterations at lower cost, whereas Gemini 3 Pro high-vs-low and Gemini 3 Flash minimal-vs-low show no significant improvement. Resource actions must be backbone conditioned.
-- Numina-Lean-Agent is a strong free-form heterogeneous-tool-routing baseline: a general coding agent autonomously uses Lean inspection/retrieval/informal/auxiliary tools and reports 12/12 Putnam 2025. Public author clarification says displayed ~$50 default / $1000 A5 / $300 B6 budgets were calculated after proof completion rather than selected by an autonomous pre-run difficulty router; A5 subagent decomposition itself was agent-selected. B4 equal-call evidence favors iterative refinement (success in 5 rounds) over independent sampling (failure by 10 rounds).
-- Adaptive Test-Time Compute Allocation (non-Lean transfer) supplies a clean global-budget template: Lagrangian relaxation prices accuracy vs compute per instance, exact budget targeting is done via the dual variable, and a cheap learned policy imitates the oracle with >91% action accuracy; up to 12.8% relative MATH accuracy improvement is reported under matched average budgets. It does not yet model stateful Lean meta-actions or calibrated action probabilities.
-- LeanFlow gives direct workflow-control ablations: queue ownership + bounded theorem-local state is decisive for Kimi-K2.6 on two document projects and usually reduces GPT-5.5 context cost, while stronger-model outcome sensitivity is smaller. Externalized workflow state can reduce context pollution independently of base-model scale.
-- AlphaProof Nexus shows rich evolutionary/population coordination can save roughly 2x–5x on the hardest compared Erdős cases but be about half as cost-efficient on easier ones; generator count also has a difficulty tradeoff. Rich controller complexity should itself be a purchased meta-action.
-- HILBERT's released config fixes depth/attempt/correction/time thresholds; BFS-Prover-V2 exposes explicit replan mode/event triggering; LEAP publishes simple DFS/backtracking and explicitly names branch prioritization/compute allocation as future work. These form strong controller-only baselines.
-- LEAP feedback iteration improves Gemini-3.1-Pro 20.0%→36.6% on Lean-IMO-Bench Basic but changes Goedel-Prover-V2-32B 10.0%→6.6%; action value is prover-regime dependent.
-- Persistent verified memory repeatedly matters: LEAP DAG memoization, BFS shared subgoal cache, AlphaProof Nexus exact goal cache, LeanFlow theorem-local state and AxProver compact memory all reduce redundant/interfering work; memory coverage belongs in controller state.
-- AlgoSkill remains cross-domain evidence for typed heterogeneous action scheduling; CSSC remains a low-evidence heuristic-controller implementation lead, not scientific proof.
+- **OpenProver** supplies a strong direct free-form Lean controller baseline. On 185 ProofNet formal theorems with a 100k output-token budget per problem, Kimi-K2.5 improves from linear rollout **36.8% to 57.3%** and Leanstral from **21.1% to 28.1%**. Its Planner chooses heterogeneous actions (`spawn`, repository read/write, Whiteboard update, theorem reread, search, submit), while Lean Workers can verify/store/search. This is matched on total output-token budget but not on wall-clock/input/verifier/parallel overhead.
+- OpenProver also implements an explicit context-pollution defense: Workers do not see prior Workers' or Planner reasoning traces; Verifiers do not see Worker reasoning traces; the Planner gets a compact Whiteboard plus only summaries/slugs of large repository items, retrieving full items on demand. This converges with AxProverBase's compact-memory result and gives a concrete branch-independence baseline.
+- Targeted searches for Lean `contextual bandit`, `offline RL`, `meta-action`, `tool routing`, and `compute allocation` did **not** surface a primary direct Lean system learning the full heterogeneous meta-action policy. Pantograph exposes machine-readable tactic transitions suitable for offline RL, but is an interface/data primitive, not that controller. Keep this absence as an active search gap, not proof of nonexistence.
+- **AxProverBase** directly rejects raw-history accumulation as the default: on its 100-problem PutnamBench ablation subset, a compact self-managed notebook proves **7% more** than `n=5` full-attempt history at **20% lower total cost** (10% lower at equal iterations), with about half the run dispersion. It still uses a fixed 50-iteration cap.
+- AxProverBase also shows thinking-budget value is model dependent: Opus benefits from 10k→32k and can match doubling iterations at lower cost, while some Gemini settings are flat. Compute actions must be backbone-conditioned.
+- **Numina-Lean-Agent** is another free-form heterogeneous-tool baseline, reporting 12/12 Putnam 2025. Public author clarification says displayed large A5/B6 budgets were calculated after completion, not autonomously pre-routed; A5 subagent isolation was agent-selected. B4 equal-call evidence favors iterative refinement (success in 5 rounds) over independent sampling (failure by 10).
+- **Adaptive Test-Time Compute Allocation** (non-Lean transfer) gives a rigorous global-budget template via Lagrangian pricing and a cheap oracle-imitation policy, with up to 12.8% relative MATH accuracy gain and >91% oracle-action imitation under matched average budgets; it does not model stateful Lean meta-actions or probability calibration.
+- **LeanFlow** shows deterministic queue/workflow state can dominate free-running agent loops, especially for Kimi-K2.6; stronger GPT-5.5 completes all tested document variants but often at higher context cost without queue control. Controller value is backbone dependent.
+- **AlphaProof Nexus** shows rich evolutionary/population coordination can save roughly 2x–5x on hardest compared Erdős cases while being about half as cost-efficient on easier ones; fixed rich orchestration is not universally efficient.
+- **HILBERT, BFS-Prover-V2, LEAP** expose strong heterogeneous action hierarchies but use fixed retry/depth/time thresholds, event-triggered replanning, or simple DFS/backtracking. LEAP explicitly identifies branch prioritization and compute allocation as future work.
+- Persistent verified memory repeatedly helps: LEAP DAG, BFS subgoal cache, AlphaProof Nexus exact-goal cache, OpenProver repository/lean_store, LeanFlow theorem-local state, AxProver compact notebook.
 - `research_feedback_clean_g1/reasoning/FEEDBACK.json` remains absent; no sanitized feedback was consumed.
 
 Exact continuation:
-1. search Lean/formal-proof work for contextual-bandit, offline-RL or policy-learning controllers trained from logged **multi-action** verifier trajectories rather than only tactic prediction;
-2. search AxProverBase/Numina/LeanFlow follow-ups for learned memory compression, prospective difficulty prediction and automatic thinking/iteration/tool/controller-budget selection;
-3. search stateful value-of-computation/metareasoning formulations that combine sequential actions with global resource constraints, keeping transfer theory distinct from direct Lean evidence;
-4. recover action-invocation/escalation statistics from public HILBERT/LEAP/Numina/LeanFlow traces if feasible to quantify wasted calls before switching levels;
-5. continue matched subgoal scheduling, backbone-conditioned action value, triggered global retrieval, online trajectory compression and snapshot+semantic-repair integration;
-6. keep the frontier nonempty and preserve exact source/version/model/budget/cost-accounting/tested-scope caveats.
+1. inspect OpenProver public benchmark/run artifacts for action-frequency, Worker-spawn, Whiteboard/repository-read, verifier and tool-use statistics suitable as an offline multi-action dataset;
+2. search Pantograph/OpenProver/LeanFlow/HILBERT citations and forks for released offline-RL/contextual-bandit/controller learning on machine-readable formal-agent traces;
+3. search stateful sequential value-of-computation/metareasoning under global resource constraints, preserving transfer-vs-direct-Lean scope;
+4. continue matched fixed-vs-free-form-vs-learned controller, subgoal scheduling, backbone-conditioned action values, triggered reretrieval, trajectory compression and snapshot+semantic-repair searches;
+5. keep the frontier nonempty and preserve exact source/version/model/budget/cost-accounting/tested-scope caveats.
 
 Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, other-worker state, shared execution ledger, or other-role receipts.
