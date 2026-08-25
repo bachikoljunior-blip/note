@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "role": "work_delegation_gate",
+  "mode": "active_bounded_support",
+  "config_revision": 6,
+  "platform_configuration": {
+    "change_requested": false,
+    "title_change_requested": false,
+    "schedule_change_requested": false,
+    "notification_change_requested": false,
+    "physical_enablement_change_requested": false,
+    "note": "Repository behavior only. The existing platform automation settings remain untouched."
+  },
+  "ownership": {
+    "queue_path": "work_delegation_gate/TASK_QUEUE.json",
+    "state_path": "work_delegation_gate/STATE.json",
+    "result_namespace": "work_delegation_gate/results/",
+    "receipt_namespace": "automation_control/receipts/work_delegation_gate/",
+    "max_tasks_per_invocation": 1
+  },
+  "bootstrap": {
+    "required": true,
+    "rule": "After invocation start, resolve note main through a SHA-only Git ref lookup, fetch DESIRED_STATE and DOWNSTREAM_STATE at that SHA, repeat the SHA-only lookup immediately before the first task/source semantic read, and freeze the tuple. On any presemantic ordering defect emit only a gate-local diagnostic receipt.",
+    "required_fields": [
+      "invocation_started_at",
+      "bootstrap_head_observed_at",
+      "frozen_note_main_sha",
+      "desired_state_control_revision",
+      "desired_state_blob",
+      "downstream_state_control_revision",
+      "downstream_state_blob",
+      "role_config_revision",
+      "bootstrap_valid"
+    ]
+  },
+  "task_selection": {
+    "rule": "Choose the highest-priority pending task whose idempotency key has no completed result. Revalidate every source path/blob at the frozen SHA. Execute no more than one task.",
+    "empty_queue_fallback": "Materialize and execute one bounded mechanical maintenance task from automation_control/OPTIMIZER_STATE.json exact_next_action, or run one non-duplicative gate queue/state/receipt integrity sweep for a source tuple not already checked.",
+    "duplicate_rule": "Do not repeat a completed idempotency key or emit a duplicate all-clear for an unchanged source tuple."
+  },
+  "execution_preference": [
+    "direct reasoning",
+    "connected tools and APIs",
+    "existing automations",
+    "repository and GitHub actions",
+    "Work handoff only when the task explicitly permits it and direct execution is demonstrably insufficient"
+  ],
+  "write_boundary": {
+    "allowed": [
+      "work_delegation_gate/",
+      "automation_control/receipts/work_delegation_gate/"
+    ],
+    "forbidden": [
+      "primary O USER_INPUT_INBOX",
+      "primary O WORK_STRATEGY",
+      "primary O WORK_EXECUTION_STATE",
+      "clean exploration worker namespaces",
+      "other-role receipts",
+      "shared aggregate ledger",
+      "ACTIVE_WAVE or comparator/integrator outputs"
+    ]
+  },
+  "o_boundary": {
+    "primary_o_targeted": false,
+    "revision_23_least_work_export_forbidden": true,
+    "second_o_writer_forbidden": true,
+    "frozen_o_execution_interruption_forbidden": true,
+    "o_read_rule": "Do not read O unless a selected gate-owned task has an explicit collision/safety need immediately before a possible side effect. No current seeded task requires O access."
+  },
+  "result_contract": {
+    "must_include": [
+      "task_id",
+      "idempotency_key",
+      "frozen_control_tuple",
+      "source_qualified_inputs",
+      "checks_performed",
+      "finding",
+      "action_taken",
+      "writes",
+      "claim_boundary",
+      "next_action"
+    ],
+    "status_values": [
+      "completed",
+      "completed_with_defect",
+      "blocked_stale_control",
+      "blocked_authority_conflict",
+      "blocked_duplicate",
+      "diagnostic_only"
+    ]
+  }
+}
