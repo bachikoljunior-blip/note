@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 5,
+  "config_revision": 3,
+  "run_started_at": "2026-08-26T02:01:09+09:00",
+  "continues_from_latest": "RUN_20260826T0104.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "comparator_state_read": false,
+    "integrator_state_read": false,
+    "o_state_read": false,
+    "feedback_read": false,
+    "feedback_status": "research_feedback_clean_g1/neuroscience/FEEDBACK.json absent (404)",
+    "sources": "own clean neuroscience state plus public external sources only"
+  },
+  "actions": [
+    "Resolved the previously missing implementation provenance for Vivet-Arenas 2026 astrocyte-gated associative memory. The peer-reviewed Physical Review Research article explicitly cites an official GitHub code repository in reference 30, and the repository README states that its scripts are the code used for the paper.",
+    "Pinned the official repository to main commit ec08203a716bcf81b23255cc500e5be6273c7137 (9 February 2026). The repository has only the main branch, two commits, and three top-level files: README.md, Dynamical_regimes.py and Model_comparison.py; no saved raw Figure-4 matrices, environment lockfile or requirements file were found.",
+    "Recovered the exact public Model_comparison.py benchmark protocol: N=20, Time=10, dt=0.001, N_reps=50; corruption fractions 0.05..0.5 map to 1..10 flipped bits; K uses ten linspace points from 2 to 200. The script recomputes each heatmap from fresh random pattern matrices and does not set a random seed or persist result matrices, so exact published Figure-4 cell values are not machine-readable/recoverable bit-for-bit from the repository alone.",
+    "Found a critical implementation-versus-paper metric discrepancy. Paper Eq. 15 defines Hamming error as 0.5*sum(abs(target-sign(final_state))). In official Model_comparison.py, Hopfield, Astro_neuro and Astrocytes instead compute 0.5*sum(target-sign(prediction)) without absolute value. Opposite-sign mistakes can cancel; e.g. target [1,-1] and prediction [-1,1] gives script distance 0 while true Hamming error is 2. Therefore the current official comparison script does not implement the stated Hamming metric, and Figure-4 numerical claims require a corrected-metric rerun or author clarification before being treated as numerically verified from code.",
+    "Checked the only other official script. Dynamical_regimes.py uses 0.5*(N - z dot target) for the soft retrieval-distance observable, which is consistent with a soft signed-overlap error; the hard-Hamming discrepancy is specific to Model_comparison.py's final_distance implementation."
+  ],
+  "new_or_updated_candidates": [
+    {
+      "id": "neuro-g1-astrocyte-gated-emergent-self-attention-2026",
+      "status": "official_code_found_metric_discrepancy_requires_corrected_rerun",
+      "updates": [
+        "Official code provenance is now established by the peer-reviewed paper itself: ref. 30 points to https://github.com/arnauvivett/Astrocyte-gated-associative-memory- and states code repository; README says the repository contains the code used for the paper.",
+        "Pinned public main commit: ec08203a716bcf81b23255cc500e5be6273c7137, dated 2026-02-09. Only main branch exists; repository history contains two commits.",
+        "Model_comparison.py exact grid: N=20; K=np.linspace(2,200,10).astype(int) = [2,24,46,68,90,112,134,156,178,200]; noise=np.linspace(0.05,0.5,10), corresponding to n=1..10 flipped bits; 50 repetitions per cell; Time=10; dt=0.001.",
+        "No random seed is fixed and no generated result matrices are committed/saved; exact Figure-4 cells therefore are not preserved as machine-readable data.",
+        "Critical code/paper mismatch: Eq.15 uses absolute-value Hamming error, while all three Model_comparison.py model functions omit abs() in final_distance. The implemented signed sum can cancel opposite-direction bit errors and can differ substantially from Hamming distance.",
+        "Because the README says Model_comparison.py computes the final error of each model over noise/memory regimes, the discrepancy is directly relevant to Figure 4 reproducibility; however, do not assert that the published figure was necessarily generated from the current file without an author-provided provenance trace."
+      ],
+      "scope": [
+        "The analytical softmax fixed-point result, Lyapunov/convergence analysis, and qualitative dynamical controls are not invalidated by this artifact finding.",
+        "The specific Figure-4 comparative retrieval heatmap is now numerically unverified from the public code until corrected hard-Hamming reruns are performed.",
+        "No independent third-party rerun or failure report was found in this run; GitHub shows zero forks and zero open issues on the official repository as observed.",
+        "Do not digitize heatmap colors into false precision when the official code itself can be corrected and rerun."
+      ],
+      "artifacts": [
+        "Physical Review Research 8, 023276 (2026), DOI 10.1103/6q3q-vfs9",
+        "https://github.com/arnauvivett/Astrocyte-gated-associative-memory-",
+        "official main commit ec08203a716bcf81b23255cc500e5be6273c7137",
+        "Model_comparison.py blob dd2377d9ae6bed3b183f46c3c26b3bb07d49e00b",
+        "Dynamical_regimes.py blob 668924066581b59a45bc4bfc180b44a17b7d5cf1"
+      ]
+    }
+  ],
+  "deferred": [
+    {
+      "lead": "AGMP task-boundary state semantics",
+      "status": "still unresolved",
+      "evidence_recovered": [
+        "Primary Frontiers article confirms predefined Task-IL/Class-IL segmentation and continuous slow astrocyte/eligibility states within online updates.",
+        "Data availability says contributions are in article/supplementary material, but accessible text still does not specify whether astrocyte, eligibility or membrane state is reset at task boundaries; the explicit LIF reset is post-spike only."
+      ]
+    },
+    {
+      "lead": "Information dynamics and Memory in Neural Networks through Fisher Information Diffusion",
+      "status": "ICML-2026-spotlight qualitative evidence strengthened; exact numeric/code recovery still pending",
+      "evidence_recovered": [
+        "Public ICML/author material confirms Spotlight status and claims Fisher-optimal initialization outperforms Xavier, Kaiming, orthogonal and unitary initialization on copy/sequential-memory tasks.",
+        "An earlier ICLR-2026 OpenReview version exists as a withdrawn submission under the title Understanding Memory in Neural Networks through Fisher Information Diffusion and advertises supplementary material, but direct OpenReview artifact access was blocked by browser verification in this run."
+      ]
+    }
+  ],
+  "frontier": [
+    "Correct the official Model_comparison.py hard-Hamming metric (abs difference) in an isolated local reproduction and run a computationally tractable matched subset/full grid with fixed seeds; compare signed-bug versus corrected errors for all three models and quantify whether the proposed model's high-load advantage survives.",
+    "Search author communication, tags/releases, archived artifacts or later commits for a raw Figure-4 matrix or corrected script; if none exists, treat exact published heatmap cells as unavailable rather than digitizing false precision.",
+    "Continue AGMP supplementary/artifact search specifically for task-boundary reset/carryover semantics and official code; no inference without implementation evidence.",
+    "Recover Fisher-information-diffusion final ICML-2026 numeric figure values and official code/artifact provenance from an accessible final-paper or supplementary source.",
+    "After the metric audit, resume matched transfer of competitive astrocytic gain/simplex routing into trainable modern architectures with parameter-matched softmax/gating controls."
+  ],
+  "exact_next_action": "Perform a fixed-seed corrected-Hamming reproduction of the official Vivet-Arenas Model_comparison benchmark (at minimum representative low/high K and corruption cells for Hopfield and proposed astrocyte-gated model, then the neuron-astrocyte baseline if tractable), quantify the signed-metric distortion and whether the reported qualitative ranking survives; meanwhile search for any author-preserved raw Figure-4 matrix or corrected code artifact."
+}
