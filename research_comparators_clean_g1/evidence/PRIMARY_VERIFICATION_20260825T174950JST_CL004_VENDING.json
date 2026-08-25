@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "comparator": "evidence_strength",
+  "generation": "clean_g1",
+  "verification_run_started_at": "2026-08-25T17:49:50+09:00",
+  "scope": "Primary-source follow-up for continual_learning CLG1-CL-004 and long_horizon LH-VendingBench.",
+  "input_boundary": {
+    "clean_candidate_source_only": true,
+    "legacy_research_workers_read": false,
+    "o_read": false,
+    "clean_worker_writes": false,
+    "output_prefix": "research_comparators_clean_g1/evidence/"
+  },
+  "supersedes_assessments": [
+    {
+      "worker": "continual_learning",
+      "candidate_id": "CLG1-CL-004",
+      "mechanism": "Experience replay plus low-overhead Reptile/meta-experience-replay gradient alignment for continual LLM pre-training",
+      "prior_tier": "B+",
+      "new_tier": "A-",
+      "scores": "333232",
+      "score_order": ["primary_source_quality", "quantitative_result", "matched_baseline", "ablation_or_causal_support", "reproducibility_artifacts", "replication_or_failure_scope"],
+      "primary_verification": {
+        "peer_reviewed_source": "https://proceedings.mlr.press/v330/abbes26a.html",
+        "primary_pdf": "https://arxiv.org/pdf/2508.01908",
+        "public_code": "https://github.com/chandar-lab/continual-pretraining",
+        "training_scope": "Llama-family/Spectra models from 99M through 6B parameters. Main three-language sequence uses 100B tokens each for English, French, and German; an extended 1B experiment uses five 100B-token language tasks including Arabic and Japanese.",
+        "replay_rate_design": "Replay fraction alpha is explicitly tested at 0%, 25%, and 50%; 25% replay costs about 1.33x FLOPs per incoming token and 50% replay about 2x, giving a direct stability/plasticity-versus-compute tradeoff.",
+        "retained_loss_examples_three_task": {
+          "99M": {"no_replay": 2.80, "25pct_replay": 2.52, "50pct_replay": 2.44, "25pct_replay_plus_reptile": 2.46, "50pct_replay_plus_reptile": 2.20},
+          "560M": {"no_replay": 2.53, "25pct_replay": 2.15, "50pct_replay": 2.06, "25pct_replay_plus_reptile": 2.06, "50pct_replay_plus_reptile": 1.68},
+          "1B": {"no_replay": 2.20, "25pct_replay": 2.14, "50pct_replay": 2.00, "25pct_replay_plus_reptile": 2.09, "50pct_replay_plus_reptile": 1.79},
+          "6B": {"no_replay": 1.37, "25pct_replay": 1.00, "50pct_replay": 0.87, "25pct_replay_plus_reptile": 0.80, "50pct_replay_plus_reptile": 0.76}
+        },
+        "downstream_examples": [
+          "For 6B, the primary table reports the English benchmark average rising from 69.3 under sequential training to 75.5 with 25% replay and 76.8 with 25% replay plus Reptile; 50% replay plus Reptile reaches 77.1.",
+          "For 99M, 50% replay plus Reptile reaches an English-benchmark average of 61.5 versus 41.9 sequential and 58.8 under 50% replay alone in the appendix table.",
+          "For 1B, the combination does not dominate every downstream cell: 50% replay alone has English average 64.0 versus 63.8 for 50% replay plus Reptile, while the combined method improves some individual cells. This is useful counterevidence against a universal additive-gain claim."
+        ],
+        "compute_scaling": [
+          "The paper's compute-normalized analysis concludes 25% replay is more compute-efficient than investing the same budget in model scale in the small-replay regime, whereas increasing from 25% to 50% replay becomes less efficient than scaling model size for larger models.",
+          "Reptile/MER interpolation is applied every 500 batches with reported overhead of roughly three times model size in FLOPs every 500 batches, described as negligible relative to gradient-update cost."
+        ],
+        "causal_support": [
+          "The factorial-style comparisons include no replay, replay only, Reptile only, and replay+Reptile at two replay rates, allowing direct separation of replay quantity from the alignment/meta-update addition.",
+          "Gradient-alignment benefits are strongest and most consistent on forgetting/retained-loss metrics; downstream task averages can saturate or show cell-level reversals at 1B, so evidence supports a stability/plasticity mechanism rather than unconditional accuracy gains."
+        ],
+        "reproducibility": "A public chandar-lab repository explicitly accompanies the paper and exposes the disk-backed replay pipeline, configurable replay fraction, MER/Reptile hook, and forgetting/retained/learned-loss metric scripts.",
+        "scope_limits": [
+          "The study is multilingual continual pre-training within one architecture family; it does not establish the same replay-rate optimum for agent memory, instruction tuning, or non-language task distributions.",
+          "The 25%-versus-model-scale efficiency conclusion is regime-dependent; the paper itself shows high replay rates can be a worse use of compute than increasing model size.",
+          "No independent external reproduction of the full 100B-token-per-language experiments was verified in this pass."
+        ]
+      },
+      "judgment": "Upgrade B+ -> A-. The missing replay-rate and compute-scaling evidence is directly present in the peer-reviewed primary source, with matched replay/Reptile combinations across four model scales and public implementation artifacts. Strong evidence supports replay plus cheap gradient-alignment updates as a stability mechanism in large-scale multilingual continual pre-training, while the paper's own saturation/reversal cells bound any broader accuracy or universal-rate claim."
+    },
+    {
+      "worker": "long_horizon",
+      "candidate_id": "LH-VendingBench",
+      "mechanism": "Long-horizon coherence failure is not adequately explained by context-window fill alone",
+      "prior_tier": "B",
+      "new_tier": "B+",
+      "scores": "232123",
+      "score_order": ["primary_source_quality", "quantitative_result", "matched_baseline", "ablation_or_causal_support", "reproducibility_artifacts", "replication_or_failure_scope"],
+      "primary_verification": {
+        "source": "https://arxiv.org/abs/2502.15840",
+        "primary_pdf_mirror": "https://lukaspetersson.com/assets/pdf/vbench_paper.pdf",
+        "quantitative_context_test": {
+          "pearson_correlation_days_until_sales_stop_vs_days_until_full_memory": 0.167,
+          "interpretation": "Across the model points in the paper's Table 9, time-to-failure is only weakly correlated with time-to-memory-fill, directly weakening a pure growing-context-length explanation."
+        },
+        "table_9_examples": [
+          "Claude 3.5 Sonnet: sales stop day 102; memory full day 51; failure occurs +51 days after memory is full.",
+          "o3-mini: 86 versus 52 (+34 days).",
+          "GPT-4o: 65 versus 50 (+15 days).",
+          "Claude 3.5 Haiku: 8 versus 32 (-24 days), showing that some failures also occur before memory fill.",
+          "Gemini 2.0 Pro: 25 versus 111 (-86 days), another strong counterexample to a context-full prerequisite."
+        ],
+        "memory_cap_scope": "The benchmark caps agent memory at about 30k tokens while tested model input capacities span roughly 100k to 2M tokens. The paper also reports degradation in a 10k-memory condition, so the failure pattern is not tied to a single cap.",
+        "failure_classes": "The paper reports misinterpreted deliveries, forgotten orders, repetitive/meltdown loops and other long-run coherence failures; the key assessed claim here is diagnostic, not an intervention claim.",
+        "causal_limit": "This correlation/table analysis rejects a simple context-fill explanation but does not isolate the exact causal mechanism of degradation, and it does not test a checkpoint/reset/recovery intervention. Therefore the candidate should not be promoted to an intervention-strength A tier.",
+        "reproducibility": "The benchmark is objectively scored on the simulated business state, but this pass did not verify an official complete public implementation/artifact package tied to the original paper; public clones are not counted as author replication evidence.",
+        "scope_limit": "Evidence concerns the Vending-Bench simulation and model set in the paper. It supports long-horizon failure beyond naive context exhaustion, not a universal claim that context length never matters."
+      },
+      "judgment": "Upgrade B -> B+. The previously missing exact correlation and timing table are primary-verified and provide strong failure-scope evidence against a pure context-window-fill explanation. The candidate remains diagnostic rather than a demonstrated remedy, with no isolated causal intervention or independently verified original implementation in this pass."
+    }
+  ],
+  "state_delta": {
+    "new_high_confidence_scoped_candidate": ["continual_learning/CLG1-CL-004"],
+    "diagnostic_upgrade": ["long_horizon/LH-VendingBench"],
+    "remaining_open_questions": [
+      "CLG1-CL-004: seek an independent reproduction at large token scale and test whether gradient-alignment gains persist outside multilingual Llama-family CPT.",
+      "LH-VendingBench: find controlled reset/checkpoint/failure-loop interventions and match them against a no-intervention baseline; correlation alone does not identify the recovery mechanism."
+    ]
+  },
+  "exact_continuation": "Next, prioritize direct independent replication/failure evidence for the current A/A- set, starting with self_improvement Meta-Harness/RSEA and continual-learning replay/FOREVER, or primary-verify a remaining B/B+ candidate only if a concrete table/ablation gap is likely to change its tier. Keep legacy research_workers/ excluded, leave O unread unless configuration comparison is strictly necessary, and write only under research_comparators_clean_g1/evidence/."
+}
