@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "failure_evidence/FE-021",
+  "canonical_id": "cg1.benchmark_task_validity_ranking_sensitivity",
+  "source": {
+    "paper_project": "AgentSuite: Toward More Reliable Agent Evaluation via a Component-Based Benchmark Auditing Pipeline",
+    "official_repository": "https://github.com/Agent-Suite/AgentSuite",
+    "audited_commit": "0f9eac1c1a376a411ad807bd974555055f08e6c5",
+    "commit_date": "2026-07-05"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "artifact_evidence": {
+    "artifact_completeness": "very strong for this specific candidate: issue manifests, derived filtering/remove ID lists, original/filtering/fixed split definitions, per-benchmark split-score CSVs, aggregate leaderboard CSV and split_scores.json are committed at one immutable public commit.",
+    "same_trajectory_design": "eval_splits.md explicitly defines Filtering as re-scoring the same Original trajectories over the surviving task set, dropping every flagged task not marked KEEP. It states no reruns and original data for Filtering.",
+    "manifest_semantics": "Per-benchmark `<bench>_issues.csv` is the source of truth with detection, issue reason, resolution FIX/REMOVE/KEEP/TODO and source; derived filtering IDs are generated from this manifest.",
+    "committed_drop_counts": "Documentation records filtering drops: tau2bench 32, taubench 26, BFCL-v3 151, BFCL-v4 13, ACEBench 126, NexusBench 159, CFBench 176.",
+    "tau_bench_rank_reversal": "Committed `tau-bench_split_scores.csv` directly shows DeepSeek-V3.2-Exp-thinking-on original rank 1 / filtering rank 2 (0.7212 -> 0.7914) and Claude-4.5-Sonnet-thinking-on-10k original rank 2 / filtering rank 1 (0.7152 -> 0.7986), with 26/26 filtering IDs matched for both full-coverage rows.",
+    "acebench_pair_reversal": "Committed `ACEBench_split_scores.csv` shows Kimi-K2-Instruct original rank 8 / filtering rank 13 (0.7996 -> 0.8350) while Gemini-2.5-Pro-thinking-on original rank 13 / filtering rank 8 (0.7928 -> 0.8417), with 126/126 filtering IDs matched for full-coverage rows.",
+    "overall_rank_reversal": "Committed `overall_leaderboard.csv` shows Kimi-K2-Instruct original overall rank 2 -> filtering rank 3 and o3-high rank 3 -> filtering rank 2, without generating new trajectories for Filtering."
+  },
+  "reproducibility_assessment": {
+    "grade": "A",
+    "official_artifact_support": "complete enough to recompute the ranking-sensitivity observation from stored artifacts without new model calls",
+    "independent_replication": "not required to reproduce the candidate's narrow arithmetic claim because the claim is a deterministic recomputation over committed original trajectories/manifests; no separate third-party audit of task-validity judgments was identified in this pass",
+    "failed_independent_replication": "none identified",
+    "judgment": "This candidate has unusually high reproducibility because its key result is not a fresh stochastic model evaluation. The public commit contains the policy manifests and the before/after score artifacts, while the documented Filtering procedure reuses the same trajectories. A third party can therefore verify that benchmark composition alone changes several rankings without paying for or depending on current model APIs. What remains contestable is the semantic validity classification of individual flagged tasks, not the ranking-sensitivity arithmetic conditional on those manifests.",
+    "exact_blockers": [
+      "The artifact establishes sensitivity to the authors' audited manifests; it does not prove every FIX/REMOVE/TODO classification is objectively correct.",
+      "Filtering intentionally drops FIX tasks before rerunning repaired versions, so Filtering and Fixed answer different questions and should not be conflated.",
+      "The tau2bench fixed data includes additional upstream corrections beyond the manifest FIX rows; Fixed-variant reproduction must use the actual domains-vs-domains_fixed diff as documented.",
+      "Some models have partial benchmark coverage (for example Gemini rows in tau-bench may not cover all 165 original tasks); rank comparisons should preserve coverage metadata rather than blindly mix partial rows.",
+      "NexusBench/Multichallenge Fixed mode is not yet supported by the documented runner, although Filtering lists are still reproducible."
+    ],
+    "scope": "Strong replication of the narrow claim that ranking can change under a committed benchmark-validity filtering policy while holding trajectories fixed. Do not generalize this into a claim that filtering always improves benchmark validity or that the filtered ranking is the uniquely correct ranking."
+  },
+  "downstream_note": "This is directly reusable as a low-cost evaluator calibration: store raw trajectories once, pin a task-manifest digest, then recompute candidate rankings under original/audited subsets before triggering expensive reruns. If rankings are composition-sensitive, report both and reserve repaired-task reruns for the FIX subset rather than conflating task validity with model change.",
+  "provenance": [
+    "https://github.com/Agent-Suite/AgentSuite/commit/0f9eac1c1a376a411ad807bd974555055f08e6c5",
+    "https://github.com/Agent-Suite/AgentSuite/blob/0f9eac1c1a376a411ad807bd974555055f08e6c5/eval_splits.md",
+    "https://github.com/Agent-Suite/AgentSuite/blob/0f9eac1c1a376a411ad807bd974555055f08e6c5/results/splits/tau-bench_split_scores.csv",
+    "https://github.com/Agent-Suite/AgentSuite/blob/0f9eac1c1a376a411ad807bd974555055f08e6c5/results/splits/ACEBench_split_scores.csv",
+    "https://github.com/Agent-Suite/AgentSuite/blob/0f9eac1c1a376a411ad807bd974555055f08e6c5/results/splits/overall_leaderboard.csv"
+  ]
+}
