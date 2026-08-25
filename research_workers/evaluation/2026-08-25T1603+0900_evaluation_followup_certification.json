@@ -1,0 +1,78 @@
+{
+  "worker": "evaluation",
+  "run_timestamp_jst": "2026-08-25T16:03:20+09:00",
+  "followup_seq": 3,
+  "search_branch": "finite-sample certification and conformal per-instance uncertainty",
+  "candidates": [
+    {
+      "candidate_id": "EVAL-CERTIFIED-NOISY-JUDGE-008",
+      "mechanism": "Treat LLM-judge outputs as noisy labels, estimate judge true-positive and false-positive rates from a small human calibration set, and apply a variance-corrected hypothesis test to a large judge-labeled set so certification retains finite-sample Type-I error control.",
+      "evidence": [
+        {
+          "source": "Noisy but Valid: Robust Statistical Evaluation of LLMs with Imperfect Judges",
+          "url": "https://arxiv.org/abs/2601.20913",
+          "venue": "ICLR 2026",
+          "date": "2026-01-28",
+          "status": "primary peer-reviewed conference paper",
+          "quantitative_or_formal": "The method estimates judge TPR/FPR from a small human-labeled calibration set, uses a variance-corrected critical threshold, and provides finite-sample Type-I error control despite calibration uncertainty. The paper derives conditions under which noisy testing has higher power than direct evaluation and validates on Jigsaw Comment, Hate Speech, and SafeRLHF; it also reports a practical-vs-oracle gap caused by estimating judge parameters."
+        }
+      ],
+      "interpretation": "This supplies a principled statistical layer missing from heuristic judge-validation gates. The judge is explicitly modeled as an imperfect sensor rather than assumed correct. A small amount of trusted human data can anchor large-scale judge evaluation while preserving a chosen false-certification error rate.",
+      "connection_to_mvvp": "MVVP can screen whether a judge is stable/invariant/cross-benchmark valid enough to use; Noisy-but-Valid can then propagate its residual TPR/FPR uncertainty into population-level certification. These solve different layers and are complementary.",
+      "scope_limits": "Binary failure labels and certification of a population failure rate; extension to ordinal/multi-class/open-ended scoring requires separate theory. Judge TPR/FPR may drift across target-model distributions, so calibration-transfer stability remains a critical assumption."
+    },
+    {
+      "candidate_id": "EVAL-CONFORMAL-INSTANCE-UNCERTAINTY-009",
+      "mechanism": "Use split conformal prediction sets/intervals around judge outputs to expose per-instance ambiguity with finite-sample coverage guarantees rather than relying only on aggregate judge reliability.",
+      "evidence": [
+        {
+          "source": "Diagnosing LLM Judge Reliability: Conformal Prediction Sets and Transitivity Violations",
+          "url": "https://arxiv.org/abs/2604.15302",
+          "date": "2026-04-16",
+          "status": "primary preprint",
+          "quantitative": "On SummEval, aggregate transitivity-violation rates were only 0.8-4.1%, yet 33-67% of documents had at least one directed 3-cycle. Split conformal sets over 1-5 scores provided >=(1-alpha) coverage; set width correlated with per-instance disagreement/difficulty (Spearman r=+0.576, N=1,918, p<1e-100), with cross-judge set-width correlations around 0.32-0.38."
+        }
+      ],
+      "interpretation": "Aggregate metrics can hide local inconsistency. Conformal set width is a usable abstention/escalation signal: wide sets identify items where a point judge score should not be trusted.",
+      "scope_limits": "SummEval/rating setup; requires exchangeability for formal coverage and calibrated labeled data. Transitivity analysis applies naturally to pairwise/ranking settings but not every evaluation task."
+    }
+  ],
+  "new_synthesis": {
+    "proposed_evaluation_stack": [
+      "Layer 1 construct validity: objective/checkable benchmarks where possible plus preference-style benchmark coverage.",
+      "Layer 2 judge diagnostics: chance-corrected agreement, AB/BA invariance, >=3 replicate consistency, cross-benchmark stability.",
+      "Layer 3 judge-noise model: estimate TPR/FPR or calibrated success probabilities on target-distribution holdout data.",
+      "Layer 4 statistical inference: finite-sample noisy-judge hypothesis tests for population claims/certification.",
+      "Layer 5 per-instance uncertainty: conformal sets or calibrated confidence; abstain/escalate high-uncertainty items.",
+      "Layer 6 ensemble diversity: measure error correlation/effective sample size before adding judges."
+    ],
+    "why_it_matters": "The literature increasingly separates three quantities that are often conflated: repeatability, correctness/validity, and uncertainty. A robust evaluator should preserve them as separate measured objects rather than compressing them into one judge score."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "question": "Extract numerical power/sample-size tradeoffs and the practical-vs-oracle gap from Noisy but Valid; determine minimum human calibration size as a function of judge TPR/FPR, target failure threshold, and desired Type-I/II error."
+    },
+    {
+      "priority": 2,
+      "question": "Compare Noisy-but-Valid against prediction-powered inference and the ICLR 2026 constrained-MLE follow-up under calibration transfer/mismatch; identify which method fails most gracefully when judge TPR/FPR shifts across candidate models."
+    },
+    {
+      "priority": 3,
+      "question": "Connect conformal set width to routing policies: human review, stronger judge, tool-based verifier, or extra test-time compute; measure risk-coverage curves instead of accuracy alone."
+    },
+    {
+      "priority": 4,
+      "question": "Check whether conformal guarantees survive correlated judge panels or repeated samples from the same foundation model; quantify exchangeability violations and effective calibration size."
+    },
+    {
+      "priority": 5,
+      "question": "Search objective agentic-trajectory and code/math evaluation benchmarks where this full stack can be tested end-to-end with ground-truth execution signals."
+    }
+  ],
+  "termination_diagnostics": {
+    "status": "runtime-bounded checkpoint; active frontier remains",
+    "completed_unresolved_action": "Followed the MVVP statistical-guarantee frontier into ICLR 2026 finite-sample noisy-judge certification and a 2026 conformal per-instance reliability diagnostic.",
+    "exact_next_action": "Read arXiv:2601.20913 full text and extract its finite-sample critical-threshold formula, power conditions, calibration-set sizes, and empirical oracle-gap numbers; then compare them to constrained-MLE/PPI alternatives under TPR/FPR mismatch."
+  }
+}
