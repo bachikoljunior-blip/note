@@ -1,6 +1,6 @@
 # O / Chat continuity
 
-Updated: 2026-08-25 18:27 JST
+Updated: 2026-08-25 18:55 JST
 
 Mandatory continuity: read this file before every O-related answer/reasoning/action, then update it in the same turn whenever the conversation advances or materially clarifies the current design/state. Treat this as the chat-side reconstruction checkpoint so long conversation history is not required. Before sending new semantic context to O, show the wording and wait for user approval. Safe non-semantic operational defects may be repaired immediately.
 
@@ -77,16 +77,16 @@ Observed at 2026-08-25 18:27 JST; re-read before relying on it.
 - Positive evidence also cannot exceed the tested scope.
 
 ## Clean external-research status
-Observed at 2026-08-25 18:27 JST; re-read before relying on it.
+Observed at 2026-08-25 18:55 JST; re-read before relying on it.
 
 - `clean_g1` is the authoritative ongoing external-research generation. Legacy `research_workers/`, `research_comparators/`, and `research_index/` material is preserved only as `pre_independence` historical evidence and must not steer clean worker frontiers or be bridged as clean evidence.
-- The last integrated index/feed remains revision 3: `INDEX.json` digest `4b463efb44299ecfd10540382b823d72b0a8bc89f7311023181b313b30e1a7af`; `O_FEED.json` digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90`.
-- That feed still contains zero items and says relevance coverage is 0/73, but it is stale relative to newer comparator work.
-- Clean decision relevance is now assessed for all 73 candidates at the 18:02:15 JST snapshot: 38 high, 11 medium-to-high, 14 medium, 4 low-to-medium, and 6 low. Comparator input used clean worker artifacts only, O read-only, and did not feed judgments back to workers.
+- The current integrated index/feed is revision 3: `INDEX.json` digest `4b463efb44299ecfd10540382b823d72b0a8bc89f7311023181b313b30e1a7af`; `O_FEED.json` digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90`, blob `9ed59f3429f8ea65763a5df615146b1be1948058`, with zero items.
+- O has durably acknowledged inbox revision 22 and the clean_g1 subscription. Its authoritative `clean_g1_research_feed_cursor` acknowledges feed revision 3 with the same digest/blob, polled at 18:05 JST, `item_count: 0`, and `ingestion_status: empty_nonblocking_no_candidate_ingested`.
+- Bridge health is synchronized: `research_index_clean_g1/BRIDGE_STATE.json` now records directive-present-and-acknowledged, clean feed revision/digest parity with O, no bridge blockers, and explicit exclusion of legacy/pre_independence evidence. No additional O Work invocation was created for polling or acknowledgement.
+- The feed itself remains stale relative to newer comparator work: clean decision relevance is assessed for all 73 candidates at the 18:02:15 JST snapshot, while feed revision 3 still reports relevance coverage 0/73 and therefore admits no item.
 - Clean novelty remains an older 17:42:58 JST snapshot covering 67 candidates: 11 known, 22 partially tested, 34 uncovered, 0 directly evaluated. Six newer candidates still require novelty reconciliation against current O.
 - Clean evidence has a 68-candidate base plus newer primary-verification/correction overlays. Current scoped upgrades include `self_improvement/C3` A-, `self_improvement/C4` A-, `continual_learning/CLG1-CL-004` A-, `CLG1-CL-005` A-, `CLG1-CL-006` A, `long_horizon/LH-Context-Folding` A-, and `LH-VendingBench` B+; preserve each exact claim scope and corrections.
-- Therefore external research has progressed beyond the current `O_FEED.json`: the remaining pipeline issue is Integrator/index/feed reconciliation across current novelty, evidence, and relevance dimensions, followed by Bridge resynchronization—not lack of worker activity.
-- `research_index_clean_g1/BRIDGE_STATE.json` is also stale: it predates O's revision-22 acknowledgement and still describes PR 308 as open. Re-read O and feed before using its cursor/blockers.
+- Therefore external research has progressed beyond the current `O_FEED.json`: the remaining pipeline issue is Integrator/index/feed reconciliation across current novelty, evidence, and relevance dimensions. Once a later clean feed revision/digest advances, O should pick it up only at an already-occurring safe Root/equivalent boundary via the existing revision-22 directive.
 - Keep worker independence and diversity: workers do not read O; a separate Comparator may read O read-only; Comparator/Integrator results do not flow back into worker state; exploration biases remain heterogeneous without becoming rigid.
 - Do not create extra Work calls solely to poll or acknowledge the feed. O should inspect it at already-occurring safe Root/equivalent boundaries and continue normal work when it is missing, stale, empty, or non-qualifying.
 
