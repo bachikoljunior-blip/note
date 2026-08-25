@@ -1,0 +1,68 @@
+{
+  "worker": "evaluation",
+  "run_timestamp_jst": "2026-08-25T16:03:20+09:00",
+  "followup_seq": 2,
+  "source": {
+    "title": "Reliability without Validity: A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias",
+    "url": "https://arxiv.org/html/2606.19544v1",
+    "date": "2026-06-17",
+    "status": "primary preprint"
+  },
+  "extracted_protocol": {
+    "name": "Minimum Viable Validation Protocol (MVVP)",
+    "steps": [
+      "Chance-correct: report Cohen's kappa or Krippendorff's alpha alongside exact match and make the chance-corrected metric the headline reliability number.",
+      "Swap positions: paired AB+BA evaluations; report absolute position bias |P(A wins)-0.5|.",
+      "Replicate: >=3 independent runs at temperature 0 with response caching disabled; measure test-retest reliability.",
+      "Cross-validate: >=2 benchmarks spanning preference-style and correctness-style label distributions.",
+      "Audit the consistency-bias paradox: when test-retest >0.95, verify position bias <0.10 before claiming reliability."
+    ],
+    "metric_definitions": {
+      "cohen_kappa": "(p_observed - p_expected_chance)/(1 - p_expected_chance)",
+      "kappa_deflation": "exact_match - Cohen_kappa",
+      "position_flip_rate": "fraction of items whose verdict changes under AB<->BA swap",
+      "position_bias": "|P(A wins)-0.5|",
+      "test_retest": "agreement of a judge with itself across independent reevaluations of the same items"
+    },
+    "quantitative_support": [
+      "Across 21 judges on MT-Bench, kappa deflation ranged 33.8-41.3 percentage points; cohort mean 38.6 pp.",
+      "Gemini 3.1 Pro: MT-Bench exact match 0.849 vs kappa 0.511, a 33.8 pp deflation.",
+      "JudgeBench's judge spread was 60.4 pp in kappa versus 13.5 pp on MT-Bench, about 4.5x wider, motivating multi-benchmark validation.",
+      "Qwen 3 8B: test-retest 0.992, position bias 0.192, JudgeBench kappa 0.289; empirical example of high consistency with poor validity.",
+      "Gemini 2.5 Flash: test-retest 0.988, position bias 0.125; same paradox more mildly."
+    ],
+    "threshold_assessment": {
+      "three_or_more_replicates": "Protocol recommendation based on study design; not presented as a formal power-optimal sample size.",
+      "test_retest_0_95_and_position_bias_0_10": "Operational failure thresholds motivated by the study's a-priori hypothesis and observed paradox; should be treated as heuristic deployment gates, not universal statistical constants.",
+      "two_benchmarks": "Minimum diversity recommendation motivated by large rank instability across preference-vs-correctness benchmarks; not a guarantee of construct coverage."
+    }
+  },
+  "new_candidate_refinement": {
+    "candidate_id": "EVAL-MULTIAXIS-VALIDITY-002",
+    "refinement": "Operationalize the candidate as a five-gate MVVP rather than a loose metric bundle. Preserve the distinction between agreement, repeatability, invariance, and cross-construct validity.",
+    "important_caveat": "The source explicitly defers probability calibration (ECE/Brier) because many providers do not expose token logprobs; calibration must be added as a separate axis when available."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "question": "Trace ICLR 2026 certified/conformal evaluation methods that model judge TPR/FPR and give finite-sample error guarantees; determine whether they can supply principled thresholds/sample sizes missing from MVVP."
+    },
+    {
+      "priority": 2,
+      "question": "Derive a power/sample-size procedure for position-bias and test-retest gates rather than using fixed >=3 replicate and 0.10 bias thresholds."
+    },
+    {
+      "priority": 3,
+      "question": "Test whether chance-corrected metrics remain stable under benchmark label-marginal shifts and whether prevalence-adjusted alternatives outperform kappa for strongly imbalanced judge datasets."
+    },
+    {
+      "priority": 4,
+      "question": "Combine MVVP with calibrated judge uncertainty/ECE-Brier and selective abstention when provider logprobs or repeated-sampling confidence are available."
+    }
+  ],
+  "termination_diagnostics": {
+    "status": "continued beyond first checkpoint; not complete",
+    "completed_unresolved_action": "Extracted the full MVVP, its exact gates, metric definitions, quantitative support, and identified which thresholds are heuristic rather than formally justified.",
+    "exact_next_action": "Search primary ICLR 2026/open-access sources for certified LLM evaluation with judge TPR/FPR or conformal finite-sample error control, then compare its assumptions and guarantees against MVVP."
+  }
+}
