@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "worker": "self_improvement",
+  "recorded_at": "2026-08-25T16:03:42+09:00",
+  "checkpoint_kind": "continuation",
+  "continues": "research_workers/self_improvement/20260825T150501JST-continuation.json",
+  "search_bias": {
+    "mode": "benchmark-first, ablation-first, self-improvement/meta-learning",
+    "seeds": [
+      "held-out commit gates for self-evolving context",
+      "recursive evolution of the improvement operator",
+      "skill-library lifecycle failure and governance",
+      "two-timescale retrieval/reflection adaptation",
+      "co-evolution of evaluators/utility",
+      "unresolved GEA/MARS component attribution"
+    ],
+    "explicit_exclusions": [
+      "O and O-derived state",
+      "comparator/integrator outputs",
+      "re-summarization of already-covered AI4AI-Bench, PAST-Bench, DGM, GEPA, MemoHarness, GEA headline results, TMEM unless resolving a new ablation/replication"
+    ]
+  },
+  "new_findings": [
+    {
+      "id": "rsea-heldout-commit-gate-2026",
+      "priority": "very_high",
+      "source": {
+        "title": "Recursive Self-Evolving Agents via Held-Out Selection",
+        "paper": "https://arxiv.org/abs/2606.28374",
+        "submitted": "2026-06-17",
+        "status": "preprint"
+      },
+      "mechanism": "Treat self-improvement as a candidate-commit problem: evolve natural-language state, but commit a candidate only if it does not regress on a disjoint held-out split; otherwise keep the previous state/base policy.",
+      "quantitative_evidence": [
+        "Shared-backbone comparison across ALFWorld, GAIA, tau-bench and WebShop against ReAct, Reflexion, GEPA, AWM, ACE and Dynamic Cheatsheet: RSEA single-pass reached 69.3% on ALFWorld versus ReAct 64.6% (McNemar p=0.015); retry reached 79.4%.",
+        "On WebShop every evolved candidate hurt held-out validation, so the gate retained an effectively empty evolved state and RSEA stayed near ReAct: 0.437 versus 0.429.",
+        "The unguarded Dynamic Cheatsheet scored 70.7% on ALFWorld but collapsed to 0.136 on WebShop versus ReAct 0.429 and was worst on tau-bench at 36.7%.",
+        "Removing held-out selection produced a perfect 100% in-sample selection score but 66.7% test, a 33-point train-test gap; held-out RSEA was 67.3% versus ReAct 63.6% in that controlled ablation.",
+        "State-layer ablation found strategy, skills and playbook each improved over ReAct 64.2%, with skills and playbook 69.8% each; full three-layer state 68.5%, showing overlap rather than strict complementarity."
+      ],
+      "evidence_scope": "Weight-frozen natural-language context evolution. The gate protects against regressions detectable on the held-out sample; it is not a guarantee under distribution shift or tiny validation sets. The three-layer representation itself is not causally necessary; the strongest causal signal is the commit gate.",
+      "candidate_implication": "Separate mutation from admission. Any persistent self-improvement artifact should face an unseen validation/replay gate before becoming durable state, and the system should retain the prior state when evidence is weak or negative."
+    },
+    {
+      "id": "metaskill-two-timescale-improver-evolution-2026",
+      "priority": "very_high",
+      "source": {
+        "title": "MetaSkill-Evolve: Recursive Self-Improvement of LLM Agents via Two-Timescale Meta-Skill Evolution",
+        "paper": "https://arxiv.org/abs/2607.05297",
+        "submitted": "2026-07-06",
+        "status": "preprint"
+      },
+      "mechanism": "Evolve the task skill on a fast loop and the improvement operator itself on a slower loop. Each branch carries five editable meta-skills controlling failure analysis, cross-branch retrieval, search-budget allocation, edit proposal and edit application; parent selection includes both current utility and recent meta-productivity.",
+      "quantitative_evidence": [
+        "With one frozen Gemma-4 31B backbone shared by all pipeline agents, held-out test gains over no-skill were +23.54 OfficeQA, +16.09 SealQA and +1.92 ALFWorld.",
+        "Compared with single-level evolution (fast task-skill loop but fixed meta-process), the additional slow meta-skill loop added +6.38 OfficeQA, +8.05 SealQA and +1.92 ALFWorld.",
+        "Reported table values: OfficeQA no-skill 31.78, static 36.09, single-level 48.94, full 55.32; SealQA 29.17, 29.41, 37.21, 45.26; ALFWorld 92.31, 90.38, 92.31, 94.23.",
+        "Component analysis reports task-specific dependence: removing adaptive allocation on OfficeQA caused a 19.7-point drop; proposal policy dominated on SealQA; cross-branch sharing was the primary driver on ALFWorld."
+      ],
+      "evidence_scope": "One preprint, one backbone family, three benchmarks. ALFWorld is near ceiling and the recursive gain is small there. The fast loop explains much of total uplift; recursive meta-evolution adds a meaningful but task-dependent increment. Component-specific 19.7-point attribution was recovered from paper-derived analysis and should be checked against the primary table before treating the exact number as fully verified.",
+      "candidate_implication": "Do not freeze the improver forever. Maintain a slower, separately evaluated adaptation loop for diagnosis/search-allocation/retrieval/edit policies, but require held-out gates and cost accounting because the marginal value is task-dependent."
+    },
+    {
+      "id": "library-drift-lifecycle-governance-2026",
+      "priority": "very_high",
+      "source": {
+        "title": "Library Drift: Diagnosing and Fixing a Silent Failure Mode in Self-Evolving LLM Skill Libraries",
+        "paper": "https://arxiv.org/abs/2605.19576",
+        "submitted": "2026-05-19",
+        "revised": "2026-07-29",
+        "venue": "ICML 2026 Workshop on Failure Modes in Agentic AI"
+      },
+      "mechanism": "Prevent skill-library drift with outcome-driven retirement, a bounded active-skill cap, contribution attribution and a meta-skill authoring prior; log per-skill contribution and router engagement so degradation is visible before aggregate scores fall.",
+      "quantitative_evidence": [
+        "On MBPP+ hard-100 over 100 rounds, the governance recipe raised held-out pass@1 from 0.258 baseline to a late-window mean of 0.584, rolling gain +0.328.",
+        "Ablation trigger disabling skill injection produced only +0.002, showing a flat floor; premature retirement caused active harm of -0.019.",
+        "Eight ablations were used to separate load-bearing lifecycle mechanisms from subsumed ones.",
+        "The paper motivates the failure mode with SkillsBench evidence that LLM-authored skills yielded +0.0pp while human-curated skills yielded +16.2pp, emphasizing that accumulation alone is not improvement."
+      ],
+      "evidence_scope": "Coding/skill-library domain and workshop paper. The absolute 0.584 late-window result is from one benchmark regime, but the lifecycle failure mechanism is directly falsifiable and the ablations isolate both no-injection and over-retirement failures.",
+      "candidate_implication": "Persistent self-improvement state needs lifecycle governance, not append-only growth: bounded active set, outcome-linked contribution scores, conservative retirement and explicit attribution receipts."
+    },
+    {
+      "id": "ael-adaptive-retrieval-plus-reflection-less-is-more-2026",
+      "priority": "high",
+      "source": {
+        "title": "AEL: Agent Evolving Learning for Open-Ended Environments",
+        "paper": "https://arxiv.org/abs/2604.21725",
+        "code": "https://github.com/WujiangXu/AEL",
+        "submitted": "2026-04-23"
+      },
+      "mechanism": "Use a fast bandit to choose among memory-retrieval policies and a slower LLM reflection step to diagnose failure patterns and inject an interpretive frame; resist adding extra adaptive modules unless ablations justify them.",
+      "quantitative_evidence": [
+        "Sequential portfolio benchmark: 10 sector-diverse tickers, 208 episodes, 5 seeds; AEL Sharpe 2.13 +/- 0.47, reported best among five published self-improving methods and all non-LLM baselines.",
+        "Incremental ablation: stateless Sharpe 1.35 -> +memory 1.68 -> memory+reflection 2.13, a 58% cumulative increase from stateless.",
+        "Single-policy variants with reflection were all below bandit+reflection: compressed 1.44 +/- 0.71, recent-window 1.31 +/- 0.83, aggressive 0.92 +/- 0.95, full-detailed 0.78 +/- 1.10, no retrieval 1.41 +/- 0.84; default beat the best fixed variant by at least 0.69 Sharpe.",
+        "Every tested added mechanism degraded the full AEL configuration: planner evolution, per-tool selection, cold-start initialization, skill extraction and three credit-assignment variants; reported figure deltas include planner evolution -1.72 and per-tool selection -1.70 Sharpe."
+      ],
+      "evidence_scope": "Strong multi-seed ablation structure but one financial sequential environment. The 'less is more' result should be treated as a counterexample to complexity-by-default, not a universal law for all agent domains.",
+      "candidate_implication": "Adapt how memory is retrieved before proliferating modules. Maintain explicit complexity penalties and require each extra adaptive component to beat a simpler matched baseline."
+    },
+    {
+      "id": "rqgm-evaluator-coevolution-2026",
+      "priority": "high_experimental_candidate",
+      "source": {
+        "title": "The Red Queen Gödel Machine: Co-Evolving Agents and Their Evaluators",
+        "paper": "https://arxiv.org/abs/2606.26294",
+        "submitted": "2026-06-24",
+        "status": "preprint"
+      },
+      "mechanism": "Make the evaluation/utility part of self-improvement rather than eternally fixed: hold utility fixed within an epoch for coherent selection, then permit evaluator/objective updates at epoch boundaries, including adversarial objectives.",
+      "quantitative_evidence": [
+        "On verifiable coding tasks, adding a complementary agent-as-a-judge code-review signal improved test pass rate over the prior self-improving baseline while using 1.35x-1.72x fewer tokens.",
+        "For scientific writing, co-evolved writers achieved 1.78x-1.86x higher acceptance rates under a diverse judge panel than prior self-improving agents.",
+        "Co-evolved Olympiad proof graders reached 9% higher ground-truth grading accuracy.",
+        "The strongest baseline paper reviewer over-accepted AI-generated papers at up to 1.91x the human rate; an adversarial utility discovered reviewers with matched stringency on AI and human work."
+      ],
+      "evidence_scope": "Composite framework across coding, writing/reviewing and proof grading. Abstract-level quantitative claims are primary, but component-level ablations for exactly which evaluator changes drive each gain remain unresolved. Dynamic utilities can also destabilize optimization if changed too frequently, which is why within-epoch stationarity is central.",
+      "candidate_implication": "A fixed evaluator can become the bottleneck or be gamed by stronger descendants. Test a two-timescale evaluator loop with fixed within-epoch scoring, adversarial calibration and independent ground-truth checks before allowing evaluator updates to steer self-improvement."
+    }
+  ],
+  "resolved_or_partially_resolved_prior_frontier": [
+    {
+      "item": "MARS component causality",
+      "status": "partially_resolved",
+      "evidence": [
+        "The paper reports explicit ablations on MLE-Bench Lite for Modular Decomposition and Lesson Learning; both reduce performance when removed.",
+        "Search-strategy ablations compare budget-aware MCTS against vanilla MCTS (w=0) and greedy search, with budget-aware search reported superior.",
+        "Lesson utilization 65.8% +/- 1.1% and cross-branch transfer 63.0% +/- 1.8% establish active memory use, but do not isolate the causal fraction of the final score attributable specifically to cross-branch transfer."
+      ],
+      "remaining_gap": "Recover the numeric ablation table/figure values for no-modularity and no-lesson-learning; current sources establish direction and significance but not exact effect sizes."
+    },
+    {
+      "item": "GEA component causality",
+      "status": "still_unresolved_at_component_level",
+      "evidence": "Primary text confirms the DGM-style baseline differs in both group parent selection and cross-branch experience sharing, with a comparable number of evolved agents. This strengthens fairness of the composite comparison but still does not isolate experience pooling from performance-novelty group selection.",
+      "remaining_gap": "Find an explicit no-sharing, random-group, or performance-only selection ablation."
+    }
+  ],
+  "rejected_or_deferred_leads": [
+    {
+      "item": "Continual Harness",
+      "reason": "Interesting reset-free online harness refinement, but current accessible results are capability-dependent: official release notes say Pareto-dominant on Gemini 3 Pro, high-variance on Flash, and below the minimalist baseline on Flash-Lite. Defer until matched numerical ablations across backbones are recovered."
+    },
+    {
+      "item": "MOSS source-level rewriting",
+      "reason": "Reported four-task mean grader 0.25->0.61 in one cycle is promising but too composite and narrow to promote without ablations separating source-level reachability, replay verification and coding-agent effects."
+    },
+    {
+      "item": "SkillMisevo-Gym / SafeEvolve",
+      "reason": "Important persistence-safety evidence, but primarily a safety/failure-mode result rather than capability-improvement evidence; retain as a boundary condition rather than a self-improvement accelerator."
+    }
+  ],
+  "frontier_queue": [
+    "Locate numeric MARS ablation values for removing lesson learning and modular decomposition; distinguish comparative reflective memory from generic logging.",
+    "Locate GEA no-sharing / random-group / performance-only ablations to separate experience pooling from selection policy.",
+    "Search independent replications or adversarial re-evaluations of RSEA held-out selection, MetaSkill-Evolve recursion, Library Drift governance and AEL less-is-more claims.",
+    "Search for 2026 evaluator/credit-assignment methods with ground-truth calibration and matched ablations, especially methods that prevent self-improvement from gaming its own judge.",
+    "Search cost/compute-normalized comparisons of recursive meta-improvement loops; quantify when slower improver evolution pays for itself.",
+    "Search for evidence that a validation gate itself can overfit under non-stationary task streams and mechanisms such as rotating/replay/OOD gates that mitigate this."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_is_not_completion": true,
+    "performed_unresolved_frontier_action_after_initial_findings": "Yes: pursued GEA and MARS component-level attribution and recovered partial MARS ablation evidence plus a clearer unresolved GEA confound.",
+    "reason_for_turn_end": "automation runtime boundary / current tool turn completion, not research frontier exhaustion"
+  },
+  "exact_next_action": "Start from the MARS and GEA unresolved component-attribution queue, not from headline re-reading. First search the MARS primary full text for Figure 3 numeric values and the GEA appendix for explicit no-sharing/selection ablations; then branch into independent replications of RSEA/MetaSkill/Library Drift/AEL and evaluator-gaming countermeasures."
+}
