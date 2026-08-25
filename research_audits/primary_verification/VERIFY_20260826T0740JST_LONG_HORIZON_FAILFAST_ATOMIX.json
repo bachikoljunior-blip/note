@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "auditor_role": "primary_source_verifier",
+  "created_at": "2026-08-26T07:40:00+09:00",
+  "semantic_control_freeze": {
+    "note_main_sha": "e48a596f2f1431445302fcf4fa3b88feb24d66e8",
+    "desired_state_control_revision": 9,
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_state_control_revision": 10,
+    "downstream_state_blob": "53b941ec42fdf0e502a78c06041b325d3087ff2b",
+    "role_config_revision": 4,
+    "role_enabled_desired": true
+  },
+  "source_worker_artifact": {
+    "worker": "long_horizon",
+    "path": "research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T0659JST.md",
+    "blob": "5253b0649f736a9a3e25a78b837024b101757e64",
+    "worker_frozen_note_main_sha": "bef75c9992d531894760890e0a092f1e7eb0da0e",
+    "worker_control_revision": 9,
+    "worker_config_revision": 5
+  },
+  "candidate": "long_horizon/recovery-control-decomposition@FailFast-RestartSmart-2608.03222v1+Atomix-2602.14849v2",
+  "status": "primary_verified_with_two_material_scope_clarifications",
+  "sources": [
+    {
+      "kind": "primary_paper",
+      "title": "Fail-Fast, Restart-Smart: Early Failure Prediction and Restart for SWE Agentic Tasks",
+      "version": "arXiv:2608.03222v1",
+      "date": "2026-08-04",
+      "url": "https://arxiv.org/pdf/2608.03222"
+    },
+    {
+      "kind": "primary_paper",
+      "title": "Atomix: Timely, Transactional Tool Use for Reliable Agentic Workflows",
+      "version": "arXiv:2602.14849v2",
+      "date": "2026-05-29",
+      "url": "https://arxiv.org/html/2602.14849v2"
+    },
+    {
+      "kind": "first_party_code",
+      "title": "mpi-dsg/atomix",
+      "url": "https://github.com/mpi-dsg/atomix"
+    }
+  ],
+  "findings": [
+    {
+      "id": "failfast-table3-restart",
+      "verdict": "verified",
+      "scope": "Qwen3.6-27B on SWE-bench Verified under the paper's own FailFast alarms and mini-swe-agent setup",
+      "evidence": {
+        "vanilla_resolve_pct": 66.6,
+        "fpr10_restartsmart": {"fp_lost_pct":15.2,"tp_recovery_pct":27.6,"resolve_pct":69.8,"delta_pp":3.2,"token_overhead_pct":30.3},
+        "fpr10_cold": {"fp_lost_pct":36.4,"tp_recovery_pct":19.7,"resolve_pct":67.2,"delta_pp":0.6,"token_overhead_pct":17.8},
+        "fpr25_restartsmart": {"fp_lost_pct":8.8,"tp_recovery_pct":28.9,"resolve_pct":71.8,"delta_pp":5.2,"token_overhead_pct":43.8},
+        "fpr25_cold": {"fp_lost_pct":27.5,"tp_recovery_pct":20.2,"resolve_pct":66.8,"delta_pp":0.2,"token_overhead_pct":18.2}
+      },
+      "statistical_support": "Appendix Table 8 reports paired exact two-sided McNemar tests on the same 500 evaluation runs. RestartSmart vs cold is significant for Qwen3.6-27B at 10% FPR (p=0.029) and 25% FPR (p=0.001); pooled over three policies p=8.8e-3 and 4.5e-4 respectively."
+    },
+    {
+      "id": "failfast-table6-cut-timing",
+      "verdict": "verified_point_estimate_only_for_wait_vs_immediate",
+      "scope": "Qwen3.6-27B, same paper, 10% and 25% target FPR budgets",
+      "evidence": {
+        "fpr10_immediate": {"fp_lost_pct":21.2,"tp_recovery_pct":28.9,"resolve_pct":69.6,"delta_pp":3.0},
+        "fpr10_wait": {"fp_lost_pct":15.2,"tp_recovery_pct":27.6,"resolve_pct":69.8,"delta_pp":3.2},
+        "fpr25_immediate": {"fp_lost_pct":18.8,"tp_recovery_pct":22.8,"resolve_pct":68.8,"delta_pp":2.2},
+        "fpr25_wait": {"fp_lost_pct":8.8,"tp_recovery_pct":28.9,"resolve_pct":71.8,"delta_pp":5.2},
+        "wait_definition": "locate first edit at or after abort signal; cut after five edit-free steps"
+      },
+      "material_scope_clarification": "The paper does not report a dedicated confidence interval or significance test for Table 6 Wait-vs-Immediate. Therefore the worker's architectural inference that alarm time and safe-cut time should be separated is well supported by the point estimates, but the wording 'immediate abort is contradicted' is too strong if read as a statistically established causal conclusion. Prefer 'disfavored in this Qwen3.6-27B point-estimate ablation, especially at 25% FPR'."
+    },
+    {
+      "id": "atomix-rq1-full-pool",
+      "verdict": "verified_with_clustered-trial-statistics_scope",
+      "scope": "tau-bench retail full pool, 38 tasks x 3 trials = N=114, fp=0.10, GPT-4.1, max_steps=30",
+      "evidence": {
+        "tx_full": "67/114 = 58.8%, CP95 [49.4,67.7]",
+        "checkpoint_replay": "61/114 = 53.5%, CP95 [43.9,63.0]",
+        "reported_test": "Fisher exact two-sided p≈0.50"
+      },
+      "material_scope_clarification": "The paper pools three stochastic trials per underlying task into N=114 and reports Fisher's exact test as if comparing binary trial outcomes. It does not report a task-clustered, hierarchical, or paired-by-task analysis. Thus 'statistically tied' is accurate as a report of the authors' Fisher test, but it is not a demonstrated task-cluster-robust equivalence result and should not be generalized as evidence of true equivalence."
+    },
+    {
+      "id": "atomix-rq3-and-joint-stress",
+      "verdict": "verified",
+      "scope": "paper's append-only SMTP/webhook harness and combined-stress harness",
+      "evidence": {
+        "rq3": {
+          "tx_full_invalid_leaks": "0/500, CP95 [0,0.74]",
+          "checkpoint_replay_invalid_leaks": "200/500 = 40%, CP95 [36,44]",
+          "valid_send_positive_control": "500/500 for every baseline",
+          "note": "TCC-Confirm and Mutex+WAL+Rollback also have 0/500 classified-before-externalization leaks in this fully wired email-tool test; zero leakage is not unique to Atomix on this axis."
+        },
+        "combined_stress": {
+          "fp010": {"tx_full_run_clean_pct":84,"checkpoint_replay_run_clean_pct":63},
+          "fp030": {"tx_full_run_clean_pct":65,"checkpoint_replay_run_clean_pct":25},
+          "real_llm_fp010_n30": {"tx_full_pct":90,"checkpoint_replay_pct":73,"tcc_pct":93,"saga_pct":80}
+        }
+      },
+      "scope_guard": "Atomix is an execution-layer prototype and explicitly does not claim semantic validation, distributed deployment, or full crash-safe exactly-once. Safety depends on adapter mediation and correct metadata/effect classification."
+    }
+  ],
+  "overall_assessment": "The long-horizon worker's central modular decomposition survives primary verification: failure sensing, safe cut timing, recovery-state carry-over, and external-effect settlement are empirically separable axes. Two wording/statistics guards are required: Table 6 Wait-vs-Immediate is a point-estimate ablation without a reported dedicated significance test, and Atomix's RQ1 p≈0.50 is a pooled-trial Fisher result over three trials per task rather than a task-cluster-robust equivalence analysis.",
+  "do_not_infer": [
+    "Do not treat the Table 6 Wait-vs-Immediate difference as independently statistically established without raw paired outcomes or a dedicated test.",
+    "Do not treat Atomix Tx-Full and Checkpoint-Replay as proven equivalent on task success; the reported p≈0.50 is non-rejection under the authors' pooled-trial test.",
+    "Do not infer zero irreversible leakage is unique to Atomix; TCC-Confirm and fully wired Mutex+WAL+Rollback also achieve 0/500 in RQ3.",
+    "Do not generalize either paper beyond its tested agent, task, fault, adapter, and runtime regimes."
+  ],
+  "exact_next_action": "Verify the next high-value long_horizon frontier claim that isolates historical restore-target selection while holding alarm, checkpoint candidates, carry-forward, model, task set and budget fixed; if no strict selector-only study exists, record the gap rather than promoting a looser rollback comparison."
+}
