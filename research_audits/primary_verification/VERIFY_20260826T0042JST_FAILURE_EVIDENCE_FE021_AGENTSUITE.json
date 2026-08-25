@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T00:42:00+09:00",
+  "candidate": {
+    "worker_namespace": "failure_evidence",
+    "candidate_id": "FE-021",
+    "source_artifact": "research_workers_clean_g1/failure_evidence/2026-08-25T200000+0900.md",
+    "source_blob": "ad97e83bceb73ae762a106a338007a068d4a2202",
+    "claim": "Auditing/filtering benchmark tasks can reverse model rankings even when the exact same stored trajectories are re-scored."
+  },
+  "primary_source_snapshot": {
+    "repository": "Agent-Suite/AgentSuite",
+    "main_commit": "0f9eac1c1a376a411ad807bd974555055f08e6c5",
+    "main_commit_date": "2026-07-05T22:08:10Z",
+    "files": [
+      {"path":"eval_splits.md","blob":"ae76ad440701542995054a81be020f80af8a90bf"},
+      {"path":"leaderboard/README.md","blob":"c7f9facc3b072ef8b775febc5ab71c47df387072"},
+      {"path":"results/splits/tau-bench_split_scores.csv","blob":"be54317b22fa6abf772677cdcfeea970f46e9d9a"},
+      {"path":"results/splits/complex-func-bench_split_scores.csv","blob":"dd7421e504f9c9ec721f8dd572863e5ded40e681"},
+      {"path":"results/splits/ACEBench_split_scores.csv","blob":"f970152b6f0bb10598e34b076e6dc392e3e64e35"},
+      {"path":"results/splits/overall_leaderboard.csv","blob":"40056331f0b20d7b9fa69c3640a7701405259de0"}
+    ]
+  },
+  "verification": {
+    "same_trajectory_design": {
+      "status": "verified",
+      "detail": "eval_splits.md defines Filtering as re-scoring the same Original trajectories on the surviving task set after dropping every flagged non-KEEP task (FIX ∪ REMOVE ∪ TODO); it explicitly says no reruns and original data. Fixed is a different variant that applies repairs/reruns where required."
+    },
+    "tau_bench": {
+      "status": "verified",
+      "denominator": {"original":165,"filtering":139,"dropped":26},
+      "top_pair_reversal": {
+        "DeepSeek-V3.2-Exp-thinking-on": {"original_micro":0.7212121212121212,"filtering_micro":0.7913669064748201,"rank":"1->2"},
+        "claude-4.5-sonnet-thinking-on-10k": {"original_micro":0.7151515151515152,"filtering_micro":0.7985611510791367,"rank":"2->1"}
+      },
+      "additional_rank_sensitivity": {
+        "Kimi-K2-Instruct":"15->10",
+        "gpt-4.1":"10->12"
+      }
+    },
+    "complex_func_bench": {
+      "status": "verified",
+      "denominator": {"original":1000,"filtering":824,"dropped":176},
+      "verified_swaps": [
+        "claude-4-sonnet-thinking-off 8->9 while thinking-on-10k 9->8",
+        "Qwen3-235B-A22B-Instruct-2507-FP8 10->12 while claude-4-opus-thinking-off/on move 11->10 and 12->11",
+        "gemini-2.5-flash-thinking-off 19->20 and o3-high 20->19",
+        "gpt-4o-mini 22->23 and DeepSeek-V3.2-Exp-thinking-on 23->22"
+      ]
+    },
+    "ACEBench": {
+      "status": "verified",
+      "denominator": {"original":1023,"filtering":897,"dropped":126},
+      "rank_changes": {
+        "claude-4.5-sonnet-thinking-on-10k":"7->3",
+        "Kimi-K2-Instruct":"8->13",
+        "gemini-2.5-pro-thinking-on":"13->8"
+      },
+      "pairwise_reversal": {
+        "original": "Kimi-K2-Instruct 0.7996089931573802 > gemini-2.5-pro-thinking-on 0.7927663734115347",
+        "filtering": "gemini-2.5-pro-thinking-on 0.8416945373467113 > Kimi-K2-Instruct 0.835005574136009"
+      }
+    },
+    "overall_leaderboard": {
+      "status": "verified",
+      "aggregation": "leaderboard/README.md states equal-weight macro-average over the seven live benchmark keys, restricted to models present in all of them",
+      "rank_changes": {
+        "Kimi-K2-Instruct":"2->3",
+        "o3-high":"3->2",
+        "DeepSeek-V3-0324":"7->8",
+        "gpt-5":"8->7",
+        "gpt-4.1":"1->1"
+      }
+    }
+  },
+  "scope_clarifications": [
+    "The result directly establishes ranking sensitivity to the AgentSuite audit/filtering policy on committed stored trajectories; it does not establish that every dropped task is objectively invalid.",
+    "Filtering drops FIX and TODO tasks in addition to REMOVE tasks. FIX means correctable, TODO means unresolved, and REMOVE means unfixable/invalid. Therefore downstream wording should prefer 'audit-flagged task composition' or 'Filtering policy' over treating the entire dropped set as proven-invalid tasks.",
+    "Because Filtering performs no rerun, this experiment isolates denominator/task-set re-scoring on stored trajectories. It does not measure behavior after repaired wording/data/environment changes; that belongs to Fixed.",
+    "Some per-benchmark rows can have partial coverage. The cited tau-bench reversal uses full-coverage rows with n_all=165, n_filtered=139 and all 26 filter IDs matched.",
+    "The current public leaderboard documents Original/Filtering only; Fixed leaderboard results are not live, so FE-021 does not support Fixed-vs-Filtering causal attribution."
+  ],
+  "corrections": [
+    {
+      "severity":"material_scope",
+      "from":"This directly demonstrates benchmark-task validity as a possible source of ranking instability.",
+      "to":"This directly demonstrates that AgentSuite's audit-flagged task composition / Filtering policy can be a source of ranking instability on the same stored trajectories. It is not proof that every filtered task was invalid."
+    }
+  ],
+  "status": "primary_verified_with_task_validity_and_split_scope_clarification",
+  "confidence": "high for committed split semantics and rank/score values; no independent trajectory recomputation performed in this audit",
+  "unresolved": [
+    "Fixed-vs-Filtering attribution: quantify how much score/rank change comes from deleting flagged tasks versus repairing FIX tasks and rerunning them once provenance-equivalent Fixed results become available.",
+    "Independent recomputation from the referenced stored trajectory datasets was not performed here; this audit verifies the committed primary repository semantics and computed CSV outputs."
+  ],
+  "downstream_instruction": "Evidence comparator/integrator may retain FE-021 as same-trajectory benchmark-composition ranking sensitivity, but must use the scope clarification above and must not label all filtered tasks invalid or infer Fixed behavior from Filtering."
+}
