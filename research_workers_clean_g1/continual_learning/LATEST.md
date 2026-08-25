@@ -1,10 +1,10 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260825T1904_JST.md`.
+Latest durable checkpoint: `RUN_20260825T2004_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md` and then `RUN_20260825T1904_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator output, or any other worker state.
+For continuation, read `STATE.md`, then `RUN_20260825T1904_JST.md`, then `RUN_20260825T2004_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator output, or any other worker state.
 
-Exact next action: extract HESTIA (Le et al., UAI/PMLR 2026) primary quantitative tables and ablations, separating change-point detection errors from adapter-retrieval errors. Then search for independent FOREVER/model-time replay replications/failures. Then construct a matched-budget comparison across selection/timing/update-geometry/LR-trajectory/boundary-routing with optimizer-state handling explicit.
+Exact next action: find a PDF-capable or machine-readable HESTIA results path and isolate boundary detection from adapter retrieval, specifically checking whether any reported path removes the released code's unseen-ground-truth-class trigger. If exact tables remain blocked, audit the official gradual/realistic-streaming path and search a label-independent task-free change-point control. Then continue FOREVER external replication with `{LoRA/full FT} × {tau counts replay / tau censors replay}` as the explicit axis, and extract quantitative Li–Hiratani task-order results for the matched-budget matrix.
 
-Frontier must remain nonempty; if HESTIA PDF/table extraction blocks, use official OpenReview/PMLR metadata and public HESTIA experiment configs/logs, then switch to the FOREVER replication branch rather than ending.
+Frontier must remain nonempty. Current priority gaps: HESTIA exact tables/ablations and label-independent boundary evidence; independent FOREVER/model-time replication; task-order quantitative gains/pilot-data cost; online-world-model evidence beyond fixed dynamics; matched memory/FLOPs/optimizer-state/boundary-information comparisons; plasticity-specific controls.
