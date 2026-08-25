@@ -1,0 +1,140 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T17:57:22+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T170020_JST.json",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_feedback": false
+  },
+  "search_bias": "benchmark-design and measurement-validity first; judge meta-evaluation, process verification, downstream-valid evaluator testing, prompt/format robustness, and uncertainty/reliability diagnostics",
+  "new_sources_checked": [
+    {
+      "title": "Time to REFLECT: Can We Trust LLM Judges for Evidence-based Research Agents?",
+      "date": "2026-05-18",
+      "url": "https://arxiv.org/abs/2605.19196",
+      "primary": true
+    },
+    {
+      "title": "AgentProcessBench: Diagnosing Step-Level Process Quality in Tool-Using Agents",
+      "date": "2026-03-15; revised 2026-06-01; KDD 2026",
+      "url": "https://arxiv.org/abs/2603.14465",
+      "primary": true
+    },
+    {
+      "title": "Judging the Judges: A Systematic Evaluation of Bias Mitigation Strategies in LLM-as-a-Judge Pipelines",
+      "date": "2026-04-25; revised 2026-06-24; TMLR 2026",
+      "url": "https://arxiv.org/abs/2604.23178",
+      "primary": true
+    },
+    {
+      "title": "AgentRewardBench: Evaluating Automatic Evaluations of Web Agent Trajectories",
+      "date": "2025-04-11; revised 2025-10-06; COLM 2025",
+      "url": "https://arxiv.org/abs/2504.08942",
+      "primary": true
+    },
+    {
+      "title": "JudgeSense: A Benchmark for Prompt Sensitivity in LLM-as-a-Judge Systems",
+      "date": "2026-04-26",
+      "url": "https://arxiv.org/abs/2604.23478",
+      "primary": true
+    },
+    {
+      "title": "Who can we trust? LLM-as-a-jury for Comparative Assessment",
+      "date": "2026-02-18; revised 2026-05-28; ICML 2026",
+      "url": "https://arxiv.org/abs/2602.16610",
+      "primary": true
+    }
+  ],
+  "candidate_findings": [
+    {
+      "candidate_id": "eval-g1-controlled-intervention-metaeval-v2",
+      "mechanism": "Meta-evaluate research-agent judges with verified clean-vs-localized-corruption pairs, score failure detection by category, and combine fine-grained local judging with holistic checks for context-dependent failures rather than trusting one aggregate judge score.",
+      "evidence": "REFLECT constructs 140 reasoning, 132 tool-use, and 200 outcome perturbations with localized edits and human validation (inter-annotator kappa 0.86). Pointwise judge best overall accuracies are only 45.7% for reasoning, 54.5% for tool use, and 47.5% for report quality. Fine-grained judging improves over holistic judging across the reported model/protocol cells by +2.8 to +34.3 percentage points, while holistic judging remains better for some global-context failure types such as shallow reflection/topical misalignment.",
+      "quantitative": "N=472 controlled perturbations (140 reasoning, 132 tool-use, 200 outcome); kappa=0.86; best holistic pointwise overall 45.7% reasoning / 54.5% tool / 47.5% report; fine-grained minus holistic +2.8 to +34.3 pp in Table 2",
+      "scope": "deep-research-agent trajectories and reports under controlled localized interventions",
+      "uncertainty": "Controlled perturbations improve causal diagnosis but do not exhaust naturally occurring or interactive failures; exact Best-of-N numeric accuracies/cost frontier remain to be extracted."
+    },
+    {
+      "candidate_id": "eval-g1-tool-agent-first-error-and-process-selection",
+      "mechanism": "For tool-using agents, evaluate both dense step correctness and earliest critical-error localization; keep a neutral/exploratory label, and combine process signals with outcome signals for selection rather than treating either alone as sufficient.",
+      "evidence": "AgentProcessBench contains 1,000 trajectories and 8,509 human-labeled steps with 89.1% inter-annotator agreement. Its strongest reported model reaches 81.6% StepAcc but only 65.8% FirstErrAcc, exposing a substantial localization gap. On the top 25% longest trajectories, StepAcc falls 3.8-13.49 points and FirstErrAcc falls 10.79-21.67 points. In GAIA Best-of-8, two-stage outcome->process selection improves over outcome-only for every listed generator: 37.7->43.4, 35.9->50.9, 47.2->49.1, 56.6->64.2, and 56.6->58.5; oracle Pass@8 is 77.4%.",
+      "quantitative": "1,000 trajectories; 8,509 steps; 89.1% IAA; strongest 81.6% StepAcc vs 65.8% FirstErrAcc; long-horizon drops 3.8-13.49 StepAcc and 10.79-21.67 FirstErrAcc; Best-of-8 two-stage gains up to +15.0 pp",
+      "scope": "realistic tool-augmented trajectories spanning HotPotQA, GAIA, BFCL, and tau2-Bench",
+      "uncertainty": "Error-propagation labeling is evaluator-dependent: removing it improved DeepSeek-V3.2 two-stage selection by +3.7 pp but hurt DeepSeek-V3.2-Thinking by -13.2 pp and Gemini-3-Flash by -5.7 pp. Protocol choice requires ablation rather than assumption."
+    },
+    {
+      "candidate_id": "eval-g1-bias-profiled-cost-aware-judge",
+      "mechanism": "Calibrate judge protocols to the actual judge/task bias profile using controlled counterfactual pairs and cost-aware strategy selection; do not apply position-swap/CoT/ensemble universally.",
+      "evidence": "A TMLR 2026 study compares nine strategies across five judges, three benchmarks, and a 375-pair controlled set. In its current-model setup, style bias (0.10-0.76, markdown preference) dominates position bias (<=0.04), while verbosity preference is model-dependent. The best tested configuration is Gemini 2.5 Flash with Combined Budget at 71.0% agreement and kappa 0.549 at about $0.001/eval, versus the best frontier setup Claude Sonnet 4 at 69.5% and about $0.015/eval. Holm-Bonferroni-surviving gains include Claude S8 +11.5 pp, Flash S8 +7.5 pp, and Claude S5 +7.3 pp.",
+      "quantitative": "style bias 0.10-0.76; position <=0.04; best agreement 71.0%, kappa=0.549, ~$0.001/eval; ~15x cheaper than 69.5% frontier setup; significant gains +7.3 to +11.5 pp",
+      "scope": "pairwise text judging on MT-Bench, LLMBar, and controlled formatting/length/model-origin tests",
+      "uncertainty": "Bias rankings conflict with other protocols such as JudgeSense's pairwise always-A behavior; therefore bias is measurement-design and task dependent, not a universal property of a model."
+    },
+    {
+      "candidate_id": "eval-g1-trajectory-evaluator-crossbenchmark-validity",
+      "mechanism": "Validate agent evaluators against expert-labeled trajectories across heterogeneous environments and multiple dimensions (success, side effects, repetition), and report precision/recall/F1 by benchmark rather than treating benchmark rule checks as ground truth.",
+      "evidence": "AgentRewardBench has 1,302 trajectories across five web benchmarks and four agent LLMs, with expert labels and 89.3% inter-annotator agreement on success. No single LLM judge excels across all benchmarks. Official rule-based evaluation has overall precision 83.8%, recall 55.9%, F1 67.1; a simplified GPT-4o judge using final accessibility-tree input reports precision 69.8%, recall 83.1%, F1 75.9. The paper finds rule-based evaluators systematically underreport successful trajectories.",
+      "quantitative": "1,302 trajectories; 5 benchmarks; 4 agent models; 89.3% success-label IAA; rule F1 67.1 vs simplified GPT-4o A11Y F1 75.9",
+      "scope": "web-agent trajectory success evaluation across AssistantBench, VisualWebArena, WebArena, WorkArena, WorkArena++",
+      "uncertainty": "Expert labels are environment-specific and the best precision/recall tradeoff depends on downstream use (e.g. rejection fine-tuning vs monitoring)."
+    },
+    {
+      "candidate_id": "eval-g1-prompt-equivalence-robustness",
+      "mechanism": "Treat judge-prompt wording as a measurement variable: test verdict invariance under validated semantically equivalent prompt paraphrases and separate true judge instability from polarity/order artifacts.",
+      "evidence": "JudgeSense evaluates nine judges on 494 validated paraphrase pairs. Coherence JSS ranges from 0.389 to 0.992; factuality appears around 0.63 before correcting a polarity-inverted template and rises to about 0.9 afterward. Pairwise preference/relevance shows degenerate always-A behavior in 8 of 9 judges, demonstrating that apparent stability can itself be an order artifact. Model scale does not predict consistency.",
+      "quantitative": "494 validated paraphrase pairs; coherence JSS 0.389-0.992; factuality ~0.63 before polarity correction and ~0.9 after; always-A in 8/9 pairwise judges",
+      "scope": "prompt-sensitivity meta-evaluation for factuality, coherence, preference, and relevance judging",
+      "uncertainty": "The always-A result conflicts with a separate current-model controlled-bias study that reports small position bias; differences in task construction and prompt format must be reconciled before generalization."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Fine-grained judging alone is always superior",
+      "reason": "REFLECT shows strong average/local gains but holistic judging can better expose failures requiring global context, accumulated evidence, or overall intent. Use mixed granularity."
+    },
+    {
+      "lead": "A single step-accuracy metric is sufficient for process evaluators",
+      "reason": "AgentProcessBench shows first-error localization is materially harder than aggregate step labeling, and long trajectories disproportionately degrade FirstErrAcc."
+    },
+    {
+      "lead": "Error-propagation labels are universally correct for tool-agent process evaluation",
+      "reason": "AgentProcessBench ablation is evaluator-dependent: removing propagation improves one evaluator by +3.7 pp but degrades stronger evaluators by -5.7 to -13.2 pp in Best-of-8 selection."
+    },
+    {
+      "lead": "Rule-based environment success should be treated as ground truth for web-agent evaluator training",
+      "reason": "AgentRewardBench finds high precision but low recall for official rules and systematic underreporting of expert-defined success."
+    },
+    {
+      "lead": "Position swap is the dominant universal judge mitigation",
+      "reason": "A 2026 TMLR controlled study finds negligible position bias but large style bias for its tested modern judges, while JudgeSense reports severe always-A behavior under different pairwise protocols. The safe conclusion is protocol-specific measurement, not a universal ranking of biases."
+    }
+  ],
+  "frontier": [
+    "Extract REFLECT Appendix A full failure taxonomy and Figure 5 Best-of-N numeric accuracies/cost points; map which failure types require fine-grained versus holistic context.",
+    "Retrieve quantitative tables from ICML 2026 BT-sigma LLM-as-a-jury and compare judge-aware aggregation against equal-weight averaging, including cycle-consistency correlation and data efficiency without human labels.",
+    "Search objective evidence/citation-verification evaluators for deep research reports (citation entailment, source support, coverage, evidence omission) and quantify reliability against human/controlled ground truth.",
+    "Reconcile the apparent position-bias contradiction between JudgeSense and the TMLR 2026 bias study by comparing task construction, label encoding, option randomization, and prompt templates.",
+    "Search power-analysis and sequential-testing methods for evaluator regression detection so benchmark sample size is tied to minimum detectable effect rather than arbitrary N.",
+    "Compare AgentRewardBench trajectory-level success/side-effect/repetition labels with AgentProcessBench step-level +1/0/-1 labels and identify a minimal multi-resolution agent-evaluation suite.",
+    "Test whether per-instance judge uncertainty diagnostics (conformal set width, transitivity violations, repeated-run instability) predict errors on agent trajectories rather than only NLG datasets.",
+    "Search for objective or intervention-based benchmarks for long-horizon GUI/computer-use agents, especially irreversible side effects, policy violations, and citation/tool-response grounding."
+  ],
+  "termination_diagnostics": {
+    "frontier_empty": false,
+    "report_readiness_used_as_stop_condition": false,
+    "additional_frontier_actions_completed_this_run": [
+      "Opened REFLECT full primary-source HTML and extracted controlled-intervention construction, category counts, judge accuracies, fine-grained-vs-holistic deltas, and cost/Best-of-N qualitative findings.",
+      "Opened AgentProcessBench primary-source HTML and extracted FirstErrAcc, long-horizon degradation, Best-of-8 process/outcome selection table, error-propagation ablation, and training signal results.",
+      "Opened AgentRewardBench primary-source HTML and extracted expert-label design plus precision/recall/F1 for rules and LLM judges.",
+      "Followed the judge-mitigation frontier into current TMLR 2026 bias-ablation results and then into JudgeSense prompt-sensitivity evidence, exposing a protocol-dependent contradiction worth targeted reconciliation.",
+      "Followed the heterogeneous-jury frontier to ICML 2026 BT-sigma; abstract supports judge-aware unsupervised calibration but numeric tables remain unresolved."
+    ],
+    "current_blockers": [
+      "BT-sigma full HTML endpoint was unavailable through the web fetch path used in this run; arXiv abstract was accessible but quantitative tables were not yet extracted."
+    ]
+  },
+  "exact_next_action": "Start with REFLECT Appendix A/Table 4 and Figure 5 to enumerate the full failure taxonomy and extract Best-of-N numeric accuracies/cost points. Then obtain BT-sigma quantitative tables via its PDF/alternative primary-source rendering and compute the gain over equal-weight jury aggregation. After that, branch into objective citation/evidence-verification benchmarks and use their strongest controlled metrics to design a mixed-granularity research-agent evaluator stack."
+}
