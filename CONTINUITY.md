@@ -49,6 +49,13 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 - Research index should persist seen papers/repos/mechanisms, source hashes, extracted claims, evidence type, O-known/tested status, and rejection reasons so later runs avoid repeated discovery.
 - If model-based external analysis is ever added, it should use a non-Work/free resource and remain optional; do not assume Copilot or other provider usage is free without checking current quota/terms.
 
+## Continuous external research status
+- Durable integration files are initialized at `research_index/INDEX.json` and `research_index/O_FEED.json`.
+- Latest integration revision: 1; index digest `a0091815e0ebe7acbea43caec24b6466490735a7416290c8a264a262253dcea6`.
+- Latest O-feed revision: 1; feed digest `354e8690a37603b801db18c9927dbee877ba80ee73dbed384660ea71a9ae84af`; feed is currently empty.
+- Latest integrator scan at 2026-08-25T05:52:19Z found `research_workers/` absent (GitHub contents 404), so there were no worker records to reconcile yet. This is treated as a transient startup blocker; the next integration resumes from revision 1 when worker records appear.
+- Keep detailed worker findings out of this file; store them under `research_workers/` and canonicalize them into `research_index/INDEX.json`. This continuity section should remain a compact health/reference pointer only.
+
 ## Evaluated mechanism/candidate status so far
 - Checkpoint inheritance: harness/provenance built in PRs 263-265; genuine matched native observations initially unavailable; not adopted or disproven in principle. Generation 9 later began reconciling 12 bounded-stage measurement receipts under Revision 20 scope rules.
 - Deterministic recursive history commitment v2: adopted/merged in PR 266; internal engineering only.
