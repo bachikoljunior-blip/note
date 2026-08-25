@@ -1,0 +1,176 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T19:04:55+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T175722_JST.json",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_feedback": false
+  },
+  "search_bias": "benchmark-design and measurement-validity first; judge meta-evaluation, selection-mode validity, verifier calibration, uncertainty/abstention, benchmark statistical resolution, and process/outcome measurement",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Time to REFLECT: Can We Trust LLM Judges for Evidence-based Research Agents?",
+      "date": "2026-05-18",
+      "url": "https://arxiv.org/abs/2605.19196",
+      "primary": true,
+      "action": "revisited full paper/PDF; extracted complete failure taxonomy and Best-of-N degradation"
+    },
+    {
+      "title": "Who can we trust? LLM-as-a-jury for Comparative Assessment",
+      "date": "2026-02-18; revised 2026-05-28; ICML 2026",
+      "url": "https://arxiv.org/abs/2602.16610",
+      "primary": true,
+      "action": "revisited full paper/PDF; extracted reliability correlations and jury-size ablation"
+    },
+    {
+      "title": "Do You Need a Frontier Model as a Citation Verifier? Benchmarking Rubric LLMs for Deep-Research Source Attribution",
+      "date": "2026-07",
+      "url": "https://arxiv.org/abs/2607.08700",
+      "primary": true
+    },
+    {
+      "title": "Cited but Not Verified: Parsing and Evaluating Source Attribution in LLM Deep Research Agents",
+      "date": "2026-05-07",
+      "url": "https://arxiv.org/abs/2605.06635",
+      "primary": true
+    },
+    {
+      "title": "SCOPE: Selective Conformal Optimized Pairwise LLM Judging",
+      "date": "2026-02; revised 2026-08-18; ICML 2026",
+      "url": "https://arxiv.org/abs/2602.13110",
+      "primary": true
+    },
+    {
+      "title": "Diagnosing LLM Judge Reliability: Conformal Prediction Sets and Transitivity Violations",
+      "date": "2026-04-16; workshop publication 2026-05-30",
+      "url": "https://arxiv.org/abs/2604.15302",
+      "primary": true
+    },
+    {
+      "title": "Resolution Diagnostics for Paired LLM Evaluation",
+      "date": "2026-05-28",
+      "url": "https://arxiv.org/abs/2605.30315",
+      "primary": true,
+      "action": "abstract-level quantitative lead; full primary text still unresolved"
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-ranking-mode-metaevaluation-v1",
+      "mechanism": "Meta-evaluate an evaluator in the exact downstream selection mode, not only on isolated pairwise judgments. For Best-of-N or reranking, construct controlled groups containing one verified reference plus multiple known failures and measure whether the evaluator can identify the reference as N grows.",
+      "evidence": "REFLECT's Best-of-N stress test places the verified reference among 4-7 failure-bearing alternatives. Process-level selection collapses from single-pair 37.1% to 0.0% for GPT-5.4 and 24.1% to 0.0% for Gemini-3.1-Pro; Qwen3-8B 0.7% to 0.0%, Qwen3-32B 0.0% to 0.0%. Outcome selection also drops: GPT-5.4 38.0% to 10.0%, Gemini 32.5% to 5.0%, Qwen3-8B 14.5% to 0.0%, Qwen3-32B 39.5% to 5.0%.",
+      "quantitative": "Best-of-N process delta: -37.1, -24.1, -0.7, 0.0 pp; outcome delta: -28.0, -27.5, -14.5, -34.5 pp across the four tested judges.",
+      "scope": "REFLECT evidence-based research-agent controlled failure alternatives; four tested judges and the paper's group construction.",
+      "uncertainty": "Does not prove all rerankers fail; it proves single-pair accuracy cannot be assumed to transfer to group selection. Need group-aware calibration methods and N-scaling curves."
+    },
+    {
+      "candidate_id": "eval-g1-unsupervised-jury-reliability-btsigma-v1",
+      "mechanism": "Estimate global judge reliability from pairwise inconsistency/cycle structure and weight jurors by learned reliability instead of equal-weight averaging when human labels are unavailable.",
+      "evidence": "BT-sigma's learned discriminator 1/sigma correlates strongly with external judge quality and even more strongly with internal cycle consistency. On SummEval, overall correlation between 1/sigma and judge performance is PCC 72.21%, rank SRC 85.71%; with 1-CycleRate it is PCC 90.29%, SRC 95.24%. On Topical-Chat those are PCC 67.41%, SRC 59.52% for performance and PCC 93.09%, SRC 90.48% for cycle consistency. In the Topical-Chat overall jury-size ablation, at 8 judges AvgProb/softBT/BT-sigma are 54.64/58.50/59.92 SRC; at 2 judges 46.41/50.91/52.99.",
+      "quantitative": "At two judges BT-sigma is +6.58 SRC points over AvgProb and +2.08 over softBT; at eight judges +5.28 over AvgProb and +1.42 over softBT. SummEval hard BT-sigma is significant vs AvgProb on all four reported aspects (COH/CON p<0.001; FLU/REL p<0.05).",
+      "scope": "pairwise NLG comparative assessment on SummEval and Topical-Chat; global per-judge reliability, not per-instance reliability.",
+      "uncertainty": "Transfer to long-horizon agent/process/citation judgments is untested. Per-judge global reliability may miss instance-specific difficulty; pair with per-instance diagnostics rather than treating it as sufficient."
+    },
+    {
+      "candidate_id": "eval-g1-citation-criterion-calibration-v1",
+      "mechanism": "Treat citation-verifier criteria as distinct measurement instruments. Calibrate source relevance and factual support separately against human-reviewed hard cases, and report FPR/FNR/pass-rate drift plus F1/kappa rather than one aggregate verifier score.",
+      "evidence": "The 2026 citation-verifier benchmark uses 624 attribution-citation pairs (1,248 LLM-judged criterion decisions) with all decisions human-reviewed and 378 hard cases adjudicated from judge disagreement. On the full set GPT-5-mini leads source relevance at F1 .908 / kappa .636, while factual-support point estimates are much closer and overlapping; Claude Opus 4.6 is .750 / .701 and GPT-5-mini .710 / .649. Rankings change on the hard subset, and directional error differs materially. Gold source-relevance pass rate is 79.3% while all eight judges underpredict it; factual-support FNR ranges roughly .183 to .470.",
+      "quantitative": "624 pairs; 1,248 criterion decisions; 378 adjudicated hard cases. Source relevance GPT-5-mini F1 .908. Factual support examples: Opus 4.6 F1 .750, GPT-5-mini .710. Reported cost spans ~49x without monotonic quality scaling.",
+      "scope": "deep-research citation source relevance and factual support, under the benchmark's retrieved-source inputs and human review protocol.",
+      "uncertainty": "Criterion-specific best model may change with task/domain; hard-case distribution is enriched by disagreement and should not be treated as deployment prevalence."
+    },
+    {
+      "candidate_id": "eval-g1-retrieval-depth-factuality-stress-v1",
+      "mechanism": "Include a retrieval-depth/synthesis-load stress test in research-agent evaluation: hold model/task family fixed, vary tool-call/search depth, and measure factual support independently from link validity and topical relevance.",
+      "evidence": "Cited but Not Verified varies maximum tool calls over 2,10,30,50,70,100,150 for GPT-5.4 and Claude Opus 4.6. GPT-5.4 Fact Check falls 78.6%->16.7% from 2 to 150 calls while Link Works stays 97.7-100% and Relevant 95.3-100%. Claude Opus 4.6 Fact Check falls 80.0%->57.9%, with Link Works/Relevant >=92.3%. The paper reports ~42% average factual-accuracy degradation across the two models, despite stable surface citation metrics.",
+      "quantitative": "GPT-5.4: 78.6,45.9,43.0,38.0,35.5,37.2,16.7 Fact Check across 2..150 calls. Claude Opus 4.6: 80.0,74.4,69.2,61.2,61.7,58.7,57.9. Average endpoint degradation ~42%; model-specific endpoint drops ~62 and ~22 points.",
+      "scope": "two frontier models in the paper's deep-research web-search setup; max tool calls as search-depth intervention.",
+      "uncertainty": "The mechanism is compatible with information overload/attention dilution but the ablation does not isolate all mediators such as report length, source count, or task difficulty. Do not generalize the exact slope to other agents."
+    },
+    {
+      "candidate_id": "eval-g1-selective-risk-controlled-judging-v1",
+      "mechanism": "Allow judges to abstain and calibrate the acceptance threshold with finite-sample risk control rather than forcing every decision or thresholding raw confidence. Use bidirectional/order-neutral uncertainty when position effects are plausible, and re-calibrate under distribution shift.",
+      "evidence": "SCOPE's BPE queries both response orders and converts order-averaged preference probability to entropy. At target alpha=.10 across MT-Bench, RewardBench and Chatbot Arena, empirical accepted-set risk is typically .097-.099 while retaining meaningful coverage; on MT-Bench Qwen-7B coverage is .246 at risk .097 vs naive .102 at risk .116. Scope achieves 1.1-3.2x the coverage of Trust-or-Escalate at the same MT-Bench risk constraint. Calibration-size ablations retain risk <=.10 even at n=50 and coverage is largely converged by n=200-500. Under calibration-label noise, risk stays conservative but coverage can collapse near zero.",
+      "quantitative": "At alpha=.10, MT-Bench Scope coverage/risk Qwen7B .246/.097, Qwen14B .504/.098, Qwen32B .502/.099, Llama70B .543/.098. Calibration n=200 is within about 5-10% of n=1000 coverage in reported cells. Cross-benchmark shift can break guarantees: RewardBench calibration -> harder targets reaches risk up to .203.",
+      "scope": "pairwise preference judging under exchangeability; tested on MT-Bench, RewardBench, Chatbot Arena plus extended JudgeBench/PKU-SafeRLHF and a specialized critic.",
+      "uncertainty": "Not yet validated for multicriterion agent trajectories or scalar/process rubrics. Distribution shift is a first-order failure mode; cross-benchmark risk rises to .157-.203 in some cells, so 'conformal' is not a transferable guarantee without target-distribution calibration."
+    },
+    {
+      "candidate_id": "eval-g1-per-instance-reliability-diagnostics-v1",
+      "mechanism": "Add per-instance reliability diagnostics to judge evaluation: conformal prediction-set width for scalar ratings plus local preference-cycle checks for pairwise judgments. Escalate or abstain on wide/high-cycle cases instead of relying on aggregate judge correlation.",
+      "evidence": "Diagnosing LLM Judge Reliability reports aggregate 3-cycle violation rates only 0.8-4.1%, yet 33-67% of SummEval documents contain at least one directed 3-cycle. Conformal set width over 1-5 Likert scores correlates with actual judge-human disagreement at Spearman +0.576 over N=1,918 (p<1e-100), with cross-judge width correlations around .32-.38, suggesting shared document difficulty. Reliability varies more by criterion than judge: average set size ~3.0 relevance, ~3.9 coherence, ~4.9 fluency/consistency.",
+      "quantitative": "cycle rate 0.8-4.1% aggregate but 33-67% documents affected; set-width vs error rs=.576, N=1,918, p<1e-100; cross-judge width r~.32-.38.",
+      "scope": "SummEval, four judges/four NLG criteria; workshop/preprint evidence.",
+      "uncertainty": "Need validation on agent trajectories, tool calls and research reports. The paper reports MFAS ranking repair does not improve human ranking agreement, so cycle detection is diagnostic rather than automatically repairable."
+    },
+    {
+      "candidate_id": "eval-g1-benchmark-resolution-gating-v1",
+      "mechanism": "Treat benchmark resolution/power as a precondition for interpreting small regressions or gains. Use paired-design MDE with actual discordance and clustering; label comparisons unresolved when the suite cannot attain the target alpha/power rather than converting tiny score differences into directional claims.",
+      "evidence": "Resolution Diagnostics for Paired LLM Evaluation reports that at (alpha,power)=(.05,.8), 11/40 Open LLM Leaderboard v1 pairwise comparisons and 4/9 adjacent MMLU-Pro top-10 pairs are unresolved under the actual paired design; accounting for subject clustering raises MMLU-Pro to 6/9, remaining 5-6/9 in 99.9% of category-bootstrap resamples. The paper warns common unpaired Cohen-h plus (1-rho) shortcuts can miss the correct small-effect paired sample size by about a factor of two.",
+      "quantitative": "11/40 unresolved OLL v1 pairs; 4/9 MMLU-Pro adjacent pairs unresolved, 6/9 with clustering; 5-6/9 in 99.9% category-bootstrap resamples.",
+      "scope": "paired binary/accuracy-style leaderboard comparisons; abstract-level extraction pending full-table verification.",
+      "uncertainty": "Full primary tables/method details still need extraction; extension to graded agent outcomes requires variance model appropriate to continuous/ordinal/multilevel scores."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Single-pair judge accuracy is sufficient evidence for Best-of-N selection quality",
+      "reason": "Rejected in REFLECT's tested setup: process Best-of-N collapses to 0% for all four judges despite nonzero pairwise accuracy, and outcome Best-of-N falls 14.5-34.5 points."
+    },
+    {
+      "lead": "Raw confidence thresholding gives reliable selective judging",
+      "reason": "Rejected for the tested SCOPE benchmarks. Vanilla/heuristic exceed alpha=.10; naive calibration exceeds it in several cells (e.g. MT-Bench .116/.124), while conformal calibration controls risk by abstaining."
+    },
+    {
+      "lead": "A conformal calibration threshold can be transferred across benchmarks without re-calibration",
+      "reason": "Rejected. SCOPE cross-benchmark transfer from easier RewardBench to harder targets reaches empirical risk .157-.203 at a .10 target, demonstrating exchangeability failure."
+    },
+    {
+      "lead": "Aggregate F1 or kappa alone is sufficient to select a citation verifier",
+      "reason": "Rejected. Citation-verifier error is directional and criterion-dependent; hard-subset rankings shift, and similar aggregate scores can hide very different FNR/FPR/pass-rate drift."
+    },
+    {
+      "lead": "More retrieval/search depth monotonically improves factual citation support",
+      "reason": "Rejected within the two-model controlled ablation: factual support degrades sharply as tool-call budget increases while link/relevance metrics remain stable. Scope is two models, not a universal law."
+    },
+    {
+      "lead": "Low aggregate transitivity-violation rate implies reliable per-instance judging",
+      "reason": "Rejected on SummEval: aggregate cycles are 0.8-4.1%, yet 33-67% of documents have at least one 3-cycle."
+    },
+    {
+      "lead": "Equal-weight jury aggregation should be the default when no human labels exist",
+      "reason": "Weak in BT-sigma's tested NLG settings; unsupervised judge-reliability weighting improves rank correlation, including at small jury sizes. Transfer to agent evaluation remains open."
+    }
+  ],
+  "frontier": [
+    "Obtain full primary text/tables for Resolution Diagnostics (arXiv:2605.30315), verify its paired MDE derivation, clustering penalty, multiplicity and anytime-valid sequential-test results, then translate to ordinal/continuous agent-evaluation outcomes.",
+    "Locate an accessible primary HTML/author mirror for Adaptive Sequential Certification for LLM Evaluators; the OpenReview PDF screenshot path was blocked. Verify the reported 29-grader/3-benchmark annotation savings, exact-boundary error inflation, and when evidence-maximizing item ordering beats Fisher-information selection.",
+    "Search for group-aware judge/reranker calibration that is explicitly evaluated as candidate-set size N grows; compare against REFLECT Best-of-N collapse and test whether pairwise tournament, listwise, or elimination protocols retain controlled error.",
+    "Extend citation evaluation beyond per-citation relevance/support to coverage/necessity: find primary benchmarks measuring whether all material claims are supported, whether citations are sufficient/non-redundant, and whether evidence omission is detected.",
+    "Test SCOPE-like selective risk control on non-pairwise tasks: scalar rubric judging, step-level process labels, citation factual support, and long-horizon trajectory failure localization. Quantify calibration under domain drift and criterion drift.",
+    "Validate conformal-width/transitivity diagnostics on agent trajectories: determine whether wide sets/cycles predict first-error localization failures, bad reranking, or downstream selection errors rather than only NLG rating disagreement.",
+    "Search objective/intervention-based computer-use/GUI-agent evaluators for irreversible side effects, hidden policy violations, stale state, and tool-response grounding; prioritize benchmarks with human-validated causal failures.",
+    "Construct a minimal multi-resolution evaluation suite linking outcome success, step correctness, first critical error, side effects, citation support, and uncertainty/abstention; use ablations to test whether each layer adds decision value.",
+    "Search benchmark-design methods that separate item sampling, stochastic generation variance, judge variance, and clustered task families, with MDE/power specified before regression claims."
+  ],
+  "termination_diagnostics": {
+    "frontier_empty": false,
+    "report_readiness_used_as_stop_condition": false,
+    "additional_frontier_actions_completed_this_run": [
+      "Completed the previously unresolved REFLECT failure-taxonomy and Best-of-N branch, including exact group-selection accuracy collapses.",
+      "Completed the previously unresolved BT-sigma quantitative branch, including performance/cycle correlations and 2-8 judge jury-size ablations.",
+      "Opened a new citation-verification branch: quantified criterion-level verifier calibration and independently followed its cited Onweller primary source to the 2-150 tool-call factual-support ablation.",
+      "Opened a new selective-risk branch with SCOPE and followed it through calibration-size, label-noise, specialized-critic, and cross-benchmark transfer ablations; identified exchangeability failure up to .203 risk at a .10 target.",
+      "Followed the per-instance uncertainty branch into conformal prediction-set width and transitivity diagnostics.",
+      "Followed the benchmark-power frontier into a 2026 paired-resolution diagnostic reporting substantial unresolved leaderboard comparisons."
+    ],
+    "current_blockers": [
+      "OpenReview served browser verification when trying to open/screenshot the Adaptive Sequential Certification PDF, so its detailed primary tables were not ingested as a candidate in this checkpoint.",
+      "Direct arXiv HTML endpoints for 2605.30315 and 2607.08700 intermittently returned disabled/internal errors; 2605.30315 remains abstract-level, while 2607.08700 had been extracted from a primary rendering earlier in the run."
+    ]
+  },
+  "exact_next_action": "First obtain an accessible full primary rendering for arXiv:2605.30315 and verify the MDE/resolution tables, clustering and anytime-valid claims. Then find an HTML/author-copy of Adaptive Sequential Certification and extract its actual annotation-saving curves plus boundary-failure rates. After that, search primary citation-coverage/necessity benchmarks so research-report evaluation scores not only whether each shown citation is correct but whether material claims lacking adequate evidence are detected."
+}
