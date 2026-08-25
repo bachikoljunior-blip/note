@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "continual_learning/CLG1-CL-007",
+  "canonical_id": "External-memory representation and retrieval granularity for cross-task experience reuse in LLM agents",
+  "source": {
+    "paper": "When Continual Learning Moves to Memory: A Study of Experience Reuse in LLM Agents",
+    "arxiv": "2604.27003v1",
+    "paper_date": "2026-04-29",
+    "authors": ["Qisheng Hu", "Quanyu Long", "Wenya Wang"],
+    "paper_status": "working-in-progress preprint at audit time"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "paper_protocol": {
+    "framework": "frozen-backbone non-parametric continual learning over an external memory M, with two sequential task phases A and B and no weight updates",
+    "base_system": "ReAct-style interaction built on AgentGym with the ReMe memory module; BM25 retrieval throughout",
+    "backbone": "Qwen-Plus",
+    "data_budget": "200 training instances per task phase and 100 test instances per task; results averaged over two independent runs",
+    "study_1": {
+      "raw": "complete action-observation trajectory per episode, top-1 memory retrieval",
+      "insight": "LLM-distilled abstract strategy insights, approximately three per instance, aggregated into one task-level memory keyed by original task instruction, top-1 retrieval"
+    },
+    "study_2": {
+      "cond_agg": "one task-level insight bundle per instance, top-1 retrieval once at episode start",
+      "cond_ind": "each insight stored separately with an LLM-generated when_to_use key, top-3 once at episode start",
+      "cond_step": "same insight-level storage as Cond-Ind but re-query every four execution steps; approximately three insights surfaced per retrieval event"
+    },
+    "reported_directional_evidence": "clean worker primary extraction reports ALFWorld A→B FWT raw -9.5pp versus insight +6.5pp; BabyAI raw -7.5pp versus insight +9.0pp; ALFWorld hard baseline-fail subset raw ΔNL -26.1pp versus insight +3.3pp. BabyAI organization effects are direction-dependent: Cond-Ind A→B +15.0pp FWT versus Cond-Agg +9.0pp, but B→A Cond-Ind -1.0pp versus Cond-Agg +7.5pp; Cond-Step can help or hurt depending on target execution structure.",
+    "claim_scope": "two environment/task-family pairs, frozen Qwen-Plus backbone, AgentGym/ReMe/BM25, finite top-k retrieval, 200-instance sequential phases and two-run averages. The results support a design warning about representation/retrieval interference under this protocol, not a universal theorem that abstract memory always dominates raw trajectories or that any particular memory granularity is optimal."
+  },
+  "artifact_evidence": {
+    "paper_specific_repository": "No author-associated repository or paper-specific code/data release for arXiv:2604.27003 was identified by targeted web and GitHub repository searches on 2026-08-25.",
+    "base_components": {
+      "AgentGym": "AgentGym is public and provides ALFWorld/BabyAI-capable agent-environment infrastructure, datasets/benchmark tooling and evaluation controllers, but the paper does not pin an AgentGym commit/release in the text surfaced during this audit.",
+      "ReMe": "agentscope-ai/ReMe is a substantial public memory-management project. Its current main at audit time was 626c850ccb2c25be92a9ce575886a85f54e8683a (2026-08-24), but this is not evidence that this commit matches the paper's April 2026 experiment. The paper citation to ReMe does not by itself bind an exact package/repository revision for the reported runs.",
+      "BM25": "the retrieval algorithm is standard and specified, but the tokenizer/preprocessing/scoring implementation and exact index construction used for paper memories are not bound to a released experiment artifact."
+    },
+    "protocol_transparency": "The preprint appendix is unusually explicit about run labels, FWT/BWT/RR/NL metrics, AgentGym+ReMe+BM25, storage/retrieval conditions, top-k, four-step Cond-Step frequency, Qwen-Plus backbone, 200/100 train/test counts and two-run averaging. This makes conceptual reimplementation feasible even without a release.",
+    "missing_paper_artifacts": [
+      "No paper-specific source tree or immutable experiment commit was identified.",
+      "No exact Qwen-Plus provider/model snapshot or API-version/date binding was identified in the surfaced protocol; a hosted model can change underneath the experiment.",
+      "No released exact ALFWorld/BabyAI task-instance lists/splits for the two task families were identified.",
+      "No exact prompts for ReAct action generation, raw-memory insertion, insight distillation, when_to_use generation, or memory formatting were identified as versioned files in a paper artifact.",
+      "No exact AgentGym/ReMe revisions, BM25 library/settings/tokenization or context-budget/truncation settings were bound to an experiment manifest.",
+      "No committed per-instance trajectories, generated insight memories, retrieval results, run seeds/provider randomness controls, or raw two-run score ledgers were identified.",
+      "No one-command or containerized reproduction environment for the paper-specific modifications was identified."
+    ]
+  },
+  "reproducibility_assessment": {
+    "grade": "C+",
+    "official_artifact_support": "moderate at the protocol/base-component level, weak at the exact paper-run level. AgentGym and ReMe are public, and the appendix is detailed, but the experiment glue, exact revisions/prompts/splits/provider identity and raw outputs are not publicly pinned in a paper-specific artifact identified in this audit.",
+    "independent_replication": "No clear independent provenance-equivalent numerical reproduction of the ALFWorld/BabyAI transfer results was identified in the targeted public search on 2026-08-25. Secondary summaries and visualizations repeat the paper results but are not independent reruns. Absence of located evidence is not evidence that none exists.",
+    "failed_independent_replication": "None identified in the targeted search; do not interpret the missing release or missing rerun as a failed scientific replication.",
+    "judgment": "This is a high-information experimental design with enough appendix detail to reconstruct the conceptual ablations, and its underlying AgentGym/ReMe ecosystem is public. However, exact numerical reproducibility is currently limited by missing paper-specific artifacts and hosted-model/version dependence. The strongest downstream-safe statement is that the study provides primary preprint evidence that memory representation and retrieval granularity can cause directional transfer/forgetting effects under the specified Qwen-Plus + AgentGym/ReMe/BM25 protocol. It does not yet provide a provenance-equivalent public artifact trail sufficient to independently recompute the reported pp deltas.",
+    "exact_blockers": [
+      "No paper-specific repository/commit or archived experiment package was identified.",
+      "Qwen-Plus is a hosted backbone and the exact immutable model/API snapshot used for the reported runs is not pinned by a public artifact identified here.",
+      "Exact AgentGym and ReMe revisions are not bound to the paper runs; current public ReMe is newer than the paper submission and cannot be assumed equivalent.",
+      "Task-instance splits, prompts, memory serialization, BM25 preprocessing/index settings, context-budget policy, seeds and raw outputs are not available in a single immutable manifest identified in this audit.",
+      "Only two independent runs are reported, making variance/stability especially important; raw per-run ledgers are not publicly pinned in an identified artifact.",
+      "No independent provenance-equivalent rerun was located in the targeted search window."
+    ],
+    "scope": "Supports a scoped design-warning candidate for external-memory agents. Artifact gaps reduce replayability but do not constitute evidence against abstract-insight memory, raw trajectories, ReMe, AgentGym, or the broader experience-reuse family."
+  },
+  "recommended_matched_reproduction": {
+    "minimum_viable": "Freeze a public AgentGym commit, ReMe commit, open-weight or immutable-version backbone, BM25 implementation, exact task-instance lists and all prompts. Reproduce only Study 1 A→B on one environment first, with raw versus insight under identical top-1/context budgets and at least 3-5 seeds/runs.",
+    "diagnostic": "Persist each source episode, memory object, retrieval ranking, injected context and action trace so FWT plus RR/NL can be recomputed and negative transfer localized to retrieval versus generation.",
+    "extension": "Only after Study 1 ordering is reproduced should Cond-Agg/Cond-Ind/Cond-Step be tested. Keep storage granularity, number of surfaced insights and retrieval-event count separately budgeted; otherwise retrieval frequency and context volume are confounded."
+  },
+  "provenance": [
+    "https://arxiv.org/abs/2604.27003",
+    "https://www.researchgate.net/publication/404332510_When_Continual_Learning_Moves_to_Memory_A_Study_of_Experience_Reuse_in_LLM_Agents",
+    "https://agentgym.github.io/",
+    "https://github.com/WooooDyy/AgentGym",
+    "https://github.com/agentscope-ai/ReMe",
+    "https://github.com/agentscope-ai/ReMe/commit/626c850ccb2c25be92a9ce575886a85f54e8683a"
+  ]
+}
