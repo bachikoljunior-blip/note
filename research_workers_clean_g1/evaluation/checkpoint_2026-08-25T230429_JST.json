@@ -1,0 +1,142 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T23:04:29+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T215903_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 1,
+    "config_revision": 1,
+    "enabled_desired": true,
+    "source": "automation_control/DESIRED_STATE.json"
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity and benchmark-design; selective/post-selection validity, few-cluster randomization, anytime-valid stopping, and filtration mismatch",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Post-selection inference for e-value based confidence intervals",
+      "authors": "Xu, Wang, Ramdas",
+      "date": "2024",
+      "url": "https://arxiv.org/abs/2203.12572",
+      "primary": true,
+      "action": "Extracted e-BY post-selection FCR guarantee under arbitrary selection/dependence for already-valid e-CIs, plus sequential/stopping-time applicability and real A/B evidence."
+    },
+    {
+      "title": "Placebo inference on treatment effects when the number of clusters is small",
+      "authors": "Andreas Hagemann",
+      "date": "2019",
+      "url": "https://arxiv.org/abs/1803.02764",
+      "primary": true,
+      "action": "Extracted few-cluster placebo/randomization size and power simulations, especially 3+3 and 6+2 cluster designs."
+    },
+    {
+      "title": "Inference in Cluster Randomized Trials with Matched Pairs",
+      "authors": "Bai, Liu, Shaikh, Tabord-Meehan",
+      "date": "2025-08-14",
+      "url": "https://arxiv.org/abs/2211.14903",
+      "primary": true,
+      "action": "Extracted finite-sample/asymptotic randomization-test scope and 2,000-replication size/power tables for 12, 26 and 50 matched pairs."
+    },
+    {
+      "title": "AV-AIVAT: 74x Cheaper Agent Evaluation with Certified Anytime-Valid Stopping in Imperfect-Information Games",
+      "authors": "Boning Li, Yu Chen, Longbo Huang",
+      "date": "2026-08-06",
+      "url": "https://arxiv.org/abs/2608.06362",
+      "primary": true,
+      "action": "Extracted agent-evaluation variance reduction, stopping-time savings, exact-vs-asymptotic CS distinction, held-out calibration, and optional-stopping stress tests."
+    },
+    {
+      "title": "Combining Evidence Across Filtrations",
+      "authors": "Yo Joong Choe, Aaditya Ramdas",
+      "date": "2026",
+      "url": "https://arxiv.org/abs/2402.09698",
+      "primary": true,
+      "action": "Extracted failure of coarse-filtration e-process validity under finer-information stopping and the adjuster-based e-lifting remedy."
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-post-selection-e-confidence-layer-v1",
+      "mechanism": "For adaptively selected evaluation metrics, candidate gates, or continuously monitored endpoints, construct each marginal statement as a valid e-CI/confidence sequence under its actual data-dependence assumptions, then apply e-BY after selection. Keep dependency-model selection separate: e-BY cannot rescue a marginal interval that was invalid because the wrong clustering/dependence model was chosen.",
+      "evidence": "Xu, Wang and Ramdas prove e-BY FCR control at target delta with no restriction on the selection rule or dependence among already-valid e-CIs. The construction also supports stopped confidence sequences. In a Twitter A/B dataset spanning 1.5 years with 263 experiments and K=30 treatment/control parameters, at delta=0.1 e-BY justified shipping in 127 experiments versus 122 for BY; among experiments both methods could ship, mean decision time was 1.2 versus 1.5 days. Simulations also covered K from 10 to 1000 under multiple signal sizes and dependence settings.",
+      "scope": "Post-selection among valid e-value/e-CI constructions. It does not validate selecting an incorrect dependence model or finer clustering level on the same data.",
+      "uncertainty": "FCR is not automatically the right objective for a single high-stakes pass/fail gate; agent-specific endpoint selection and family structure need explicit design."
+    },
+    {
+      "candidate_id": "eval-g1-small-cluster-randomization-gate-v1",
+      "mechanism": "When model/variant assignment can be randomized at the independent task/cluster or matched-pair level, base small-sample comparison on permutation/randomization at that assignment unit rather than treating trajectories/steps as independent. Prefer design-based inference when there are only tens of independent tasks and asymptotic cluster formulas are fragile.",
+      "evidence": "Hagemann's 2,000-replication simulations at nominal 5% show placebo inference near target under very few clusters: with 3 treated + 3 controls, placebo 5.35%, Ibragimov-Mueller 2.2%, wild bootstrap 8.55%, ordinary t test 16.05%; with 6 treated + 2 controls, placebo 5.30% versus wild bootstrap 9.05%. Bai et al. similarly find matched-pair randomization tests control size more reliably than cluster-robust alternatives for fewer than about 50 pairs. In one Model-1 setting with G=12 pairs, RT size was 0.0395, conventional CR 0.0015, and PCVE 0.0770; at G=26 and 50 pairs RT remained near 0.05.",
+      "scope": "Requires a valid randomized/exchangeable assignment or a null under which the permutation is justified. It is not a generic fix for observational benchmark comparisons.",
+      "uncertainty": "Need direct agent-benchmark experiments with bounded paired rewards, repeated rollouts per task, and heterogeneous task difficulty."
+    },
+    {
+      "candidate_id": "eval-g1-dual-track-anytime-agent-eval-v1",
+      "mechanism": "For expensive noisy agent comparisons, pair a predictable past-only variance-reduction/control-variate correction with sequential confidence sequences. Keep two evidence tracks: a practical/asymptotic screen calibrated on held-out data, and an exact certificate only when an independently justified almost-sure bound exists. Never use the observed sample maximum as proof of the exact bound; persist prefix/stopping/correction/bound provenance for replay.",
+      "evidence": "AV-AIVAT evaluates 15 agent configurations over 71,439 paired HUNL hands. Median raw/AIVAT variance ratio is 54.4x [24.2,86.0]; median raw/AIVAT AsympCS stopping-time ratio at +/-1 BB is 74.17x [54.53,97.62]. Yet the EB-CS stopping ratio is only 1.365x [1.235,1.556] over 14 evaluable runs, showing that variance reduction does not imply comparable exact-CS savings when the range/bet cap dominates width. At +/-0.5 BB all raw AsympCS streams were censored by 4,028-5,000 hands while AIVAT median stopping was 56.5 hands [42.5,71]. In a zero-effect optional-stopping stress test, naively peeking at fixed 95% intervals yielded 1,227/2,000 = 61.35% false nonzero claims; at those selected prefixes EB-CS contained zero in 1,227/1,227 and AsympCS in 1,226/1,227. A separate 5,000-hand standalone AsympCS check still showed 208/2,000 = 10.4% false positives, underlining that its guarantee is asymptotic rather than exact.",
+      "scope": "Primary empirical scope is imperfect-information game agents. HUNL corrected-payoff EB-CS is descriptive because no independent analytic bound for the corrected stream was available. Ground-truth Leduc provides an independently justified |Y|<=117 bound and stronger exact-CS evidence.",
+      "uncertainty": "The optional-stopping resampling simulation does not preserve temporal dependence or run-level clustering. Extension to hierarchical/crossed agent evaluation needs a corresponding dependence model."
+    },
+    {
+      "candidate_id": "eval-g1-filtration-lifting-gate-v1",
+      "mechanism": "Match the stopping rule's information set to the filtration under which an e-process/confidence sequence is valid. If a task-level/coarse statistic is valid only for coarse arrivals but stopping is allowed to inspect finer trajectory, step, tool, or evaluator signals, either restrict stopping to the coarse filtration or lift/adjust the evidence into the finer filtration before using the richer stopping information.",
+      "evidence": "Choe and Ramdas show that an e-process valid for a coarse filtration need not remain valid at stopping times in a richer filtration. Their Bernoulli example stops after five consecutive zeros using finer information and demonstrates failure of the coarse conformal test martingale at that stopping rule. Their e-lifting construction applies an adjuster to the running maximum of the coarse e-process, restoring anytime validity in the finer filtration, at an unavoidable evidence-efficiency cost for generic lifting.",
+      "scope": "General e-process/filtration theory. It does not by itself specify the correct task/trajectory clustering model; the filtration must faithfully encode all information visible to the stopping/selection policy.",
+      "uncertainty": "Need agent-specific simulations quantifying the power cost of lifting versus restricting stopping to task boundaries, especially under crossed task x judge/policy dependence."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "e-BY post-selection validity makes same-data dependence-model selection safe.",
+      "reason": "Rejected. e-BY assumes the marginal e-CIs/e-processes supplied to it are already valid; it cannot repair a confidence process made invalid by choosing the wrong clustering/dependence model."
+    },
+    {
+      "lead": "A 54x variance reduction implies roughly 54x savings for an exact confidence-sequence stopping rule.",
+      "reason": "Rejected. AV-AIVAT reports median 54.4x variance reduction but only 1.365x EB-CS stopping-time ratio in the HUNL descriptive exact-track replay because the declared range/bet cap creates a width floor."
+    },
+    {
+      "lead": "The AV-AIVAT 74x result is a general certified finite-sample speedup for agent evaluation.",
+      "reason": "Rejected. 74.17x is the median HUNL AsympCS stopping ratio for the tested 15 configurations; AsympCS is asymptotic, and the HUNL corrected stream lacked an independently justified analytic bound for an exact EB-CS claim."
+    },
+    {
+      "lead": "A confidence sequence valid at task boundaries remains anytime-valid if stopping also looks at step-level or trajectory-internal evidence.",
+      "reason": "Rejected in general. Coarse-filtration validity need not survive stopping in a richer filtration; explicit lifting/adjustment or restricted stopping is required."
+    },
+    {
+      "lead": "Randomization/permutation inference is a universal fix for few tasks.",
+      "reason": "Rejected. Its finite-sample validity depends on the assignment/exchangeability/null structure; arbitrary observational benchmark comparisons do not inherit that guarantee."
+    }
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Find primary methods that combine cluster-aware or paired bounded outcomes with anytime-valid confidence sequences/e-processes, preferably with only 10-50 independent tasks, and extract finite-sample type-I/coverage and stopping-time results."
+    },
+    {
+      "priority": 2,
+      "action": "Search selective/post-selection inference that can choose among candidate dependency structures or clustering levels while retaining valid downstream sequential inference, beyond simple full sample splitting."
+    },
+    {
+      "priority": 3,
+      "action": "Construct an agent-evaluation design map separating: randomized paired-task inference, coarse-filtration task-boundary stopping, lifted finer-filtration stopping, and crossed task x judge/policy dependence; identify where each guarantee breaks."
+    },
+    {
+      "priority": 4,
+      "action": "Deep-extract ground-truth Leduc and held-out calibration tables from AV-AIVAT to quantify exact EB-CS versus asymptotic screen tradeoffs under independently justified bounds."
+    },
+    {
+      "priority": 5,
+      "action": "Search direct benchmark/agent papers that use randomization inference over tasks or matched task pairs and compare against cluster-robust/bootstrap baselines."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "The prior dependency-unit-selection frontier was extended into three distinct validity layers: post-selection among already-valid e-CIs, design-based few-cluster randomization, and anytime-valid stopping under filtration mismatch. A direct 2026 agent-evaluation source added a fourth mechanism separating practical asymptotic screening from exact certification. None is treated as globally solved; each leaves explicit scope and failure modes.",
+  "exact_next_action": "Prioritize primary cluster-aware/paired bounded anytime-valid inference for only 10-50 independent tasks; then look for selection-aware dependency-structure choice that remains valid under sequential stopping without a full data split."
+}
