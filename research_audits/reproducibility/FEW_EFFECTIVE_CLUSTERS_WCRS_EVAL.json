@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "evaluation/eval-g1-few-effective-clusters-bootstrap-gate-v1",
+  "canonical_id": "Few/effective-cluster diagnostics plus jackknife-aware restricted wild cluster bootstrap (WCR-S)",
+  "source": {
+    "primary_paper": "Fast and reliable jackknife and bootstrap methods for cluster-robust inference",
+    "authors": ["James G. MacKinnon", "Morten Ørregaard Nielsen", "Matthew D. Webb"],
+    "journal": "Journal of Applied Econometrics 38(5):671-694",
+    "doi": "10.1002/jae.2969",
+    "arxiv": "2301.04527",
+    "published": "2023-08",
+    "replication_archive_doi": "10.15456/jae.2023042.1653281787"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "paper_claim_boundary": {
+    "mechanism": "cluster-jackknife transformations of restricted score vectors produce WCR-S, a restricted wild cluster bootstrap variant designed to improve finite-sample inference when nominal cluster counts are small or effective information is degraded by imbalance/leverage",
+    "reported_simulation_cell": "in a skewed-regressor design at G=84, nominal 5% rejection is reported as WCR-S 4.97%, CV3 5.49%, CV2 7.15%, and CV1 9.04%; the paper reports 400,000 Monte Carlo replications for these simulation experiments",
+    "paper_recommendation": "authors state that if they had to recommend one method, it would be WCR-S, while separately warning that bootstrap methods can still perform poorly with very few treated/control clusters",
+    "scope": "linear regression estimated by least squares under clustered disturbances. The transferable agent-evaluation lesson is diagnostic/resampling structure, not a direct guarantee for bounded paired agent scores, adaptive sampling, multi-way dependence or sequential stopping."
+  },
+  "artifact_evidence": {
+    "journal_archive": {
+      "availability": "Journal of Applied Econometrics article has an Open Data badge and a public ZBW Journal Data Archive package.",
+      "contents": "The archive description explicitly says it contains nine files for three empirical examples: one CSV data file, one Stata DO file and one produced output file per example.",
+      "limitation": "The public replication archive description does not advertise the paper's large Monte Carlo simulation code/raw simulation outputs. Therefore the headline 400,000-replication rejection-frequency cells are not directly replayable from the journal archive identified in this audit."
+    },
+    "method_implementations": {
+      "fwildclusterboot": "The public R package fwildclusterboot implements MacKinnon-Nielsen-Webb bootstrap variants including WCR31/WCR-S, WCR-V/WCR-B and unrestricted counterparts. Audited public repository master was at commit 336bb574eba169ac0183317f01d0564791d8122f (version 0.14.3-era commit dated 2023-09-12).",
+      "boottest": "Stata boottest documentation states its OLS jackknife/score implementation corresponds to MNW WCU/WCR-S; documentation also records historical default changes that can slightly alter bootstrap p-values, so software/version pinning matters for exact reproduction.",
+      "cross_implementation_reproduction": "An independent fwildclusterboot issue (opened 2025-03-27) uses the authors' archived minimum-wage empirical data, B=999,999 and seed 9326. The WildBootTests.jl engine reproduced the paper's reported WCR-C/WCR-S p-values to approximately 0.0001 (paper 0.0362/0.0374; Julia 0.0363/0.0373), while fwildclusterboot's native R engine gave 0.0358/0.0368. The issue remains open with no comments in the current GitHub state inspected. This is strong evidence that the method/empirical example is independently implementable, plus evidence that engine/small-sample-correction details can produce small but nonzero numerical discrepancies."
+    },
+    "simulation_replay_gap": "The worker candidate's most decision-relevant quantitative cell is from Monte Carlo simulation, but the identified journal replication package covers empirical examples rather than the simulation generator. The published article describes the DGP in detail, so reimplementation is possible, but exact raw simulation replay is weaker than the empirical-example replay path."
+  },
+  "reproducibility_assessment": {
+    "grade": "B+",
+    "official_artifact_support": "strong for empirical examples and production implementations of WCR-S; moderate for exact Monte Carlo-cell replay because the identified official archive does not include the simulation code/raw outputs",
+    "independent_replication": "There is concrete independent implementation evidence for at least one archived empirical example: fwildclusterboot/WildBootTests.jl reproduces the paper WCR-C/WCR-S p-values extremely closely. This is not an independent rerun of the paper's 400,000-replication simulation tables and must not be promoted as such.",
+    "failed_independent_replication": "No failed reproduction of the paper's WCR-S finite-sample simulation ordering was identified. A current open fwildclusterboot issue documents small R-engine versus Julia/paper p-value differences on an empirical example; this is an implementation/default discrepancy, not evidence that WCR-S fails.",
+    "judgment": "The WCR-S mechanism has substantially better reproducibility support than a typical research-only candidate: public journal data, executable empirical scripts, multiple maintained implementations and an independent cross-engine check that nearly reproduces a paper p-value. The main gap is narrower but important: the exact Monte Carlo evidence motivating the clean candidate's finite-sample rejection-rate comparison is not contained in the identified official archive. Downstream evidence may therefore treat WCR-S as a well-implemented statistical method with independently checked empirical behavior, while retaining the reported simulation cells as primary-study numerical evidence unless the authors' simulation code/raw outputs are separately located or independently reconstructed.",
+    "exact_blockers": [
+      "The identified ZBW replication archive explicitly covers three empirical examples; simulation code/raw Monte Carlo outputs for the 400,000-replication figures were not identified there.",
+      "Exact bootstrap p-values can shift slightly across engines/software versions/small-sample corrections; version, engine, weights, seed, bootstrap draw count and correction settings must be frozen in any reproduction.",
+      "The independent fwildclusterboot issue reproduces one empirical example, not the G=84 simulation cell used by the clean candidate.",
+      "Direct transfer to agent evaluation remains unvalidated because agent scores are often bounded, paired, non-OLS, adaptively sampled and potentially multi-way clustered."
+    ],
+    "scope": "Supports WCR-S as a reproducible method within clustered OLS inference and supports using effective-cluster/leverage diagnostics as a cautionary evaluation principle. It does not by itself validate an agent-evaluation confidence interval or sequential gate."
+  },
+  "recommended_matched_reproduction": {
+    "simulation": "Reconstruct the paper's G=84 skewed-regressor DGP from the published specification, freeze RNG and software, and recompute WCR-S/CV3/CV2/CV1 rejection rates with at least 100k replications first; compare confidence intervals around the reported 4.97/5.49/7.15/9.04 cells before paying the full 400k cost.",
+    "software_crosscheck": "Run the same generated datasets through at least two independently maintained implementations (e.g. fwildclusterboot native R and WildBootTests.jl/boottest-equivalent settings) with explicitly matched small-sample corrections; treat persistent engine gaps separately from method failure.",
+    "agent_extension": "If adapted to agent benchmarks, create a separate simulation with paired bounded task outcomes and realistic cluster imbalance. Do not cite the OLS Monte Carlo size result as direct calibration until that target estimator is tested."
+  },
+  "provenance": [
+    "https://doi.org/10.1002/jae.2969",
+    "https://arxiv.org/abs/2301.04527",
+    "https://journaldata.zbw.eu/dataset/fast-and-reliable-jackknife-and-bootstrap-methods-for-cluster-robust-inference",
+    "https://doi.org/10.15456/jae.2023042.1653281787",
+    "https://sites.google.com/view/mortennielsen/research",
+    "https://github.com/s3alfisc/fwildclusterboot/commit/336bb574eba169ac0183317f01d0564791d8122f",
+    "https://github.com/s3alfisc/fwildclusterboot/issues/159",
+    "https://github.com/droodman/boottest/blob/master/boottest.sthlp"
+  ]
+}
