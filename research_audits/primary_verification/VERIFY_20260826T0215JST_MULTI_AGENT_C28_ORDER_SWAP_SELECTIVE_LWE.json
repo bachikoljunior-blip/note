@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T02:15:00+09:00",
+  "candidate": {
+    "worker_namespace": "multi_agent",
+    "candidate_id": "multi_agent/C28-order-swap-selective-LWE",
+    "source_artifact": "research_workers_clean_g1/multi_agent/FOLLOWUP_2026-08-26_0000_JST.md",
+    "source_blob": "25cf94070c95dd76bc4ed6c87a3864b64db78658",
+    "claim": "Order-swap inconsistency is a directly tested label-free trigger for selectively escalating pairwise LLM evaluator computation; it concentrates updates on cases with larger measured benefit, while missing consistent-but-wrong cases and becoming expensive when the base judge is broadly unstable."
+  },
+  "primary_source": {
+    "title": "Becoming Experienced Judges: Selective Test-Time Learning for Evaluators",
+    "authors": ["Seungyeon Jwa","Daechul Ahn","Reokyoung Kim","Dongyeop Kang","Jonghyun Choi"],
+    "arxiv": "2512.06751v1",
+    "submitted": "2025-12-07",
+    "peer_reviewed_venue": "EACL 2026 Short Papers, pages 697-721",
+    "primary_html": "https://arxiv.org/html/2512.06751v1",
+    "acl_record": "https://aclanthology.org/2026.eacl-short.50/"
+  },
+  "verification": {
+    "selection_signal": {
+      "status": "verified",
+      "definition": "The vanilla judge evaluates both A-vs-B and B-vs-A. A response-order-dependent verdict is self-inconsistent and triggers Selective LWE meta-prompt updating; stable verdicts skip the expensive update path.",
+      "label_free": true,
+      "base_cost": "The Selective LWE budget includes two vanilla passes used for the consistency check."
+    },
+    "gpt_4_1_main_table": {
+      "status": "verified",
+      "metrics": "Pair Accuracy requires both original and swapped predictions to be correct; Relative Inference Cost is total input+output character length normalized to vanilla.",
+      "VLRewardBench": {
+        "Vanilla": {"PairAcc":0.529,"Consistency":0.801},
+        "Full_LWE": {"PairAcc":0.646,"Consistency":0.805},
+        "Selective_LWE": {"PairAcc":0.648,"Consistency":0.940}
+      },
+      "MMRewardBench": {
+        "Vanilla": {"PairAcc":0.747,"Consistency":0.863},
+        "Full_LWE": {"PairAcc":0.727,"Consistency":0.846},
+        "Selective_LWE": {"PairAcc":0.808,"Consistency":0.947}
+      },
+      "relative_inference_cost": {"Vanilla":1.0,"Full_LWE":10.9,"Selective_LWE":3.9},
+      "cost_ratio_selective_to_full": "3.9/10.9 ~= 35.8%; the paper describes this as approximately 36% of LWE",
+      "selective_cost_decomposition": "two vanilla passes for consistency checking plus an additional 1.9x for LWE on flagged cases",
+      "ordering_repeats": "LWE and Selective LWE main results are averaged over three random test-case orderings."
+    },
+    "inconsistent_subset": {
+      "status": "verified",
+      "scope": "single run (run 0), vanilla-inconsistent subsets",
+      "VLRewardBench": {"Vanilla":"0.504 (125/248)","Selective_LWE":"0.762 (189/248)"},
+      "MMRewardBench": {"Vanilla":"0.453 (62/137)","Selective_LWE":"0.672 (92/137)"},
+      "interpretation": "The intervention is substantially more helpful on the cases selected by order-swap inconsistency in this setup."
+    },
+    "consistent_subset_and_blind_spot": {
+      "status": "verified",
+      "consistent_but_wrong_counts": {"VLRewardBench":340,"MMRewardBench":117},
+      "consistent_subset_ablation": {
+        "VLRewardBench": {"Vanilla":"0.660 (659/999)","Full_LWE":"0.734 (733/999)"},
+        "MMRewardBench": {"Vanilla":"0.864 (746/863)","Full_LWE":"0.846 (730/863)"}
+      },
+      "clarification": "Table 4 applies full LWE as an ablation to consistent examples; it is not Selective LWE, which by design skips updates there. The MM result shows that updating consistent cases can reduce accuracy."
+    },
+    "backbone_generalization_and_cost_failure": {
+      "status": "verified",
+      "Gemini_2_5_Pro": {"Vanilla_pairacc":"0.696/0.820 VL/MM","Selective_pairacc":"0.744/0.852","cost":3.2},
+      "Claude_Sonnet_4_5": {"Vanilla_pairacc":"0.327/0.419","Selective_pairacc":"0.648/0.771","cost":15.2},
+      "cause_reported_by_paper": "Claude produces inconsistent judgments on over 50% of the test sets, so Selective LWE intervenes much more frequently and its cost rises sharply."
+    },
+    "batching": {
+      "status": "verified_qualitatively",
+      "finding": "Updating every sample (b=1) is most expensive and not necessarily best; b=8 degrades as update context becomes long/unstable; b=4 is the selected balance in the tested inconsistent subsets.",
+      "scope": "The HTML text describes this non-monotonic result but this audit did not digitize every point in Figure 7."
+    },
+    "weak_model_failure": {
+      "status": "verified",
+      "detail": "The limitations section reports that Qwen3-VL-235B-A22B-Instruct often fails to produce valid evaluation prompts after meta-prompt updates, so the method depends on base evaluator capability."
+    }
+  },
+  "scope_clarifications": [
+    "The direct experiment is sequential evaluator meta-prompt adaptation on two pairwise multimodal reward benchmarks, not evolutionary archive replacement or MAP-Elites. Transfer from selective judging to search-controller survival decisions is a hypothesis.",
+    "Order-swap inconsistency is a useful selection signal, not a correctness certificate. The source explicitly exposes hundreds of stable-but-wrong cases, so a controller that never audits stable decisions can systematically miss errors.",
+    "The 3.9x and 10.9x costs are normalized input/output CHARACTER LENGTH, not measured wall-clock, API dollars or exact tokenizer counts. Avoid calling 3.9x a token-cost ratio without qualification.",
+    "Selective LWE itself includes a two-pass order-swap probe, so 'selective' does not mean near-zero overhead on stable cases.",
+    "High instability can destroy the cost advantage: Claude Sonnet 4.5 reaches 15.2x because more than half of cases trigger updates. Therefore selective escalation needs a fallback/cap when the trigger rate is high.",
+    "The inconsistent-subset 125/248->189/248 and 62/137->92/137 comparisons are from run 0, whereas the headline main table averages three random-order runs. Do not mix their uncertainty/repetition scopes.",
+    "The consistent-subset comparison is Vanilla vs full LWE, not Vanilla vs Selective LWE. It supports the idea that uniform updating can be low-value or harmful on stable cases, but does not measure what Selective LWE would do there because it skips those updates."
+  ],
+  "status": "primary_verified_with_consistent_wrong_and_trigger_rate_cost_scope",
+  "confidence": "high for primary tables, subset counts and limitations; medium for transfer to population/QD search",
+  "unresolved": [
+    "Matched-budget archive/search experiment where order-swap inconsistency directly controls re-judging or survival/archive replacement and final search quality is measured.",
+    "Stable-wrong sentinel audit policy comparing random audits versus other perturbation/uncertainty probes at equal cost.",
+    "A trigger-rate cap/fallback policy for regimes where most judgments are unstable, preserving useful verification without 15x+ overhead."
+  ],
+  "downstream_instruction": "Retain C28 as direct evidence that a cheap decision-invariance probe can concentrate evaluator adaptation on cases with larger measured benefit, while explicitly carrying the stable-wrong blind spot, two-pass probe cost, character-length cost metric, and high-trigger-rate cost failure. Do not claim it directly improves evolutionary archive quality."
+}
