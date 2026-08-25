@@ -1,0 +1,105 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 7,
+  "config_revision": 4,
+  "control_snapshot": {
+    "note_main_sha_frozen": "c29e946dc7f47942ed09a73c8ab1ff1e6bd63a6f",
+    "desired_state_blob": "ae605e09eb3bcdc7aa18238d2c42218b0272d2e6",
+    "role_config_blob": "99d0a840ae0ad936881bc93eb5448dede4d7f044"
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T040330+0900.json",
+  "started_local": "2026-08-26T05:01:17+09:00",
+  "checkpointed_local": "2026-08-26T05:03:30+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404",
+    "note": "Semantic inputs were only own role-local clean state, sanitized root/own role config, and public sources."
+  },
+  "checked_sources": [
+    {
+      "source": "Wanqiao Xu, Yecheng Ma, Kan Xu, Hamsa Bastani, Osbert Bastani, Uniformly Conservative Exploration in Reinforcement Learning, AISTATS 2023",
+      "type": "primary PMLR/arXiv",
+      "url": "https://proceedings.mlr.press/v206/xu23j.html",
+      "result": "Primary-verified an adaptive current-baseline shield. The baseline policy is re-estimated from all observations so far; a reward-deficit state z tracks only positive local shortfall against that current baseline. UCBVI exploration is overridden once the conservative deficit budget is exhausted. Meta-episode stitching resumes exploration at the previously interrupted target state so per-episode shielding does not permanently bias exploration toward early states. Theorem 4.3 gives cumulative expected regret <= 20 H L sqrt(S A H N) + 250 H^2 S^2 A L^2 + (960 H^3 S/eta) sqrt(2 A L H N), and the paper summarizes this as tilde-O(H^3 sqrt(S A T)) for T=HN, while the uniformly conservative constraint holds with high probability for every episode and step."
+    },
+    {
+      "source": "Donghao Li, Ruiquan Huang, Cong Shen, Jing Yang, Near-optimal Conservative Exploration in Reinforcement Learning under Episode-wise Constraints, ICML 2023",
+      "type": "primary PMLR/arXiv",
+      "url": "https://proceedings.mlr.press/v202/li23k.html",
+      "result": "Primary-verified StepMix as a complementary smooth interpolation primitive: it mixes baseline and optimistic policies within each episode and achieves zero episode-wise conservative-constraint violation with high probability plus near-optimal regret order. Informal Theorem 4.2 gives tilde-O(sqrt(H^3 S A K)+H^3 S^2 A+H^3 S A Delta0(1/kappa^2+S/kappa)). The baseline can also be learned from a sufficiently large offline dataset."
+    },
+    {
+      "source": "Andrew Bennett, Dipendra Misra, Nathan Kallus, Provable Safe Reinforcement Learning with Binary Feedback, AISTATS 2023",
+      "type": "primary PMLR/arXiv",
+      "url": "https://proceedings.mlr.press/v206/bennett23a.html",
+      "result": "Primary-verified SABRE as a limited-feedback safety primitive: with an offline binary safe/unsafe oracle and technical assumptions, it never takes unsafe actions during training, actively queries uncertain safety regions, controls oracle-query complexity, and returns a near-optimal safe policy with high probability. It does not itself provide the adaptive baseline-relative utility floor sought in this frontier."
+    },
+    {
+      "source": "Paul Daoudi, Mathias Formoso, Othman Gaizi, Achraf Azize, Evrard Garcelon, Conservative Exploration for Policy Optimization via Off-Policy Policy Evaluation, arXiv:2312.15458",
+      "type": "primary preprint",
+      "url": "https://arxiv.org/abs/2312.15458",
+      "result": "Primary-verified a model-free conservative deployment gate for continuous finite-horizon policy optimization. It uses importance-sampling off-policy evaluation on self-generated data to counterfactually test the conservative baseline condition, derives a regret bound, and guarantees no conservative-constraint violation with high probability. This is promising for limited-feedback gating, but the source inspected here does not supply a second independent pathwise validity/safety debt."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r20-adaptive-baseline-deficit-shield-with-meta-episode-stitching",
+      "mechanism": "Replace a permanently fixed production baseline with a conservative policy re-estimated from all target observations so far. Track a one-sided reward-deficit state against that current baseline at every step; allow exploratory actions only while the certified deficit remains inside an exploration budget, otherwise override with the current baseline. To avoid the shield causing systematic under-exploration of late states, stitch the exploratory fragments across multiple episodes into an unbiased meta-episode and resume at the previous target state.",
+      "primary_source": "Xu et al., Uniformly Conservative Exploration in Reinforcement Learning, PMLR 206 (2023), arXiv:2110.13060",
+      "quantitative_evidence": "Theorem 4.3 bounds cumulative expected regret by 20 H L sqrt(S A H N) + 250 H^2 S^2 A L^2 + (960 H^3 S/eta) sqrt(2 A L H N), with L=log(5 S A H^2 M N); for T=HN the paper summarizes regret as tilde-O(H^3 sqrt(S A T)). Its uniformly conservative constraint holds with high probability for every episode k and every step t: the one-sided accumulated reward deficit z_t* is <= eta.",
+      "operational_observable": "For each decision retain current target-only/current-data baseline snapshot, lower/upper value confidence used by the shield, one-sided deficit z, budget eta, proposed exploratory action, whether it was overridden, target state for resumption, meta-episode id/length, stitched exploratory trajectory, regret/progress, and fallback count. Diagnose shield-induced exploration bias by state/time-position coverage rather than only total fallback frequency.",
+      "scope": "Finite-horizon tabular MDP theory with bounded rewards, high-probability confidence events, an ergodicity/diameter assumption and a bound that any single exploratory action cannot consume more than half the exploration budget. The deep-RL continuous-state extension is empirical rather than covered by the same theorem.",
+      "failure_conditions": "If the target process cannot reliably revisit interrupted states, meta-episode stitching can become slow or fail; the theory assumes worst-case hitting time <= H/2. If one exploratory action can cause deficit > eta/2, the shield cannot safely take that action under the theorem. A current baseline learned from sparse or misspecified data can be overly pessimistic or incorrectly confident unless its conservative value estimates are valid. Small eta increases the third regret term as 1/eta.",
+      "transfer_hypothesis": "For research automation, keep a live current-policy shadow learned only from current target evidence, track one-sided local decision debt rather than allowing later wins to erase earlier harms, and override risky proposals when debt is exhausted. When safety overrides fragment exploratory trajectories, resume the same branch/context later so protection does not systematically starve late-stage or hard-to-reach research states.",
+      "confidence": "high for source-domain adaptive-baseline/pathwise-deficit and stitching mechanism; medium for research-loop transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r19-baseline-shadow-with-certified-fallback",
+      "update": "r20 materially strengthens the fallback primitive by replacing a fixed baseline with a baseline estimated from all current target data and by making the safety accounting one-sided at every step. It also identifies a concrete failure of naive fallback: always exploring at the beginning of each episode can create state-position bias and linear regret, motivating meta-episode stitching."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "A fixed baseline is necessary for conservative exploration guarantees.",
+      "evidence": "False within Xu et al.'s tabular assumptions: the conservative policy can be adaptively estimated from all observations so far and still serve as the per-episode/step reference under the high-probability analysis.",
+      "reason": "Prefer a current-target baseline when confidence can be maintained, rather than freezing an obsolete production policy indefinitely."
+    },
+    {
+      "lead": "Switching to baseline whenever a per-episode budget is exhausted is enough without controlling where exploration resumes.",
+      "evidence": "False in general. Xu et al. explicitly show the naive beginning-of-episode exploration pattern can underexplore states reachable only later and lead to linear regret; the target-state/meta-episode stitching construction repairs that sampling bias under its assumptions.",
+      "reason": "A safety shield needs an exploration-continuation protocol, not only a fallback condition."
+    },
+    {
+      "lead": "A single primary method was found that simultaneously provides an independent anytime/pathwise validity debt and a separate adaptive-baseline utility floor under bandit-style partial feedback.",
+      "evidence": "Not established in this run. Uniformly Conservative Exploration gives a strong pathwise one-sided utility deficit against an adaptive current baseline; SABRE gives binary safety feedback; COPTIMIST gives model-free OPE baseline gating. The inspected primary sources do not prove the exact two-controller composition with both guarantees simultaneously.",
+      "reason": "Keep the composition frontier open and avoid claiming that one reward-deficit certificate is equivalent to an independent scientific-validity certificate."
+    }
+  ],
+  "frontier": [
+    "Find a single limited-feedback method that jointly enforces an independent hard/pathwise safety or calibration constraint and an adaptive current-policy baseline utility floor, rather than treating one scalar reward deficit as both.",
+    "Search safe policy improvement / conservative policy optimization with anytime-valid off-policy confidence sequences, so a current target-only baseline can be updated without optional-stopping leakage.",
+    "Look for algorithms composing binary safe/unsafe feedback (SABRE-like) with baseline-relative conservative regret/fallback while retaining no-unsafe-action guarantees and sublinear regret.",
+    "Find robust variants of adaptive-baseline deficit shielding under non-ergodic or hard-to-revisit states, where meta-episode stitching cannot assume bounded hitting time.",
+    "Quantify empirical shield overhead: fallback rate, meta-episode length tails, and time-to-cover late states versus unconstrained exploration and fixed-baseline conservative exploration."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Followed the exact prior frontier into conservative/safe sequential decision methods rather than stopping at the first baseline-fallback result.",
+      "Found and primary-verified an adaptive current-baseline shield with per-step one-sided deficit accounting and a concrete continuation mechanism that prevents shield-induced exploration bias.",
+      "Branched into binary-feedback safety and model-free off-policy baseline gating to test whether the two guarantees already exist in one method; did not find a proven full composition in the inspected sources.",
+      "Preserved the missing composition as a nonempty frontier instead of collapsing distinct validity and utility guarantees."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search for safe policy improvement or constrained contextual/RL algorithms that combine (a) an adaptively learned current/target-only baseline with uniform-over-time fallback, and (b) a second independent hard safety/calibration constraint under bandit or binary feedback. Prioritize anytime-valid off-policy confidence sequences or dual-certificate shields; if no single method exists, identify the weakest sufficient assumptions for safely composing Xu-style one-sided deficit shielding with SABRE-style binary safety certification."
+}
