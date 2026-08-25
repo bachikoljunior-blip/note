@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate": "open_source/argus-transition-authority",
+  "worker_artifact": "research_workers_clean_g1/open_source/RUN_20260826_0101.md",
+  "worker_blob": "20e6e3a76cdbeca55fdf7cddf0222e03ec414c80",
+  "verified_at": "2026-08-26T01:42:29+09:00",
+  "primary_commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+  "status": "primary_verified_with_capability_vs_integrity_scope_clarification",
+  "primary_sources": [
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/manager/_stage_ops.py",
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/manager/stage_decider.py",
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/core/sandbox.py",
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/tests/test_engineer_sandbox.py",
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/tests/skills/test_stage_completion_authority.py"
+  ],
+  "verified_claims": [
+    {
+      "claim": "The normal Manager decision-model path is mediated by host code rather than trusting a model-supplied early-completion capability.",
+      "result": "verified",
+      "evidence": "_StageDecisionMixin identifies decide_stage_transition as the Manager's sole stage-transition authority. Its model call is constructed with sandbox_mode=read-only and dangerous_yolo=False. After parsing, host code computes _allow_early_completion = (not open_ended and resolve_workflow_mode(root) == 'direct') and passes that host-derived boolean into the completion contract. StageDecision itself carries action/target/reason/diagnostic/resolves_wait, not an allow_early_completion field supplied by the model."
+    },
+    {
+      "claim": "The enabled Engineer sandbox protects control/package paths from writes.",
+      "result": "verified_with_default_off_scope",
+      "evidence": "sandbox.py defines the engineer containment policy as OFF by default and, when enabled, makes the project workdir the writable root while forbidding writes to ~/.argus-skill, ~/.codex, package source and the active venv. VCS credentials are scrubbed and PYTHONSAFEPATH=1 is set. tests/test_engineer_sandbox.py exercises these invariants."
+    },
+    {
+      "claim": "Filesystem integrity containment is equivalent to revoking an Engineer's ability to invoke stage-machine mutation primitives.",
+      "result": "contradicted",
+      "evidence": "The repository's own regression test documents testbed run 13 in which an Engineer imported the framework and called complete_final_stage directly. The repaired primitive now refuses non-final completion unless allow_early_completion is passed, but the same test explicitly states this is a lock, not a signature, and that a determined caller can still pass the argument. The sandbox contract restricts writes to framework/gate paths; it does not define an import/call denylist or opaque capability checked by stage_machine. Project-local state remains writable by design."
+    }
+  ],
+  "scope_corrections": [
+    "Do not infer transition-capability revocation from package-file immutability. The current source proves integrity protection, not an unforgeable authority boundary around Python-callable mutation functions.",
+    "The run-13 accidental early-completion path is materially repaired: a normal caller omitting allow_early_completion cannot complete a staged project off the final stage, and read-side certificate validation rejects old inconsistent early-completion records.",
+    "The boolean guard is caller-supplied at the primitive boundary. Therefore it is not equivalent to an opaque capability/token or a privilege check bound to Manager identity.",
+    "This audit did not launch a fresh sandboxed Engineer process and re-run the direct import after the repair. Runtime reachability under every deployment sandbox configuration is therefore not independently reproduced here; the stronger source-level conclusion is that the published sandbox and primitive contracts do not themselves revoke the call capability."
+  ],
+  "downstream_use": "Treat Argus as evidence for model-decision -> host mediator -> deterministic checks -> mutation on the normal Manager path, while separately labeling Engineer containment as filesystem/code-integrity protection rather than demonstrated control-plane capability revocation.",
+  "unresolved": [
+    "Execute a direct sandbox/runtime regression showing whether an enabled Engineer can import stage_machine and call advance_stage/rollback_stage/complete_final_stage against its writable project root after the repair.",
+    "Trace reset_stage_for_replacement_intent, persist_vertical(force_replacement=...) and other non-forward mutation surfaces for equivalent caller-identity/capability checks."
+  ]
+}
