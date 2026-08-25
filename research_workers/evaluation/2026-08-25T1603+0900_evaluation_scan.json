@@ -1,0 +1,186 @@
+{
+  "worker": "evaluation",
+  "run_timestamp_jst": "2026-08-25T16:03:20+09:00",
+  "independence": {
+    "o_read": false,
+    "o_derived_state_read": false,
+    "other_worker_state_read": false,
+    "comparator_or_integrator_state_read": false,
+    "own_prior_state": "none found; research_workers/evaluation/ returned 404 before search began",
+    "allowed_inputs": ["this worker prompt", "public external sources"]
+  },
+  "search_bias_and_seeds": {
+    "bias": "benchmark-design and measurement-validity first; then verifier/process-supervision/calibration mechanisms",
+    "initial_query_families": [
+      "LLM judge benchmark reliability calibration verifier primary paper",
+      "JudgeBench objective correctness LLM judges",
+      "process reward model verifier calibration uncertainty",
+      "generative verifier next-token prediction",
+      "judge panels correlated errors effective sample size",
+      "LLM-as-a-judge bias uncertainty calibration stability"
+    ],
+    "branching_strategy": "Follow quantitative benchmark failures into measurement-validity corrections, then trace mechanisms that improve verification or calibrate uncertainty."
+  },
+  "candidates": [
+    {
+      "candidate_id": "EVAL-OBJ-SWAP-CONSISTENCY-001",
+      "mechanism": "Evaluate judges on objectively verifiable response pairs, run both AB and BA orderings, and count inconsistent/tied aggregate verdicts as failures rather than hiding them in a preference score.",
+      "evidence": [
+        {
+          "source": "JudgeBench: A Benchmark for Evaluating LLM-Based Judges",
+          "url": "https://arxiv.org/abs/2410.12784",
+          "date": "2024-10-16",
+          "status": "primary preprint",
+          "quantitative": "JudgeBench has 350 objectively labeled pairs across knowledge/reasoning/math/coding. Vanilla GPT-4o judge scored 50.86% overall; Arena-Hard prompt with self-reference/analysis scored 56.57%; o3-mini(high) scored 80.86%. ChatEval multi-agent judge scored only 34.00% overall."
+        }
+      ],
+      "interpretation": "Human-preference agreement is not a sufficient validity test for advanced judging. Objective correctness plus order-swap consistency exposes failures that softer preference benchmarks can miss. The large gap between GPT-4o and reasoning models suggests judge reasoning capability is a real bottleneck, not merely prompt format.",
+      "scope_limits": "Pairwise comparison on datasets with ground-truth verification; does not by itself validate open-ended subjective evaluation."
+    },
+    {
+      "candidate_id": "EVAL-MULTIAXIS-VALIDITY-002",
+      "mechanism": "Replace single headline agreement with a minimum validation suite: chance-corrected agreement (e.g. Cohen's kappa/Krippendorff alpha), test-retest consistency, AB/BA position-flip checks, and explicit bias audits.",
+      "evidence": [
+        {
+          "source": "Reliability without Validity: A Systematic, Large-Scale Evaluation of LLM-as-a-Judge Models Across Agreement, Consistency, and Bias",
+          "url": "https://arxiv.org/abs/2606.19544",
+          "date": "2026-06-17",
+          "status": "primary preprint; not yet treated as independently replicated",
+          "quantitative": "21 judges from 9 providers, 3 benchmarks, 118 runs, about 541,000 judgments. Exact-match minus Cohen-kappa deflation was 33-41 percentage points on MT-Bench; judge rank shifted by up to 14 positions across benchmarks; >0.95 test-retest reliability coexisted with >0.10 position bias in two deployed judges."
+        }
+      ],
+      "interpretation": "A judge can be highly repeatable yet systematically wrong or biased. Reliability and validity must be tracked separately; raw agreement can overstate discriminative ability because it ignores chance agreement.",
+      "scope_limits": "Recent 2026 preprint. The reported verbosity-bias result is rubric-specific and should not be generalized beyond the tested protocol."
+    },
+    {
+      "candidate_id": "EVAL-CALIBRATED-PRM-IAS-003",
+      "mechanism": "Calibrate process-reward scores into model-specific success probabilities with uncertainty bounds, then use those probabilities to allocate test-time compute adaptively instead of treating raw PRM scores as calibrated probabilities.",
+      "evidence": [
+        {
+          "source": "Know What You Don't Know: Uncertainty Calibration of Process Reward Models",
+          "url": "https://arxiv.org/abs/2506.09338",
+          "date": "2025-06-11; revised 2025-11-07",
+          "status": "primary, accepted NeurIPS 2025",
+          "quantitative": "The paper shows state-of-the-art PRMs systematically overestimate eventual success, especially for weaker completion models and OOD AIME problems. Example MATH500 table entries with Qwen-PRM: Llama-3.1-8B fixed BoN 0.6440 accuracy versus calibrated instance-adaptive BoN 0.6223 at 0.3631 of the N=64 sampling budget; Qwen-2.5-7B fixed BoN 0.8540 versus calibrated IAS 0.8368 at 0.2342 budget."
+        }
+      ],
+      "interpretation": "Ranking quality and probability calibration are different properties. Raw verifier scores may suffice for ordering but are unsafe for budget decisions, abstention thresholds, or safety monitoring. Calibrated success probability can trade a small accuracy decrement for large compute savings and enables explicit confidence bounds.",
+      "scope_limits": "Demonstrated on mathematical reasoning with specific PRMs/LLMs; calibration is generator- and distribution-dependent and must not be assumed portable."
+    },
+    {
+      "candidate_id": "EVAL-GENERATIVE-VERIFIER-004",
+      "mechanism": "Train verifiers generatively with next-token prediction so the verifier can reason and use inference-time compute, rather than only outputting a scalar/classification score.",
+      "evidence": [
+        {
+          "source": "Generative Verifiers: Reward Modeling as Next-Token Prediction",
+          "url": "https://arxiv.org/abs/2408.15240",
+          "date": "2024-08-27",
+          "status": "primary; ICLR 2025",
+          "quantitative": "Reported Best-of-N gains include 5.0% -> 45.3% on algorithmic tasks, 73.0% -> 93.4% on GSM8K, and 28.0% -> 44.6% on easy-to-hard MATH generalization; it outperformed discriminative, DPO, and LLM-as-a-Judge baselines."
+        }
+      ],
+      "interpretation": "Verifier capacity can itself scale at inference time. A judge that generates a verification rationale can outperform fixed discriminative scoring, suggesting evaluation should be treated as a reasoning task when errors are subtle.",
+      "scope_limits": "Reasoning/math domains; gains depend on generator/verifier/data setup and should not be extrapolated to subjective evaluation."
+    },
+    {
+      "candidate_id": "EVAL-THINKING-PRM-DATAEFF-005",
+      "mechanism": "Use a long-CoT verifier that verbalizes step-wise verification to reduce dependence on dense process labels while retaining test-time scaling capability.",
+      "evidence": [
+        {
+          "source": "Process Reward Models That Think",
+          "url": "https://arxiv.org/abs/2504.16828",
+          "date": "2025-04-23",
+          "status": "primary preprint",
+          "quantitative": "ThinkPRM reports outperforming LLM-as-a-Judge and discriminative verifiers using only 1% of PRM800K process labels; OOD gains over full-PRM800K discriminative verifiers were +8% on a GPQA-Diamond subset and +4.5% on a LiveCodeBench subset, and +7.2% over LLM-as-a-Judge on a ProcessBench subset at equal token budget."
+        }
+      ],
+      "interpretation": "Dense step labels are not necessarily the only route to strong process verification; explicit verifier reasoning may substitute for large amounts of supervision in some domains.",
+      "scope_limits": "Preprint and subset-based OOD results; needs independent replication and full-budget accounting."
+    },
+    {
+      "candidate_id": "EVAL-PANEL-ERROR-CORRELATION-006",
+      "mechanism": "Before ensembling judges, measure error correlation/effective sample size; select judges for complementary error structure rather than nominal model-family count, and do not assume majority vote creates independence.",
+      "evidence": [
+        {
+          "source": "Nine Judges, Two Effective Votes: Correlated Errors Undermine LLM Evaluation Panels",
+          "url": "https://arxiv.org/abs/2605.29800",
+          "date": "2026-05-28",
+          "status": "primary preprint; single-study evidence",
+          "quantitative": "A panel of 9 frontier LLMs from 7 model families had effective sample size about 2 independent votes. Actual panel accuracy was 8-22 percentage points below the independent-voting ideal; the best single judge matched or beat the full panel across tested conditions; aggregation methods closed at most 11% of the gap."
+        }
+      ],
+      "interpretation": "Nominal judge count is a poor proxy for epistemic diversity. The key resource for panels is uncorrelated error, not simply more models.",
+      "scope_limits": "Three NLI datasets plus RewardBench robustness checks; needs replication in coding/math/agentic evaluation."
+    },
+    {
+      "candidate_id": "EVAL-CALIBRATION-STABILITY-007",
+      "mechanism": "When using a calibrated LLM judge to estimate or compare model accuracy, estimate judge sensitivity/specificity separately per compared model or explicitly test cross-model calibration stability; avoid silently sharing calibration parameters.",
+      "evidence": [
+        {
+          "source": "Bias and Uncertainty in LLM-as-a-Judge Estimation",
+          "url": "https://arxiv.org/abs/2605.06939",
+          "date": "2026-05-07",
+          "status": "primary preprint; analytic/simulation plus MMLU-Pro case study",
+          "quantitative": "The paper demonstrates a real-data MMLU-Pro case where shared calibration across compared models can reverse the sign of the estimated performance difference while appearing highly confident. It proposes judge quality J and cross-model calibration instability delta-J as diagnostics."
+        }
+      ],
+      "interpretation": "Calibration is not merely a judge-level property; it can shift with the candidate model distribution. Shared calibration can make comparisons confidently wrong.",
+      "scope_limits": "Need extraction of full case-study magnitudes and replication across more benchmarks."
+    }
+  ],
+  "rejected_or_deprioritized_leads": [
+    {
+      "lead": "Use raw exact-match agreement with human labels as the primary judge-quality metric.",
+      "reason": "Deprioritized: chance agreement can inflate apparent quality, and 2026 large-scale evidence reports 33-41 pp kappa deflation on MT-Bench."
+    },
+    {
+      "lead": "Treat high test-retest consistency as evidence the judge is valid.",
+      "reason": "Rejected: >0.95 repeatability coexisted with severe position bias in tested production judges."
+    },
+    {
+      "lead": "Improve evaluator reliability simply by adding more LLM judges and majority voting.",
+      "reason": "Rejected as a general rule: 9-judge panel study measured only ~2 effective independent votes and best single judge matched or beat the panel in tested conditions."
+    },
+    {
+      "lead": "Interpret a PRM's normalized score directly as a probability of eventual success.",
+      "reason": "Rejected unless calibrated for the specific generator/distribution: accepted NeurIPS 2025 work found systematic optimism and generator-dependent miscalibration."
+    },
+    {
+      "lead": "Use human-preference agreement alone to validate judges for difficult reasoning/coding.",
+      "reason": "Deprioritized: JudgeBench's objectively verifiable pairs place strong generic judges near chance and reveal large capability gaps hidden by preference-oriented benchmarks."
+    }
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "question": "Extract and audit the full Minimum Viable Validation Protocol from arXiv:2606.19544, including exact metric definitions, sample-size assumptions, and whether its thresholds are empirically justified or heuristic."
+    },
+    {
+      "priority": 2,
+      "question": "Trace recent certified/conformal LLM evaluation work (including ICLR 2026 papers) that models judge true-positive/false-positive rates and provides finite-sample guarantees; compare against simple kappa/calibration correction."
+    },
+    {
+      "priority": 3,
+      "question": "Quantify when generative verifiers stop improving with larger Best-of-N due to verifier exploitation/reward hacking; connect GenRM/ThinkPRM to pessimistic or uncertainty-aware selection methods."
+    },
+    {
+      "priority": 4,
+      "question": "Measure whether error-correlation/effective-sample-size findings for judge panels replicate on objective math, code, and agentic trajectory benchmarks, not only NLI/preference tasks."
+    },
+    {
+      "priority": 5,
+      "question": "Investigate distribution-specific calibration drift: how much judge sensitivity/specificity varies by candidate model, task, and difficulty, and what minimum calibration set is needed to avoid sign reversal."
+    }
+  ],
+  "termination_diagnostics": {
+    "status": "runtime-bounded checkpoint, not research completion",
+    "completed_actions": [
+      "verified no prior evaluation-worker state existed at the expected directory",
+      "searched benchmark-validity, verifier, calibration, and panel-error branches",
+      "read primary arXiv sources and extracted quantitative results",
+      "persisted candidates, rejected leads, and nonempty frontier"
+    ],
+    "avoidable_short_run_issue": "None diagnosed in this run; search branched beyond initial findings into calibration drift and correlated-panel failure.",
+    "exact_next_action": "Open the experimental HTML/full text for arXiv:2606.19544, extract the complete minimum validation protocol and thresholds, then branch from its statistical references into ICLR 2026 certified/conformal evaluation methods with finite-sample error guarantees."
+  }
+}
