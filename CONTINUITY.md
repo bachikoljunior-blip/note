@@ -50,10 +50,13 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 - If model-based external analysis is ever added, it should use a non-Work/free resource and remain optional; do not assume Copilot or other provider usage is free without checking current quota/terms.
 
 ## Continuous external research status
-- Durable integration files are initialized at `research_index/INDEX.json` and `research_index/O_FEED.json`.
+- Durable integration files are initialized at `research_index/INDEX.json` and `research_index/O_FEED.json`; bridge state is at `research_index/BRIDGE_STATE.json`.
 - Latest integration revision: 1; index digest `a0091815e0ebe7acbea43caec24b6466490735a7416290c8a264a262253dcea6`.
 - Latest O-feed revision: 1; feed digest `354e8690a37603b801db18c9927dbee877ba80ee73dbed384660ea71a9ae84af`; feed is currently empty.
 - Latest integrator scan at 2026-08-25T05:52:19Z found `research_workers/` absent (GitHub contents 404), so there were no worker records to reconcile yet. This is treated as a transient startup blocker; the next integration resumes from revision 1 when worker records appear.
+- O feed subscription directive was appended as USER_INPUT_INBOX revision 21 at 2026-08-25T05:55:31Z through expected previous blob `c462c8d1636d0249646627311257978b8c679a3d`; result commit `ac169336414a509b8169d42fdd6e96317a327332`, result blob `6a60ef74ce1dc37a906e5dd67affc0ddf612f005`, exact remote readback verified.
+- O authoritative WORK_EXECUTION_STATE currently acknowledges USER_INPUT_INBOX only through revision 20, so the subscription is `appended_unacknowledged` until the next safe semantic boundary. Highest acknowledged research-feed revision is therefore 0 / no digest yet; no extra Work invocation was created solely for the bridge.
+- Current bridge blockers are only startup/uptake conditions: O must acknowledge revision 21 at a normal safe boundary, and the feed has no items until research worker records appear. Neither blocks normal O work; the hourly bridge rechecks both.
 - Keep detailed worker findings out of this file; store them under `research_workers/` and canonicalize them into `research_index/INDEX.json`. This continuity section should remain a compact health/reference pointer only.
 
 ## Evaluated mechanism/candidate status so far
