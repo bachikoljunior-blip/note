@@ -1,0 +1,88 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-25T180142+0900.json",
+  "started_local": "2026-08-25T19:02:44+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_research_workers_cross_field": false,
+    "read_comparator_or_integrator_feedback": false,
+    "note": "This checkpoint used only public external sources plus the prior clean_g1 cross_field checkpoint. No O, O-derived state, comparator/integrator output, or legacy pre_independence cross_field state was inspected."
+  },
+  "search_bias": "Continue unresolved clean frontier outside mainstream agent literature. This run started with finite-budget ranking-and-selection failure modes, then branched to physical dual-control experiments, adaptive checkpointing, and cross-task/cost-sensitive Bayesian optimization. Prefer explicit crossover regimes, matched baselines, measured overhead-recovery tradeoffs, and transferable mechanisms with strict scope.",
+  "candidates_new": [
+    {
+      "id": "cf-g1-r3-finite-budget-allocation-guardrail",
+      "mechanism": "Budget-regime-aware allocation: do not apply an asymptotically optimal OCBA allocation unchanged at small budgets. Use equal/broader allocation in the low-confidence regime, then progressively concentrate on competitive designs as budget grows; budget-adaptive rules explicitly make the allocation ratio depend on total budget.",
+      "primary_sources": [
+        "Xiufeng Shao, Ranking and Selection Procedures for Feasibility Determination, PhD dissertation, University of Wisconsin-Madison, 2017, https://asset.library.wisc.edu/1711.dl/5XOD3TCR42YWN9D/R/file-1e50d.pdf?dl=",
+        "Zirui Cao, Haowei Wang, Ek Peng Chew, Haobin Li, Kok Choon Tan, A budget-adaptive allocation rule for optimal computing budget allocation, European Journal of Operational Research 325(2), 2025, DOI 10.1016/j.ejor.2025.04.015; preprint arXiv:2304.02377"
+      ],
+      "quantitative_evidence": "Shao proves that for any nontrivial design set there exists nt>0 such that for n<=nt the static asymptotic ALD/OCBA allocation is no better than equal allocation. In a 10-design N(i,10^2) feasibility example with threshold 6.4, simulation over 10,000 independent experiments found ALD/OCBA did not surpass equal allocation until total budget exceeded about 3000; at the crossover both achieved expected correct determinations gn about 9.62. Cao et al. derive a budget-adaptive rule for the finite-budget scaling T=O(k log k), while the asymptotic OCBA regime corresponds to T=omega(k log k); their rule discounts allocation to hard-to-distinguish competitive non-best designs under smaller budgets and increases allocation to easier designs, converging back to OCBA as budget becomes sufficiently large.",
+      "scope": "The 3000 crossover is specific to Shao's feasibility-determination example and objective, not a universal threshold. Cao et al.'s O(k log k) versus omega(k log k) distinction is an asymptotic scaling regime, not a finite universal switch point. The transferable result is the need for budget-aware concentration rather than blindly applying an asymptotic allocation from the first samples.",
+      "transfer_hypothesis": "Evaluation schedulers should begin conservatively when evidence is sparse, avoid starving apparently easy/weak candidates too early, then increase concentration as total evidence budget and confidence rise. A scheduler can expose a budget/confidence regime explicitly and interpolate from equal/racing-style coverage toward OCBA-style concentration rather than using one fixed allocation law.",
+      "confidence": "high for original finite-budget pathology and scoped crossover; medium-high for budget-adaptive principle; medium for transfer"
+    },
+    {
+      "id": "cf-g1-r3-adaptive-independent-checkpointing",
+      "mechanism": "Event-triggered adaptive checkpointing: checkpoint when dependency patterns imply future rollback propagation risk, rather than checkpointing only at a fixed period or coordinating every process globally.",
+      "primary_source": "Jian Xu and Robert H. B. Netzer, Adaptive Independent Checkpointing for Reducing Rollback Propagation, Brown University Technical Report CS-93-25, 1993, https://cs.brown.edu/research/pubs/techreports/reports/CS-93-25.html",
+      "quantitative_evidence": "Experiments on an iPSC/860 hypercube reduced average rollback needed after a fault to less than one state interval per process while checkpointing only about 10% more often than traditional periodic independent checkpointing.",
+      "scope": "Early-1990s message-passing distributed systems and rollback-consistency semantics; not a direct measurement on modern research-agent runtimes. The result isolates a checkpoint-frequency versus recovery-depth tradeoff distinct from speculative request duplication/straggler mitigation.",
+      "transfer_hypothesis": "Persist research state preferentially at semantic dependency/risk boundaries where losing progress could force cascading recomputation, instead of either checkpointing every small action or using a purely fixed timer. Measure extra checkpoint cost against expected rollback depth.",
+      "confidence": "high for original system result; medium for transfer"
+    },
+    {
+      "id": "cf-g1-r3-cost-sensitive-cross-task-experiment-transfer",
+      "mechanism": "Cost-sensitive multi-task Bayesian optimization: learn correlation between related tasks/fidelities and choose the next evaluation by information gained about the expensive target per unit evaluation cost, while keeping target-task optimization explicit rather than directly copying the source optimum.",
+      "primary_source": "Kevin Swersky, Jasper Snoek, Ryan P. Adams, Multi-Task Bayesian Optimization, NeurIPS 2013, https://papers.nips.cc/paper/5086-multi-task-bayesian-optimization.pdf",
+      "quantitative_evidence": "For logistic-regression hyperparameter optimization, dynamically querying the cheaper USPS task let MTBO reach the target MNIST validation minimum within about 40 minutes versus about 100 minutes for single-task BO. For online LDA on a 200,000-document corpus, large-corpus evaluations averaged 5.8 h and the auxiliary 50,000-document task averaged 2.5 h; MTBO found the minimum in about 6 days versus 10 days for single-task BO, saving almost 4 days. The paper also reports that direct transfer of the best source settings sometimes performed poorly, motivating correlation-aware rather than blind reuse.",
+      "scope": "Hyperparameter optimization on related ML datasets/tasks; cross-task relation is learned by a multi-task GP and the 2013 experiments do not establish universal positive transfer. A 2026 preprint (Hvarfner et al., arXiv:2607.09073) reports structural negative-transfer failure modes for standard MTGP transfer even on simple affine relations, so any transferred mechanism requires correlation diagnostics and a target-only fallback.",
+      "transfer_hypothesis": "When a costly research evaluation has cheaper related proxies, choose proxy versus target trials by expected information about the target divided by cost, and continuously learn whether the proxy is actually predictive. Never equate 'best on the proxy/source' with 'best on target'; fall back to target-only evaluation when estimated transfer becomes unreliable.",
+      "confidence": "high for original 2013 matched timing results; medium for transfer; negative-transfer caveat high enough to require gating"
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Physical dual-control / active-learning MPC with a clean matched passive-learning quantitative benefit",
+      "evidence": "Kumar et al., Experimental Evaluation of a MIMO Adaptive Dual MPC, IFAC-PapersOnLine 48(8), 2015, used a real continuous stirred-tank heater at IIT Bombay. Adaptive DMPC introduced low-amplitude probing while preserving servo/regulatory control and averaged 0.5482 s computation per 5 s sample. Conventional MPC inputs were smoother and had no such excitation; the authors explicitly warn that high-frequency excitation may increase actuator wear.",
+      "reason": "Deferred as a strong transfer candidate because this experiment demonstrates real-time feasibility and the exploration-cost failure mode, but the paper does not provide a clean matched numerical improvement in identification speed or closed-loop cost versus passive/conventional MPC. Keep the prior simulation-only 47.7% model-discrimination result separate from this physical feasibility evidence."
+    },
+    {
+      "lead": "Blind multi-task transfer from prior optimization runs",
+      "evidence": "Swersky et al. already report direct transfer can be good on some tasks and poor on others. Hvarfner et al. (2026 preprint, arXiv:2607.09073) further report that standard multi-task GPs can misestimate cross-task correlation even on affinely related tasks, with broader negative-transfer failure persisting on harder instances despite conservative remedies.",
+      "reason": "Reject unconditional source-task reuse. Only cost-sensitive/correlation-aware transfer with target-only fallback is promoted."
+    }
+  ],
+  "prior_candidates_preserved_by_reference": [
+    "cf-g1-r1-racing-elimination",
+    "cf-g1-r1-instance-conditioned-portfolio",
+    "cf-g1-r1-randomized-work-stealing",
+    "cf-g1-r1-closed-loop-transfer",
+    "cf-g1-r1-delta-debugging-failure-minimization",
+    "cf-g1-r2-ocba-compute-budget-allocation",
+    "cf-g1-r2-dual-control-active-identification",
+    "cf-g1-r2-cause-aware-straggler-mitigation",
+    "cf-g1-r2-sparse-statistical-observability"
+  ],
+  "frontier": [
+    "Find a physical dual-control or active-identification experiment with a genuinely matched passive/nominal baseline and explicit quantitative identification-speed plus control-cost tradeoff; distinguish feasibility evidence from benefit evidence.",
+    "Extract finite-budget numerical results for modern budget-adaptive OCBA variants (FAA/DAA or finite-budget allocation improvement) against equal allocation and classical OCBA, including a practical confidence/budget switching observable rather than only asymptotic scaling.",
+    "Search statistical/causal debugging primary studies for explicit reductions in inspected code, diagnosis trials, or localization entropy under sparse monitoring; compare the benefit/cost surface against delta debugging and sparse instrumentation.",
+    "Investigate transfer-aware experimental design with explicit held-out-task negative-transfer detection or safe fallback, prioritizing quantitative regret/sample-efficiency guarantees rather than assuming task relatedness.",
+    "Investigate semantic/event-triggered checkpointing on modern distributed or workflow systems and quantify checkpoint overhead, rollback depth, and lost-work recovery under changing failure rates."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Completed the finite-budget OCBA crossover branch and extracted both a theorem and a concrete 10-design crossover at roughly budget 3000.",
+      "Continued into the newer budget-adaptive OCBA derivation and extracted the T=O(k log k) finite-budget versus T=omega(k log k) asymptotic regime distinction.",
+      "Continued into real physical dual-control evidence on a continuous stirred-tank heater; retained feasibility/overhead evidence but deferred a strong benefit claim because no clean matched quantitative identification improvement was reported.",
+      "Continued into adaptive checkpointing and extracted a measured rollback-versus-checkpoint-frequency tradeoff on real distributed hardware.",
+      "Continued again into cross-task cost-sensitive Bayesian optimization, extracting 40 versus 100 minute and 6 versus 10 day target-optimization timings plus a negative-transfer guardrail."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search primary experimental dual-control/active-identification papers for a physical plant or robot with a matched passive/nominal baseline reporting both identification speed/error and closed-loop control cost. If no clean physical matched result is found quickly, switch to modern finite-budget OCBA/FAA/DAA numerical experiments and extract a practical budget/confidence trigger that decides when to broaden versus concentrate evaluation allocation."
+}
