@@ -1,0 +1,83 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 6,
+  "config_revision": 3,
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T040217+0900.json",
+  "started_local": "2026-08-26T04:02:18+09:00",
+  "checkpointed_local": "2026-08-26T04:03:30+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed": false,
+    "read_other_worker_state": false,
+    "own_sanitized_feedback": "not_found_404",
+    "shared_execution_ledger_read": false,
+    "other_receipts_read": false,
+    "note": "Continued only from own 04:02 checkpoint and public primary sources."
+  },
+  "checked_sources": [
+    {
+      "source": "Rohan Deb, Mohammad Ghavamzadeh, Arindam Banerjee, Conservative Contextual Bandits: Beyond Linear Representations, arXiv:2412.06165",
+      "type": "primary preprint HTML",
+      "url": "https://arxiv.org/abs/2412.06165",
+      "result": "Primary-verified a sequential exploration method with an explicit baseline fallback at every round. C-SquareCB/C-FastCB first propose an exploratory action, test a safety condition, and play the known baseline instead when the condition cannot be certified. The safety requirement is uniform over time: cumulative loss through every t must remain at most (1+alpha) times baseline cumulative loss. For neural online regression, the paper gives regret O(sqrt(K T log T)+K log(T)/alpha) for C-SquareCB and a first-order bound O(sqrt(K L* log(L*) log T)+K log T+K log(T)/alpha) for C-FastCB, while satisfying the performance constraint with high probability."
+    },
+    {
+      "source": "Abbas Kazerouni, Mohammad Ghavamzadeh, Yasin Abbasi-Yadkori, Benjamin Van Roy, Conservative Contextual Linear Bandits, arXiv:1611.06426",
+      "type": "primary preprint",
+      "url": "https://arxiv.org/abs/1611.06426",
+      "result": "Primary-verified the earlier linear conservative-bandit principle: maintain performance above a fixed percentage of a known baseline uniformly over time, while regret decomposes into the usual learning term plus a conservatism penalty that does not grow with the horizon under the stated assumptions. This supports the baseline-shadow/fallback principle independently of the newer nonlinear construction."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r19-baseline-shadow-with-certified-fallback",
+      "mechanism": "Keep a known baseline policy as a live shadow throughout exploration. Before executing a proposed exploratory action, certify that cumulative performance remains inside a baseline-relative safety budget; if certification fails, execute the baseline action instead. This makes fallback an explicit online action rather than a post-hoc rollback.",
+      "primary_source": "Deb, Ghavamzadeh & Banerjee, arXiv:2412.06165; Kazerouni et al., arXiv:1611.06426",
+      "quantitative_evidence": "The nonlinear CCB paper enforces, with high probability, cumulative loss <= (1+alpha) times baseline cumulative loss for every t. With neural online regression it derives O(sqrt(K T log T)+K log(T)/alpha) regret for C-SquareCB and a first-order O(sqrt(K L* log(L*) log T)+K log T+K log(T)/alpha) bound for C-FastCB. The safety price enters as additive terms scaling with 1/alpha rather than changing the leading horizon dependence.",
+      "operational_observable": "Maintain baseline cumulative loss, exploratory-policy cumulative loss, current safety slack/budget, proposed action confidence, fallback count, alpha, regret versus optimal policy, and cost attributable to conservative fallback. Every exploratory action should have a pre-action safety-certificate receipt.",
+      "scope": "Contextual bandit sequential decisions under realizability/online-regression assumptions and a baseline with known expected cost; safety is cumulative baseline-relative performance, not arbitrary scientific correctness.",
+      "failure_conditions": "Requires a trustworthy baseline and enough knowledge to bound or know its expected performance. Very small alpha forces frequent fallback and increases the K/alpha conservatism cost. A weak baseline prevents catastrophic degradation relative to that baseline but does not guarantee absolute high utility. Model misspecification outside the realizability/confidence assumptions can invalidate certification.",
+      "transfer_hypothesis": "For research automation, every risky new scheduler/evaluator/research policy can run behind a current-production shadow. Adopt experimental decisions only when a cumulative utility/safety budget can be certified; otherwise execute the existing baseline path. This gives a direct target-only/current-policy fallback primitive that complements r16's pathwise validity controller.",
+      "confidence": "high for source-domain baseline-fallback principle; medium-high for research-loop transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r16-unprojected-validity-controller-with-boundary-actions",
+      "update": "r19 supplies the explicit baseline-relative utility fallback that r16 lacks. The two primitives are complementary: r16 preserves pathwise validity accounting via an unprojected controller and boundary actions; r19 preserves cumulative utility relative to a known baseline by certifying each exploratory action and falling back when needed. No primary source found here proves the exact composition of both guarantees in one algorithm."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "A baseline fallback makes exploration free of opportunity cost.",
+      "evidence": "False. The conservative contextual-bandit regret bounds include additive terms scaling as K/alpha (and log factors), so stronger baseline protection increases the conservatism price.",
+      "reason": "Tune the safety slack explicitly and measure fallback cost rather than treating safety as free."
+    },
+    {
+      "lead": "Baseline-relative safety is equivalent to absolute safety or scientific correctness.",
+      "evidence": "False. The guarantee is relative to the specified baseline's cumulative performance and depends on model/confidence assumptions.",
+      "reason": "A bad or mismeasured baseline can be safely matched while still being objectively poor."
+    }
+  ],
+  "frontier": [
+    "Find a single primary method that composes an anytime/pathwise validity-debt controller like r16 with an explicit baseline/current-policy utility fallback like r19, ideally under partial/bandit feedback.",
+    "Find sequential transfer/admission where the baseline is target-only learning rather than a fixed known policy and prove no-negative-transfer or bounded excess regret uniformly over time.",
+    "Find online repeated-round proposal-shift conformal certification with estimated density ratios and finite-sample validity after adaptive prior experiments.",
+    "Extract empirical stopping-time tail and overhead curves for exponential-tail best-arm wrappers and analogous restart wrappers in distributed/asynchronous search.",
+    "Find finite-budget covariance-aware ranking/selection under genuinely heavy-tailed paired/common-random-number observations with robust estimators and exact PCS guarantees."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Continued the exact validity+utility frontier after the 04:02 checkpoint rather than stopping at report readiness.",
+      "Searched conservative sequential decision methods and found a direct live baseline fallback with uniform-over-time performance protection and sublinear regret.",
+      "Separated baseline-relative safety from absolute scientific correctness and recorded the 1/alpha conservatism cost.",
+      "Kept the frontier nonempty because no single source yet composes r16 pathwise validity with r19 baseline-relative utility protection under the same limited-feedback process."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search for conservative/safe bandit or online-learning algorithms that maintain both a pathwise calibration/constraint debt and a baseline-relative reward/loss floor under limited feedback. Prefer a theorem with uniform-over-time target-only/current-policy fallback. If absent, examine safe policy improvement/off-policy evaluation and e-process-based constrained decisions for a composable bridge."
+}
