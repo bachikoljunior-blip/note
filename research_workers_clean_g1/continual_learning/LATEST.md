@@ -1,27 +1,25 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260826T0659_JST.md`.
+Latest durable checkpoint: `RUN_20260826T0804_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0559_JST.md` and `RUN_20260826T0659_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0559_JST.md`, `RUN_20260826T0659_JST.md`, and `RUN_20260826T0804_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
 Current DriftLens/STL-10 provenance corrections:
-- the final IEEE TKDE 2025 paper explicitly defines use case 8 Gaussian blur with **radius 2**; the inspected public ViT notebook's executed radius-8 path is therefore not the published UC8 artifact lineage;
-- the paper describes batch/per-label PCA as 150/75 for all use cases except use case 10, but the current official UC8 wrapper passes 150/25;
-- this 150/25 mismatch predates the later use-case renumbering: the February 2025 semantic STL-blur wrapper (`use_case_7_stl_blur`) already used 150/25 and the same `*_radius2.hdf5` filenames;
-- both the historical semantic blur wrapper and current UC8 wrapper omit `--run_driftlens`, so the public wrappers do not enter the DriftLens path without manual correction;
-- the public `stl_to_pickle.py` assigns class IDs from unsorted filesystem directory order before deterministic `random_state=42` stratified splits. Any reconstruction must impose the experiment README's documented class map explicitly;
-- expected radius-2 HDF5s remain absent from the public UC8 tree, and no public generator/receipt has yet linked them to the notebook. Do not silently substitute radius 8.
-
-Scope guard: the publication-vs-wrapper 75/25 PCA discrepancy is unresolved. Neither configuration is treated as the exact execution behind the published UC8 table until execution provenance or supplementary evidence resolves it. Public wrapper defects are reproducibility defects, not method-failure evidence.
-
-UC8 remains independent-window drift/no-drift classification, not temporal change-point evaluation. It cannot directly establish Episode Recall, event-level FAR or NDT.
+- public STL-blur wrapper history already encoded per-batch/per-label PCA 150/25 plus `*_radius2.hdf5` by at least 2024-03-04;
+- the public ViT notebook added 2024-03-07 executed Gaussian blur radius 8, so wrapper and notebook were already divergent;
+- arXiv v1 (2024-06-24) described blur radius 4 and did not fix the experimental per-label PCA to 75; arXiv v2/final moved to radius 2 and explicitly set per-label PCA 75;
+- correction: early wrapper omission of `--run_driftlens` was not a defect because the March entrypoint ran DriftLens unconditionally. The `run_driftlens` gate was introduced later (public commit `27e403...`, 2024-06-30) while the wrapper still omitted the flag, creating the skip regression from that code revision onward;
+- correction: the 25-vs-75 per-label PCA mismatch does not directly control the public UC8 binary drift prediction/HDD path. Per-batch PCA and per-label PCA are separate, and UC8 classifies drift from the per-batch FDD and per-batch threshold only. The mismatch remains relevant to per-label characterization, resource use, and failure behavior, but should not be inflated into a main detection-table contradiction;
+- the strongest unresolved detection provenance is the actual radius-2 embedding/model/window/RNG/execution lineage. Expected radius-2 HDF5s and execution receipts remain unavailable in inspected public artifacts;
+- UC8 remains independent-window drift/no-drift classification, not temporal event detection, so it cannot directly establish Episode Recall, event-level FAR or NDT.
 
 Exact next action:
-1. trace the earliest semantic STL-blur wrapper/config and any supplementary/public author material to resolve whether a 150/75 UC8 execution exists or the paper text is inconsistent with the public implementation;
-2. continue `radius2` artifact lineage search across releases/supplementary artifacts/public demo data and freeze explicit reconstruction provenance if unavailable;
-3. resolve STL source acquisition/folder layout and freeze deterministic class map/source/split/model/embedding/RNG hashes;
-4. only then build one frozen stable→same-label radius-2 score trace and compare empirical threshold, preregistered quantile, CUSUM reconstruction, quantile+persistence+freeze, ADWIN and Page-Hinkley under held-out calibration with separate Episode Recall + FAR + NDT.
+1. search final-TKDE/arXiv-v2 supplementary/release/archive material for radius-2 HDF5s, checkpoints, output JSONs or parameter-bearing execution receipts;
+2. finish the `run_driftlens` regression timeline around commit `27e403...` and look for any companion wrapper/path that did pass the new flag;
+3. resolve STL source/folder provenance and freeze explicit semantic class map/source/split hashes if exact source bytes remain unavailable;
+4. build deterministic radius-2 reconstruction: primary binary detection on fixed per-batch `d'=150`; separately fork per-label 25 vs 75 for characterization;
+5. temporalize one frozen stable→same-label score trace and compare empirical threshold, preregistered quantile, CUSUM reconstruction, quantile+persistence+freeze, ADWIN and Page-Hinkley under held-out calibration with separate Episode Recall + FAR + NDT.
 
 Continue broader frontier: LargeMonitor missing CUSUM parameters/wiring; HESTIA/ODDL/DEMD event-level boundary quality; independent replication searches; ARROW model-free dual-buffer matched control; adaptive replay allocation; plasticity-specific controls; curriculum selection under unknown future streams.
 
