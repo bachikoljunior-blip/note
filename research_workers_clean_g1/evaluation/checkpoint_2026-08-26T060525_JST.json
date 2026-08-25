@@ -1,0 +1,272 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T06:05:25+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T050518_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 8,
+    "config_revision": 5,
+    "enabled_desired": true,
+    "source_main_sha": "80af76b45485b4a3d93075aa96e6f7c327007d7d",
+    "root_manifest_blob": "508c9f92dd965d2b5074932b99847411cb66bef4",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "config_frozen_before_substantive_work": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "head_resolution": "SHA-only refs/heads/main used before config resolution, before semantic work, and before persistence; no commit-message/diff payload was used semantically."
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; terminal-test-informed sign betting and adaptive-sampling validity for paired binary evaluation",
+  "public_primary_sources": [
+    {
+      "title": "Gaussian-efficient testing by betting on the mean of bounded data",
+      "authors": "Diego Martinez-Taboada; Aaditya Ramdas",
+      "date": "2026-08-22",
+      "url": "https://arxiv.org/abs/2608.21694",
+      "used_scope": "Event/Doob-martingale design principle: track a terminal rejection event's conditional probability and derive predictable bets; bounded-data GE-betting is martingale-valid and fixed-horizon oriented. Used only as a design template; the matched-pair derivations and simulations below are new worker-local calculations."
+    },
+    {
+      "title": "Anytime validity is free: inducing sequential tests",
+      "authors": "Nick W. Koning; Sam van Meer",
+      "date": "2026-02-21",
+      "url": "https://doi.org/10.1093/jrsssb/qkag050",
+      "used_scope": "For a simple null, a terminal test can be sequentialized by conditional expectation under the null; composite hypotheses require a family of point-null tests and an essential-infimum construction, and the natural family is not unique. Used to separate the exact fixed-discordant simple-sign construction from the fixed-task composite nuisance problem."
+    },
+    {
+      "title": "The McNemar test for binary matched-pairs data: mid-p and asymptotic are better than exact conditional",
+      "authors": "Morten W. Fagerland; Stian Lydersen; Petter Laake",
+      "date": "2013-07-13",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3716987/",
+      "used_scope": "Exact conditional McNemar conditions on the total number of discordant pairs and uses a Binomial(d,1/2) tail; under the standard matched-pair sampling model its Type-I error does not exceed nominal. Used as the classical terminal test definition, not as support for adaptive task selection."
+    },
+    {
+      "title": "Inverse Sampling for McNemar's Test",
+      "authors": "Mark Von Tress",
+      "date": "2016-12-21",
+      "url": "https://www.ccsenet.org/journal/index.php/ijsp/article/view/65236",
+      "used_scope": "Sampling until a pre-specified number of discordant pairs fixes the sample size of the exact binomial component, whereas standard sampling leaves discordant count random. Used to motivate the exact fixed-discordant-horizon route and its random total-task cost."
+    }
+  ],
+  "new_derivations": {
+    "fixed_discordant_exact_rejection_tracking": {
+      "setup": "Index informative observations by discordant count j. Let X_j=1 for candidate-only success and 0 for incumbent-only success. Under the null, conditional on a discordance, P(X_j=1 | past, discordant)=1/2. Let N be a precommitted discordant horizon and k_N=min{k:P(Bin(N,1/2)>=k)<=alpha}.",
+      "continuation_value": "H_j(w)=P{Bin(N-j,1/2)>=k_N-w}. Then H_j(w)=[H_{j+1}(w+1)+H_{j+1}(w)]/2.",
+      "predictable_bet": "a_j(w)=H_{j+1}(w+1)/[H_{j+1}(w+1)+H_{j+1}(w)] when the denominator is positive; arbitrary (e.g. 1/2) on zero-continuation states. On each task use factor 2a_j on candidate-only discordance, 2(1-a_j) on incumbent-only discordance, and 1 on concordance.",
+      "robust_validity": "If task-level discordance probability rho_t is any predictable process and the null satisfies P(+|past)=P(-|past)=rho_t/2, then E[factor_t|past]=(1-rho_t)+rho_t*a_j+rho_t*(1-a_j)=1. Thus concordance waiting times and predictable rho_t do not affect martingale validity.",
+      "terminal_identity": "After j discordances, K=H_j/H_0. At N discordances K_N=1/H_0 on the exact-binomial rejection event and 0 otherwise. Since H_0 is the exact terminal size alpha_N<=alpha, every terminal exact rejection crosses the 1/alpha e-threshold; earlier crossing can use discreteness slack while retaining Ville control.",
+      "scope": "Exact for a precommitted discordant horizon N and one-sided sign-symmetry null. Total task cost is random. It is not terminal-equivalent to fixed-total-task McNemar where the final discordant count is random."
+    },
+    "fixed_task_directional_projection": {
+      "setup": "For fixed total task horizon T, define terminal exact McNemar rejection R_T(d,w)=1{w>=k_d}. Choose a reference null discordance model rho_ref (constant 0.4 in the calculation) and compute H_t^ref(d,w)=P_ref(R_T=1 | current state) by three-branch backward recursion.",
+      "projected_bet": "Let H_plus=H_{t+1}^ref(d+1,w+1), H_minus=H_{t+1}^ref(d+1,w). Set a_t=H_plus/(H_plus+H_minus), with 1/2 when the denominator is zero, and deliberately discard the nuisance-sensitive concordance continuation ratio by assigning concordance factor 1.",
+      "validity": "The resulting process is not the reference Doob martingale and need not match the terminal exact McNemar decision. Nevertheless its one-step factor is a valid conditional e-variable for every actual predictable rho_t under sign symmetry, because validity depends only on a_t being predictable and on + and - having equal null probability.",
+      "interpretation": "This is a nuisance-robust directional projection of terminal rejection geometry: use the reference model only to choose where to bet, while the null expectation identity supplies validity."
+    },
+    "adaptive_discordance_counterexample": {
+      "claim": "Classical exact conditional McNemar size control is not implied by one-step sign symmetry alone when future discordance propensity/task selection may adapt to past paired outcomes.",
+      "dynamic_program": "For a fixed total horizon T and terminal exact-McNemar rejection indicator V_T(d,w), maximize under the null over predictable rho_t in [rho_lo,rho_hi]: V_t(d,w)=max_rho[(1-rho)V_{t+1}(d,w)+rho/2*V_{t+1}(d+1,w+1)+rho/2*V_{t+1}(d+1,w)]. The objective is linear in rho, so an endpoint policy is exact.",
+      "why_conditioning_breaks": "When rho_t depends on past signs, the final discordant count D_T is informative about the sign path; conditioning on D_T need not leave W_T~Bin(D_T,1/2), even though each new discordant sign is locally symmetric when it occurs.",
+      "scope": "This does not contradict Fagerland et al.'s standard matched-pair result. It targets adaptive benchmark/task selection or adaptive continuation that makes discordance propensity depend on prior outcomes."
+    }
+  },
+  "numerical_results": {
+    "fixed_discordant_exact_DP_alpha_0_05_q_0_75": [
+      {
+        "N": 10,
+        "k": 9,
+        "size": 0.0107421875,
+        "terminal_power": 0.24402523040771484,
+        "seq_power": 0.378204345703125,
+        "null_seq_size": 0.0390625
+      },
+      {
+        "N": 20,
+        "k": 15,
+        "size": 0.020694732666015625,
+        "terminal_power": 0.6171726543871046,
+        "seq_power": 0.6922244733577827,
+        "null_seq_size": 0.04138946533203125
+      },
+      {
+        "N": 30,
+        "k": 20,
+        "size": 0.04936857335269451,
+        "terminal_power": 0.8942718773073399,
+        "seq_power": 0.8942822544763087,
+        "null_seq_size": 0.0493782851845026
+      },
+      {
+        "N": 50,
+        "k": 32,
+        "size": 0.03245432353613609,
+        "terminal_power": 0.9712668401644692,
+        "seq_power": 0.975956213327635,
+        "null_seq_size": 0.04413054518680415
+      }
+    ],
+    "fixed_task_projected_reference_rho_0_4": {
+      "alternative": "iid task stream, rho=0.4, discordant candidate-win probability q=0.75",
+      "projected_mc_reps_per_horizon": 600000,
+      "rows": [
+        {
+          "T": 10,
+          "projected_reject_by_T_mc": 0.087405,
+          "projected_null_cross_mc": 0.011153333333333333,
+          "terminal_exact_power_exact": 0.07752149550000001,
+          "terminal_exact_size_exact": 0.008749260800000002,
+          "prior_horizon_Bellman_approx_reject_by_T": 0.09703963,
+          "prior_oracle_fixed_GRO_reject_by_T": 0.001230844,
+          "prior_sign_Jeffreys_reject_by_T": 0.007313171,
+          "prior_full_KT_reject_by_T": 0.000125978
+        },
+        {
+          "T": 20,
+          "projected_reject_by_T_mc": 0.279675,
+          "projected_null_cross_mc": 0.028463333333333334,
+          "terminal_exact_power_exact": 0.2625461070354049,
+          "terminal_exact_size_exact": 0.02012148488637252,
+          "prior_horizon_Bellman_approx_reject_by_T": 0.326577487,
+          "prior_oracle_fixed_GRO_reject_by_T": 0.075757085,
+          "prior_sign_Jeffreys_reject_by_T": 0.104355079,
+          "prior_full_KT_reject_by_T": 0.01916077
+        },
+        {
+          "T": 30,
+          "projected_reject_by_T_mc": 0.41690666666666665,
+          "projected_null_cross_mc": 0.030298333333333333,
+          "terminal_exact_power_exact": 0.43310299687640536,
+          "terminal_exact_size_exact": 0.026765086668520174,
+          "prior_horizon_Bellman_approx_reject_by_T": 0.478057318,
+          "prior_oracle_fixed_GRO_reject_by_T": 0.243802208,
+          "prior_sign_Jeffreys_reject_by_T": 0.179931385,
+          "prior_full_KT_reject_by_T": 0.057880229
+        },
+        {
+          "T": 50,
+          "projected_reject_by_T_mc": 0.6508216666666666,
+          "projected_null_cross_mc": 0.034043333333333335,
+          "terminal_exact_power_exact": 0.6785016195552886,
+          "terminal_exact_size_exact": 0.032578674226599456,
+          "prior_horizon_Bellman_approx_reject_by_T": 0.699623674,
+          "prior_oracle_fixed_GRO_reject_by_T": 0.538831372,
+          "prior_sign_Jeffreys_reject_by_T": 0.333133401,
+          "prior_full_KT_reject_by_T": 0.128358124
+        }
+      ],
+      "interpretation": "The projected rejection-tracking bet captures much of the Bellman finite-horizon gain without a wealth-grid optimization: it is within about 1.0/4.7/6.1/4.9 percentage points of the prior Bellman policy at T=10/20/30/50 in this alternative, while strongly beating the prior fixed-GRO, Jeffreys and full-KT baselines at short horizons. It slightly exceeds terminal exact power at T=10 and 20 via early crossing, but falls below terminal exact at T=30 and 50 because the nuisance-robust projection sacrifices terminal equivalence."
+    },
+    "adaptive_terminal_mcnemar_exact_type1_maxima": {
+      "alpha": 0.05,
+      "null_constraint": "At each task P(+|past)=P(-|past)=rho_t/2; rho_t may be chosen predictably from current state.",
+      "rho_bounds_0_1": {
+        "10": 0.05078125,
+        "20": 0.0986785888671875,
+        "30": 0.12946296762675047,
+        "50": 0.1578822453198061
+      },
+      "rho_bounds_0_1_to_0_7": {
+        "10": 0.03309143430810547,
+        "20": 0.06008669147658638,
+        "30": 0.07460444389642078,
+        "50": 0.08886198450931275
+      },
+      "interpretation": "With rho_t constrained to [0.1,0.7], exact terminal McNemar can reach Type-I rejection probabilities about 0.0601, 0.0746 and 0.0889 at T=20,30,50, exceeding nominal 0.05. With unrestricted [0,1], maxima rise to about 0.0987,0.1295,0.1579. Thus local sign symmetry is insufficient for the usual fixed-task exact conditional argument when discordance sampling is outcome-adaptive.",
+      "sanity_mc_against_rho_0_1_to_0_7_adversary": {
+        "mc_reps": 400000,
+        "rows": [
+          {
+            "T": 20,
+            "projected_false_positive_mc": 0.0161475,
+            "terminal_exact_false_positive_mc": 0.059555,
+            "exact_terminal_max": 0.06008669147658638
+          },
+          {
+            "T": 30,
+            "projected_false_positive_mc": 0.013055,
+            "terminal_exact_false_positive_mc": 0.074325,
+            "exact_terminal_max": 0.07460444389642078
+          },
+          {
+            "T": 50,
+            "projected_false_positive_mc": 0.00608,
+            "terminal_exact_false_positive_mc": 0.0897425,
+            "exact_terminal_max": 0.08886198450931275
+          }
+        ],
+        "note": "Projected e-process remains theoretically <=0.05 for any such predictable rho policy by the one-step martingale identity; Monte Carlo is only a sanity check."
+      }
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-exact-discordant-horizon-doob-sign-bet-v1",
+      "mechanism": "Sequentialize a terminal exact binomial/McNemar sign test at a precommitted discordant horizon by betting the normalized conditional terminal rejection probability; concordant tasks receive factor 1.",
+      "evidence": "Closed-form continuation H_j(w) yields an exact Doob sign bet. Exact DP at alpha=.05,q=.75 gives reject-by-N 0.3782/0.6922/0.8943/0.9760 for N=10/20/30/50 discordances versus terminal exact power 0.2440/0.6172/0.8943/0.9713, with null sequential sizes 0.0391/0.0414/0.04938/0.04413. Predictable task-specific discordance rates cancel from the one-step null expectation.",
+      "scope": "One-sided sign symmetry, fixed discordant horizon; random total task cost. Does not solve fixed-total-task terminal equivalence.",
+      "implication": "When task budget can be expressed as a target number of informative disagreements, inverse-sample discordances and use rejection-tracking sign betting rather than repeatedly peeking at a fixed-sample exact test."
+    },
+    {
+      "candidate_id": "eval-g1-directional-terminal-rejection-projection-v1",
+      "mechanism": "For fixed total task horizons with nuisance discordance rate, compute terminal rejection continuation values under a reference rho model but use only their + versus - directional ratio as a predictable sign bet, assigning concordances factor 1.",
+      "evidence": "At rho_ref=actual rho=.4,q=.75 and alpha=.05, 600k-rep Monte Carlo gives projected reject-by-T 0.0874/0.2797/0.4169/0.6508 for T=10/20/30/50. Prior Bellman values were 0.0970/0.3266/0.4781/0.6996; prior fixed-GRO 0.00123/0.0758/0.2438/0.5388; prior Jeffreys 0.00731/0.1044/0.1799/0.3331. Validity is exact under arbitrary predictable rho_t as long as conditional + and - probabilities match.",
+      "scope": "The rho_ref calculation is a design heuristic, not a null model required for validity. The projected process is not terminal-equivalent to fixed-task McNemar and its power can degrade under reference mismatch.",
+      "implication": "A cheap terminal-geometry-informed policy can recover much of finite-horizon Bellman power while retaining nuisance-robust validity and avoiding online wealth-grid optimization."
+    },
+    {
+      "candidate_id": "eval-g1-adaptive-discordance-breaks-terminal-exact-mcnemar-v1",
+      "mechanism": "Treat adaptive task/benchmark selection that changes discordance propensity based on past paired outcomes as a measurement-validity hazard: final discordant count becomes informative, invalidating the usual conditional Binomial(D,1/2) argument even under local sign symmetry.",
+      "evidence": "Exact control DP over predictable rho_t shows terminal exact McNemar Type-I maxima above 0.05: with rho_t in [0.1,0.7], 0.0601/0.0746/0.0889 at T=20/30/50; with rho_t in [0,1], 0.0987/0.1295/0.1579. The sign-betting e-process remains valid because each factor has conditional expectation exactly 1 for every predictable rho_t.",
+      "scope": "Counterexample applies to adaptive discordance/task-selection processes. It does not challenge the standard i.i.d./fixed-sampling exact McNemar guarantee.",
+      "implication": "If evaluation task allocation, retrying, filtering, or continuation is outcome-adaptive, either precommit an independent sampling design or use an e-process whose validity is conditional on the actual adaptive filtration; do not rely on post-hoc exact McNemar conditioning alone."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "The exact McNemar test remains exact under any adaptive task stream as long as each new discordant sign is locally fair under the null.",
+      "reason": "Rejected. Local sign symmetry does not imply W_T|D_T~Bin(D_T,1/2) when future discordance probability depends on past signs. Exact DP yields Type-I error well above 0.05 under bounded predictable rho policies."
+    },
+    {
+      "lead": "Terminal rejection-probability tracking under one reference discordance rate is automatically the exact Doob martingale for fixed-total-task McNemar.",
+      "reason": "Rejected. The exact Doob update contains a concordance continuation component that depends on the nuisance discordance model. Dropping that component preserves sign-martingale validity but loses terminal equivalence."
+    },
+    {
+      "lead": "Inverse sampling to a fixed discordant count solves evaluation cost.",
+      "reason": "Rejected as a general claim. It fixes the informative sign horizon and yields clean exact sequentialization, but total tasks become random and can be prohibitive when discordance is rare."
+    }
+  ],
+  "design_implications": {
+    "gate_1": "Declare whether the evaluation horizon is total tasks or informative discordances. These induce different exact objects and cost semantics.",
+    "gate_2": "If task selection/continuation can depend on prior paired outcomes, test whether final discordant count remains ancillary/ignorable. If not, classical terminal McNemar conditioning is unsafe.",
+    "gate_3": "For robust adaptive evaluation, prefer predictable sign e-factors whose conditional expectation can be verified in the actual filtration; use terminal models only to choose bets, not to justify validity, unless the nuisance model is genuinely fixed.",
+    "gate_4": "Report both terminal-test power and reject-by-deadline power. Rejection-tracking can exploit exact-test discreteness slack early, but nuisance-robust projections may sacrifice terminal equivalence.",
+    "gate_5": "When using a reference-model projected bet, stress-test rho schedule mismatch and adaptive task-selection policies separately from sign-effect q uncertainty."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Optimize or mix the reference discordance model used by the fixed-task directional rejection-projection, while preserving sign-only validity; compare learned/predictable rho_ref, rho-mixtures, and Bellman policies under common, increasing, decreasing, and outcome-adaptive discordance schedules."
+    },
+    {
+      "priority": 2,
+      "action": "Derive a two-sided exact-McNemar rejection-tracking construction, including boundary randomization to use discreteness slack without losing finite-sample validity, and compare separate-tail/mixture/maximum combinations."
+    },
+    {
+      "priority": 3,
+      "action": "Quantify total-task cost and futility rules for fixed-discordant inverse sampling under low or drifting discordance rates; derive an anytime-valid fallback when the target discordant count is not reached by a hard total-task cap."
+    },
+    {
+      "priority": 4,
+      "action": "Search for published selective/adaptive paired-testing results that characterize when conditioning on an adaptively generated discordant count remains valid; compare their assumptions directly with the DP counterexample."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "The previous terminal-rejection-tracking frontier was not merely restated: it yielded an exact fixed-discordant Doob sign construction, a nuisance-robust fixed-task directional projection, and a new exact counterexample showing that terminal conditional McNemar can lose size control under outcome-adaptive discordance sampling.",
+  "exact_next_action": "Stress-test and optimize the fixed-task directional rejection-projection over reference-rho mixtures/predictable estimates under varying and outcome-adaptive discordance schedules, then derive the two-sided/boundary-randomized version while retaining exact sign-martingale validity."
+}
