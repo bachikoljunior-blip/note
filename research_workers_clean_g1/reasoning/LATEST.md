@@ -13,38 +13,38 @@ Latest checkpoints in order:
 10. `2026-08-26T0102JST-followup.md`
 11. `2026-08-26T0200JST.md`
 12. `2026-08-26T0302JST.md`
+13. `2026-08-26T0302JST-followup.md`
 
 Read `STATE.md` for accumulated findings through 18:15 JST, then read the source-qualified checkpoints above in order for the newest evidence and exact continuation.
 
 Top unresolved frontier:
-1. learned heterogeneous Lean meta-action scheduling: fixed HILBERT/BFS-style thresholds vs a policy over keep-searching, repair, retrieval, decomposition/replan, preserve/backtrack and model escalation with identical available tools and real compute;
-2. calibrated replan/action utility under search-policy and theorem-distribution shift: Brier/ECE/reliability/selective-risk for one-more-attempt vs repair/decompose/retrieve/replan/restart;
-3. typed action preconditions in Lean: safely mask inapplicable/low-value actions using error class, progress, retrieval/context support, attempt history and remaining budget;
-4. matched subgoal scheduling: ordered first-stuck focused parallelism vs hardest-branch routing vs independent parallelism vs total-work/tail-risk scheduling under equal model-token, Lean-execution and wall-clock budgets;
-5. compressed online trajectory sufficiency: preserve LeanProgress/DT-Solver history value using Delta/progress/error/retrieval summaries without raw-history growth;
+1. controller-only matched Lean experiment: replace HILBERT/BFS/LEAP fixed thresholds, event triggers or DFS/backtracking with a learned heterogeneous action policy while holding prover/retriever/verifier/actions fixed;
+2. calibrated action utility under theorem/backbone/search-policy shift: Brier/ECE/reliability/selective-risk for attempt, repair, retrieve, decompose, replan, backtrack, escalate and stop;
+3. action-specific sufficient state: compressed trajectory/progress/error history + current proof state + reusable DAG/cache + retrieval coverage + remaining budget + execution substrate;
+4. backbone-conditioned routing: learn when iterative feedback, semantic branching or repair is beneficial vs harmful for the current prover/training regime;
+5. matched subgoal scheduling: ordered first-stuck focused parallelism vs hardest-branch routing vs independent parallelism vs total-work/tail-risk scheduling under equal model-token, Lean-execution and wall-clock budgets;
 6. variable branching/search purchase: learn when greedy scheduling suffices and when MCTS/beam/semantic branching has positive marginal value;
-7. coverage-aware routing: finite-sample/selective-risk abstention when compiler/retrieval/trajectory evidence is partial or OOD;
-8. triggered global re-retrieval: learned escalation from failure-conditioned local retrieval to a fresh global proof-route sketch/retrieve/reflect cycle;
-9. execution-substrate-aware cost models: generation, retrieval, Lean tactic/verifier/checking, snapshot/state reconstruction, downstream savings and wall-clock;
-10. exact Lean composite of proof-state snapshot/forking + learned tactic/transition-semantic diversity + compiler-guided repair + typed/calibrated hierarchical routing under equal real compute;
+7. coverage-aware routing and calibrated abstention when compiler/retrieval/trajectory evidence is partial or OOD;
+8. triggered global re-retrieval after local failure/decomposition change;
+9. execution-substrate-aware cost: generation, retrieval, verifier/tactic/checking, snapshot/state reconstruction, downstream savings and wall-clock;
+10. exact Lean composite of snapshot/forking + semantic tactic diversity + compiler-guided repair + typed/calibrated hierarchical routing under equal real compute;
 11. benchmark-audited robustness with pinned Lean/mathlib/repository/harness versions and candidate/retrieval-access sensitivity.
 
 Important updates from the newest checkpoints:
-- BFS-Prover-V2's released code sharpens the replanning gap: planning and replanning are separate explicit modes, and the README exposes replanning as an optional operation when proof search is stuck. The paper uses current-subgoal budget exhaustion as the trigger. No learned/calibrated replan trigger was surfaced in the public implementation.
-- HILBERT provides a strong direct Lean hierarchy: cheap prover attempts -> reasoner correctness check -> retrieval + verifier-guided shallow repair -> recursive decomposition/restart. It reaches 99.2% MiniF2F and 70.0% PutnamBench in its strongest published configuration, but its action switches use fixed retry/length/depth thresholds rather than learned marginal-value control.
-- HILBERT retrieval is a downstream-compute saver in its tested MiniF2F configuration: Goedel-Prover retrieval changes 97.9% -> 99.2% while reducing average reasoner calls 862 -> 548 and reasoner tokens about 4.0M -> 2.3M. Retrieval cost should therefore be evaluated net of downstream savings.
-- AlgoSkill supplies a program-synthesis precedent for a learned typed heterogeneous action scheduler with precondition masking, failure-history conditioning, verifier reward, local repair credit and entropy regularization. Its reported search benefit is not uniform, and the main CP-275 table is explicitly filtered to positive-gain backbones; treat it as transfer evidence, not Lean proof-search evidence.
-- BFS-Prover-V2 still provides planner-guided ordered subgoals, focused parallelism and shared subgoal caching, but the 86.1% -> 95.08% planner headline is not a compute-matched controller ablation.
-- `LeanProgress` remains direct future-cost evidence: ReProver Mathlib4 41.4% -> 45.2%, with proof-history prediction 75.8% exact-step accuracy / MAE 3.15 versus 61.8% / 5.22 without history.
-- AlphaProof, MPS-Prover and DT-Solver jointly establish value/progress guidance, multiple perspectives and state-dependent branching; the remaining gap is calibrated allocation across *different action types* under real cost.
+- BFS-Prover-V2's public implementation exposes `initial` and `replan` as separate planning modes; public instructions invoke replanning when proof search gets stuck and the paper uses current-subgoal budget exhaustion. No learned/calibrated replan trigger was surfaced.
+- HILBERT's public config makes the fixed-control baseline explicit: `max_depth=4`, proof-length recurse cutoff 30, 4 decomposition attempts, 4 formal proof attempts, 6 main/subgoal error corrections, 4 parallel subgoal proof attempts, 8 sketch corrections, and a 60-second verification timeout. This is a strong target for a controller-only learned-threshold replacement.
+- LEAP independently validates a direct-proof/retrieval/revision/decomposition/memoization/backtracking hierarchy. Full DAG memoization improves the same workflow from 73.3%→83.3% Basic and 40.0%→56.7% Advanced on Lean-IMO-Bench, but the published search is simple DFS with backtracking; the paper explicitly names branch prioritization and compute allocation as future work.
+- LEAP gives important backbone-dependent negative evidence: iterative compiler-feedback revision improves Gemini-3.1-Pro 20.0%→36.6% on Lean-IMO-Bench Basic but changes Goedel-Prover-V2-32B 10.0%→6.6%. A controller must condition action value on prover family/training regime.
+- AlgoSkill supplies cross-domain program-synthesis evidence for typed heterogeneous action scheduling with precondition masking, failure-history conditioning, verifier reward and local repair credit, but does not establish Lean gains; reported tree-search benefit is not uniform.
+- Public CSSC engineering converges on nearly the same expand/repair/retrieve/escalate/backtrack/prune action vocabulary, but its surfaced controller is heuristic and its report is a baseline/provider run, not controller evidence. Keep it as a low-evidence implementation lead only.
+- LeanProgress, AlphaProof, MPS-Prover and DT-Solver already establish useful progress/value/history, multiple perspectives and dynamic widening; the missing piece is calibrated allocation across different *action types* under real cost.
 - `research_feedback_clean_g1/reasoning/FEEDBACK.json` remains absent; no sanitized feedback was consumed.
 
 Exact continuation:
-1. search direct Lean/formal-proof work for a learned heterogeneous meta-action policy choosing among repair, retrieval, decomposition/replan, preserve/backtrack and model escalation rather than only value-guided tactic selection;
-2. inspect HILBERT and BFS-Prover-V2 code/configs for exact fixed thresholds and any adaptive switch logic, and recover a controller-only matched baseline if available;
-3. search program-synthesis/verified-code follow-ups to AlgoSkill for contamination-controlled and compute-matched action-scheduling ablations, preserving transfer scope;
-4. continue modern Lean value/progress calibration, OOD and selective-risk searches;
-5. continue matched subgoal scheduling, triggered global re-retrieval, online trajectory compression and snapshot+semantic-selection+repair integration searches;
-6. keep the frontier nonempty and preserve exact source/version/tested-scope caveats.
+1. search LEAP/HILBERT/BFS citations and current formal-proof literature for a learned heterogeneous meta-action policy using branch-prioritization, compute-allocation, controller, meta-action and tool-routing terms;
+2. extract controller-only statistics from HILBERT/LEAP public traces/configs if possible: action invocation counts, escalation thresholds reached and wasted calls before switching levels;
+3. search calibrated metareasoning/value-of-computation methods that can transfer to a typed Lean action set, keeping transfer evidence distinct from direct formal-proof evidence;
+4. continue matched subgoal scheduling, backbone-conditioned action-value, triggered global re-retrieval, online trajectory compression and snapshot+semantic-selection+repair searches;
+5. keep the frontier nonempty and preserve exact source/version/tested-scope caveats.
 
 Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, other-worker state, shared execution ledger, or other-role receipts.
