@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "comparator": "evidence_strength",
+  "record_id": "evidence-comparator-20260825T0753Z-014",
+  "created_at": "2026-08-25T07:53:00Z",
+  "status": "ongoing",
+  "previous_record": "research_comparators/evidence/2026-08-25T0746Z-013.json",
+  "input_record": "research_workers/cross_field/2026-08-25T160027+0900.json",
+  "assessments": [
+    {
+      "candidate_id": "CF-20260825-01-adaptive-capping-config",
+      "mechanism": "adaptive capping inside automatic algorithm configuration",
+      "sources": [
+        "https://doi.org/10.1613/jair.2861",
+        "https://www.cs.ubc.ca/labs/algorithms/Projects/ParamILS/"
+      ],
+      "evidence_grade": "B",
+      "primary_source_quality": "High-maturity Journal of Artificial Intelligence Research work with a concrete algorithm-configuration framework, trajectory-preserving and aggressive adaptive-capping variants, extensive solver-configuration experiments, and a long subsequent application history. The worker's largest headline speedups are system-level configuration gains, not isolated gains attributable only to capping.",
+      "quantitative_result": "ParamILS reports general SPEAR configuration speedups of 20x on SWV and 1.3x on BMC, instance-specific improvements of over 500x on SWV and 4.5x on BMC, and a best SWV configuration solving every instance within 20 seconds where defaults had multiple one-CPU-day timeouts. The paper separately defines trajectory-preserving capping that can avoid spending full runtime on already-inferior configurations and aggressive capping that trades strict trajectory preservation for additional savings.",
+      "matched_baseline": "Good for ParamILS/configuration as a whole and for capping mechanics within the optimization framework. The 20x/500x headline numbers should not be credited specifically to adaptive capping because they reflect discovering better solver configurations over structured parameter spaces.",
+      "ablation_or_causal_support": "Strong for the fact that trajectory-preserving capping can eliminate unnecessary evaluation work without changing BasicILS pairwise decisions under its assumptions; moderate for aggressive capping and for the broader configuration-search bundle. Direct evidence does not establish safe capping on non-monotonic noisy agent learning curves.",
+      "reproducibility_or_artifacts": "Mature published algorithm, public project materials and detailed experimental scenarios.",
+      "external_replication": "Extensive later algorithm-configuration literature provides broad field-level replication of racing/capping ideas, but no specific agent-system replication is part of this assessed worker record.",
+      "failure_evidence": "The source itself motivates capping because poor configurations can take orders of magnitude longer than good ones; aggressive capping can alter search behavior and therefore requires a correctness/savings tradeoff rather than being treated as free.",
+      "scope_limits": [
+        "SAT/MIP-style solver runtime objectives with pairwise incumbent comparisons.",
+        "Headline configuration speedups combine search, parameter-space structure and repeated runs; they are not an adaptive-capping effect size.",
+        "Agent evaluations may be non-monotonic, noisy and multi-objective, so a current poor partial score may not upper-bound final value.",
+        "Safe transfer requires explicit false-elimination measurement."
+      ],
+      "original_method_vs_o_adaptation": {
+        "original_method_evidence": "B+ for adaptive capping as a source-domain evaluation-cost mechanism within algorithm configuration; B overall for the worker's combined capping+structured-search candidate because headline system gains are not component-isolated.",
+        "o_specific_adaptation": "C for incumbent-relative early termination of O/research trials until conservative bounds are defined and compared against full evaluation on noisy/non-monotonic candidate trajectories with false-pruning accounting."
+      },
+      "uncertainty": "low_for_source_domain_high_for_agent_transfer"
+    },
+    {
+      "candidate_id": "CF-20260825-02-hyperband-successive-halving",
+      "mechanism": "successive halving / Hyperband staged resource allocation",
+      "source": {
+        "title": "Hyperband: A Novel Bandit-Based Approach to Hyperparameter Optimization",
+        "url": "https://jmlr.org/papers/v18/16-558.html",
+        "venue": "JMLR 2018"
+      },
+      "evidence_grade": "A-",
+      "primary_source_quality": "Very strong mature peer-reviewed primary source with formal pure-exploration framing, theoretical guarantees and empirical comparisons to popular Bayesian-optimization methods across deep-learning and kernel problems. The mechanism has extensive subsequent field use, providing equivalent robustness beyond one paper even though this record does not enumerate replication studies.",
+      "quantitative_result": "The JMLR abstract directly reports over an order-of-magnitude speedup over the competitor set across multiple deep-learning and kernel-based hyperparameter problems. The full worker extraction reports observed 6x-70x speedups over random search in studied settings and explains that superlinear training-resource scaling can exceed the roughly 50x linear-resource maximum intuition.",
+      "matched_baseline": "Strong source-domain comparison: configurations receive staged resources and poor performers are culled against random search and Bayesian-optimization competitors on shared optimization tasks. Fidelity/resource is explicitly controlled by the algorithm.",
+      "ablation_or_causal_support": "Strong for staged allocate-and-prune resource scheduling when low-resource performance is informative enough about full-resource quality. The source also documents settings where startup overhead or weak low/high-fidelity correlation reduces benefit, giving important boundary evidence.",
+      "reproducibility_or_artifacts": "Mature JMLR publication with standard algorithm specification and extensive later implementations.",
+      "external_replication": "Broad adoption and later methods such as BOHB/multi-fidelity optimization provide strong equivalent robustness in the source field, although a specific independent agent-evaluation replication is absent.",
+      "failure_evidence": "Explicitly bounded: early low-fidelity ranking can be misleading, and fixed startup overhead can erase the advantage.",
+      "scope_limits": [
+        "Hyperparameter/learning-curve optimization, not open-ended scientific hypotheses.",
+        "Requires a resource/fidelity axis whose early performance predicts final performance often enough to justify pruning.",
+        "Candidates with delayed emergence or qualitative phase transitions can be eliminated incorrectly.",
+        "Its source-domain speedups are not expected-value multipliers for O."
+      ],
+      "original_method_vs_o_adaptation": {
+        "original_method_evidence": "A- for successive-halving/Hyperband staged resource allocation in its mature optimization domain.",
+        "o_specific_adaptation": "C+/B- for staged O/research candidate evaluation until cheap proxy fidelity is empirically calibrated against full held-out outcomes and late-bloomer loss is measured."
+      },
+      "uncertainty": "low_for_native_mechanism_high_for_o_transfer"
+    },
+    {
+      "candidate_id": "CF-20260825-03-cost-aware-multifidelity-bo",
+      "mechanism": "cost-aware multi-fidelity Bayesian optimization / information per cost",
+      "source": {
+        "title": "Fast Bayesian Optimization of Machine Learning Hyperparameters on Large Datasets",
+        "url": "https://proceedings.mlr.press/v54/klein17a.html",
+        "venue": "AISTATS 2017"
+      },
+      "evidence_grade": "B+",
+      "primary_source_quality": "Strong peer-reviewed AISTATS/PMLR source with an explicit generative model of validation error and training time versus dataset-size fidelity, information-gain/cost acquisition, and direct SVM/DNN hyperparameter comparisons against contemporary Bayesian optimization and Hyperband.",
+      "quantitative_result": "FABOLAS is reported to find high-quality solutions 10x-100x faster than other state-of-the-art Bayesian-optimization methods or Hyperband in the experiments, by learning how objective value and computational cost vary with dataset size and selecting informative fidelities accordingly.",
+      "matched_baseline": "Strong within the tested hyperparameter problems, with shared optimization objectives and explicit competitor methods. The largest reported speedup is task/distribution dependent and includes surrogate-model quality, not only the abstract 'information per cost' principle.",
+      "ablation_or_causal_support": "Moderately strong for dynamic cost-aware fidelity choice outperforming fixed full-data evaluation and contemporary alternatives. Surrogate calibration and fidelity correlation are structural assumptions; if cheap fidelities are systematically misleading, the acquisition rule can optimize the wrong proxy.",
+      "reproducibility_or_artifacts": "Peer-reviewed PMLR publication with detailed method and standard benchmark experiments.",
+      "external_replication": "The large subsequent multi-fidelity BO literature supplies strong conceptual replication; no specific autonomous-research transfer study is part of this record.",
+      "failure_evidence": "The method's need to jointly model cost and loss highlights that a cheaper benchmark is useful only when it is informative about the target objective.",
+      "scope_limits": [
+        "Dataset-size fidelity in supervised ML optimization is particularly smooth compared with many agent/research fidelity axes.",
+        "10x-100x is a source-task optimization result, not a universal speedup.",
+        "Surrogate misspecification can systematically prefer cheap but misleading evaluations.",
+        "O transfer requires target-outcome calibration, not merely cost accounting."
+      ],
+      "original_method_vs_o_adaptation": {
+        "original_method_evidence": "B+ for FABOLAS-style cost-aware dynamic multi-fidelity optimization in the tested ML problems.",
+        "o_specific_adaptation": "C for dynamically choosing O evaluation fidelity by expected information/cost until fidelity correlations and decision-calibration are measured on O-specific candidate families."
+      },
+      "uncertainty": "low_to_moderate_native_high_transfer"
+    },
+    {
+      "candidate_id": "CF-20260825-04-closed-loop-active-experiment-selection",
+      "mechanism": "closed-loop Bayesian active experiment selection",
+      "sources": [
+        "https://www.nature.com/articles/s41467-020-19597-w",
+        "https://www.nature.com/articles/s41586-020-2442-2"
+      ],
+      "evidence_grade": "B+",
+      "primary_source_quality": "Very strong peer-reviewed source-domain evidence from two real laboratory autonomous-experiment systems. CAMEO is a physics-informed closed-loop materials system benchmarked against common active-learning schemes; the mobile robotic chemist runs hundreds of physical experiments under batched Bayesian search. The two studies address related but not identical mechanisms/objectives.",
+      "quantitative_result": "CAMEO reports a 10-fold reduction in required experiments for phase mapping/materials discovery; simulations show an approximately 35-iteration maximum average lead over GP-UCB, with 31% of CAMEO runs reaching within 1% of optimum in the first 20 runs versus 10% for GP-UCB. Separately, the mobile robotic chemist ran 688 experiments over eight days in a ten-variable space and found photocatalyst mixtures six times more active than the initial formulations.",
+      "matched_baseline": "Good for CAMEO, which explicitly benchmarks closed-loop selection against alternative active-learning schemes. The robotic-chemist sixfold objective improvement does not by itself measure experiment-count efficiency against a randomized/static-search baseline and should be treated as complementary demonstration rather than a second 10x sample-efficiency replication.",
+      "ablation_or_causal_support": "Moderately strong for closed-loop uncertainty/information-guided experiment selection in physical materials optimization. Physics-informed priors, instrument automation and domain structure contribute to the effect, so generic active selection is not isolated as the sole cause of all reported gains.",
+      "reproducibility_or_artifacts": "Peer-reviewed Nature/Nature Communications work; robotic-chemist workflow/optimizer code and station implementations are publicly referenced.",
+      "external_replication": "Two distinct teams/systems independently demonstrate practical closed-loop autonomous physical experimentation, though not the same exact algorithm/effect size.",
+      "failure_evidence": "The evidence also shows that objective improvement and experiment-count efficiency are different endpoints; the sixfold chemistry result must not be misreported as sixfold or tenfold sample efficiency.",
+      "scope_limits": [
+        "Materials/chemistry domains with structured physical variables and domain priors.",
+        "CAMEO's 10x result includes physics-informed modeling and a particular search landscape.",
+        "Robotic-chemist sixfold activity is an objective-value result, not directly a reduced-experiment-count result.",
+        "Research-agent hypotheses may have sparse/noisy delayed outcomes and much harder-to-calibrate uncertainty."
+      ],
+      "original_method_vs_o_adaptation": {
+        "original_method_evidence": "B+ for closed-loop Bayesian experiment selection in the demonstrated source domains.",
+        "o_specific_adaptation": "C+/B- for choosing the next O/research ablation by value of information until an explicit hypothesis-belief representation and matched adaptive-vs-static experiment-sequence comparison shows fewer evaluations or faster valid decisions."
+      },
+      "uncertainty": "moderate_native_high_transfer"
+    },
+    {
+      "candidate_id": "CF-20260825-05-tail-tolerant-speculation",
+      "mechanism": "delayed tied/hedged duplicate requests for straggler mitigation",
+      "source": {
+        "title": "The Tail at Scale",
+        "url": "https://research.google/pubs/the-tail-at-scale/",
+        "venue": "Communications of the ACM 2013"
+      },
+      "evidence_grade": "B+",
+      "primary_source_quality": "High-maturity primary distributed-systems article from Google documenting production-scale tail-tolerance techniques and concrete BigTable/file-system latency measurements. It is not an AI reasoning-quality study and the worker correctly scopes the mechanism to latency/throughput resilience.",
+      "quantitative_result": "A tied duplicate request sent after 1 ms lowers mostly-idle BigTable read latency from 19→16 ms at median (-16%) and 98→61 ms at p99.9 (-38%); with concurrent terasort, median falls 24→19 ms (-21%) and p99.9 159→108 ms (-32%). The paper reports less than 1% disk-utilization overhead in these examples due to prompt cancellation of the loser.",
+      "matched_baseline": "Strong for the source-domain latency mechanism: same request service with versus without delayed tied requests under idle and loaded conditions.",
+      "ablation_or_causal_support": "Strong for reducing latency tails when replicas have partially independent straggler causes and cancellation overhead is low. It establishes no reasoning-quality gain and does not directly test high-variance tool/reasoning trajectories.",
+      "reproducibility_or_artifacts": "Mature published system evidence; exact production environment is not an easily independent public reproduction.",
+      "external_replication": "Hedged/speculative execution is broadly reproduced in distributed systems, although this record does not enumerate independent studies.",
+      "failure_evidence": "If replica delays/errors are strongly correlated or duplication is expensive, speculative execution can waste capacity without improving the relevant outcome.",
+      "scope_limits": [
+        "Latency endpoint only; no evidence of higher answer correctness.",
+        "Requires redundant execution with cancellation and sufficient independence.",
+        "Reasoning/tool jobs can have irreversible external effects and cannot always be safely duplicated.",
+        "Cost-latency frontier must be measured for the actual job class."
+      ],
+      "original_method_vs_o_adaptation": {
+        "original_method_evidence": "B+ for delayed tied-request tail-latency reduction in distributed serving.",
+        "o_specific_adaptation": "C for speculative duplicate O/research trajectories until idempotence/external-effect safety, straggler independence, cancellation cost and time-to-first-valid-outcome are measured."
+      },
+      "uncertainty": "low_native_high_transfer"
+    }
+  ],
+  "cross_source_synthesis": [
+    "The cross-field mechanisms are strongest as resource-allocation and experimentation principles, not as direct evidence about autonomous general-purpose agents. Hyperband, FABOLAS and adaptive capping all rely on measurable relationships between partial evidence and final value; those relationships must be calibrated before transfer.",
+    "CAMEO and the mobile robotic chemist supply unusually concrete physical-world support for closed-loop adaptive experimentation, but source-domain priors and instrumentation contribute materially to their gains.",
+    "Tail-tolerant duplicate execution is well established for latency but has no source evidence for reasoning quality; it should remain a throughput hypothesis only.",
+    "The most dangerous overclaim in this batch would be copying source-domain speedup numbers into O. Every O-specific adaptation is intentionally graded lower because fidelity correlation, monotonicity, idempotence and evaluator validity remain untested."
+  ],
+  "supporting_provenance": [
+    "https://doi.org/10.1613/jair.2861",
+    "https://jmlr.org/papers/v18/16-558.html",
+    "https://proceedings.mlr.press/v54/klein17a.html",
+    "https://www.nature.com/articles/s41467-020-19597-w",
+    "https://www.nature.com/articles/s41586-020-2442-2",
+    "https://research.google/pubs/the-tail-at-scale/"
+  ],
+  "exact_continuation": {
+    "next_action": "Assess the new neuroscience worker artifact next, keeping biological evidence, demonstrated AI-transfer evidence and O-specific transfer as three separate layers. Then check whether reasoning/evaluation/open_source directories have appeared before continuing older backlog.",
+    "watch_new_records_first": true
+  }
+}
