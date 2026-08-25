@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate": "reasoning/C35-execution-substrate-snapshot-dsp",
+  "source_candidate_artifact": {
+    "path": "research_workers_clean_g1/reasoning/2026-08-26T0002JST.md",
+    "blob_sha": "1c9a93cf54195556347913e7b972e4b8d0bd5aec"
+  },
+  "verified_at": "2026-08-26T01:10:00+09:00",
+  "status": "primary_verified_with_execution_substrate_measurement_and_reproducibility_scope_clarification",
+  "primary_sources": [
+    {
+      "title": "Keep the Proof State Live: Snapshotting for Efficient Tactic Search in Lean 4",
+      "url": "https://arxiv.org/html/2605.25556v2",
+      "version": "arXiv:2605.25556v2, 2026-05-27"
+    },
+    {
+      "title": "Kimina Lean Server: Technical Report",
+      "url": "https://arxiv.org/abs/2504.21230",
+      "version": "arXiv:2504.21230"
+    }
+  ],
+  "claim_checks": [
+    {
+      "claim": "Repeated branch startup dominates wall time in the paper's stock fallback substrate.",
+      "result": "verified_with_scope",
+      "evidence": "Snapshot-DSP v2 reports import loading about 60 s per branch plus theorem-body elaboration estimated 18-735 s, together >99% of per-branch wall time in its standard single-machine fallback. Representative Table 2 rows report 99.9-100% overhead, with tactic CPU averaging about 45 ms across the shown 16 cases.",
+      "scope": "This is the paper's rebuild-per-branch Lean 4 + Mathlib / lake-build fallback on an Apple M-series MacBook Pro with 8 GB RAM, not a universal Lean runtime fact. The 18-735 s theorem-body range is estimated/back-computed rather than a direct independent instrumentation of theorem-body elaboration."
+    },
+    {
+      "claim": "Proof-state snapshotting gives 5.6-50x wall-time gains.",
+      "result": "verified_with_scope",
+      "evidence": "The 45 hand-crafted Prove-phase miniF2F-v2 benchmarks show group ranges containing the 5.6x minimum and 50.0x maximum; all-45 average is 14.0x and the paper reports median 9.7x. Three separate end-to-end DSP runs show 13.2x, 13.5x, and 19.9x.",
+      "scope": "The large range is primarily Prove-phase infrastructure timing on hand-crafted sketches specifically designed so at least one portfolio tactic closes each hole. The paper explicitly states these 45 benchmarks measure tactic-search infrastructure speed, not proof-discovery accuracy; only three problems are full end-to-end DSP runs."
+    },
+    {
+      "claim": "Import caching and theorem-body snapshot reuse are distinct mechanisms.",
+      "result": "verified",
+      "evidence": "Kimina's primary report says its LRU cache reuses workers with matching import headers and then verifies the body. Snapshot-DSP captures after theorem-body elaboration and reuses that proof state across branches. Snapshot-DSP v2 therefore correctly distinguishes import-level environment reuse from same-theorem post-elaboration snapshot reuse; it also says the two can compose.",
+      "scope": "Snapshot-DSP's persistent-server Level 1+2 numbers are estimates/future work, not measured implementation results."
+    },
+    {
+      "claim": "Snapshotting changes proof-search accuracy.",
+      "result": "not_supported_and_explicitly_rejected_by_primary_source",
+      "evidence": "The limitations section calls Snapshot-DSP a pure acceleration architecture: same tactic portfolio, same sketches, same set of proved theorems as fallback; accuracy/search strategy are unchanged.",
+      "scope": "Any claim that snapshots themselves improve theorem-solving quality would exceed the tested evidence."
+    }
+  ],
+  "additional_scope_corrections": [
+    "The current implementation restarts the LSP server per theorem, so it still pays the roughly 60 s import cost once per theorem; cross-theorem persistent-server amortization is not implemented in the reported system.",
+    "All experiments use one Apple M-series MacBook Pro with 8 GB RAM and a patched Lean 4.25.1 toolchain; other hardware and deeper/harder proof distributions were not characterized.",
+    "The paper's >100x Level 1+2 and large-branch projections are modeled estimates, not measured results and must not be mixed with the measured 5.6-50x range.",
+    "As of this audit, the paper-advertised public GitHub repository https://github.com/A2DR1/Lean_Snapshot returned 404 through the GitHub API/search path, so the numerical result is primary-paper verified but not independently reproduced from the claimed release artifact in this run."
+  ],
+  "material_note": "C35 is directionally correct after narrowing. The >99% overhead and 5.6-50x speedup are real primary-paper results for Snapshot-DSP's specific rebuild-per-branch miniF2F-v2/DSP substrate. Treat theorem-body 18-735 s as estimated/back-computed, distinguish measured snapshot results from projected persistent-server combinations, and do not transfer the speedup or cost mix to a cached/persistent Lean runtime without measurement. Kimina primary evidence confirms import-header caching is a different layer from post-elaboration branch snapshots.",
+  "unresolved": [
+    "Independent reproduction of Snapshot-DSP timing on the released implementation/artifacts.",
+    "Whether the advertised Lean_Snapshot repository becomes publicly available and matches the paper's patched Lean 4.25.1 implementation.",
+    "Matched measurements under Kimina/persistent-server baselines, Linux/high-RAM hardware, and learned rather than fixed tactic portfolios."
+  ],
+  "downstream_only": true,
+  "exploration_feedback": false
+}
