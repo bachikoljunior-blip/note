@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T02:00:00+09:00",
+  "candidate": {
+    "worker_namespace": "multi_agent",
+    "candidate_id": "multi_agent/C26-depth-over-fidelity-PEM",
+    "source_artifact": "research_workers_clean_g1/multi_agent/FOLLOWUP_2026-08-25_2300_JST.md",
+    "source_blob": "1d6f13354889a1e0d1b9121574e0a58b3cdf3479",
+    "claim": "Under fixed noisy-evaluation oracle budgets, preserving optimization depth and integrating ranking uncertainty at selection time can outperform spending many evaluations on evaluation-stage denoising; a rank-disagreement probe can selectively route between uncertainty-aware and vanilla search."
+  },
+  "primary_source": {
+    "title": "Depth over Fidelity in Fixed-Budget Noisy Evolution Strategies",
+    "authors": ["Sichen Wang","Zhipeng Lu"],
+    "venue": "ICML 2026 / PMLR 306",
+    "arxiv": "2606.06555",
+    "submitted": "2026-06-04",
+    "author_hosted_full_text": "https://sichen-wang.github.io/publications/depth-over-fidelity/",
+    "source_status": "primary author-hosted ICML publication page with full paper text/tables"
+  },
+  "verification": {
+    "main_matched_oracle_budget_results": {
+      "status": "verified",
+      "protocol": "COCO bbob-noisy: 30 functions x 15 instances per dimension at B=200d for d in {10,20,40}; six external tasks with 50 independent seeds each. Probe-and-Switch uses tau=0.12. Each COCO instance is run once per method.",
+      "aggregate_probe_and_switch_win_rates": {
+        "vs_resample_k10": {"wins":1413,"losses":237,"rate":0.856},
+        "vs_resample_k5": {"wins":1307,"losses":341,"rate":0.793},
+        "vs_UH_CMA_ES": {"wins":1276,"losses":373,"rate":0.774},
+        "vs_CMA_ES": {"wins":865,"losses":728,"rate":0.543},
+        "vs_always_on_RB_PEM": {"wins":954,"losses":688,"rate":0.581}
+      }
+    },
+    "adaptive_routing_value": {
+      "status": "verified",
+      "protocol": "B=100d; all 30 COCO functions split by probe-defined high-misranking subset versus complement; d in {10,20,40}, 15 instances/function, 675 matched problems per column.",
+      "RB_PEM": {"high_misranking":"68.1% (460/675)","complement":"35.3% (238/675)"},
+      "Probe_and_Switch": {"high_misranking":"65.2% (440/675)","complement":"47.4% (320/675)"},
+      "interpretation": "Always-on uncertainty smoothing is beneficial in the selected high-misranking regime but harmful on the stable complement; adaptive routing recovers most high-misranking gain while avoiding much of the low-misranking penalty."
+    },
+    "rank_instability_vs_variance_probe": {
+      "status": "verified",
+      "radial_noise_protocol": "sigma_eff(x)=0.5||x-x0||, d in {80,160,320}, B=200d, 54 problems, each once per method.",
+      "triggers": {"rank_disagreement":"49/54","point_variance":"0/54"},
+      "routing_head_to_head": "rank-disagreement switching wins on 39/54 vs variance switching; sign-test p=0.0007",
+      "scope": "This establishes that local pointwise variance can fail as a trigger under the constructed state-dependent noise regime; it is not a universal theorem that variance diagnostics are useless."
+    },
+    "probe_budget_and_threshold": {
+      "status": "verified",
+      "probe_cost": "2*lambda oracle evaluations",
+      "lambda_4": {"cost":8,"AUC":0.71,"accuracy":0.72},
+      "lambda_approx_16": {"AUC":0.76},
+      "lambda_32": {"AUC":0.73},
+      "threshold_plateau": "misranking-probe routing accuracy varies by about 2 percentage points over tau in [0.08,0.18]; MR exceeds the variance proxy by roughly 5-6 points across thresholds",
+      "scope": "tau=0.12 and the lambda plateau are empirical settings for this study, not universal constants."
+    },
+    "depth_loss_and_hidden_resampling_checks": {
+      "status": "verified",
+      "UH_maxevals_sweep": "At d=40, B in {200d,500d}, maxevals in {1,10,30}; increasing maxevals monotonically reduces UH-CMA-ES win rate versus CMA-ES and Probe-and-Switch under the fixed oracle budget.",
+      "Kmax0_ablation": "On 225 high-misranking COCO problems at d=40, B=100d, RB-PEM retains a 66% win rate versus CMA-ES when Kmax=0, where per-generation evaluation cost is essentially vanilla CMA-ES. This disfavors hidden boundary resampling as the main source of gain.",
+      "representative_failure_trace": "In one diagnostic example, a bad RB-PEM run exhausted budget by generation 129 while a good run reached generation 211, a reported 39% depth loss; this is illustrative rather than a population-average causal estimate."
+    },
+    "real_data_external_task": {
+      "status": "verified",
+      "digits0_MLP": "n=256, d=265, total oracle budget B=40d=10,600, 50 random seeds per method/batch-size pair",
+      "moderate_noise_batch16": {"Probe_and_Switch_win_rate":0.66,"warmstart_win_rate":0.76},
+      "extreme_noise_batch4": {"win_rate_near_parity":0.54},
+      "deterministic_batch256": "warmstart produces 48/50 ties (96%) with CMA-ES",
+      "scope": "Small nonconvex real-data optimization with minibatch-induced numerical objective noise; not an LLM-judge experiment."
+    },
+    "assumption_and_cost_scope": {
+      "status": "verified",
+      "wall_clock": "At d=40, B=100d, median wall-clock overhead is reported around 1.70x/1.64x for RB-PEM variants and 1.66x/1.62x for Probe-and-Switch variants relative to CMA-ES. Thus equal oracle-call budget is not equal wall-clock or total computation.",
+      "Cauchy": "Raw Cauchy noise violates the finite-variance assumption. The implementation clips standardized residuals and bootstraps from a winsorized working distribution; Cauchy results are empirical robustness stress tests, not theorem-valid raw-Cauchy guarantees."
+    }
+  },
+  "scope_clarifications": [
+    "The fixed-budget claim is primarily a fixed number of black-box oracle evaluations. It should not be paraphrased as equal wall-clock, equal FLOPs, equal LLM tokens, or equal dollar cost; the source reports ~1.6-1.7x median wall-clock overhead for selection-stage variants in one setting.",
+    "The noise model is stochastic black-box objective noise. Semantic LLM-judge hallucination, systematic bias, adversarial feedback, and correlated judge errors are different regimes; transfer to LLM population/QD selection is a mechanism hypothesis requiring direct testing.",
+    "The evidence supports conditional/adaptive uncertainty handling, not always-on smoothing: always-on RB-PEM loses badly on the stable complement while Probe-and-Switch approaches parity by reverting to vanilla CMA-ES.",
+    "Extreme-noise near-parity on digits0 is evidence for a saturation regime in that task, not a universal threshold for when verification becomes useless.",
+    "The COCO aggregate protocol uses one run per method per instance, aggregated across many functions/instances/dimensions; do not report per-instance run-to-run variance where none was measured.",
+    "The probe statistic is directly tested as decision-relevant rank instability. Its superiority to a point-variance proxy is established under a constructed radial-noise counterexample and broader empirical calibration, but does not prove it is the optimal trigger for every noisy search system."
+  ],
+  "status": "primary_verified_with_oracle_budget_and_transfer_scope_clarification",
+  "confidence": "high for ICML primary method, tables and appendix ablations; medium only for transfer to semantic LLM/multi-agent search",
+  "unresolved": [
+    "Direct LLM/QD experiment at matched total token/dollar/wall-clock budget comparing search depth, uniform re-judging, uncertainty-aware selection and adaptive decision-instability routing.",
+    "Injected semantic judge-noise/correlated-bias sweep measuring archive corruption, selection regret or final search quality.",
+    "Principled saturation criterion for switching from hard selection to reversible/evidence-collection mode when comparisons become effectively uninformative."
+  ],
+  "downstream_instruction": "Retain C26 as strong source-domain fixed-oracle-budget evidence that repeated denoising can sacrifice adaptive search depth and that decision-relevant rank instability is a useful routing signal. Do not translate the numeric win rates or tau/probe settings into universal LLM-search constants, and explicitly distinguish oracle-call budget from wall-clock/token/dollar cost."
+}
