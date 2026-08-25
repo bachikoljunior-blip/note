@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "worker": "multi_agent",
+  "checkpoint_at": "2026-08-25T15:02:00+09:00",
+  "checkpoint_phase": "exact_coordination_mitigation_tables",
+  "prior_checkpoints": [
+    "research_workers/multi_agent/20260825T1502JST.json",
+    "research_workers/multi_agent/20260825T1502JST-02.json",
+    "research_workers/multi_agent/20260825T1502JST-03.json"
+  ],
+  "new_exact_findings": [
+    {
+      "source_id": "yang2026-mas-bench",
+      "mechanism": "coordination-aware messaging + early global metadata + one-shot verified commitment",
+      "baseline_scaling": "Averaged across all models and difficulties, increasing agents N from 1 to 20 sharply reduced distributed-sorting success. At segment size K=10: Broadcasting 100.0% -> 38.6%, P2P 100.0% -> 22.8%, Shared K-V 80.0% -> 22.6%. Larger N also increased rounds and collapsed token efficiency.",
+      "camoc_effect": "On Shared K-V, CAMOC raised success from 38.2% to 84.7% for DeepSeek-V3.1, 33.7% to 67.2% for Qwen3, and 25.6% to 56.5% for GPT-OSS-120B. The paper reports success-rate gains up to 40 percentage points overall.",
+      "cost_effect": "Raw token difference versus Base/Ablation was only +1-2% on Shared K-V, -1-2% on P2P and -4-6% on Broadcasting. Because success rose substantially, Shared K-V tokens per correct instance fell by about 54% (DeepSeek-V3.1), 49% (Qwen3) and 53% (GPT-OSS-120B).",
+      "ablation_and_exception": "Structured messaging appears to drive much of the gain in shared-state settings. One-shot commitment is not universally beneficial: on Qwen3 P2P, Base success 56.9% fell to CAMOC 51.2% (p<0.05), and the component ablation identified one-shot commitment as the regression source, implying some model/backend pairs benefit from iterative refinement.",
+      "generalization": "On additional tasks, DeepSeek-V3.1 Base success fell with coupling intensity: ~61% distributed maximum (loose), ~34% prefix sum (medium), ~12% sorting (tight). CAMOC improved distributed maximum ~58%->~71% and prefix sum ~32%->~43% without task-specific tuning.",
+      "decision_relevance": "For coupled outputs, protocol engineering can matter more than simply increasing agent count. Use early coarse shared metadata and explicit final verification, but keep commitment depth adaptive because suppressing refinement can regress some backends."
+    },
+    {
+      "source_id": "zhang2026-silo-bench",
+      "mechanism": "coordination complexity as a multiplicative scaling tax",
+      "overall": "SILO-BENCH contains 1,620 experiments over 54 configurations. Average success across all configurations was 36.9% DeepSeek-V3.1, 16.9% GPT-OSS-120B, and 8.2% Qwen3-Next-80B-A3B.",
+      "agent_scale": "DeepSeek-V3.1 average success declined from 61.2% at N=2 to 18.1% at N=100; GPT-OSS from 34.4% to 6.4%; Qwen3 from 17.2% to 1.3%.",
+      "coordination_cost": "For GPT-OSS-120B, even N=2 lost 15.2% of N=1 performance on Level I, 31.1% on Level II and 48.8% on Level III. At N=50, relative coordination cost rose to 45.9%, 80.0%, and 100% respectively; Level III success was 0% at N=50 and N=100.",
+      "difficulty_interaction": "For DeepSeek-V3.1, success was 62.0% Level I, 35.1% Level II and 11.7% Level III averaged over protocols/scales. Level III reached zero success at N>=50 while Level I remained above 40% even at N=100 in the paper's scale-by-difficulty analysis.",
+      "structural_observation": "Agents often discover qualitatively appropriate communication structures but fail to synthesize correct global outputs; at larger scales communication density can decrease precisely when more coordination is required.",
+      "decision_relevance": "Do not use free-form agent societies to carry exact global state across many shards. If N must be large, make partitions independently verifiable and move global recombination into deterministic machinery or a small authoritative aggregator."
+    }
+  ],
+  "revised_parallelism_policy": {
+    "independent_discovery": "Scale wide when candidate evaluation is objective and lineages are mostly independent. FunSearch's rare-hit 4/140 result is the clearest case for very large repetition.",
+    "reasoning_ensemble": "Scale width only to a measured Pareto point; ACL 2026 reasoning evidence found gains up to about four debate agents and then decline, with shallow depth preferred.",
+    "coupled_distributed_state": "Do not scale N blindly. MAS-BENCH and SILO-BENCH show steep correctness and efficiency loss; invest in protocol/shared metadata/verification or deterministic recombination first.",
+    "communication": "Treat communication as a cost and potential corruption channel, not as the reason collaboration works. Independent voting often captures gains; structured corrective communication is the exception worth testing.",
+    "adaptive_controller_inputs": [
+      "single-agent baseline capability",
+      "task coupling/communication complexity",
+      "candidate verifier objectivity and cost",
+      "observed inter-agent output correlation/diversity",
+      "marginal quality gain per added worker",
+      "marginal latency/token cost",
+      "lineage novelty rate",
+      "error-amplification/consistency failures"
+    ]
+  },
+  "new_cautions": [
+    "One-shot commitment is not universally positive; preserve iterative correction where backend/model evidence supports it.",
+    "Shared-state tools can introduce interface friction even at N=1; MAS-BENCH observed a 20% N=1 failure rate on Shared K-V and ~28% more tokens than Broadcast/P2P for the same workload, so coordination-tool ergonomics must be separately measured.",
+    "Communication topology dominated token consumption by roughly 2-5x in MAS-BENCH, whereas CAMOC variant overhead within a backend was under 10%; optimize topology before micro-optimizing prompts."
+  ],
+  "next_queries": [
+    "Find adaptive-N controllers or uncertainty-based routing that explicitly optimize agent count online.",
+    "Find matched-budget archive/niche QD studies in LLM-guided discovery and quantify novelty/coverage versus best-of-N.",
+    "Inspect GPTSwarm graph optimization and any learned topology ablations against fixed debate/centralized structures.",
+    "Inspect SwarmBench for cases where local decentralized interaction genuinely improves with N rather than only diagnosing failure.",
+    "Extract AlphaEvolve internal system ablations or model-mixture evidence if publicly available."
+  ],
+  "exact_continuation": "Continue with adaptive-N and learned-topology evidence. Current robust rule: scale independent evaluator-gated search aggressively, but make interactive/coupled agent count an optimized variable, not a maximum. For shared-state work, protocol/topology/verification are first-order variables."
+}
