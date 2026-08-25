@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 9,
+  "config_revision": 5,
+  "control_source_main_sha": "3fe049c115171904a70796ad582ed7e13af2128f",
+  "control_root_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+  "role_config_blob": "f8b9cec681279d8dbd14c5db87ee79bc743a27b0",
+  "run_started_at": "2026-08-26T08:04:24+09:00",
+  "run_completed_at": "2026-08-26T08:25:21+09:00",
+  "continues_from_latest": "RUN_20260826T0657.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "downstream_state_read": false,
+    "o_state_read": false,
+    "feedback_read": false,
+    "semantic_control_freeze": "main 3fe049c115171904a70796ad582ed7e13af2128f, control 9, config 5 frozen before first role-local/public-source semantic read; later main-head changes were not adopted semantically."
+  },
+  "public_sources": {
+    "paper": "Physical Review Research 8, 023276 (2026), DOI 10.1103/6q3q-vfs9, published 2026-06-11",
+    "official_code": "arnauvivett/Astrocyte-gated-associative-memory- commit ec08203a716bcf81b23255cc500e5be6273c7137, Dynamical_regimes.py"
+  },
+  "actions": [
+    "Continued the exact Figure-1 tau_p audit from the predecessor checkpoint using the public equations and the public run_parameter_sweep discretization for every public logspace point with tau_p>=0.010722672220103232 (indices 17..99 of np.logspace(-3,3,100)), 50 independently generated pattern/query realizations per point, N=30, K=100, six flipped bits, Time=10, dt=0.001, tau_x=1, T=0.01.",
+    "Recorded both true last-observed soft-Hamming/perplexity and the public code's last-above-threshold values, plus public list-length convergence-time surrogates, finite first-passage indices, threshold recrossing flags, post-Euler negative gain events, and NaN-perplexity events.",
+    "Validated a newly observed low-tau numerical issue against the literal scalar public update: p is clamped only at the start of an Euler step, can become negative after dp integration, and entropy/perplexity are then evaluated before the next clamp. The dynamics can recover on later steps, so these NaNs may be silently omitted rather than crash the sweep."
+  ],
+  "tau_p_sweep_progress": {
+    "public_points_total": 100,
+    "exact_points_completed_this_run": 83,
+    "completed_indices": [17, 99],
+    "completed_tau_range": [0.010722672220103232, 1000.0],
+    "repetitions_per_point": 50,
+    "exact_trajectory_count": 4150,
+    "remaining_stiff_indices": [0, 16],
+    "remaining_tau_range": [0.001, 0.0093260334688322],
+    "remaining_reason": "The public rule uses dt=tau_p*0.05 below 0.01; exact Time=10 integration becomes computationally stiff. These 17 points are explicitly unresolved rather than extrapolated."
+  },
+  "protocol": {
+    "seed_policy": "For reproducibility, public point index i uses torch Generator seed 202608260804+i; each point uses fresh random KxN binary memories and six unique random query flips for each of 50 repetitions.",
+    "public_observable_semantics": "distance is computed from pre-x-update z=tanh(10*x), while perplexity is computed from post-p-update normalized p, matching Dynamical_regimes.py.",
+    "true_endpoint": "last distance/perplexity observable actually evaluated before official break or Time=10",
+    "public_reported_endpoint": "distances[-1] and perplexities[-1], where lists append only while distance>0.01 and perplexity>1.1",
+    "recross_test": "flag any finite trajectory that goes below a reporting threshold and later rises above it before official termination"
+  },
+  "findings": {
+    "endpoint_reporting_mismatch_confirmed_broadly": {
+      "scope": "83 exact public tau_p points, tau_p>=0.010722672220103232",
+      "result": "For points where at least half of repetitions officially converged by Time=10 (through tau_p=10 in this fixed-seed audit), the median public last-above-threshold error exceeded the median true endpoint error by 0.0117078 to 0.0332623 soft-Hamming units. The corresponding perplexity median gap ranged from 0.0001324 to 0.1382588.",
+      "example_tau_0_0107227": {"official_convergence_fraction":0.92,"true_error_median":0.0004405975341796875,"public_last_above_error_median":0.032321929931640625,"true_perplexity_median":1.0,"public_last_above_perplexity_median":1.118335247039795},
+      "interpretation": "The public arrays named distances_final/perp_final are not end-of-run observables for converged trajectories; they are near-threshold pre-end values. This directly conflicts with reading Figure 1 as literal final-time error/perplexity, while leaving the underlying continuous-time convergence theorem and fixed-point equations untouched."
+    },
+    "threshold_recrossing": {
+      "exact_trajectory_count": 4150,
+      "distance_recross_count": 0,
+      "perplexity_recross_count": 0,
+      "interpretation": "No empirical recrossing was found in the completed tau range under this seed set. Thus len(filtered_list)*dt does not acquire a large recrossing-induced occupancy bias here. It still differs from a literal first-passage timestamp by the code's indexing convention, and low-tau NaN omissions create an additional issue. Do not generalize the no-recross result to the unresolved tau_p<0.01 region or other tau_x/T sweeps."
+    },
+    "post_euler_simplex_violation": {
+      "tau_0_0107226722": {"runs_with_negative_p":50,"runs_with_nan_perplexity":49,"nan_perplexity_steps_total":96,"official_convergence_fraction":0.92},
+      "tau_0_0123284674": {"runs_with_negative_p":50,"runs_with_nan_perplexity":49,"nan_perplexity_steps_total":107,"official_convergence_fraction":0.96},
+      "tau_0_0141747416": {"runs_with_negative_p":50,"runs_with_nan_perplexity":44,"nan_perplexity_steps_total":64,"official_convergence_fraction":0.90},
+      "tau_0_0162975083": {"runs_with_negative_p":0,"runs_with_nan_perplexity":0,"official_convergence_fraction":0.94},
+      "mechanism": "run_parameter_sweep reduces dt only when the swept value is strictly <0.01. The first three public logspace points above 0.01 therefore use dt=0.001. In the literal public Euler update, p is clamped before dpdt but not projected/clamped after p<-p+dpdt*dt before entropy; negative coordinates can therefore make log(p+1e-10) invalid for a step. The next iteration clamps p and may recover.",
+      "scope": "This is a numerical-integration/observable validity defect in the published script for the tested low-above-0.01 points. It is not evidence against the model's continuous-time simplex dynamics."
+    },
+    "finite_horizon_transition": {
+      "selected_convergence_fractions": [
+        {"tau_p":5.72236765935022,"fraction":0.92},
+        {"tau_p":6.5793322465756825,"fraction":0.90},
+        {"tau_p":7.56463327554629,"fraction":0.84},
+        {"tau_p":8.697490026177835,"fraction":0.76},
+        {"tau_p":10.0,"fraction":0.66},
+        {"tau_p":11.497569953977358,"fraction":0.18},
+        {"tau_p":13.219411484660286,"fraction":0.0}
+      ],
+      "interpretation": "The public-paper qualitative statement that apparent performance worsens beyond tau_p around 10 because Time=10 ends before convergence is reproduced in this fixed-seed audit."
+    }
+  },
+  "quality_notes": [
+    "An earlier exploratory vectorized implementation in this physical run used the unclamped pre-step p as the Euler base and produced spurious recrossing/NaN behavior. Those exploratory outputs were discarded. All persisted statistics above come from the corrected literal public update p_base=clamp_min(p) before both the Euler base and dpdt.",
+    "No claims are made for the 17 unresolved tau_p<0.01 points."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Finish public tau_p indices 0..16 (0.001 through 0.009326...) with the literal dt=tau_p*0.05 rule using rowwise/stiff-safe exact integration and the same corrected collector; specifically test whether post-Euler negativity/NaN disappears under the smaller official dt and whether any threshold recrossing appears there. Then rerun the full tau_p sweep with a positivity/simplex-preserving numerical update or sufficiently smaller dt as a sensitivity control, keeping the continuous model equations fixed, to quantify how much Figure-1 endpoint/convergence curves depend on the public Euler discretization. After that, resume the planned matched instantaneous-softmax versus finite-tau tests across T and tau_x to search for a regime where slow routing itself has a statistically robust benefit."
+}
