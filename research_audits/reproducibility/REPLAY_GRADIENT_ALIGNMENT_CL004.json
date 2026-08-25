@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "continual_learning/CLG1-CL-004",
+  "canonical_id": "Replay plus Reptile/MER gradient alignment for large-scale continual language-model pretraining",
+  "source": {
+    "paper": "Revisiting Replay and Gradient Alignment for Continual Pre-Training of Large Language Models",
+    "arxiv": "2508.01908",
+    "pmlr": "PMLR 330:465-486 (CoLLAs; PMLR publication 2026)",
+    "author_associated_repository": "https://github.com/chandar-lab/continual-pretraining",
+    "audited_commit": "f6490d488f09fe53549094dd3f39a5b05234be1d",
+    "audited_tree": "8078fa98d42aa51747b3ce1c43e03228221d2df4",
+    "audited_commit_date": "2025-08-09T19:09:46Z",
+    "commit_author": "istabrak-abbes"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "paper_claim_boundary": {
+    "reported_scale": "Llama-family/Spectra-style models from 99M through 6B parameters, primarily English -> French -> German continual pretraining with 100B tokens per language, plus a more diverse multi-language extension",
+    "reported_replay_conditions": "sequential, 25% replay, 50% replay, Reptile-only, replay+Reptile/MER, and joint-training controls",
+    "reported_reptile_rule": "paper text reports an interpolation every k=500 batches with epsilon=0.1; replay+Reptile combines that update with replay ratios 25% or 50%",
+    "reported_compute_scope": "paper states 25% replay costs about 1.33x sequential FLOPs, 50% replay about 2x, and the Reptile interpolation adds roughly three model-size FLOP terms every 500 batches",
+    "claim_scope": "supports a stability/plasticity and compute-tradeoff result on the tested fixed language streams and model scales; it is not evidence for arbitrary online nonstationarity, tiny-memory replay, isolated factual-update preservation, or all task sequences"
+  },
+  "artifact_evidence": {
+    "repository_provenance": "strong author provenance: the pinned main commit is authored by paper first author Istabrak Abbes, and the README explicitly identifies the repository as the accompanying GPT-NeoX/Megatron-DeepSpeed implementation for the paper",
+    "environment": {
+      "docker": "Dockerfile pins base image tag nvcr.io/nvidia/pytorch:24.02-py3 and installs repository requirements",
+      "key_pins": "requirements.txt pins a DeeperSpeed git commit 02e2ebf7dee6aaab3d89094ed470a4609763c742, lm_dataformat commit 4eec05349977071bf67fc072290b95e31c8dd836, transformers==4.38.0, jinja2==3.1.4, and lm_eval 0.4.0-0.4.1; several other packages remain range- or base-image-resolved rather than fully lockfile-pinned",
+      "vendored_stack": "the repository contains the modified GPT-NeoX/Megatron training stack rather than depending only on an unspecified external NeoX revision",
+      "ci_tests": "repository tree includes CI workflows and tests, increasing implementation inspectability",
+      "release_state": "GitHub releases endpoint returned no releases at audit time"
+    },
+    "mechanism": {
+      "readme": "README documents disk-backed replay, asynchronous prefetch/RAM cache, mixed-batch replay, Reptile/MER meta-updates, forgetting/retained/learned-loss metrics and lm-eval integration",
+      "replay_buffer": "continual_utils/replay_buffer.py implements disk-backed files, metadata load/save, asynchronous prefetch and random replay sampling; get_batch sizes replay samples as int(eff_batch_size * replay_buffer_proportion)",
+      "training_path": "megatron/training_replay.py concatenates current-task samples with a replay-buffer batch after an initial buffer-fill threshold and performs periodic weight interpolation using reptile_inner_steps and reptile_beta",
+      "model_configs": "configs/99M_reptile.yml and configs/1B_reptile.yml expose concrete model/training settings, dataset path conventions, 35,763 training iterations and 11,921 iterations per each of three tasks for the displayed configs"
+    },
+    "important_code_paper_mismatch": {
+      "paper": "k=500 and epsilon=0.1 in reported experiments",
+      "pinned_code_defaults": "NeoXArgsTraining sets reptile_inner_steps=500, reptile_beta=0.01, reptile_gamma=0.02 and reptile=False",
+      "training_replay_behavior": "the audited training_replay.py applies the Reptile interpolation whenever iteration % reptile_inner_steps == 0; in the inspected code path this update is not guarded by the reptile boolean",
+      "named_configs": "99M_reptile.yml and 1B_reptile.yml do not set reptile_beta to 0.1; 1B_reptile.yml has the reptile enable line commented out and both inspected configs set replay_buffer_proportion=0 for their Reptile-only-style setting",
+      "implication": "running the pinned code/configs naively does not reconstruct the paper's stated epsilon=0.1 MER hyperparameter. A paper-faithful reproduction must explicitly override reptile_beta=0.1 (or identify the exact historical experiment config/branch that did so) and must verify the intended replay-ratio semantics rather than assuming the named configs encode all paper cells. This is an artifact/configuration provenance gap, not evidence that the scientific result is false."
+    },
+    "replay_semantics_caution": "README describes each step as drawing (1-alpha) current and alpha replay samples. In the inspected training_replay/replay_buffer implementation, replay get_batch is sized from eff_batch_size * replay_buffer_proportion and is concatenated to current_batch. The exact relationship between that code parameter and the paper's final-batch alpha therefore needs a matched launcher/config reconstruction before treating 0.25 or 0.5 as paper-equivalent; this audit does not infer a bug without the original run invocation.",
+    "result_artifacts": "the public tree exposes training/evaluation code, configs and checkpoint-writing paths, but this audit did not identify committed 99M-6B paper checkpoints, raw training logs, immutable W&B exports, per-cell result tables, or a one-command manifest that binds every reported table cell to an exact config/data/model/run hash"
+  },
+  "reproducibility_assessment": {
+    "grade": "B",
+    "official_artifact_support": "strong for mechanism-level reimplementation and environment reconstruction; moderate for exact paper-result replay because run/config provenance is incomplete and a material Reptile hyperparameter mismatch exists between paper text and pinned code defaults",
+    "independent_replication": "no clear independent provenance-equivalent numerical rerun of the paper's large-scale replay+Reptile results was identified in the targeted public search on 2026-08-25; search results surfaced the primary paper, author-associated repository, paper indexes and author promotion/listing pages. Absence of a located rerun is not evidence that none exists.",
+    "failed_independent_replication": "none identified in the targeted search; do not infer failure from absence",
+    "judgment": "This candidate has materially stronger reproducibility support than a paper-only claim: the authors released a substantial modified GPT-NeoX stack, replay buffer, Reptile training code, Docker environment and concrete configs. However, exact numerical replay of the headline 25%/50% replay + Reptile cells is not turnkey. The paper reports epsilon=0.1, while the pinned code default is reptile_beta=0.01; the inspected training path applies Reptile by cadence without using the declared reptile boolean; and the named configs do not themselves encode all paper replay+MER conditions. Raw large-run result/checkpoint provenance is also not committed in a cell-addressable form. Downstream evidence should therefore treat the mechanism as strongly implementable but the reported large-scale gains as primary-study evidence pending a matched run reconstruction or independent replication.",
+    "exact_blockers": [
+      "No immutable experiment manifest was identified that maps each paper result cell to repository commit, branch, full merged config/CLI overrides, dataset snapshot, tokenizer/model initialization and hardware/runtime.",
+      "Paper Reptile epsilon=0.1 differs from pinned NeoXArgs default reptile_beta=0.01; inspected named Reptile configs do not override it to 0.1.",
+      "The inspected training_replay.py performs periodic interpolation independent of the declared reptile boolean, so paper-faithful enable/disable conditions require explicit path/config validation.",
+      "Exact mapping between replay_buffer_proportion in the inspected concatenation code and the paper's alpha replay ratio requires reconstruction of the original batch/launcher semantics.",
+      "Large-scale 99M-6B checkpoints/raw logs/result ledgers sufficient to recompute the published retained/learned-loss and downstream cells were not identified in the audited public tree.",
+      "The environment is substantially specified but is not fully hermetic: some Python dependencies remain range/base-image resolved and external datasets/tokenizer/model paths are not bound by a single data manifest with hashes.",
+      "No independent provenance-equivalent numerical rerun was located in the targeted search window."
+    ],
+    "scope": "Supports public implementability of disk-backed replay plus periodic Reptile-style gradient alignment and substantial environment/config reconstruction. It does not independently verify the paper's exact 99M-6B quantitative gains or establish general effectiveness outside the tested fixed language-stream settings."
+  },
+  "recommended_matched_reproduction": {
+    "stage_1": "Before spending large compute, freeze the pinned code and create an explicit merged config that matches paper k=500, epsilon=0.1, one model scale and one 3-language stream; bind exact tokenizer/data hashes and replay-ratio semantics.",
+    "stage_2": "Run a small model positive control with sequential, Reptile-only, replay-only and replay+Reptile routes using identical token/order budgets; persist per-task losses, forgetting, retained loss, learned loss, exact FLOPs and all config/seed hashes.",
+    "stage_3": "Only if the small matched control reproduces the qualitative ordering should a larger paper-scale cell be attempted. Keep any failure scoped to the exact reconstructed code/config/data path rather than the replay/MER family."
+  },
+  "provenance": [
+    "https://proceedings.mlr.press/v330/abbes26a.html",
+    "https://arxiv.org/abs/2508.01908",
+    "https://github.com/chandar-lab/continual-pretraining/commit/f6490d488f09fe53549094dd3f39a5b05234be1d",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/README.md",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/Dockerfile",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/requirements/requirements.txt",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/continual_utils/replay_buffer.py",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/megatron/training_replay.py",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/megatron/neox_arguments/neox_args.py",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/configs/99M_reptile.yml",
+    "https://github.com/chandar-lab/continual-pretraining/blob/f6490d488f09fe53549094dd3f39a5b05234be1d/configs/1B_reptile.yml"
+  ]
+}
