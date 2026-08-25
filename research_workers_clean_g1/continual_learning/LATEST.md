@@ -1,10 +1,10 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260825T2004_JST.md`.
+Latest durable checkpoint: `RUN_20260825T2032_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then `RUN_20260825T1904_JST.md`, then `RUN_20260825T2004_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator output, or any other worker state.
+For continuation, read `STATE.md`, then the clean run checkpoints through `RUN_20260825T2032_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator output, or any other worker state.
 
-Exact next action: find a PDF-capable or machine-readable HESTIA results path and isolate boundary detection from adapter retrieval, specifically checking whether any reported path removes the released code's unseen-ground-truth-class trigger. If exact tables remain blocked, audit the official gradual/realistic-streaming path and search a label-independent task-free change-point control. Then continue FOREVER external replication with `{LoRA/full FT} × {tau counts replay / tau censors replay}` as the explicit axis, and extract quantitative Li–Hiratani task-order results for the matched-budget matrix.
+Exact next action: begin with independent ARROW replication/failure and a matched dual-buffer model-free ablation; if no direct replication exists, inspect the public ARROW artifact to isolate which updates consume FIFO versus long-term replay and whether the causal gain is specifically world-model consolidation. Then compare EEM against a newer label-independent same-label-domain-shift detector (ODDL/DEMD/expansible-ViT), extracting exact boundary delay/false-expansion/parameter-growth/forgetting evidence from a PDF-capable path. After that, return to HESTIA exact-table retrieval and visually extract Li–Hiratani real-image task-order gains. Do not stop after one branch resolves.
 
-Frontier must remain nonempty. Current priority gaps: HESTIA exact tables/ablations and label-independent boundary evidence; independent FOREVER/model-time replication; task-order quantitative gains/pilot-data cost; online-world-model evidence beyond fixed dynamics; matched memory/FLOPs/optimizer-state/boundary-information comparisons; plasticity-specific controls.
+Frontier must remain nonempty. Current priority gaps: HESTIA exact tables/ablations; same-label label-independent boundary evidence with capacity accounting; independent EEM/ARROW/FOREVER replication; ARROW causal world-model-vs-buffer isolation; adaptive short-/long-term replay allocation; task-order exact real-image gains and similarity-estimation cost; matched memory/FLOPs/parameter-growth/boundary-information comparisons; plasticity-specific controls; autonomous active curriculum under unknown future streams.
