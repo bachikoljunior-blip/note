@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "continual_learning/CLG1-CL-006",
+  "canonical_id": "FOREVER model-time forgetting-curve replay scheduling",
+  "source": {
+    "paper": "FOREVER: Forgetting Curve-Inspired Memory Replay for Language Model Continual Learning",
+    "venue": "ACL 2026",
+    "acl_anthology": "2026.acl-long.1144",
+    "doi": "10.18653/v1/2026.acl-long.1144",
+    "arxiv": "2601.03938",
+    "official_repository": "https://github.com/WoodScene/FOREVER",
+    "audited_commit": "bbeb549a21e59d9490f20a2b02099ee766a67f48"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "artifact_evidence": {
+    "official_code": "substantial original implementation",
+    "data": "Repository commits large preprocessed train/dev/test JSON corpora for LongSequence and SuperNI, rather than only data-download scripts. The exact task orders are committed in utils/dataset_order.py for dataset_id 1-8.",
+    "environment": {
+      "readme_critical_versions": ["transformers==4.57.0", "peft==0.17.1", "torch>=2.0.0"],
+      "requirements_snapshot": "requirements.txt is a broad pip-freeze-style snapshot with many exact package versions, including CUDA/RAPIDS/Jupyter packages; it is more specific than the README but is not a minimal portable lock and does not hash artifacts."
+    },
+    "model_time_implementation": "src/finetune_cl_our_qwen.py records the L2 norm of the change in the flattened trainable-parameter vector after each current-task optimizer step, accumulates that as tau, calibrates one model-day from the first steps_per_day current-task steps, and converts human forgetting days [1,2,4,7,15,30,60,90,120] into tau thresholds.",
+    "intensity_control": "The same implementation maintains an EMA of update magnitude mu, compares it with calibration mu0, clips replay-strength scale to [0.5,3.0], and applies replay-time quadratic regularization around task-start trainable parameters. Replay updates deliberately do not advance tau; the drift reference is reset after replay.",
+    "trigger_and_final_replay": "When tau crosses the next threshold, memory replay is triggered immediately; after all current-task steps the implementation performs a final replay regardless of threshold to guarantee at least one memory pass on tasks with history.",
+    "task_order": "utils/dataset_order.py explicitly commits six LongSequence order variants and two 15-task SuperNI order variants.",
+    "evaluation_surface": "Repository includes scripts and Python evaluators for average performance and BWT for both LongSequence and SuperNI.",
+    "result_artifacts": "No committed original training checkpoints, paper result tables, generated inference outputs, visualization directory, or run logs were identified in the audited tree."
+  },
+  "paper_claims": {
+    "main_qwen06b": "Primary clean evidence records FOREVER OP/BWT 72.9/-4.7 on Standard CL, 69.4/-5.0 on Long Sequence, and 42.1/-2.9 on SuperNI for Qwen3-0.6B, exceeding the compared replay baselines under the paper setup.",
+    "scale": "Clean evidence records LLaMA3.1-8B SuperNI 50.6/-2.1 versus VBM 49.0/-2.9.",
+    "scheduler_ablation": "On SuperNI task order 7, clean evidence records FOREVER 42.5/-2.8, fixed interval 40.1/-5.2, reversed 37.2/-7.8, end-only 40.9/-6.9, step-time calibration 41.3/-3.9, and removing intensity-aware regularization 39.9/-4.4.",
+    "memory_and_replay_saturation": "Clean evidence records modest OP gains with memory 2% to 50% and near-saturation from 1 to 4 replay epochs, arguing against interpreting the method as simply more replay compute.",
+    "runtime": "Clean evidence records FOREVER per-epoch runtime close to or below stronger adaptive baselines across Qwen3-0.6B/4B and LLaMA3.1-8B/LLaMA2-13B."
+  },
+  "reproducibility_assessment": {
+    "grade": "B+",
+    "official_artifact_support": "strong for data identity, task order, model-time scheduler, intensity control, training/evaluation implementation and environment snapshot",
+    "independent_replication": "not identified in targeted public searches on 2026-08-25",
+    "failed_independent_replication": "not identified",
+    "judgment": "FOREVER is more reproducible than a paper-only continual-learning result because the authors release substantial preprocessed datasets, fixed task-order code, the core tau/update-intensity implementation, replay/evaluation scripts, and a detailed environment snapshot. The implementation directly confirms that the claimed scheduler is based on trainable-parameter update magnitude rather than merely wall-clock step count. However, the released shell entrypoints are not portable or executable from a clean repository root without repair: they hard-code /workspace paths and invoke filenames `finetune_cl_ours_qwen.py` / `finetune_cl_ours_llama.py`, while the committed implementation files are `src/finetune_cl_our_qwen.py` / `src/finetune_cl_our_llama.py`. This is a concrete artifact defect, not evidence against the scientific mechanism. The paper's numerical tables also remain primary-study evidence because original checkpoints/results/logs were not located and no independent rerun was found.",
+    "exact_blockers": [
+      "The advertised Qwen and LLaMA shell scripts call `finetune_cl_ours_qwen.py` and `finetune_cl_ours_llama.py`, but the audited repository contains `src/finetune_cl_our_qwen.py` and `src/finetune_cl_our_llama.py`; there is both a path and singular/plural filename mismatch. Running the README command from repository root therefore requires manual correction.",
+      "Training scripts hard-code CUDA device indices, `/workspace/...` model/cache/W&B/checkpoint paths and fixed ports, so a fresh environment requires editing rather than parameter-only execution.",
+      "The Python implementation itself also hard-codes `/workspace/CL_Memory/cache` at import time / AutoConfig level, even though a cache_dir function argument exists, weakening portability.",
+      "README pins transformers and peft exactly but only lower-bounds torch; requirements.txt is a very large machine-specific package snapshot rather than a hashed minimal environment, so exact environment reconstruction is fragile across GPU stacks.",
+      "Backbone model weights are external Hugging Face artifacts and exact model revisions/hashes are not pinned in the shell scripts; future upstream model revisions can alter replay behavior.",
+      "No committed original model checkpoints, drift/replay logs, inference predictions, visualization outputs or paper result tables were found in the audited tree, so headline OP/BWT values cannot be independently recomputed from released run artifacts alone.",
+      "No independent public reproduction or failed replication of FOREVER was identified in the targeted search; original paper/repository evidence dominates current support."
+    ],
+    "scope": "Strong evidence that the core model-time replay mechanism is actually implemented as described and that major data/task-order inputs are public. Do not treat the shell-script portability defects as a failed scientific replication. Conversely, do not label the paper's OP/BWT gains independently replicated until an external rerun with pinned model/data/environment revisions exists."
+  },
+  "downstream_note": "For downstream adoption/testing, the most decision-relevant unit is not the entire FOREVER training stack but a matched scheduler ablation: compare cumulative update-magnitude time against fixed-step time while holding memory set, replay count, optimizer, LoRA configuration and regularizer constant. Preserve the paper's evidence that replay order/timing and intensity control each contribute, but independently verify under the target executor/model because the released baseline environment is LLM fine-tuning, not agent-context memory.",
+  "provenance": [
+    "https://aclanthology.org/2026.acl-long.1144/",
+    "https://github.com/WoodScene/FOREVER/commit/bbeb549a21e59d9490f20a2b02099ee766a67f48",
+    "https://github.com/WoodScene/FOREVER/blob/bbeb549a21e59d9490f20a2b02099ee766a67f48/Readme.md",
+    "https://github.com/WoodScene/FOREVER/blob/bbeb549a21e59d9490f20a2b02099ee766a67f48/src/finetune_cl_our_qwen.py",
+    "https://github.com/WoodScene/FOREVER/blob/bbeb549a21e59d9490f20a2b02099ee766a67f48/scripts/run_train_cl_ours_qwen.sh",
+    "https://github.com/WoodScene/FOREVER/blob/bbeb549a21e59d9490f20a2b02099ee766a67f48/utils/dataset_order.py",
+    "https://github.com/WoodScene/FOREVER/blob/bbeb549a21e59d9490f20a2b02099ee766a67f48/requirements.txt"
+  ]
+}
