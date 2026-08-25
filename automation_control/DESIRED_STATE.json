@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "control_revision": 8,
-  "updated_at": "2026-08-26T05:36:15+09:00",
+  "control_revision": 9,
+  "updated_at": "2026-08-26T06:37:50+09:00",
   "purpose": "Sanitized root control manifest. It is intentionally safe for clean exploration workers to read because substantive role policies are not co-located here.",
   "config_resolution": {
     "clean_exploration_role_path_template": "automation_control/roles/{role}.json",
@@ -15,22 +15,24 @@
     "anti_stop": true,
     "logical_disable_supported": true,
     "physical_scheduler_separate_from_repository": true,
-    "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus the role's designated config at that exact SHA. Before substantive semantic work, repeat the SHA-only ref lookup; if control_revision or the role config_revision changed, refetch and use the newer config. Once substantive semantic work begins, freeze the selected config snapshot for that run and record source SHA/blob so a concurrent control change is not mixed into the same semantic execution. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead."
+    "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus the role's designated config at that exact SHA. Before the first substantive semantic read, repeat the SHA-only ref lookup; if control_revision or the role config_revision changed, refetch and restart the pre-semantic bootstrap on the newer tuple. The first role-local/public-source semantic read is a hard semantic-freeze barrier: from that point the selected {main SHA, control revision, config revision, config blob} is immutable for the physical invocation. If control changes after the barrier, do not adopt it, reinterpret results, or continue semantic work under it; checkpoint under the frozen tuple and defer the newer control to the next invocation. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead.",
+    "one_semantic_config_per_invocation": true
   },
   "clean_exploration_boundary": {
     "semantic_inputs_allowed": ["own role-local clean state", "public sources", "own sanitized feedback", "this sanitized root manifest", "own role-local config"],
     "semantic_inputs_forbidden": ["O or O-derived state", "other clean-worker state or role config", "downstream comparator/integrator/index/feed/audit state", "DOWNSTREAM_STATE.json", "O_OPERATIONS.json", "legacy/pre_independence research", "shared EXECUTION_LEDGER.json", "other-role receipts", "commit messages/diffs/file snippets or other semantic payload obtained only while resolving repository head SHA"],
-    "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content",
+    "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content; each receipt must identify exactly one frozen semantic control/config tuple for the invocation",
     "feedback_rule": "own sanitized feedback is mechanical self-local quality control only and cannot convey novelty, relevance, acceptance/rejection, ranking, preferred mechanisms, O knowledge, or other-worker information",
     "own_state_resolution": "Use role-local LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology and minimum predecessor chain. Quarantine accidentally opened stale/cross-role observability content and do not use it semantically.",
     "scope_guard": "never broaden positive or negative evidence beyond tested scope",
     "head_lookup_transport": "For cleanliness/freshness checks use Git ref object lookup only. Do not use generic commit search, commit detail, branch detail, repository search, or any endpoint/tool response that may bundle unrelated commit messages, diffs, file snippets, or receipt bodies merely to learn the head SHA."
   },
   "migration": {
-    "from_control_revision": 7,
-    "reason": "Repository-head lookup transport can expose unrelated semantic payload even when the role intends to retrieve only a SHA. Revision 8 requires SHA-only Git-ref transport and explicit quarantine of any excess connector text, while retaining the role-local clean-control split.",
-    "clean_role_config_revision": 5,
+    "from_control_revision": 8,
+    "reason": "A current multi-agent receipt began semantic work under control 3/config 1 and later adopted control 8/config 5 in the same physical invocation. No cross-worker semantic contamination was reported, but mixing semantic control snapshots within one invocation weakens provenance and can reinterpret an in-flight search. Revision 9 makes the first semantic read a hard freeze barrier and defers any later control change to the next invocation.",
+    "clean_role_default_config_revision": 5,
+    "clean_role_config_overrides": {"multi_agent": 6},
     "downstream_state_control_revision": 8,
-    "rollback": "Restore DESIRED_STATE blob ae605e09eb3bcdc7aa18238d2c42218b0272d2e6 only if SHA-only ref resolution prevents execution; treat any fallback that exposes unrelated head metadata as contamination-risk degraded mode rather than clean steady state."
+    "rollback": "Restore DESIRED_STATE blob 508c9f92dd965d2b5074932b99847411cb66bef4 and multi_agent role blob 3f0ed8e0afa8bb06c153c8280353a87ff5828e0f only if hard semantic-freeze prevents safe checkpointing. Preserve SHA-only head transport and role-local isolation on any rollback."
   }
 }
