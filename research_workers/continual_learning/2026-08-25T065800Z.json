@@ -1,0 +1,112 @@
+{
+  "worker": "continual_learning",
+  "recorded_at_utc": "2026-08-25T06:58:00Z",
+  "record_type": "clean-independent-delta",
+  "independence": {
+    "status": "clean",
+    "used_O_or_O_derived_state": false,
+    "used_other_worker_or_comparator_or_integrator_state": false,
+    "prior_pre_isolation_records_read": false
+  },
+  "supersedes_or_corrects": [
+    {
+      "record": "2026-08-25T065700Z.json",
+      "field": "sources[oasis26-online-sample-selection].evidence",
+      "correction": "OASIS is NOT inference-only / forward-pass-only. The ACL 2026 appendix states that it computes sample-wise gradients, restricted to the last layer; this backward computation adds less than 3.5% overhead relative to a forward pass. It is reference-model-free and substantially cheaper than full gradient-based selection, but describing it as inference-only was incorrect."
+    }
+  ],
+  "new_evidence": [
+    {
+      "id": "oasis26-adapt20",
+      "source": "https://aclanthology.org/2026.acl-long.158/",
+      "result": "On Adapt-20, a more dynamic stream with 20 tasks and 19 distribution-shift boundaries, LLaVA-1.5-7B at a 12.5% sample-selection ratio achieved AAUC 55.04±0.89 and Alast 46.84±0.42 with OASIS. Listed alternatives included InfoBatch 54.34±0.68 / 44.59±0.59, DivBS 54.10±0.37 / 43.21±1.02, and GradNorm 52.94±1.11 / 45.02±0.91. This strengthens evidence that online global informativeness + redundancy control retains an advantage when shifts become frequent, not just in short task sequences.",
+      "scope": "Continual multimodal instruction tuning; 12.5% selection; single benchmark/model configuration for this exact Adapt-20 comparison."
+    },
+    {
+      "id": "oasis26-cost-correction",
+      "source": "https://aclanthology.org/2026.acl-long.158/",
+      "result": "OASIS uses Fisher-information-based informativeness from sample-wise last-layer gradients. Appendix A.15 reports the backward computation adds <3.5% overhead relative to the forward pass. Therefore its efficiency claim is low-overhead gradient selection, not inference-only selection.",
+      "scope": "Implementation detail reported by authors; exact end-to-end selection/training wall-clock depends on model and hardware."
+    },
+    {
+      "id": "hernandez-garcia26-vit-detail",
+      "source": "https://arxiv.org/pdf/2508.00212",
+      "result": "In class-incremental CIFAR-100 with a Vision Transformer (20 tasks, 5 new classes every 100 epochs, 2,000 epochs total), ordinary layer norm produced a final-task scratch-vs-incremental gap close to 10 percentage points. Reparameterizing layer norm as (x-normalized)*(1+gamma)+beta reduced that gap to about 4 points before reinitialization methods were applied. With reparameterized layer norm, selective weight reinitialization was the only compared reinitialization method that maintained stable performance across all 20 runs; ReDo and continual backprop suffered last-task learning instabilities. Selective weight reinitialization still fell below the from-scratch reference on the final tasks, so it only partially solved plasticity loss.",
+      "scope": "Continual supervised class-incremental CIFAR-100 with ViT; old classes remained in training data specifically to isolate plasticity from forgetting. This is evidence about plasticity, not a catastrophic-forgetting solution."
+    },
+    {
+      "id": "hernandez-garcia26-forgetting-boundary",
+      "source": "https://arxiv.org/pdf/2508.00212",
+      "result": "The authors explicitly state they did not study forgetting and there is no evidence the reinitialization algorithms prevent it; because reinitialization erases parameters, it may exacerbate forgetting unless utility is computed using past/current observations or combined with rehearsal.",
+      "scope": "Important negative boundary: do not promote selective weight reinitialization as a standalone anti-forgetting mechanism."
+    }
+  ],
+  "candidate_updates": [
+    {
+      "candidate_id": "CL-20260825-A",
+      "update": "Strengthened: Adapt-20 shows OASIS advantage with 19 shifts at 12.5% selection. Correct mechanism description to low-overhead last-layer-gradient/Fisher online selection plus redundancy reduction, not inference-only selection.",
+      "confidence": "high on online selection principle in continual instruction tuning; medium on transfer outside supervised/instruction streams"
+    },
+    {
+      "candidate_id": "CL-20260825-C",
+      "update": "Refined: selective weight reinitialization is robust to small networks and layer norm and is the most stable compared reinitialization scheme in the reported ViT/CIFAR-100 setup, but it addresses plasticity rather than forgetting. Reparameterized layer norm itself is a large part of the gain (roughly reducing final-task scratch gap from ~10 to ~4 points), so parameter renewal should be evaluated jointly with gradient-flow-preserving normalization.",
+      "confidence": "high on plasticity result; low-to-medium as standalone continual-memory mechanism"
+    }
+  ],
+  "negative_and_boundary_evidence": [
+    {
+      "claim": "Gradient-based online selection need not be prohibitively expensive.",
+      "scope": "OASIS reports <3.5% backward overhead relative to forward when restricting gradients to the last layer; not a universal hardware-independent overhead bound."
+    },
+    {
+      "claim": "Plasticity preservation and forgetting prevention are separate objectives.",
+      "scope": "The selective-weight-reinitialization ViT experiment deliberately retains old-class training data and explicitly disclaims evidence for forgetting prevention."
+    },
+    {
+      "claim": "Normalization dynamics can themselves create apparent continual-learning failure.",
+      "scope": "In this ViT/CIFAR-100 setup, the layer-norm scale collapsed and shrank gradients; reparameterized layer norm substantially narrowed the plasticity gap. Generalization to other architectures requires testing."
+    }
+  ],
+  "rejected_or_deprioritized_leads": [
+    {
+      "lead": "Treat selective weight reinitialization as a unified solution for retention",
+      "reason": "Rejected. Primary paper explicitly separates plasticity from forgetting and warns reinitialization may worsen forgetting. Keep it only as a plasticity-maintenance component that likely needs rehearsal/retention constraints."
+    },
+    {
+      "lead": "Describe OASIS as inference-only",
+      "reason": "Rejected as factually incorrect after appendix inspection; it computes last-layer sample-wise gradients."
+    }
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Extract Infinite Learning Rate Schedule autoregressive-LM zero-shot tables and replay/no-replay interaction; quantify whether avoiding cosine re-warm improves retention independently of replay and whether cooldown restores plasticity."
+    },
+    {
+      "priority": 2,
+      "action": "Extract ACL-2026 Continual Safety Alignment gradient-selection metric tables and selection-ratio ablations; compare its moderate-gradient preference with OASIS Fisher informativeness and OCAR curvature geometry."
+    },
+    {
+      "priority": 3,
+      "action": "Inspect Replay-MAML PTW buffer-size sensitivity and 1M-step ablations to separate the contribution of timescale mixture, reset, and MAML initialization."
+    },
+    {
+      "priority": 4,
+      "action": "Extract online-world-model Continual Bench exact AP/regret table and buffer/model-size ablations from an accessible primary rendering."
+    },
+    {
+      "priority": 5,
+      "action": "Inspect SERENA quantitative ten-benchmark results plus model-growth/compute overhead; accept only if gains survive online/no-task-cue constraints without prohibitive expansion."
+    }
+  ],
+  "termination_diagnostics": {
+    "finding_or_report_readiness_used_as_stop_condition": false,
+    "additional_unresolved_frontier_actions_completed_after_initial_persistence": [
+      "OASIS Adapt-20 dynamic-stream extraction and OASIS gradient-cost correction",
+      "Selective-weight-reinitialization ViT/CIFAR-100 primary-PDF inspection including layer-normalization interaction and explicit forgetting limitation"
+    ],
+    "remaining_frontier_nonempty": true,
+    "stop_reason": "automation runtime boundary",
+    "exact_next_action": "Open the Infinite Learning Rate Schedule primary PDF, inspect the autoregressive-LM tables with screenshots, and persist exact zero-shot retention/plasticity numbers plus replay/no-replay and cooldown interactions."
+  }
+}
