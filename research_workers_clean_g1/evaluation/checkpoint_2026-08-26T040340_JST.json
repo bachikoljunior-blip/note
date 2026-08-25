@@ -1,0 +1,171 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T04:03:40+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T030244_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 6,
+    "config_revision": 3,
+    "enabled_desired": true,
+    "source": "automation_control/DESIRED_STATE.json"
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; exact paired sequential inference and backward induction under nuisance discordance",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Anytime Validity is Free: Inducing Sequential Tests",
+      "authors": "Nick W. Koning, Sam van Meer",
+      "publication": "Journal of the Royal Statistical Society Series B, 2026; arXiv:2501.03982v5 dated 2025-12-21",
+      "url": "https://academic.oup.com/jrsssb/advance-article/doi/10.1093/jrsssb/qkag050/8493290",
+      "primary": true,
+      "relevance": "For a simple null, induces an anytime-valid test by phi_n=E_P[phi_N|F_n]. For composite hypotheses, uses a running essential infimum over P-specific induced tests. The paper explicitly warns that naively taking the same composite terminal test for every P can yield an uninformative 0,...,0,phi* or alpha,...,alpha,phi* process."
+    },
+    {
+      "title": "The McNemar test for binary matched-pairs data: mid-p and asymptotic are better than exact conditional",
+      "authors": "Morten W. Fagerland, Stian Lydersen, Petter Laake",
+      "publication": "BMC Medical Research Methodology 13:91, 2013",
+      "url": "https://doi.org/10.1186/1471-2288-13-91",
+      "primary": true,
+      "relevance": "Under H0, conditional on d=n12+n21 discordant pairs, n12 is Binomial(d,1/2). The exact conditional McNemar test conditions away the discordance-rate nuisance parameter. The unconditional paired table model has trinomial probabilities (rho/2,rho/2,1-rho), making rho an explicit nuisance parameter before conditioning on final discordance count."
+    },
+    {
+      "title": "Estimating means of bounded random variables by betting",
+      "authors": "Ian Waudby-Smith, Aaditya Ramdas",
+      "publication": "JRSS Series B 86(1), 2024; first published 2023-02-16",
+      "url": "https://doi.org/10.1093/jrsssb/qkad009",
+      "primary": true,
+      "relevance": "Provides the forward betting/martingale alternative: predictable bets and mixtures remain anytime-valid, separating validity from bettor utility. This supports using discordant signs directly without specifying the nuisance discordance rate when the conditional sign null is justified."
+    }
+  ],
+  "derivation": {
+    "model": "Independent paired tasks. Each task outcome is candidate-only (+), incumbent-only (-), or concordant (0). Under the McNemar null P_rho: P(+)=P(-)=rho/2 and P(0)=1-rho, with unknown rho in [0,1]. Let d_t be discordant pairs observed by total-task time t and w_t candidate-only wins among them.",
+    "terminal_test": "One-sided nonrandomized exact conditional McNemar at fixed total-task horizon N: phi_N(d,w)=1 iff P[Binomial(d,1/2)>=w] <= alpha, else 0. This is conditionally level <=alpha for every realized d and hence valid for every rho.",
+    "simple_null_backward_recursion": "For fixed known rho, V_N^rho(d,w)=phi_N(d,w) and V_t^rho(d,w)=(1-rho)V_{t+1}^rho(d,w)+(rho/2)V_{t+1}^rho(d+1,w)+(rho/2)V_{t+1}^rho(d+1,w+1). Equivalently, for m=N-t, V_t^rho is a Binomial(m,rho) mixture over future discordance counts and Binomial(k,1/2) mixture over their signs.",
+    "composite_lower_envelope": "Using the same valid terminal phi_N for every P_rho in the composite induction gives L_t(d,w)=inf_{rho in [0,1]} V_t^rho(d,w). If phi_N(d,w)=0 at the current state, then lim_{rho->0} V_t^rho(d,w)=0 because no future discordances occur with probability tending to one. Since V>=0, L_t(d,w)=0 exactly. Thus the induced composite process has no positive fractional progress at any state that would not already reject if no more discordances arrived.",
+    "interpretation": "The standard exact McNemar terminal test removes rho only after conditioning on the final discordance count. Before that final count is known, backward induction at fixed total-task N reintroduces rho as a future-information nuisance. Anytime validity is mathematically available, but a naive composite induction can be operationally degenerate."
+  },
+  "numerical_check": {
+    "purpose": "Check the explicit recursion at N=50, alpha=0.05 for representative nonrejecting interim states; exact values computed by summing future discordance and sign distributions.",
+    "states": [
+      {
+        "state": "t=20,d=8,w=6",
+        "current_exact_one_sided_p": 0.14453125,
+        "current_terminal_reject": false,
+        "V_rho_0.1": 0.0671138999,
+        "V_rho_0.2": 0.1104688483,
+        "V_rho_0.4": 0.114123261,
+        "V_rho_0.6": 0.1067289993,
+        "V_rho_0.8": 0.1041498807,
+        "composite_inf": 0.0
+      },
+      {
+        "state": "t=30,d=12,w=9",
+        "current_exact_one_sided_p": 0.072998046875,
+        "current_terminal_reject": false,
+        "V_rho_0.1": 0.2677468246,
+        "V_rho_0.2": 0.2450734237,
+        "V_rho_0.4": 0.2241048266,
+        "V_rho_0.6": 0.1978673258,
+        "V_rho_0.8": 0.1920326035,
+        "composite_inf": 0.0
+      },
+      {
+        "state": "t=40,d=16,w=11",
+        "current_exact_one_sided_p": 0.1050567626953125,
+        "current_terminal_reject": false,
+        "V_rho_0.1": 0.0565956427,
+        "V_rho_0.2": 0.1119141712,
+        "V_rho_0.4": 0.1339148288,
+        "V_rho_0.6": 0.1508353488,
+        "V_rho_0.8": 0.1468813312,
+        "composite_inf": 0.0
+      }
+    ],
+    "scope": "These values assume iid paired tasks with a common fixed rho. They illustrate the nuisance-rate issue; they are not a proof that every possible P-specific composite induction must degenerate."
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-fixed-N-mcnemar-composite-backward-degeneracy-v1",
+      "mechanism": "A fixed-total-task exact conditional McNemar terminal test can be backward-induced for each known discordance rate rho, but the naive composite construction that reuses the same terminal test for all rho has zero interim progress whenever the current discordant counts do not already reject.",
+      "evidence": "Koning-van Meer give the simple-null Doob induction and composite running-infimum construction, and explicitly warn that same-test composite choices can become 0,...,0,phi*. Fagerland et al. show exact McNemar conditions on the final discordance count while rho is a nuisance in the full trinomial paired model. The displayed recursion plus rho->0 limit makes the degeneracy explicit for McNemar.",
+      "scope": "One-sided nonrandomized exact conditional McNemar, fixed maximum total-task N, iid paired-task null P_rho with common unknown rho. Boundary-randomized terminal tests can soften some states but any state with terminal phi=0 has the same zero-infimum argument. This does not rule out a better P_rho-specific terminal-test family or a different filtration/clock.",
+      "implication": "Do not infer 'free practical early stopping signal' merely from the theorem that terminal tests can be sequentialized. Composite nuisance structure can erase useful pre-rejection progress."
+    },
+    {
+      "candidate_id": "eval-g1-known-rho-mcnemar-backward-dp-v1",
+      "mechanism": "If the discordance rate rho is genuinely fixed and known, the exact terminal McNemar test has a simple three-branch backward dynamic program over concordant, candidate-only, and incumbent-only next outcomes.",
+      "evidence": "The recursion follows directly from phi_t=E_{P_rho}[phi_N|F_t] and the trinomial null probabilities (rho/2,rho/2,1-rho). Representative states show nontrivial fractional induced values even when the current exact McNemar p-value is above alpha.",
+      "scope": "Known-rho simple null only. Plugging an estimated or guessed rho into this recursion is not automatically anytime-valid for the composite McNemar null.",
+      "implication": "Useful as a power/diagnostic oracle and as a benchmark for forward e-processes, but not as the default deployment certificate when rho is unknown."
+    },
+    {
+      "candidate_id": "eval-g1-discordance-clock-terminal-test-route-v1",
+      "mechanism": "A potentially nondegenerate backward route is to define the information clock by discordant arrivals and precommit a terminal test at a fixed discordant count M, where signs are a simple Bernoulli(1/2) null. Then the backward recursion has no rho nuisance.",
+      "evidence": "Exact McNemar's conditional law is Binomial(d,1/2) after conditioning on discordance count, and simple-null induction is exact. The obstacle is that a fixed total-task cap N yields a random final discordance count D_N, so replacing the clock/terminal rule changes the stopping design and may no longer coincide with the standard fixed-N exact McNemar terminal decision.",
+      "scope": "Proposed design route, not yet fully evaluated. Requires pre-specified treatment of runs that fail to reach M discordances by the resource deadline and a clear estimand/decision policy.",
+      "implication": "Benchmark design should consider whether the scarce information unit is total tasks or discordant paired tasks. A discordance-clock test may trade terminal equivalence for much better early resolution."
+    },
+    {
+      "candidate_id": "eval-g1-forward-betting-vs-backward-composite-choice-v1",
+      "mechanism": "Under unknown discordance frequency but a justified conditional sign null, forward betting on discordant signs (concordant factor 1) avoids specifying rho and can accumulate evidence before a classical exact terminal rejection, whereas the naive backward composite exact-McNemar induction cannot.",
+      "evidence": "Prior role-local simulations established finite-horizon behavior of valid predictable/mixture sign bets. The new backward derivation isolates why the terminal-exact route is disadvantaged under unknown rho: conditioning eliminates the nuisance only at the final discordance count.",
+      "scope": "This is not a universal optimality claim for forward betting. It depends on conditional sign symmetry and the chosen null; different P-specific terminal families may improve backward induction.",
+      "implication": "For agent A/B evaluation with many concordant tasks and uncertain discordance rates, choose the sequential evidence construction based on operational information flow, not just familiarity of the terminal test."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Anytime validity is free implies a classical exact McNemar test can be turned into a practically informative early-stopping process at no cost.",
+      "reason": "Rejected as a general operational inference. Terminal power can be preserved, but under the composite unknown-discordance null the naive same-terminal-test induction has zero progress on all current nonrejecting states."
+    },
+    {
+      "lead": "Use the simple fixed-rho backward recursion with rho estimated from the observed discordance rate.",
+      "reason": "Rejected without a separate validity argument. Predictable estimation of a nuisance parameter inside a process derived for a simple null does not by itself establish composite anytime validity."
+    },
+    {
+      "lead": "Because exact McNemar conditions on discordance count, rho never matters at interim times.",
+      "reason": "Rejected. The future final discordance count is unknown at interim time; under fixed total-task N its distribution depends on rho, so rho reappears in E[phi_N|F_t]."
+    },
+    {
+      "lead": "The degeneracy proves no backward-induced exact McNemar procedure can be useful.",
+      "reason": "Rejected as too broad. The result covers the naive same-terminal-test composite family. Koning-van Meer explicitly note that selection of P-specific terminal tests for composite induction is nontrivial; a better family may exist."
+    }
+  ],
+  "design_implications": {
+    "terminal_equivalence_vs_early_information": "Separate 'matches the classical terminal test at N' from 'provides useful fractional evidence before N'. The former does not guarantee the latter under nuisance parameters.",
+    "deployment_default": "When rho is unknown, prefer constructions whose validity is native to the conditional sign process or otherwise prove composite validity; do not silently plug in rho.",
+    "clock_choice": "Report whether the decision clock is total task pairs, discordant pairs, or another information unit. Different clocks imply different stopping policies and resolution.",
+    "anti_pseudoreplication": "Internal rollouts remain within one paired task unit unless a stronger dependence model justifies otherwise."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Search for or construct a nontrivial P_rho-specific family of valid terminal tests whose essential infimum equals the exact conditional McNemar terminal test but whose induced composite process avoids the 0-progress degeneracy; determine whether such a family is computationally useful."
+    },
+    {
+      "priority": 2,
+      "action": "Fully derive the fixed-discordant-count M backward recursion and compare its terminal/early power, unresolved probability, and resource use against forward betting under a total-task deadline N."
+    },
+    {
+      "priority": 3,
+      "action": "Extend the null to predictable task-specific discordance rates rho_t with conditional sign symmetry and check which forward/backward constructions remain exact."
+    },
+    {
+      "priority": 4,
+      "action": "Continue robust bettor design using explicit Bayes/minimax utilities over effect, discordance, and horizon distributions, with independent calibration and downside evidence-stability constraints."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "The prior frontier on backward exact McNemar has produced an explicit recursion and a concrete composite-null obstruction, but the nontrivial P-specific family and discordance-clock alternative are unresolved. Continue rather than treating the derivation as completion.",
+  "exact_next_action": "Investigate P_rho-specific terminal-test decompositions for the composite induction; if no useful family emerges, formalize the fixed-discordant-count M route and quantify its trade-off against forward betting under N=10-50 total-task budgets."
+}
