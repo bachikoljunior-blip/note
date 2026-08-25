@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "comparator": "evidence_strength",
+  "generation": "clean_g1",
+  "verification_run_started_at": "2026-08-25T17:49:50+09:00",
+  "scope": "Primary-source quantitative follow-up for continual_learning CLG1-CL-005/006 and long_horizon LH-Context-Folding.",
+  "input_boundary": {
+    "clean_candidate_source_only": true,
+    "legacy_research_workers_read": false,
+    "o_read": false,
+    "clean_worker_writes": false,
+    "output_prefix": "research_comparators_clean_g1/evidence/"
+  },
+  "supersedes_assessments": [
+    {
+      "worker": "continual_learning",
+      "candidate_id": "CLG1-CL-005",
+      "mechanism": "Infinite learning-rate schedule to avoid repeated cosine re-warming in continual pre-training",
+      "prior_tier": "B",
+      "new_tier": "A-",
+      "scores": "333232",
+      "score_order": ["primary_source_quality", "quantitative_result", "matched_baseline", "ablation_or_causal_support", "reproducibility_artifacts", "replication_or_failure_scope"],
+      "primary_verification": {
+        "source": "https://proceedings.mlr.press/v330/singh26b.html",
+        "primary_pdf": "https://arxiv.org/pdf/2503.02844",
+        "code": "https://github.com/Pauljanson002/beyond-cosine",
+        "peer_reviewed": true,
+        "quantitative_results": [
+          "Small-scale CIFAR-10 MAE without replay: infinite cosine improves average accuracy by 1.87 percentage points and BWT by about 4 points over repeated cosine.",
+          "Large-scale MAE aggregate metrics with 5% experience replay: repeated cosine Avg Acc/BWT 48.87/-3.61 versus infinite cosine 50.18/-1.37. Without replay: 39.69/-17.91 versus 41.22/-15.06.",
+          "Additional across-time forgetting metrics with 5% replay: repeated cosine Overall Acc 44.76, REM 97.11, Overall BWT -2.89, CL score 37.96; infinite cosine 50.56, 99.54, -0.46, 40.61.",
+          "For autoregressive LM continual pre-training, the paper reports better upstream validation retention under infinite schedules and zero-shot averages that favor infinite cosine in the DCLM -> Stack setting. With 50% replay, the best table-3 average is 46.81 for infinite cosine eta_const=2e-4 versus 44.65 for repeated cosine after DCLM -> Stack -> German; on German-specific ARC-de/HellaSwag-de, the best average is only 28.10 versus cosine 28.09, so newest-domain adaptation gains there are negligible."
+        ],
+        "causal_or_design_checks": [
+          "The matched comparison changes the learning-rate schedule while holding continual pre-training setup fixed, with explicit with/without replay conditions.",
+          "Appendix checkpoint-selection ablation compares infinite cosine against repeated-cosine restarts from two manually selected high-LR checkpoints; infinite cosine still yields consistently lower linear-probe loss, reducing the alternative explanation that checkpoint choice alone drives the effect.",
+          "Replay interaction is nontrivial: higher eta_const can improve adaptability when replay is present, while lower eta_const better preserves earlier knowledge without replay."
+        ],
+        "scope": "Strong evidence that repeated re-warming is avoidable and that an infinite schedule can improve stability in the studied SSL/LM continual-pretraining regimes. It is not evidence for a universal fixed eta_const; tuning remains distribution- and replay-dependent."
+      },
+      "judgment": "Upgrade B -> A-. Exact primary quantitative tables, replay interactions, checkpoint-control analysis, peer-reviewed venue, and public code are now verified. The intervention is low-complexity and well matched, but the language-model newest-domain effect can be tiny and no independent replication was established in this pass."
+    },
+    {
+      "worker": "continual_learning",
+      "candidate_id": "CLG1-CL-006",
+      "mechanism": "Model-time replay scheduling plus intensity-aware replay regularization (FOREVER)",
+      "prior_tier": "B",
+      "new_tier": "A",
+      "scores": "333333",
+      "score_order": ["primary_source_quality", "quantitative_result", "matched_baseline", "ablation_or_causal_support", "reproducibility_artifacts", "replication_or_failure_scope"],
+      "primary_verification": {
+        "source": "https://aclanthology.org/2026.acl-long.1144/",
+        "primary_pdf": "https://aclanthology.org/2026.acl-long.1144.pdf",
+        "code": "https://github.com/WoodScene/FOREVER",
+        "peer_reviewed": true,
+        "protocol": "All methods use the same LoRA-based framework and same number of epochs; main experiments are averaged over three independent runs and multiple task orders.",
+        "qwen3_0_6b_table": {
+          "Memory-Based": "FOREVER OP/BWT 72.9/-4.7 versus VBM 71.5/-5.2, AIMMerging 71.9/-5.0, Recurrent-KIF 70.6/-6.5",
+          "Standard_CL": "FOREVER 69.4/-5.0 versus VBM 68.1/-6.1, AIMMerging 67.9/-6.3",
+          "Long_Sequence_SuperNI": "FOREVER 42.1/-2.9 versus VBM 41.3/-3.7, AIMMerging 41.0/-3.4"
+        },
+        "aggregate": "Paper reports average OP +1.2 points and BWT +0.9 points over the prior best VBM across the three benchmark columns.",
+        "model_scale": "On SuperNI with LLaMA3.1-8B, FOREVER improves OP 49.0 -> 50.6 and BWT -2.9 -> -2.1 versus VBM; the study covers 0.6B to 13B backbones.",
+        "component_ablation": "Primary Table 2 separately removes/replaces replay scheduler and intensity-aware regularization. The paper also compares fixed-interval, reversed, and end-only replay schedules and alternative regularizers, providing direct mechanism-level controls rather than headline-only comparison.",
+        "failure_scope": "The gains over the strongest Ebbinghaus-style VBM baseline are consistent but modest. Evidence supports model-update-based replay timing and adaptive replay strength in the tested LoRA continual-learning settings, not a claim that human forgetting curves are universally optimal for arbitrary learning systems."
+      },
+      "judgment": "Upgrade B -> A. The previously unverified secondary 61.5 aggregate is no longer needed: the archival primary provides complete per-benchmark OP/BWT tables, three-run protocol, cross-scale evidence, direct ablations, and public code. This is strong scoped evidence for model-centric replay timing plus adaptive replay strength; the modest effect size versus VBM should be preserved."
+    },
+    {
+      "worker": "long_horizon",
+      "candidate_id": "LH-Context-Folding",
+      "mechanism": "Learned branch-and-fold context management with FoldGRPO",
+      "prior_tier": "C",
+      "new_tier": "A-",
+      "scores": "233322",
+      "score_order": ["primary_source_quality", "quantitative_result", "matched_baseline", "ablation_or_causal_support", "reproducibility_artifacts", "replication_or_failure_scope"],
+      "primary_verification": {
+        "source": "https://arxiv.org/pdf/2510.11967",
+        "project": "https://context-folding.github.io/",
+        "public_reimplementation": "https://github.com/MiaoLu3/Context_Folding",
+        "matched_main_results": {
+          "BrowseComp-Plus": {
+            "32K_ReAct": 0.286,
+            "327K_ReAct": 0.478,
+            "32Kx10_Summary_GRPO": 0.527,
+            "32Kx10_Folding_untrained": 0.420,
+            "32Kx10_Folding_GRPO": 0.567,
+            "32Kx10_Folding_FoldGRPO": 0.620
+          },
+          "SWE-Bench_Verified": {
+            "32K_ReAct": 0.436,
+            "327K_ReAct": 0.552,
+            "32Kx10_Summary_GRPO": 0.550,
+            "32Kx10_Folding_untrained": 0.492,
+            "32Kx10_Folding_GRPO": 0.564,
+            "32Kx10_Folding_FoldGRPO": 0.580
+          }
+        },
+        "controls": [
+          "Same Seed-OSS-36B-Instruct base, data, infrastructure, and RL hyperparameters are used for the directly comparable ReAct and folding baselines.",
+          "FoldGRPO vs standard GRPO improves folding-agent pass@1 from 0.567 to 0.620 on BrowseComp-Plus and 0.564 to 0.580 on SWE-Bench, isolating value from the process-reward/context-aware RL formulation beyond folding architecture alone.",
+          "Behavior ablation: BrowseComp Finish/MainLen/Scope changes 0.738/22,285/0.762 under standard GRPO to 0.935/7,752/0.895 under FoldGRPO; SWE changes 0.612/48,908/0.419 to 0.962/8,885/0.754, showing over-90% main-context compression with better branch focus/completion."
+        ],
+        "scope": [
+          "The 10x claim is peak active context (32K) versus the 327K long-context ReAct baseline; folding can consume up to 32K x 10 total branch budget, so it is not a 10x total-token/computation saving claim.",
+          "Untrained folding beats matched 32K ReAct and summarization baselines but remains below 327K ReAct; the strongest result requires RL and FoldGRPO.",
+          "The public repository states that it is an open-source reimplementation and may differ from the code used to train the paper model; full validation of training results is/was still in progress. No independent headline replication was established here."
+        ]
+      },
+      "judgment": "Upgrade C -> A-. Exact primary task-level numbers and mechanism/behavior ablations are now verified. Evidence strongly supports learned context folding as a way to preserve a small active working context while retaining long-horizon performance in the two tested domains, but the result should not be misreported as a 10x total-compute reduction and remains preprint-level without independent replication."
+    }
+  ],
+  "state_delta": {
+    "remove_from_hold_for_more_evidence": ["continual_learning/CLG1-CL-005", "continual_learning/CLG1-CL-006", "long_horizon/LH-Context-Folding"],
+    "new_high_confidence_scoped_candidates": ["continual_learning/CLG1-CL-005", "continual_learning/CLG1-CL-006", "long_horizon/LH-Context-Folding"],
+    "important_scope_corrections": [
+      "FOREVER: preserve the small margin over VBM; do not rely on the earlier secondary 61.5 aggregate when full primary per-benchmark table is available.",
+      "Context-Folding: 10x smaller active context does not mean 10x lower total token use; branch budget can reach 32K x 10 and FoldGRPO increases tool use/exploration.",
+      "Infinite schedule: language newest-domain adaptation advantage can be negligible; the stronger evidence is retention/stability and replay-dependent tradeoff, not universal superiority on every downstream metric."
+    ]
+  },
+  "exact_continuation": "Continue with primary-table verification of remaining B/B+ candidates where a missing exact table is the main blocker, starting with continual_learning/CLG1-CL-004 replay-rate scaling and then long_horizon/LH-VendingBench exact failure correlations/interventions. After table gaps, prioritize independent replication/failure evidence for current A/A- candidates. Keep legacy research_workers/ excluded; do not read O unless evidence/configuration comparison becomes necessary; write only under research_comparators_clean_g1/evidence/."
+}
