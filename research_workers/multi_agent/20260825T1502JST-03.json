@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "worker": "multi_agent",
+  "checkpoint_at": "2026-08-25T15:02:00+09:00",
+  "checkpoint_phase": "compute_efficiency_and_large_scale_coordination",
+  "prior_checkpoints": [
+    "research_workers/multi_agent/20260825T1502JST.json",
+    "research_workers/multi_agent/20260825T1502JST-02.json"
+  ],
+  "new_covered_sources": [
+    {
+      "id": "wunderlich2026-pareto-scaling",
+      "title": "Multi-Agent Reasoning Improves Compute Efficiency: Pareto-Optimal Test-Time Scaling",
+      "venue": "ACL 2026 Student Research Workshop",
+      "date": "2026-07-02",
+      "source": "https://aclanthology.org/2026.acl-srw.1/",
+      "primary": true
+    },
+    {
+      "id": "yang2026-mas-bench",
+      "title": "When 20 Agents Fail to Sort: The Distributed Sorting Benchmark for Scalable Multi-Agent Systems",
+      "venue": "Findings of ACL 2026",
+      "date": "2026-07",
+      "source": "https://aclanthology.org/2026.findings-acl.1698/",
+      "primary": true
+    },
+    {
+      "id": "zhang2026-silo-bench",
+      "title": "SILO-BENCH: A Scalable Environment for Evaluating Distributed Coordination in Multi-Agent LLM Systems",
+      "venue": "ACL 2026",
+      "date": "2026-07",
+      "source": "https://aclanthology.org/2026.acl-long.1354/",
+      "primary": true
+    },
+    {
+      "id": "alphaevolve-impact-2026",
+      "title": "AlphaEvolve: How our Gemini-powered coding agent is scaling impact across fields",
+      "date": "2026-05-07",
+      "source": "https://deepmind.google/blog/alphaevolve-impact/",
+      "primary": true,
+      "type": "official deployment/impact report"
+    }
+  ],
+  "new_mechanism_findings": [
+    {
+      "mechanism": "parallel-first compute allocation with shallow aggregation",
+      "evidence": "ACL 2026 evaluates 34 configurations and more than 100 evaluations across self-consistency, self-refinement, debate, and mixture-of-agents under compute accounting that includes FLOPs and memory-transfer time. On MMLU-Pro, 70B CoT was 64.3%; Pareto-scaled MoA reached 71.4% (+7.1 pp) at about 20x CoT compute, compared with self-consistency 68.7% and debate 70.0% at comparable high budgets. Under equal compute, debate and MoA outperformed self-consistency by 1.3 and 2.7 pp, respectively.",
+      "scaling_ablation": "For debate, accuracy improved as agent count increased up to four and then decreased; highest debate accuracy was consistently reached with only two rounds. For MoA, Pareto-optimal points appeared when proposer count exceeded layer count by one (3 models/2 layers, 4/3, 5/4); adding more models or layers beyond that tended to reduce accuracy.",
+      "budget_rule": "At roughly 5x CoT budget most of the reported MoA gain was already captured; at <=3x CoT budget self-consistency was judged the most viable. Hard tasks benefited much more from extra compute (+9 pp at 15-20x CoT) than easy tasks (+2.2 pp in the paper's difficulty breakdown).",
+      "quality_caveat": "Mixing cheaper 8B proposers into a 70B MoA did not help: all-large 70B MoA with 3 proposers/2 layers achieved 70.1% MMLU-Pro, while a 5-proposer mixture of 3x70B + 2x8B reached 67.5% despite matching the nominal scaling rule.",
+      "decision_relevance": "Use an adaptive controller over N, depth and model quality. Favor width over sequential rounds, but stop increasing width when marginal accuracy per compute turns negative. Send harder candidates to more parallel exploration; keep easy/obvious cases cheap. Do not dilute a strong population with weak proposers solely to increase N."
+    },
+    {
+      "mechanism": "early shared metadata plus single-commit verification for distributed coordination",
+      "evidence": "Findings ACL 2026 MAS-BENCH isolates distributed sorting under broadcast, peer-to-peer and shared-key-value protocols. Success falls sharply as agent count grows even on an algorithmically simple task. The proposed CAMOC mitigation combines collaboration-aware information sharing, early global metadata exchange and single-commit verification; the authors report substantially better coordination success and efficiency, especially with shared-state interaction.",
+      "decision_relevance": "If workers must jointly construct one globally consistent artifact, add explicit shared metadata/conventions early and one authoritative commit/verification point. Merely adding communication channels does not solve state-consistency failures.",
+      "scope": "Distributed sorting diagnostic benchmark; abstract-level quantitative detail is limited, so exact effect sizes remain to extract."
+    },
+    {
+      "mechanism": "avoid free-form distributed computation at very high agent counts",
+      "evidence": "ACL 2026 SILO-BENCH runs 1,620 experiments across 54 configurations, 3 communication protocols, 6 agent scales and 3 frontier LLMs on 30 role-free algorithmic tasks. Agents communicate actively but fail to convert interaction into reliable distributed computation; on the highest communication-complexity Level-III tasks, success is zero beyond 50 agents.",
+      "decision_relevance": "Very large populations should not be asked to solve a single coupled stateful problem through free-form conversation. Partition work into independently evaluable units or use deterministic shared-state/aggregation machinery; otherwise communication density can rise while correctness collapses.",
+      "scope": "Algorithmic information-silo tasks with exact ground truth; strong evidence against naive large-N free-form coordination, not against independent large-N search."
+    },
+    {
+      "mechanism": "objective-evaluator evolutionary search has demonstrated deployment-scale impact",
+      "evidence": "Google DeepMind's May 2026 AlphaEvolve impact report says the system became a regular infrastructure optimization tool, including a 20% reduction in Spanner write amplification, nearly 9% software storage-footprint reduction, and outside Google examples such as 10.4% routing efficiency improvement and roughly 4x ML force-field training/inference speedups. Earlier official reporting described an architecture using a fast model for breadth, a stronger model for depth, automated evaluators and an evolutionary program database.",
+      "decision_relevance": "This strengthens the case for evaluator-gated evolutionary populations as a practical research mechanism when objective evaluation is available. It does not establish that free-form multi-agent collaboration scales similarly."
+    }
+  ],
+  "cross_source_synthesis": {
+    "core_distinction": "Large-N helps most when workers produce independent candidates that can be cheaply and objectively evaluated. Large-N hurts when many agents must maintain shared state or converge through free-form communication.",
+    "evidence_alignment": [
+      "FunSearch: rare-hit objective search can require many independent runs (4/140 for the hardest direct cap-set result), while islands preserve diversity and periodically exploit successful lineages.",
+      "PartEvo: structured niches and local/global evolutionary operators outperform undifferentiated basic crossover/mutation under fixed sampling budgets.",
+      "ACL 2026 compute scaling: parallel width helps only to a task- and architecture-specific optimum; more agents after that can reduce accuracy.",
+      "MAS-BENCH/SILO-BENCH: coordination failure grows with agent count when global consistency must emerge from communication.",
+      "NeurIPS 2025 Debate-or-Vote: independent voting often captures most of debate's gain; communication is not itself the source of improvement.",
+      "Nature 2026 capability saturation: sufficiently strong single agents can make multi-agent coordination neutral or harmful, and centralized validation limits error amplification."
+    ],
+    "recommended_exploration_architecture": [
+      "Many isolated or niche-separated proposal lineages, each with minimal shared context.",
+      "A durable archive/index containing candidates, provenance, scores and lineage ancestry.",
+      "Cheap deterministic or independent verification before candidates enter shared context.",
+      "Periodic exploit/reseed of weak lineages from strong archive members, without collapsing all diversity.",
+      "Dynamic allocation of worker count based on task difficulty, novelty rate, verifier confidence and marginal gain per compute/latency.",
+      "Shallow aggregation and a single authoritative commit/selection point for coupled outputs.",
+      "Strong-model quality preserved; cheap models used for breadth only when matched experiments show they add complementary signal rather than noise."
+    ]
+  },
+  "new_dead_ends_or_cautions": [
+    "A fixed instruction to 'spawn as many agents as possible' is contradicted by matched-compute reasoning evidence: agent count has an optimum and can reduce accuracy beyond it.",
+    "High communication volume is not a proxy for effective collaboration; SILO-BENCH explicitly observes a communication-reasoning gap.",
+    "Sequential debate depth is particularly suspect: two rounds were the most reliable optimum in the ACL 2026 scaling study, while extra rounds often degraded or added no benefit.",
+    "Very large agent populations remain useful for independent rare-event discovery, but should not be conflated with very large conversational teams."
+  ],
+  "next_queries": [
+    "Extract CAMOC exact tables to quantify how early metadata and single-commit verification change success as N grows.",
+    "Extract SILO-BENCH success-vs-agent-count curves by protocol/model to identify practical failure thresholds below 50 agents.",
+    "Search adaptive controller methods that learn or predict optimal worker count from uncertainty/difficulty rather than hand-set N.",
+    "Search direct matched-budget quality-diversity evidence for archive/niche selection versus independent best-of-N and single-population evolution.",
+    "Extract AlphaEvolve internal ablations if the white paper exposes prompt-sampler, evaluator, model-mixture or evolutionary-database comparisons.",
+    "Search swarm-style local-communication benchmarks for any settings where decentralized local interaction beats centralized aggregation under equal compute."
+  ],
+  "exact_continuation": "Continue with exact large-scale coordination mitigations: CAMOC tables and SILO-BENCH scaling curves, then adaptive N/routing and quality-diversity matched-budget studies. Preserve the high-level split: maximize large-N independent evaluator-gated exploration, not large-N free-form interactive collaboration."
+}
