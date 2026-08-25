@@ -1,0 +1,146 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T02:02:21+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T005921_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 5,
+    "config_revision": 3,
+    "enabled_desired": true,
+    "source": "automation_control/DESIRED_STATE.json"
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; exact sequential paired-binary/task-finalization inference under optional stopping",
+  "sources_checked_or_revisited": [
+    {
+      "title": "E-values for k-Sample Tests with Exponential Families",
+      "authors": "Yunda Hao, Peter Grünwald, Tyron Lardy, Long Long, Reuben Adams",
+      "date": "2024-01-24",
+      "url": "https://link.springer.com/article/10.1007/s13171-024-00339-9",
+      "primary": true,
+      "action": "Verified the Bernoulli k=2 conditional e-variable construction. Conditional on the pair sum Z, concordant outcomes contribute factor 1; discordant outcomes contribute a conditional likelihood-ratio e-variable. The paper states that multiplying block e-variables gives an anytime-valid test under optional stopping and notes the Bernoulli connection to Wald's sequential two-proportion test."
+    },
+    {
+      "title": "Anytime validity is free: inducing sequential tests",
+      "authors": "Nick W. Koning, Sam van Meer",
+      "date": "2026-02-21",
+      "url": "https://doi.org/10.1093/jrsssb/qkag050",
+      "primary": true,
+      "action": "Verified that any valid terminal test can be induced backward into an anytime-valid sequential test that matches the terminal test at the planned horizon; verified the composite-null extension via pointwise tests/running infimum and optional-continuation results."
+    },
+    {
+      "title": "The McNemar test for binary matched-pairs data: mid-p and asymptotic are better than exact conditional",
+      "authors": "Morten W. Fagerland, Stian Lydersen, Petter Laake",
+      "date": "2013",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3716987/",
+      "primary": true,
+      "action": "Rechecked the matched-pair model and exact conditional McNemar structure: for i.i.d. bivariate Bernoulli pairs, marginal homogeneity is equivalent to equality of the two discordant-cell probabilities, and the exact conditional test reduces to a binomial split among discordant pairs."
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-sequential-mcnemar-conditional-eprocess-v1",
+      "mechanism": "For each completed task, emit exactly one paired binary task outcome (A_t,B_t) in {0,1}^2 after all within-task rollout collection/aggregation is finished. Let candidate-win discordance be (1,0), loss discordance be (0,1), and concordances be (0,0)/(1,1). Choose q_t predictably from past completed tasks with q_t in [1/2,1]. Use per-task factor e_t=1 for concordance, e_t=2 q_t for a candidate-win discordance, and e_t=2(1-q_t) for a candidate-loss discordance. Under the one-sided conditional null P((1,0)|discordant,F_{t-1}) <= 1/2, E[e_t|F_{t-1}] <= 1, so the product is an exact nonnegative supermartingale/e-process. Reject at product >=1/alpha. A fixed q corresponds to the Bernoulli conditional-likelihood-ratio construction; predictable q_t or a mixture can adapt to unknown effect size without invalidating optional stopping.",
+      "derivation": "For a discordant task with null win probability p_t<=1/2, conditional expected factor is 2[p_t q_t+(1-p_t)(1-q_t)] = 2[(1-q_t)+p_t(2q_t-1)] <=1 because q_t>=1/2. Concordant tasks have factor 1. Therefore variable tie/discordance rates and data-dependent stopping across completed tasks do not affect Type-I validity as long as the conditional discordant-sign null holds.",
+      "evidence": "Hao et al. verify the k=2 Bernoulli conditional e-variable and that concordant outcomes have factor 1; they also state blockwise multiplication yields anytime-valid optional-stopping tests. Exact McNemar conditions identify the discordant sign split as the relevant matched-pair null statistic. The one-sided composite-null inequality above is a direct extension/derivation from these ingredients.",
+      "scope": "This is exact for the induced task-level paired outcome process under a conditional per-task no-better/symmetry null. It does not by itself test an average-only null that allows some tasks to favor the candidate conditional on the past. It also does not justify treating multiple correlated rollouts inside a task as independent discordant pairs.",
+      "uncertainty": "Need power/growth comparison among fixed-q, plug-in, and mixture alternatives at only 10-50 independent tasks, especially when discordance is sparse."
+    },
+    {
+      "candidate_id": "eval-g1-adaptive-within-task-finalization-estimand-gate-v1",
+      "mechanism": "Allow a task to use a variable and outcome-adaptive number of internally correlated rollouts, but freeze a symmetric task-finalization rule before evaluation and feed only the final paired task outcome to the outer sequential test. The internal adaptive process may be arbitrarily complicated from the outer test's perspective; what matters is the induced distribution of the final task pair. Thus within-task optional stopping is not automatically a statistical violation, but it becomes part of the estimand/evaluation policy.",
+      "evidence": "The conditional e-variable is defined on a completed block, and Safe Testing-style composition from the prior checkpoint only needs block-level conditional validity. The McNemar/e-process derivation above depends only on the final pair's discordant-sign probability given prior completed tasks, not on rollout-level independence.",
+      "scope": "If the stopping/aggregation rule differs between systems, uses asymmetric access to outcomes, or is changed after seeing partial results, equality of underlying single-rollout performance need not imply equality/symmetry of the induced final task outcomes. The resulting test is then valid only for the induced evaluation policy, not automatically for a latent per-rollout capability claim.",
+      "uncertainty": "Need concrete symmetric finalization policies for common agent settings (fixed compute budget, first-success-with-equal-budget, majority/mean threshold, verifier-gated stopping) and adversarial examples showing when seemingly symmetric adaptive stopping still changes the target."
+    },
+    {
+      "candidate_id": "eval-g1-induced-anytime-exact-mcnemar-horizon-v1",
+      "mechanism": "When a maximum number N of independent task pairs is planned and terminal exact McNemar (or another exact paired test) is the desired endpoint, induce an anytime-valid sequential test backward from that terminal test by taking its null conditional rejection probability given the current filtration. This preserves the exact terminal test at N instead of paying the usual power gap of a forward-designed generic e-process.",
+      "evidence": "Koning and van Meer prove that any valid terminal test can be sequentialized into an anytime-valid process that equals the original test at the terminal horizon, and extend the construction to composite nulls by inducing pointwise tests and taking the running infimum. Exact McNemar provides a valid finite-sample terminal matched-pair test under its assumptions.",
+      "scope": "The construction requires the conditional expectation under the relevant null family to be computable or approximated safely. Exact McNemar's nuisance/conditioning structure and heterogeneous/adaptively selected tasks may make this nontrivial. A Monte Carlo approximation must itself preserve validity; a naive approximate conditional rejection probability is not automatically safe.",
+      "uncertainty": "Derive a computationally explicit recursion for terminal exact McNemar under a fixed N and compare its early stopping behavior with the forward conditional e-process."
+    },
+    {
+      "candidate_id": "eval-g1-discordance-rate-resolution-diagnostic-v1",
+      "mechanism": "Report discordance rate as a first-class resolution diagnostic for paired binary agent evaluation. In the conditional McNemar e-process, concordant tasks contribute exactly no evidence, so nominal task count can substantially overstate information. For a correctly specified fixed alternative q, expected log growth per discordant task is KL(Bern(q)||Bern(1/2)); expected log growth per total task is approximately r times this quantity where r is the discordance probability.",
+      "quantitative_sanity_check": {
+        "alpha": 0.05,
+        "threshold_log": 2.995732,
+        "expected_discordants_to_threshold_if_q_matches_truth": {
+          "q_0.65": 65.6,
+          "q_0.70": 36.4,
+          "q_0.75": 22.9,
+          "q_0.80": 15.5
+        },
+        "expected_total_tasks_at_discordance_rate_0.5": {
+          "q_0.65": 131.1,
+          "q_0.70": 72.8,
+          "q_0.75": 45.8,
+          "q_0.80": 31.1
+        }
+      },
+      "scope": "These are expected-log-growth approximations, not guaranteed stopping times or power calculations. They assume the chosen alternative q matches the true conditional win probability among discordances and a stable discordance rate.",
+      "uncertainty": "Need exact/simulated stopping distributions and unresolved rates under mixtures, sparse discordance, and heterogeneous task strata."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Variable/adaptive within-task rollout counts necessarily invalidate an outer anytime-valid task-level test.",
+      "reason": "Rejected as too broad. If each completed task is collapsed to one final paired outcome and the null is formulated for that induced task-level outcome, the outer e-process can be exact without rollout-level independence. The unresolved issue is estimand preservation: adaptive finalization changes what is being tested unless the policy is frozen and interpreted explicitly."
+    },
+    {
+      "lead": "Exact McNemar can safely treat every correlated rollout pair inside one task as an independent matched pair.",
+      "reason": "Rejected. Classical exact McNemar assumes mutually independent matched pairs (or an equivalent conditional structure). Correlated rollout pairs within a task cause pseudo-replication. One task should remain one outer unit unless stronger within-task assumptions/randomization justify more evidence."
+    },
+    {
+      "lead": "McNemar's marginal-homogeneity null across the realized sample is interchangeable with the conditional per-task no-better null used by the simple e-process.",
+      "reason": "Rejected. The simple multiplicative factor is exact under the stronger conditional null p_t<=1/2 among discordances for every completed task given the past. An average-only weak null can allow local positive conditional effects and needs a weak-null CS/e-process such as the paired bounded-score route from the prior checkpoint."
+    },
+    {
+      "lead": "Inducing an anytime-valid terminal McNemar test makes finite-horizon sequentialization computationally free as well as statistically free.",
+      "reason": "Rejected. The 2026 theorem removes the terminal power penalty in principle, but computing conditional rejection probabilities for a composite/conditioned matched-pair test can still be difficult."
+    }
+  ],
+  "design_implications": {
+    "binary_task_default": "one task -> one finalized paired binary outcome -> exact discordance-sign e-process; never count internal rollouts as independent tasks",
+    "adaptive_internal_sampling": "allowed only as part of a frozen task-finalization policy; interpret inference as applying to that induced policy",
+    "conditional_null_route": "use sequential McNemar/sign e-process when a per-task conditional no-better/symmetry null is scientifically acceptable",
+    "weak_average_null_route": "use paired bounded-score average-conditional-mean CS/e-process when only average performance is the target",
+    "known_horizon_route": "consider induced anytime-valid terminal exact test to retain terminal fixed-N power",
+    "resolution_reporting": "report discordant-task count/rate alongside total tasks and unresolved status"
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Derive and simulate mixture/predictable-q sequential McNemar e-processes at N=10,20,30,50 tasks across discordance rates 0.1-0.8 and conditional win probabilities 0.55-0.9; report Type-I, stopping probability, median stopping time and unresolved rate."
+    },
+    {
+      "priority": 2,
+      "action": "Construct an explicit backward recursion for an induced anytime-valid exact McNemar terminal test at fixed maximum N, including composite-null conditioning, and compare terminal/early power with the forward e-process."
+    },
+    {
+      "priority": 3,
+      "action": "Design symmetric within-task adaptive rollout finalization policies and prove which latent null they preserve; build counterexamples where asymmetric or model-specific stopping creates task-level bias despite equal single-rollout marginals."
+    },
+    {
+      "priority": 4,
+      "action": "Extend the exact task-finalized route from binary outcomes to bounded reward differences while distinguishing conditional per-task nulls from weak average nulls."
+    },
+    {
+      "priority": 5,
+      "action": "Connect task-population sampling/generalization to the paired sequential test so that optional stopping validity on realized tasks is not confused with external benchmark-population generalization."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "This run found an exact sequential McNemar-style e-process that absorbs arbitrary within-task rollout dependence by keeping one completed task as one outer paired observation, but it also identified a stricter null/estimand boundary and a finite-horizon induced-test route that still needs computation and power characterization. The frontier therefore remains materially nonempty.",
+  "exact_next_action": "Numerically compare fixed-q, predictable plug-in and mixture sequential McNemar e-processes at 10-50 tasks under varying discordance rates, then derive the backward induced terminal-McNemar recursion for a known task horizon."
+}
