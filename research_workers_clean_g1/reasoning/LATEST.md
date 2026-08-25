@@ -5,23 +5,26 @@ Latest checkpoints in order:
 2. `2026-08-25T1902JST-followup.md`
 3. `2026-08-25T1957JST.md`
 4. `2026-08-25T2057JST.md`
+5. `2026-08-25T2157JST.md`
 
 Read `STATE.md` for accumulated findings through 18:15 JST, then read all checkpoints above in order for the newest evidence and exact continuation.
 
 Top unresolved frontier:
-1. exact Lean composite of CARTS/3D-Prover-style tactic/transition-semantic diversity + learned compiler-guided repair + adaptive restart/continuation under equal token/verifier/wall-clock budget;
-2. calibrated hierarchical router comparing LLM pairwise judging with compiler-error diversity, proof similarity, predicted transition, repairability, tactic entropy, transition-history features, proof-state distance, and future-cost signals;
-3. learned multi-action routing among fresh branch, preserve, whole-proof repair, typed local edit, graph/blueprint refinement, and decomposition restart;
-4. proof-state snapshot/forking integrated with dynamic learned semantic tactic selection, including persistent-server composition;
-5. compute-normalized CARTS/3D-Prover evidence including generated tokens, selector overhead, Lean tactic execution count/time, and wall-clock;
-6. benchmark-audited robustness of headline pass@K claims, separating contamination sensitivity, formalization defects, and distribution shift;
-7. repository-scale non-oracle context retrieval integrated with hierarchical proof repair/routing;
-8. incremental value of tactic-transition/history priors in Lean once semantic proof-state and compiler-derived features are present.
+1. exact Lean composite of proof-state snapshot/forking + CARTS/3D-Prover-style learned tactic/transition-semantic diversity + compiler-guided repair under equal token/verifier/wall-clock budget;
+2. calibrated hierarchical router with real probability-calibration evidence (Brier/ECE/reliability/selective prediction) for success, repairability and future cost, compared against LLM pairwise judging;
+3. context as an explicit action: reuse current context vs graph-first expansion vs global premise re-retrieval vs proof-route change vs repair/restart;
+4. learned multi-action control among fresh branch, preserve, local edit, whole-proof repair, context re-retrieval, graph/blueprint refinement and decomposition restart;
+5. proof-state snapshot/forking integrated with dynamic learned semantic tactic selection, including persistent-server composition;
+6. compute-normalized comparisons including generated tokens/model calls, retrieval/reranking overhead, Lean tactic/verifier work, state reconstruction and wall-clock;
+7. failure attribution at multiple scopes (tactic/premise/local lemma/decomposition/global route) before choosing repair granularity;
+8. benchmark-audited robustness with pinned Lean/mathlib/harness versions and mutated/audited variants;
+9. execution-guided program-repair systems with actual calibration curves and search-vs-repair component ablations before cross-domain transfer.
 
 Important updates from the latest checkpoint:
-- arXiv:2605.25556 shows proof-state snapshotting can cut Lean branch wall-clock by 5.6–50× (14× average; 9.7× median) because import/elaboration dominates >99% of fallback branch time; branch cost must be decomposed rather than counted as uniform Lean calls.
-- arXiv:2606.04883v3 feature/oracle ablations are now current-verified: learned router 28.9%; all-feature ablations 23.6/20.3/19.7/13.1%; 0%-noise oracle ceiling 62.0%. The prior older-version 25.8%/59.9% values are historical only.
-- Pythagoras diffusion proving is formally viable but currently weaker than a restricted autoregressive comparison (63.25% vs 74.6% MiniF2F pass@32), so iterative refinement alone is not sufficient evidence of superiority.
-- Coq PGTS adds evidence that tactic-transition history can be a useful search feature, but Lean transfer remains unresolved.
+- LeanSearch v2 (arXiv:2605.13137v2) provides strong evidence for proof-strategy-scale context retrieval: on FATE-H, no retrieval / standard retrieval / reasoning retrieval solves 4% / 14% / 20% with the same Sonnet prover; the ordering remains 1% / 8% / 12% with Kimi. Its reflection ablation improves 16%→20% with other components fixed, supporting context/proof-route revision as a distinct action.
+- TheoremGraph/LeanGraph (arXiv:2606.25363) extracts 388,105 Lean declarations and 11.3M typed edges across 25 projects; name+signature plus graph expansion reaches Recall@10 0.775 vs LeanSearch v2 reranked 0.780 on formal concept retrieval without an LM reranker. End-to-end proof impact remains untested.
+- VeriSpecGen (arXiv:2604.10392) adds same-ITP evidence for failure attribution before repair: atomic requirements + traceability maps localize failed validation to contract clauses, enabling targeted repair; VERINA SpecGen reaches 86.6%, with trajectory training gains also reported. Do not transfer the score to theorem proving.
+- Citation-forward search still did not locate a public primary implementation combining the snapshot paper's state forking with learned semantic tactic selection; this remains a real systems-composition gap.
+- CodePilot's execution-guided MCTS + “confidence-calibrated” repair is retained only as a lead because the surfaced primary source did not expose calibration metrics or enough component ablations.
 
-Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, or feed state.
+Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, or other-worker state.
