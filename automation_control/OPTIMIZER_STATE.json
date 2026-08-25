@@ -1,127 +1,102 @@
 {
-  "schema_version": 2,
-  "observed_at": "2026-08-26T04:45:03+09:00",
-  "control_revision_seen": 7,
-  "o_operations_revision_seen": 4,
-  "downstream_control_revision_seen": 7,
-  "physical_scheduler": {
-    "last_observed_active_managed_count": 19,
-    "current_control_plane_count_verified_this_run": true,
-    "repository_can_logically_disable": true,
-    "repository_can_physically_reschedule_or_disable": false,
-    "reserved_o_slot_interpretation": "o_work_monitor_recovery is the repository-designated O main/recovery slot",
-    "work_delegation_gate_physical_disable_verified": true,
-    "free_physical_slot_count_relative_to_20_cap": 1,
-    "physical_action_required": []
+  "schema_version": 1,
+  "observed_at": "2026-08-26T05:36:15+09:00",
+  "control_revision": 8,
+  "downstream_control_revision": 8,
+  "o_operations_control_revision": 5,
+  "physical_control_observation": {
+    "active_managed_automations": 19,
+    "reserved_o_recovery_slot_active": true,
+    "work_delegation_gate_physical_enabled": false,
+    "free_physical_slots_relative_to_20": 1,
+    "observation_basis": "automation control-plane list observed in this run; paused historical/J/revenue automations excluded from management"
   },
-  "observations": [
-    {
-      "kind": "control_plane_context_contamination_detected_and_repaired",
-      "severity": "material",
-      "finding": "Control revision 6 required every clean exploration worker to read a single DESIRED_STATE.json that itself contained all 11 worker biases plus downstream/O-facing policies such as wave coordination, feed backlog control, bridge behavior, slot allocation and least-Work scope. Therefore the shared control document was a cross-role semantic context channel even when workers correctly avoided explicit downstream or other-worker artifacts.",
-      "evidence": [
-        "automation_control/DESIRED_STATE.json@9d466043149f4d7276896dcfa4d18b9bfc210ac0",
-        "automation_control/receipts/evaluation/receipt_2026-08-26T040847_JST.json@ad0798a191a3d9eea61f0237101a8b3fef01c4ba"
-      ],
-      "repair": "Control revision 7 replaces DESIRED_STATE with a sanitized root manifest, creates one role-local config file per clean explorer under automation_control/roles/, and moves all substantive non-clean policy to automation_control/DOWNSTREAM_STATE.json. Clean explorers are now explicitly forbidden to read DOWNSTREAM_STATE, O_OPERATIONS, other role configs, shared aggregate ledger or other receipts.",
-      "validation_status": "repository readback verified; behavioral adoption must be validated on the next clean-worker receipts"
+  "observations": {
+    "clean_role_local_split_validation": {
+      "status": "validated",
+      "evidence": "All current clean exploration role receipts inspected in this run used sanitized control revision 7 plus their own role-local config revision 4, with own-state/public-source semantic boundaries and no asserted semantic use of O, other workers, downstream state, legacy research, aggregate ledger, or other-role configs.",
+      "structural_contamination_repair": "revision 7 role-local split is behaviorally adopted"
     },
-    {
-      "kind": "control_snapshot_freshness_gap_observed",
-      "finding": "Both c6 comparators started from control revision 5 even though revision 6 became visible during their executions. Evidence comparator explicitly detected the concurrent change and correctly froze its start semantics rather than mixing revisions; novelty comparator also completed the exact c6 wave under the older snapshot.",
-      "evidence": [
-        "automation_control/receipts/o_novelty_comparator/2026-08-26T034950+0900-wave-c6.json@df4164b2ac75d3ca320cb0642b3c2fa9d938c401",
-        "automation_control/receipts/evidence_comparator/20260826T034228JST_wave_c6.json@df15f7abdae0e3a45bd93a297faa280a80758cda"
-      ],
-      "repair": "Revision 7 adds a generic control-freshness handshake: pin root+role config to one note main SHA, recheck immediately before substantive semantic work, refetch on changed control/config revision, then freeze the chosen snapshot once semantic work begins."
+    "residual_transport_observability": {
+      "status": "material_process_defect_repaired_in_control_revision_8",
+      "evidence": "Current receipts for multiple clean roles independently report that generic repository-head/commit lookups bundled unrelated commit messages, diff text, receipt bodies or other-role titles while the role intended only to resolve a main SHA. Those roles quarantined the excess text and attested no semantic use.",
+      "risk": "Repeated accidental semantic exposure increases context-contamination risk even when current runs quarantine it.",
+      "repair": "DESIRED_STATE revision 8 and every clean role config revision 5 require SHA-only Git ref-object head resolution and explicitly forbid generic commit/search/branch payloads for freshness. Excess connector text must be quarantined and discarded before reasoning.",
+      "validation_pending": "next clean wave receipts must demonstrate SHA-only ref lookup with no foreign metadata exposure"
     },
-    {
-      "kind": "sealed_wave_protocol_c6_validated",
-      "finding": "Wave c6 received exact source-matched novelty, relevance and evidence outputs, was integrated without moving-latest substitution, and Integrator then sealed c7 as the next immutable 11-namespace wave.",
-      "integrated_wave": "clean-g1-wave-c6-20260826T0302JST-7aa4ecc7",
-      "active_wave": "clean-g1-wave-c7-20260826T0404JST-58b55f47",
-      "active_wave_blob": "96981c1a1bb12c16a297a00b43ab4ca90d0862d2",
-      "active_wave_source_set_digest": "58b55f477c207621e98da3fb5fe5ebbf40dbeafe2224f7e16c4417abb50e6363",
-      "result": "moving-target starvation fix is validated through c6; c7 now waits for its exact matched triplet"
-    },
-    {
-      "kind": "feed_backlog_observability_gap",
-      "finding": "Control revision 6 required backlog-aware admission, but the latest Integrator run sealed c7 with feed revision 9 unchanged and did not emit the full backlog metric set needed to distinguish retained distinct items from compaction/supersession decisions.",
+    "downstream_pipeline": {
+      "c7_status": "integrated exact novelty/evidence/relevance triplet",
+      "c8_status": "sealed_awaiting_exact_matched_triplet",
       "feed_revision": 9,
-      "active_unacknowledged_item_count": 19,
-      "o_cursor_revision": 3,
-      "action": "DOWNSTREAM_STATE revision 7 requires the full backlog metric set on every Integrator run, including no-admission runs."
+      "o_clean_cursor_revision": 3,
+      "active_unacknowledged_feed_items": 19,
+      "backlog_policy_observability": "validated: integrator emitted full backlog metrics and made no new admission when incremental decision information was absent",
+      "bridge_status": "validated on control revision 7/config revision 4; feed revision 9 did not regress and no synthetic O acknowledgement, duplicate writer, individual-item spam, or extra Work poll was created",
+      "control_revision_8_status": "pending next downstream runs"
     },
-    {
-      "kind": "bridge_freshness_handshake_validated",
-      "finding": "Bridge revision-6 execution observed note main advance during the read, refetched, verified feed revision 9 without regression, and correctly left O untouched because generation 17 had a fresh fenced owner.",
-      "evidence": "automation_control/receipts/bridge/2026-08-26T0354JST-rev9.json@eacb60c64e72a76474002fc7970b5831aa436469",
-      "result": "bridge freshness repair is working on this observed run"
+    "o_recovery_quality": {
+      "current_authoritative_o_generation": 18,
+      "current_status": "checkpointed",
+      "latest_recovery_receipt": "generation 18 safely acquired from generation 17 and checkpointed after PR 314 exact-head CI/merge/readback without duplicate writer",
+      "current_blocker": "real revision-22 child-response execution requires explicit permission; frozen invocation remains preserved and no real outputs/private reveals were produced",
+      "defect": "Without an explicit distinction, a stale deliberate permission-blocked checkpoint could be repeatedly promoted to generation+1 despite no new actionable work.",
+      "repair": "O_OPERATIONS revision 5/config revision 5 forbids generation+1 recovery solely to restate an unchanged permission/user-only blocker, refresh heartbeat, poll feed, or create cosmetic progress. Recovery waits for new permission/input, an actually interrupted checkpoint, or independent unblocked work.",
+      "validation_pending": "next O monitor run should leave generation 18 intact while permission remains unchanged and no independent unblocked continuation exists"
     },
-    {
-      "kind": "o_recovery_generation17",
-      "finding": "The O execution-safety monitor established generation 16 as checkpointed/recovery-eligible and performed the existing two-phase fenced generation+1 recovery to generation 17 without creating a duplicate writer. PR 314 exact-head CI was still in progress in the latest durable monitor receipt.",
-      "evidence": "automation_control/receipts/o_work_monitor_recovery/20260825T190600Z-generation17-pr314.json@60201968b08064201e1092a6efd5f4f54aa5a3c9",
-      "result": "O_OPERATIONS revision 4 remains appropriate; no optimizer-side O writer or routing-policy injection is justified"
-    },
-    {
-      "kind": "physical_topology_healthy",
-      "finding": "The managed control-plane view has 19 active automations; work_delegation_gate is physically disabled and one physical slot remains free relative to the 20-slot cap.",
-      "result": "no physical scheduler mutation is currently required"
+    "downstream_control_adoption": {
+      "evidence_comparator": "control 7/config 4 validated",
+      "integrator": "control 7/config 5 validated",
+      "bridge": "control 7/config 4 validated",
+      "o_novelty_comparator": "latest inspected c7 receipt used older control 6/config 3 but exact sealed wave/source-set/O-snapshot contract matched and was accepted; revision 8/config 5 adoption pending",
+      "primary_source_verifier": "latest inspected receipt used older control 6/config 2; revision 8/config 4 adoption pending"
     }
-  ],
-  "changes": [
-    {
-      "file": "automation_control/DESIRED_STATE.json",
-      "before_control_revision": 6,
-      "after_control_revision": 7,
-      "before_blob": "9d466043149f4d7276896dcfa4d18b9bfc210ac0",
-      "after_blob": "ae605e09eb3bcdc7aa18238d2c42218b0272d2e6",
-      "change": "Replaced all-role substantive control with sanitized root manifest and explicit config-resolution/clean-boundary rules.",
-      "rationale": "Eliminate cross-role/O/downstream semantic exposure caused by requiring every clean explorer to read one shared substantive control document."
-    },
-    {
-      "file": "automation_control/roles/<clean-role>.json",
-      "created_role_count": 11,
-      "clean_role_config_revision": 4,
-      "change": "Created one role-local substantive config per clean exploration worker containing only that role's own bias/state/feedback/receipt policy plus generic independence/freshness guards.",
-      "rationale": "Keep repository-defined configurability while making the control plane itself compatible with CLEAN independence."
-    },
-    {
-      "file": "automation_control/DOWNSTREAM_STATE.json",
-      "created": true,
-      "control_revision": 7,
-      "blob": "2b3c035312227bf87ded38a58b0931c912c5415e",
-      "change": "Moved downstream audit/comparator/integrator/bridge/work-routing/optimizer substantive policy out of the clean-readable root; added always-on Integrator backlog-metric receipt requirement and revision-freshness handshake.",
-      "rationale": "Prevent non-clean semantics from entering clean worker context while preserving repository-only optimization of downstream roles."
-    }
-  ],
+  },
   "contamination_audit": {
-    "status": "material_control_plane_exposure_found_and_structurally_repaired_control_revision_7",
-    "prior_revision6_control_document_exposed_other_worker_biases": true,
-    "prior_revision6_control_document_exposed_downstream_or_o_facing_policy": true,
-    "observed_worker_receipt_confirmed_shared_control_read": true,
-    "evidence_of_worker_using_exposed_content_to_steer_substantive_hypotheses": "not established",
-    "new_root_contains_cross_role_substantive_policy": false,
-    "new_clean_role_configs_are_role_local": true,
-    "downstream_state_forbidden_to_clean_workers": true,
-    "behavioral_validation_pending": true
+    "prior_shared_control_semantic_contamination": "repaired structurally in revision 7 and behaviorally validated by current role-local receipts",
+    "current_semantic_cross_worker_use_detected": false,
+    "current_transport_level_exposure_detected": true,
+    "semantic_use_of_transport_exposure_observed": false,
+    "corrective_control_revision": 8,
+    "remaining_risk": "validate connector behavior under SHA-only Git-ref policy; any role that cannot obtain a clean ref response must fail closed or explicitly mark degraded cleanliness rather than silently ingest extra metadata"
   },
+  "changes_this_run": [
+    {
+      "target": "automation_control/DESIRED_STATE.json and all clean role-local configs",
+      "before": "control 7/config 4 permitted generic note-main rechecks so long as content was quarantined if noticed",
+      "after": "control 8/config 5 requires SHA-only Git-ref head resolution and explicitly forbids semantic payload acquired solely for freshness",
+      "reason": "four current clean receipts independently documented accidental foreign metadata exposure during head lookup"
+    },
+    {
+      "target": "automation_control/DOWNSTREAM_STATE.json",
+      "before": "control 7 downstream freshness did not explicitly require SHA-only ref transport",
+      "after": "control 8 downstream roles use SHA-only ref freshness; role config revisions advanced for active downstream consumers and optimizer",
+      "reason": "consistent control snapshot hygiene and easier auditability"
+    },
+    {
+      "target": "automation_control/O_OPERATIONS.json",
+      "before": "control 4 could treat a stale checkpoint as continuation-eligible without a dedicated unchanged-permission checkpoint exception",
+      "after": "control 5 distinguishes deliberate permission/user-only blocked checkpoints from interrupted actionable work and prevents generation churn",
+      "reason": "generation 18 is deliberately checkpointed on unchanged explicit permission with no real frozen child responses allowed"
+    }
+  ],
   "rollback": {
-    "desired_state_previous_blob": "9d466043149f4d7276896dcfa4d18b9bfc210ac0",
-    "desired_state_current_blob": "ae605e09eb3bcdc7aa18238d2c42218b0272d2e6",
-    "downstream_state_current_blob": "2b3c035312227bf87ded38a58b0931c912c5415e",
-    "o_operations_current_blob": "0236f9a9ccdc5727595c45c21b8430cd30c65406",
-    "role_local_config_rollback_condition": "If next-run receipts show role-config resolution failure that prevents execution, restore the prior DESIRED_STATE only as a temporary degraded contamination-risk fallback while repairing bootstrap resolution; do not treat the shared rev6 layout as clean steady state.",
-    "backlog_policy_rollback_condition": "If semantic compaction loses a distinct decision item, breaks provenance, causes feed/index disagreement or prevents exact readback, restore the prior integrator backlog behavior while retaining failed artifacts for diagnosis.",
-    "work_gate_reenable_condition": "Only a concrete separate gate-owned queue/source with demonstrated routing value can justify re-enabling; never export that policy to primary O."
+    "desired_state_previous_blob": "ae605e09eb3bcdc7aa18238d2c42218b0272d2e6",
+    "downstream_state_previous_blob": "2b3c035312227bf87ded38a58b0931c912c5415e",
+    "o_operations_previous_blob": "0236f9a9ccdc5727595c45c21b8430cd30c65406",
+    "rollback_condition": "Only roll back a specific change if it prevents safe execution; preserve the revision-7 role-local semantic isolation even if transport implementation needs an alternate SHA-only mechanism."
   },
-  "termination_diagnostics": {
+  "termination": {
     "global_completion": false,
     "fully_blocked": false,
-    "transient_blocker": false,
-    "frontier_nonempty": true,
-    "reason": "Revision 7 structural contamination repair must be validated by actual clean/downstream receipts; c7 triplet, feed-backlog metrics, bridge acknowledgement and O generation-17 continuation also remain live validation frontiers."
+    "transient_failure": false,
+    "optimizer_should_remain_enabled": true,
+    "reason": "material control repairs were applied; behavioral validation and recurring optimization frontier remain nonempty"
   },
-  "exact_next_action": "Validate the first post-revision-7 clean worker receipts: each must name control revision 7/config revision 4, read only sanitized DESIRED_STATE plus its own automation_control/roles/<role>.json and own allowed state/public sources/feedback, and must not read DOWNSTREAM_STATE, O_OPERATIONS, shared EXECUTION_LEDGER, other role configs or other receipts. Validate downstream roles resolve revision 7 from DOWNSTREAM_STATE and apply the control-freshness handshake. Keep c7 immutable until exact matching novelty+relevance+evidence arrive, then verify Integrator emits all backlog metrics even if feed revision 9 remains unchanged. Verify Bridge continues from feed revision 9+ without regression and O generation 17 remains fenced or is safely continued only after true staleness."
+  "exact_next_action": [
+    "Inspect the next receipt from every clean role and require control revision 8/config revision 5 plus a SHA-only Git-ref freshness path with no accidental foreign semantic metadata; fail/degrade cleanliness explicitly if transport cannot provide it.",
+    "Inspect next novelty/relevance, evidence, integrator and bridge runs for control revision 8 adoption and exact C8 triplet integration; preserve sealed C8 immutability and backlog metrics.",
+    "Verify O monitor does not create generation 19 solely because generation 18 heartbeat is stale while the same explicit-permission blocker remains and no independent unblocked work exists.",
+    "If a legitimate O root/recovery boundary occurs for other reasons, verify clean feed revision 9 or newer is consumed without extra Work solely for polling and O cursor advances with exact revision/digest/blob acknowledgement.",
+    "Continue measuring per-role marginal output, duplication and source diversity before changing slot allocation; current 19-active/one-free topology requires no physical scheduler mutation."
+  ]
 }
