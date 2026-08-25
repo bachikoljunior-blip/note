@@ -1,0 +1,137 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "258bd1dbb8b54c36c7a7163acbfb1281c20a231b",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "93df151a52c07589a2b33bfb95b759ea081abcce",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T071500+0900.json",
+  "started_local": "2026-08-26T07:59:43+09:00",
+  "checkpointed_local": "2026-08-26T08:03:00+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404",
+    "note": "After the first role-local semantic read, the control/config tuple was frozen. A later SHA-only head check showed main had advanced; no newer control semantics were read or adopted."
+  },
+  "checked_sources": [
+    {
+      "source": "Maxime Haddouche, Otmane Sakhi, Sequential Off-Policy Learning with Logarithmic Smoothing, arXiv:2506.10664v2, 2025 preprint",
+      "url": "https://arxiv.org/html/2506.10664v2",
+      "result": "Primary-verified the missing same-stream composition under a meaningful scope. Theorem 3.2 is simultaneous over all update times k and all posteriors Q, while the logging/data-collection policy is itself generated sequentially from prior data. Thus a data-dependent posterior/policy can be selected from the same adaptively collected stream and the PAC-Bayes bound remains valid across stopping times induced by update index. Theorem 4.1 extends this to varying batch sizes and directly bounds candidate policy risk relative to the weighted average of deployed policies."
+    },
+    {
+      "source": "Haddouche & Sakhi 2025 Appendix C, dynamic/nonstationary extension",
+      "url": "https://arxiv.org/html/2506.10664v2",
+      "result": "Primary-verified Theorem C.1 for arbitrary evolution of context distributions. It controls average sequential risk with a complexity penalty equal to the cumulative local change cost sum_k KL(Q_k||Q_{k-1}), and proposes an update that uses the latest batch plus the previous posterior. The paper explicitly states that accelerated convergence in this nonstationary regime remains open."
+    },
+    {
+      "source": "Ian Waudby-Smith, Lili Wu, Aaditya Ramdas, Nikos Karampatziakis, Paul Mineiro, Anytime-valid off-policy inference for contextual bandits, arXiv:2210.10768v3",
+      "url": "https://arxiv.org/html/2210.10768v3",
+      "result": "Primary-verified nonasymptotic anytime-valid OPE under predictable/data-dependent logging policies and arbitrary stopping. The paper permits highly dependent/time-varying contexts under its conditional-independence protocol and supports direct policy-difference e-processes. However, it treats fixed or predictable target-policy sequences rather than giving uniform inference over an adaptively searched policy family; the paper names uniform-over-family practical OPE as an open problem."
+    },
+    {
+      "source": "Waudby-Smith et al. 2024 Section 5 extensions",
+      "url": "https://arxiv.org/html/2210.10768v3",
+      "result": "Primary-verified that stopped e-values from OPE can be used for FDR/FCR control over a finite collection of evaluated policies under arbitrary dependence, because all policy evaluations may reuse the same logged data. This does not itself validate policies generated adaptively after inspecting those same e-values unless generation is covered by a uniform/PAC-Bayes construction."
+    },
+    {
+      "source": "Alexandre Lemire Paquin, Brahim Chaib-Draa, Philippe Giguere, Smoothness-Based Derandomization of PAC-Bayes Bounds, arXiv:2606.19105, 2026 preprint",
+      "url": "https://arxiv.org/abs/2606.19105",
+      "result": "Primary abstract verifies a modern route from Gibbs/posterior-average PAC-Bayes guarantees to deterministic posterior-mean predictors by paying an explicit smoothness/Jensen-gap complexity penalty. The result is for smooth supervised losses/predictors, not an off-policy contextual-bandit theorem, so it cannot be imported as a certified deterministic deployment rule without new derivation."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r28-sequential-offpolicy-pacbayes-same-stream",
+      "mechanism": "Maintain a prior-covered distribution Q over candidate policies/configurations, collect new data with the currently deployed policy, and at every update optimize a PAC-Bayes off-policy upper bound over Q using all data collected so far. Because the theorem is simultaneous in update index and Q, candidate search and certification can occur on the same sequentially collected stream without a fresh holdout solely for post-selection correction.",
+      "primary_sources": ["Haddouche & Sakhi 2025 v2, Theorems 3.2 and 4.1"],
+      "quantitative_or_formal_evidence": "Theorem 3.2 holds with probability at least 1-delta simultaneously for all k>=0 and all Q under sequential logging. Theorem 4.1 retains the all-k/all-Q guarantee with varying batch sizes. At fixed total interaction budget, the paper's converted-bandit experiments improve CIFAR100 risk from -0.207 at one update to -0.558 at 100 sequential updates with SeqAdjLS, and MNIST from -0.678 to -0.789; lower is better because cost is negative reward.",
+      "scope": "Contextual bandits with observed propensities, bounded costs/rewards, a data-independent prior for the main theorem, and policy families represented as posterior mixtures. The main accelerated-rate analysis assumes coverage of optimal actions and stationary/i.i.d. context structure; Appendix C relaxes context stationarity but does not prove the same accelerated convergence.",
+      "failure_conditions": "If the deployed/logging policies lose support on actions needed by good candidates, importance weighting/coverage can fail. A prior or hypothesis expansion chosen after seeing the same evidence is not free unless separately justified. The theorem certifies the stochastic policy pi_Q; deterministic argmax extraction is not automatically covered. Large KL(Q||P), weak action coverage, or abrupt nonstationarity can make bounds loose.",
+      "transfer_hypothesis": "For a self-optimizing automation controller, keep a broad but predeclared distribution over config variants, let deployed configs generate new execution evidence, and update the posterior by an off-policy PAC-Bayes objective. This provides one principled route to adaptive same-stream search without repeated holdout resets, while keeping support/coverage and hard safety shields separate.",
+      "confidence": "high for the source theorem; medium for automation-system transfer"
+    },
+    {
+      "id": "cf-g1-r29-dynamic-kl-change-budget",
+      "mechanism": "Under nonstationarity, charge each sequential policy/config change by KL(Q_k||Q_{k-1}) rather than comparing every new posterior to one ancient fixed prior. Optimize each update from the latest data and previous posterior; interpret the cumulative KL path length as an explicit change-complexity budget.",
+      "primary_sources": ["Haddouche & Sakhi 2025 v2, Appendix C Theorem C.1"],
+      "quantitative_or_formal_evidence": "Theorem C.1 upper-bounds average time-varying risk by average sequential off-policy empirical risk plus [sum_k KL(Q_k||Q_{k-1}) + log(1/delta)]/(lambda (K+1)m), while permitting arbitrary evolution of the context distribution. The construction is martingale-based and valid uniformly over K in the proof.",
+      "scope": "Average sequential risk under the paper's conditional within-batch independence and propensity assumptions. This is not a guarantee that any single late policy is optimal under arbitrary drift, and the authors leave accelerated convergence under nonstationarity open.",
+      "failure_conditions": "Large abrupt legitimate changes can incur high KL and over-penalize necessary adaptation; tiny KL steps can still drift far cumulatively; local latest-batch updates may forget useful older evidence. KL path cost is a statistical complexity term, not a semantic safety metric.",
+      "transfer_hypothesis": "Use cumulative config-distribution KL as one regularizer against gratuitous optimizer churn, but never as the sole safety gate. Under drift, prefer local evidence plus previous-posterior continuity; under stable regimes, retain longer-history evidence where stationarity checks support it.",
+      "confidence": "high for the source-domain bound; medium for scheduler/config-control transfer"
+    },
+    {
+      "id": "cf-g1-r30-certificate-preserving-mixture-deployment",
+      "mechanism": "When a PAC-Bayes theorem certifies the posterior-induced stochastic policy pi_Q, deploy that mixture directly instead of collapsing it to an uncertified deterministic argmax. If deterministic deployment is operationally required, treat derandomization as a separate theorem obligation with an explicit penalty rather than silently inheriting the Gibbs certificate.",
+      "primary_sources": ["Haddouche & Sakhi 2025 v2", "Lemire Paquin et al. 2026"],
+      "quantitative_or_formal_evidence": "The sequential off-policy theorem directly controls pi_Q for every posterior Q. A separate 2026 PAC-Bayes derandomization preprint shows that deterministic posterior-mean predictors can be bounded for smooth supervised losses by paying a Jensen-gap/smoothness complexity cost, demonstrating that derandomization generally has a nonzero price.",
+      "scope": "Direct certificate preservation is exact only for stochastic pi_Q in the contextual-bandit theorem. The cited deterministic derandomization result is not off-policy and not sufficient by itself for contextual-bandit deployment.",
+      "failure_conditions": "Randomized deployment may violate operational determinism/reproducibility requirements. Naively taking posterior mean or argmax can invalidate the original certificate. A discrete prior with finite mass on deterministic policies can sometimes make a point-mass posterior finite-KL, but this is architecture/prior dependent and was not separately quantified here.",
+      "transfer_hypothesis": "Prefer randomized config routing or mixture policies when certificate fidelity matters; if a single config must be chosen, run a separate deterministic certificate or a fresh evaluation gate rather than equating posterior-average and chosen-member performance.",
+      "confidence": "high for the distinction; medium for practical mixture deployment"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r26-time-uniform-pac-bayes-data-dependent-posterior",
+      "update": "The frontier is now materially resolved in contextual bandits: Haddouche & Sakhi give a sequential off-policy PAC-Bayes theorem simultaneous over update times and all posteriors Q while logging policies are themselves updated from prior data. This directly combines adaptive logging, same-stream data-dependent posterior selection, and time-uniform validity over update index under the paper's assumptions."
+    },
+    {
+      "candidate": "cf-g1-r23-uniform-class-adaptive-candidate-gate",
+      "update": "Generic anytime OPE remains non-uniform over a whole adaptively searched policy family, but PAC-Bayes supplies one structured uniform-over-Q route when the searched family is prior-covered and the off-policy estimator assumptions hold. Thus fresh holdout is not universally required; it remains a fallback when the adaptive search is outside the certified family/construction."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Generic off-policy confidence sequences alone justify selecting whichever policy looks best after adaptively searching an unrestricted family.",
+      "evidence": "Not established. Waudby-Smith et al. explicitly list practical inference uniformly over an entire policy family as an open problem. Their e-process/FDR extensions cover finite collections and predictable policy sequences, not unrestricted post-hoc family search.",
+      "reason": "Use PAC-Bayes or another class-uniform construction for adaptive search, or freeze a candidate set before OPE."
+    },
+    {
+      "lead": "The sequential PAC-Bayes result eliminates support/coverage concerns.",
+      "evidence": "False. The accelerated analysis still assumes positive coverage of optimal actions; off-policy importance ratios remain central. Appendix C relaxes context stationarity, not action-support requirements.",
+      "reason": "Keep coverage abstention/support floors as an independent deployment condition."
+    },
+    {
+      "lead": "A certified posterior automatically certifies its deterministic argmax or posterior-mean configuration.",
+      "evidence": "False in general. The off-policy result certifies pi_Q. Modern PAC-Bayes derandomization work adds an explicit smoothness/Jensen-gap penalty even in supervised settings.",
+      "reason": "Deploy the mixture or add a separate derandomization/evaluation certificate."
+    },
+    {
+      "lead": "A direct vector-valued off-policy confidence sequence jointly handling adaptive logging, adaptive policy-family search, and multiple outcome constraints was found.",
+      "evidence": "Not found in this pass. Generic vector confidence sequences and scalar/policy-difference off-policy CSs exist, but the complete vector off-policy family-uniform composition remains unverified.",
+      "reason": "Keep as frontier; do not claim a direct theorem by composition."
+    }
+  ],
+  "frontier": [
+    "Inspect whether sequential off-policy PAC-Bayes can support data-dependent or hierarchical priors learned from strictly earlier rounds without losing the all-k guarantee, and quantify the price versus a fixed data-free prior.",
+    "Find a direct vector-valued off-policy confidence sequence/e-process for several reward/safety coordinates under predictable logging; compare its sample cost with scalar alpha splitting on correlated outcomes.",
+    "Find an off-policy derandomization theorem or finite-KL deterministic-posterior construction that certifies a single selected configuration rather than pi_Q; otherwise quantify the cost of mixture deployment versus fresh deterministic re-evaluation.",
+    "Stress-test the dynamic KL(Q_k||Q_{k-1}) change-budget idea under abrupt drift, recurring regimes, and heavy-tailed rewards; look for restart/change-point variants that avoid both over-inertia and forgetting.",
+    "Formalize a layered deployment architecture: prior-covered PAC-Bayes search for candidate generation, support/coverage abstention, anytime current-baseline difference e-process, separate joint constraint inference, and pathwise hard shield, with no guarantee silently transferred across layers."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Followed the prior frontier into the current v2 sequential off-policy PAC-Bayes result and verified the all-k/all-Q theorem rather than assuming generic PAC-Bayes was sufficient.",
+      "Inspected the nonstationary Appendix C extension and separated its average-risk/KL-path guarantee from the stationary accelerated-convergence result.",
+      "Cross-checked generic anytime OPE and identified its explicit uniform-over-policy-family open problem, preventing an overclaim that scalar OPE solves adaptive family search.",
+      "Extended deterministic-deployment analysis into recent PAC-Bayes derandomization and kept it out-of-scope for off-policy certification."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search for sequential/off-policy PAC-Bayes results with valid data-dependent or hierarchical priors derived only from past rounds, then for a direct multivariate off-policy e-process under predictable logging. If neither closes, derive the weakest safe composition: prior-covered same-stream PAC-Bayes search -> coverage/support abstention -> anytime baseline-difference e-process -> separate vector safety certificate -> pathwise shield, and identify a deterministic deployment route or explicitly retain randomized mixture deployment."
+}
