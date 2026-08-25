@@ -11,38 +11,38 @@ Latest checkpoints in order:
 8. `2026-08-26T0002JST-followup.md`
 9. `2026-08-26T0102JST.md`
 10. `2026-08-26T0102JST-followup.md`
+11. `2026-08-26T0200JST.md`
 
-Read `STATE.md` for accumulated findings through 18:15 JST, then read all checkpoints above in order for the newest evidence and exact continuation.
+Read `STATE.md` for accumulated findings through 18:15 JST, then read the source-qualified checkpoints above in order for the newest evidence and exact continuation.
 
 Top unresolved frontier:
-1. calibrated Lean progress/value under real search-policy and theorem-distribution shift: Brier/ECE/reliability/selective-risk for next-attempt success, repairability, remaining-step/future-cost predictions;
-2. modern variable-action allocation: learned gating of progress-guided continuation, critic, semantic diversity, repair, retrieval escalation and restart instead of fixed MPS/CARTS/3D-Prover action counts or DT-Solver handcrafted widening equations;
-3. compressed trajectory sufficiency: preserve the useful history signal from LeanProgress/DT-Solver without raw-history context growth, testing Delta/progress/error summaries against full trajectories;
-4. AND-goal/subgoal routing: branch-specific remaining-cost prediction and learned scheduling on factorized Lean states, comparing longest-branch, total-work and risk-sensitive objectives;
-5. coverage-aware routing: finite-sample/selective-risk abstention when compiler/retrieval/trajectory evidence is partial or OOD;
-6. learned gating among uninterrupted iteration, compact proof-state branching, richer agent-context branching, and restart;
+1. matched Lean subgoal scheduling: ordered first-stuck focused parallelism vs hardest-branch routing vs independent subgoal parallelism vs total-work/risk-sensitive scheduling under equal model-token, Lean-execution and wall-clock budgets;
+2. calibrated replan/action routing under real search-policy and theorem-distribution shift: Brier/ECE/reliability/selective-risk for keep-searching, repair, decompose/replan, retrieval escalation and restart;
+3. modern variable-action allocation: learned gating of progress-guided continuation, critic, semantic diversity, repair, retrieval escalation, subgoal replan and restart rather than fixed action counts or handcrafted widening equations;
+4. compressed online trajectory sufficiency: preserve LeanProgress/DT-Solver history signal using Delta/progress/error/retrieval summaries without raw-history growth; keep this distinct from completed-proof shortening;
+5. AND-goal cost routing: branch-specific remaining-cost prediction and learned scheduling on factorized Lean states, comparing longest-branch, sum-of-work, bottleneck probability and risk-sensitive objectives;
+6. coverage-aware routing: finite-sample/selective-risk abstention when compiler/retrieval/trajectory evidence is partial or OOD;
 7. triggered global re-retrieval: learned escalation from failure-conditioned local retrieval to a fresh global proof-route sketch/retrieve/reflect cycle;
 8. learned gating among lexical/symbol retrieval, dependency-graph expansion and expensive reasoning retrieval under fixed token/latency budgets;
-9. execution-substrate-aware cost models: snapshot/persistent-server vs rebuild-per-branch, separating generation, retrieval, Lean tactic/verifier, state reconstruction and wall-clock;
-10. exact Lean composite of proof-state snapshot/forking + learned tactic/transition-semantic diversity + compiler-guided repair + calibrated multi-action routing under equal token/verifier/wall-clock budget;
+9. execution-substrate-aware cost models: snapshot/persistent-server vs rebuild-per-branch, separating generation, retrieval, Lean tactic/verifier/checking, state reconstruction and wall-clock;
+10. exact Lean composite of proof-state snapshot/forking + learned tactic/transition-semantic diversity + compiler-guided repair + calibrated hierarchical routing under equal real compute;
 11. benchmark-audited robustness with pinned Lean/mathlib/repository/harness versions and candidate-access sensitivity.
 
 Important updates from the newest checkpoints:
-- `LeanProgress` directly predicts remaining Lean proof steps and improves ReProver Mathlib4 search from 41.4% to 45.2%. Proof history materially improves the predictor: 75.8% exact-step accuracy / MAE 3.15 with history versus 61.8% / 5.22 without. This adds a direct future-cost/progress feature but does not supply probability-calibration/OOD guarantees.
-- AlphaProof supplies a high-scale precedent for a learned remaining-return value, dynamic progressive sampling, reusable Lean states, and hardest-subgoal AND routing. Tree search from about 2 TPU minutes to 12 TPU hours adds >10 absolute points on formal-imo/PutnamBench-test; TTRL adds roughly another 15 points but at hundreds of TPU-days per target. Treat TTRL as an extreme-budget meta-action, not ordinary low-cost repair.
-- LeanTree factorizes multi-goal Lean states into independently searchable/reusable branches. White-box rollouts reach 18.36% +/-0.60 on MiniF2F versus 5.32% +/-0.37 black-box rollouts and 9.59% +/-0.71 whole-proof generation in the reported protocol, but factorization itself is not isolated causally.
-- MPS-Prover shows a learned critic plus three different heuristic perspectives beats critic/random alternatives under approximately matched expansion budget: full 177/244 miniF2F, critic replaced by random 164/244, individual perspective ablations 172–174/244. Its fixed four-way allocation remains a target for learned/calibrated variable branching.
-- DT-Solver (ACL 2023) is an important historical direct precursor: state-value + policy-confidence dynamic widening raises Expert-iteration Mathlib low-resource search from 39.9% to 48.4% and Lisa/PISA from 16.8% to 26.7%. Full-trajectory value has highest classifier accuracy (70.70%) but is not best end-to-end on full Mathlib because raw trajectory truncation occurs in 53% of value queries; compressed trajectory sufficiency is therefore a concrete modern frontier.
-- Earlier key gaps remain: the current v3 cost-quality router reports no Brier/ECE/reliability/selective-risk diagnostics; CovCal gives only answer-judging selective-risk transfer evidence; LeanSearch-v2 reasoning retrieval remains one-shot in the public implementation; and the exact snapshot + semantic selection + compiler repair composite remains unlocated.
+- BFS-Prover-V2 introduces planner-guided ordered subgoals, focused parallelism where all prover agents attack the same current bottleneck, a shared subgoal cache, and dynamic replanning when that subgoal fails. The 32B MiniF2F result is 86.1% without planner and 95.08% with planner, but this is not compute-matched and changes several components. One IMO-1969-P2 case reports 7,200 failed attempts before replanning versus completion in 800 attempts after replanning; keep this as a case study only.
+- This adds a concrete scheduling alternative to AlphaProof's hardest-subgoal AND routing: preserve already-proven facts, focus compute on the earliest unresolved planned bottleneck, and change the intermediate-goal graph only after local failure. A matched scheduler comparison remains open.
+- ProofOptimizer shows completed verified Lean proofs can be compressed aggressively: about 87% shorter on MiniF2F, 57% on PutnamBench, with a preliminary ~2% downstream MiniF2F improvement when training on simplified proofs. 28% of simplified proofs achieve at least 1.5x Lean execution speedup, but some shorter proofs are slower, so proof-token length is not a sufficient execution-cost metric.
+- `LeanProgress` still provides direct future-cost evidence: ReProver Mathlib4 41.4% -> 45.2%, with proof-history prediction 75.8% exact-step accuracy / MAE 3.15 versus 61.8% / 5.22 without history.
+- AlphaProof remains the strongest high-scale precedent for learned remaining-return value, dynamic progressive sampling, reusable Lean states and hardest-subgoal AND routing; its test-time RL is an extreme-budget meta-action, not ordinary repair.
+- MPS-Prover and DT-Solver jointly show multiple search perspectives and state-dependent branching help, but neither closes calibrated variable action-type allocation under real compute.
 - `research_feedback_clean_g1/reasoning/FEEDBACK.json` remains absent; no sanitized feedback was consumed.
 
 Exact continuation:
-1. search modern descendants/citations of DT-Solver, LeanProgress and AlphaProof for OOD/generalization, value calibration, dynamic widening with current Lean provers and richer action sets;
-2. search representations that compress useful trajectory history without raw context growth, especially Delta/trajectory + progress/error fusion and end-to-end pass@budget evidence;
-3. search factorized multi-goal Lean work comparing hardest-branch vs total-work value targets and learned subgoal scheduling;
-4. continue selective-prediction/formal-methods work applying finite-sample risk control directly to proof-search actions;
-5. inspect LeanSearch-v2 follow-ups for triggered reasoning-mode re-retrieval after failure;
-6. search public snapshot/fork + learned semantic branch selection + compiler repair integration;
-7. keep the frontier nonempty and preserve exact source/version/tested-scope caveats.
+1. search BFS-Prover-V2 follow-ups/code and related hierarchical provers for matched ablations of focused parallelism, dynamic replanning, hardest-subgoal routing and independent subgoal execution;
+2. search learned replan-trigger/subgoal-scheduler policies that estimate marginal value of keep-searching versus repair/decompose/replan under calibrated uncertainty;
+3. continue modern Lean value/progress calibration and policy-shift robustness searches;
+4. search online trajectory-compression representations preserving DT-Solver/LeanProgress history signal, keeping completed-proof simplification as a separate substrate/training optimization;
+5. continue triggered global re-retrieval and snapshot+semantic-selection+repair integration searches;
+6. keep the frontier nonempty and preserve exact source/version/tested-scope caveats.
 
 Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, other-worker state, shared execution ledger, or other-role receipts.
