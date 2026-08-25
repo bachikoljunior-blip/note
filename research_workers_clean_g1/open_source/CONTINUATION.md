@@ -1,75 +1,73 @@
 # Open Source clean_g1 — continuation
 
 Status: active; frontier nonempty.
-Latest detailed run: `RUN_20260825_2001.md`.
-Base candidate ledger: `STATE.md`.
+Latest detailed run: `RUN_20260825_2100.md`.
+Base candidate ledger: `STATE.md` (candidates 001–004); later candidate/refinement detail is in the run files until ledger reconciliation.
 
-## Latest completed branches
+## Current high-value findings
 
-### ReasoningBank SWE-Bench execution path
+### `clean-os-g1-003` — memory/skill negative transfer is multi-factor, not a simple threshold story
 
-1. The released `SWE-Bench/run.sh` directly invokes the vendored mini-SWE-agent runner; memory is active inside that runner without a separate enable flag.
-2. For each SWE-Bench Verified test instance, the runner loads a model-specific memory bank and calls `select_memory(1, ...)`. If prior memory exists, retrieval is forced top-1 by embedding similarity with **no absolute threshold**.
-3. The current query embedding is appended after the old cache is loaded, while similarity is computed against the pre-append tensor, so the current instance does not self-retrieve in the same call.
-4. A retrieved prior task contributes up to three generalized memory items distilled from either successful or failed trajectories. Failed trajectories become avoidance lessons; the inducer is told to remove task-specific literals.
-5. The selected memory is injected in the **system message** with explicit utilization discretion: the acting model is told it may use items when relevant and should consider whether to use each item before acting.
-6. After each instance, the released runner labels its trajectory using an LLM `success`/`fail` judge and appends newly induced memory for later instances. Therefore the public SWE path is **online sequential test-stream self-evolution**, not one frozen prebuilt memory bank.
-7. Important unresolved caveat: this induction-time label is not the official SWE-Bench patch evaluator result in the released runner. Need public label-agreement evidence before treating each induced memory as task-native outcome-verified experience.
+ReasoningBank and Memento public paths both retrieve without an absolute admission threshold, so threshold presence does not explain their divergent EvoAgentBench cells.
 
-### Memento execution/injection path
+ReasoningBank's released SWE path uses top-1 prior-task retrieval, up to three generalized success/failure lessons, system-message injection, and explicit model discretion about relevance. Memento's public parametric CBR path uses up to eight concrete `Question + Plan` examples, a stronger planner-directed user message, LLM-judged positive/negative case labels, and a persistent query-stream planner history.
 
-1. `client/parametric_memory_cbr.py` defaults to `MEMORY_TOP_K=8` and returns the highest-ranked cases without an absolute threshold when the retriever/pool is healthy.
-2. Retrieved units are concrete prior `Question + Plan` examples split into positive and negative labels.
-3. The memory block is inserted as a **second user message** to the meta-planner and instructs it to plan from the examples, focus on positive examples, and avoid negative patterns.
-4. This makes the strongest public-code contrast with ReasoningBank: top-8 concrete cases + directive planner prompt versus top-1 prior task / <=3 generalized lessons + system guidance with explicit relevance discretion.
+New implementation detail from Memento: retriever training broadcasts the current query's final `is_correct` outcome to **every retrieved case** as `truth_label`; the pair classifier trains on that label. This is coarse query-level credit, not marginal per-memory utility. The same public script keeps one `shared_history` across queries. These are concrete confounds / candidate negative-transfer mechanisms, not proven causes of EvoAgentBench's 45.8→9.5 collapse.
 
-## Candidate `clean-os-g1-003` correction/refinement
+### `clean-os-g1-005` — reviewer/verifier-gated durable self-evolution, mechanically grounded
 
-Retain the high-confidence claim that memory/skill effects are strongly model × scaffold × domain dependent and can be severely negative. Do **not** claim that an absolute retrieval-admission threshold explains ReasoningBank-vs-Memento: neither released path has such a threshold.
+ArgusAgent's runtime connects Reviewer decisions to durable state rather than merely prompting about review:
 
-Refined testable hypothesis: negative transfer may depend jointly on:
+- `done`, `blocked`, and `replan_requested` alter backlog/journal state;
+- no-progress replans reset to pending only up to a durable bounded-convergence threshold, then become terminal no-progress;
+- premature dynamic-plan stage advances can be rolled back while sibling/dependent nodes remain unfinished;
+- independently reviewed handoff evidence is sealed only when `review_source == reviewer`;
+- learned vertical candidates are promoted only on success + final review `done` + actual Reviewer source;
+- stage certificates fingerprint the checklist/evidence and certify only Manager `advance` / `complete` actions.
 
-- concrete case/plan anchoring vs generalized procedural/avoidance lessons;
-- retrieval volume;
-- prompt placement and authority;
-- model-level utilization discretion;
-- outcome-label fidelity;
-- model × scaffold × domain interaction.
+Scope correction: independent review is conditional on explicit policy / environment / vertical contract, not universal. Stage-certificate persistence is caught fail-soft in the surrounding supervisor, so certificate enforcement still needs downstream-consumer tracing.
 
-Causal attribution for the EvoAgentBench Memento collapse remains unavailable without its exact third-party adapter/config/per-run artifacts or a matched reproduction.
+Operational artifact for 731 SWE-Bench Pro tasks: external Reviewer used on 466, self-review on 265. Of the external-review paths, 43 requested revision and 34 were eventually officially resolved; 22 ended Reviewer-accepted after revision and 21 did not. Routing is task-dependent, not randomized, so this is descriptive operational evidence rather than a causal reviewer ablation.
 
-## New candidate `clean-os-g1-005` — reviewer/verifier-gated durable self-evolution
+### `clean-os-g1-006` — separate within-task failure repair from cross-task durable memory admission
 
-A new repo-first branch inspected `microsoft/ArgusAgent`.
+Independent public reproduction `ramankrishna/reasoning-bank` ran Claude Haiku 4.5 on a 30-instance SWE-bench Lite subset, 3 seeds, using the official SWE evaluator. Reported clean-cell results:
 
-Mechanism: separate artifact production from durable admission. A separate Reviewer certifies explicit stage evidence; task-native/official evaluators are required where applicable; suspicious or externally unconfirmed accepted numbers may be reopened; plan-level reconsideration is possible rather than endlessly repairing local symptoms.
+- one attempt / no retry: 45/90 = 50.0%;
+- naive retry: 38/90 = 42.2% (−7.8 pp);
+- fresh per-instance ReasoningBank: 45/86 = 52.3% (+10.1 pp vs naive retry, +2.3 pp vs one-shot);
+- persistent cross-instance bank: 21/45 = 46.7% (−3.3 pp vs one-shot, −5.6 pp vs fresh).
 
-Public implementation evidence includes benchmark-authenticity checks, scorer/gold leakage restrictions, published-baseline calibration, truncation accounting, evidence-path checklists, and an independent re-review policy that says prior acceptance is not evidence of truth.
+The persistent bank also showed no positive early→late transfer signal; the difficulty-matched deficit versus the one-shot control widened later in the stream. Major limits: only 45/90 persistent-bank cells remained clean due infrastructure/API-credit failures, the 30-task pool is highly bimodal, CIs overlap, and referenced raw per-cell outputs were not committed. Treat as scoped negative/matched evidence, not a refutation of the original ReasoningBank paper or its reported +4.6 pp SWE-Bench Verified result with Gemini-2.5-Flash.
 
-Public operational evidence reports about 78% on 731 SWE-Bench Pro tasks versus about 59% Direct Copilot at 1.41x aggregate tokens, plus externally gated route changes in MLE-Bench. Treat this as evidence that the full verification-gated runtime can work, **not** as an isolated causal effect of the admission gate; roles, durable state, routing, review, and verification are bundled.
+Transfer rule: retry repair and durable cross-task learning must be evaluated separately. A memory system that repairs harmful retries has not thereby demonstrated positive cross-task transfer; persistent memory should require its own held-out transfer evidence and no-memory fallback.
 
-## Source pointers added this run
+### Official ReasoningBank reproducibility gap
 
-- https://github.com/google-research/reasoning-bank/blob/main/SWE-Bench/run.sh
-- https://github.com/google-research/reasoning-bank/blob/main/third_party/src/minisweagent/run/extra/swebench.py
-- https://github.com/google-research/reasoning-bank/blob/main/third_party/src/minisweagent/memory/memory_management.py
-- https://github.com/google-research/reasoning-bank/blob/main/third_party/src/minisweagent/memory/instruction.py
-- https://github.com/google-research/reasoning-bank/blob/main/third_party/src/minisweagent/agents/default.py
+The public `google-research/reasoning-bank` repository exposes SWE-Bench runner/evaluation code but this pass found no checked-in per-instance prediction/result bundle that can be joined to the released runner's online LLM `success` / `fail` induction labels. The repository tree has no ordinary checked-in `predictions` or `results` paths. Therefore public label-agreement with official resolved/unresolved outcomes remains unquantified. Missing artifacts are an auditability gap, not evidence the labels are wrong.
+
+## Primary source pointers from the latest run
+
+- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/core/models.py
+- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/engineer/round_settlement.py
+- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/life/supervisor/_mission_execution_settlement.py
+- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/core/stage_certificate.py
+- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/apps/_runtime_helpers.py
+- https://github.com/microsoft/ArgusAgent/blob/main/technical_report/evidence/swebench_pro/reviewer_mechanism_stats.json
+- https://github.com/google-research/reasoning-bank
+- https://github.com/ramankrishna/reasoning-bank/blob/main/experiments/swebench/RESULTS.md
 - https://github.com/Memento-Teams/Memento/blob/main/client/parametric_memory_cbr.py
-- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/verticals/research/stages.py
-- https://github.com/microsoft/ArgusAgent/blob/main/argus_skill/roles/prompts/reviewer.py
-- https://github.com/microsoft/ArgusAgent/blob/main/technical_report/sections/06_results.tex
-- https://arxiv.org/abs/2608.05144
+- https://github.com/Memento-Teams/Memento/blob/main/memory/train_memory_retriever.py
 
 ## Nonempty frontier
 
-1. Trace Argus Reviewer verdict parsing into actual durable state/stage transitions; identify what admission, rollback, and replan constraints are mechanically enforced versus prompt-only policy.
-2. Search ReasoningBank public trajectories/predictions/official SWE-Bench result metadata and compare online `llm_judge_status` labels with official resolved/unresolved outcomes. Quantify disagreement if possible.
-3. Trace Memento `case_label` provenance and validation, plus whether shared planner history compounds example anchoring across queries.
-4. Continue EvoAgentBench release/issue/Hugging Face/supplement search for exact Memento/ReasoningBank adapter revisions, configs, prompts, and per-run outputs.
-5. Find matched public ablations crossing generalized vs concrete memory × retrieval count × forced/thresholded retrieval × prompt placement/utilization discretion, measuring held-out success and negative-transfer rate.
-6. Continue repo-first search for contextual memory/skill admission systems with explicit no-skill fallback or calibrated benefit prediction and matched quantitative ablations.
+1. Quantify Memento's checked-in `memory/training_data.jsonl`: class balance, retrieved-case count per query, and how often retrieved positive/negative cases receive the same current-query `truth_label`. Characterize outcome-credit ambiguity directly.
+2. Trace Memento retriever training/checkpoint validation and search for matched no-memory / nonparametric / parametric ablations. Determine whether retriever validation predicts downstream benefit or only query-outcome correlation.
+3. Trace Argus tests and downstream consumers of `stage-certificates.json` to distinguish mechanically mandatory stage admission from fail-soft observability; specifically determine whether stage advancement can survive certificate persistence failure.
+4. Search for additional independent matched persistent-vs-fresh/no-memory memory ablations with task-native evaluation, sufficient n, and generalized-vs-concrete memory contrasts.
+5. Continue ReasoningBank release/supplement/OpenReview artifact search for raw SWE predictions and induction labels joinable to official resolved outcomes.
+6. Continue EvoAgentBench release/issue/supplement search for exact Memento/ReasoningBank adapters/configs/per-run artifacts needed to explain the 45.8→9.5 / 45.8→53.0 divergence.
 
 ## Exact continuation
 
-Open Argus Reviewer verdict parser/state-transition code and trace a `done` / `continue` / `replan_requested` decision to its durable effect, including any guard that prevents unreviewed artifacts or reusable state from being admitted. Separate code-enforced invariants from prompt conventions. Then search ReasoningBank for public official SWE-Bench outputs that can be joined to the runner's online memory labels; if unavailable, record that reproducibility gap and continue to Memento `case_label` provenance.
+Obtain a representative or complete sample of Memento's checked-in `memory/training_data.jsonl` through public-source tooling and quantify how each query's final `truth_label` is copied across retrieved cases, including cases whose existing `case_label` signs differ. Then inspect retriever validation/checkpoint metrics and any matched no-memory/nonparametric ablation. If the large artifact cannot be streamed, immediately switch to Argus stage-certificate enforcement tests/consumers, record the access limitation, and continue rather than stopping.
