@@ -1,0 +1,116 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 5,
+  "config_revision": 3,
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T030536+0900.json",
+  "started_local": "2026-08-26T03:05:37+09:00",
+  "checkpointed_local": "2026-08-26T03:08:30+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed": false,
+    "read_other_worker_state": false,
+    "own_sanitized_feedback": "not_found_404",
+    "shared_execution_ledger_read": false,
+    "other_receipts_read": false,
+    "note": "Continued only from own prior checkpoint and public sources; no downstream/cross-worker semantic state."
+  },
+  "checked_sources": [
+    {
+      "source": "Soonhui Lee, Barry L. Nelson, Computational Improvements in Bootstrap Ranking & Selection Procedures via Multiple Comparison with the Best, Winter Simulation Conference 2015",
+      "type": "primary conference PDF",
+      "url": "https://www.informs-sim.org/wsc15papers/425.pdf",
+      "result": "Primary-verified a general-purpose bootstrap R&S improvement that replaces all-pairs simultaneous comparisons with multiple-comparison-with-the-best intervals. The number of simultaneous intervals falls from k(k-1)/2 to k, reducing both bootstrap work and required per-system sample size while retaining asymptotic PCS validity under mild conditions and supporting common random numbers (CRN). In the CRN normal slippage experiments, k=20,n0=100,delta=0.1 used average N*=141 with PCS 0.96 versus 257 with PCS 1.00 for the all-pairs bootstrap baseline (~45% fewer samples per system). In monotone means with k=20,n0=50,delta=0.05, MCB used 581 versus 1024 (~43% fewer). Mixed normal/exponential experiments demonstrate distributional robustness and large CRN reductions, but two cases attained PCS 0.90/0.92 rather than nominal 0.95; this is not a finite-sample universal PCS guarantee or a heavy-tail theorem."
+    },
+    {
+      "source": "Rosanne J. Turner, Peter D. Grünwald, Safe Sequential Testing and Effect Estimation in Stratified Count Data, AISTATS 2023",
+      "type": "primary PMLR paper",
+      "url": "https://proceedings.mlr.press/v206/turner23a.html",
+      "result": "Primary-verified e-process/anytime-valid evidence accumulation under optional stopping for stratified Bernoulli streams. Type-I error remains controlled regardless of data-dependent stopping; confidence sequences are valid under continuous monitoring. The paper also introduces cross-talk between strata: past data in related strata can inform alternative estimates and improve power, while mixture e-processes can hedge among no-cross-talk/control-rate/odds-ratio sharing and remain valid even when the preferred cross-talk relation is wrong. The expected log-evidence growth is within O(log m) of an oracle growth benchmark under the stated model. This is an anytime-valid evidence primitive, not a target-loss/no-negative-transfer guarantee."
+    },
+    {
+      "source": "Seungjin Choi, Conformal Candidate Certification for Offline Model-Based Optimization, arXiv:2606.15217v1, 2026",
+      "type": "primary preprint",
+      "url": "https://arxiv.org/abs/2606.15217",
+      "result": "Primary-verified a post-hoc candidate-certification layer for offline model-based optimization under proposal-induced covariate shift. It attaches an importance-weighted conformal one-sided lower bound to each aggressively proposed candidate and advances only candidates whose bound clears a target threshold. With oracle density-ratio weights, a fresh candidate-response pair has finite-sample marginal lower-bound coverage at least 1-alpha. In a controlled synthetic study, CCC certified 16.7% of an aggressive pool with empirical coverage 0.990 at nominal 0.90, while unweighted conformal coverage collapsed to 0.416. The theorem assumes covariate shift (same conditional response), no calibration leakage, and bounded oracle weights; practical plug-in Gibbs weights do not inherit the exact oracle guarantee, and under noisy responses the certificate applies directly to Y*, not latent f(x*) without extra noise assumptions."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r13-best-vs-rest-bootstrap-selection",
+      "mechanism": "When the decision is only 'which candidate is best?', avoid statistically and computationally stronger all-pairs inference. Bootstrap only each candidate's difference to the best of the others, optionally preserving paired/common-random-number structure, and expand samples only until the best-vs-rest intervals support selection.",
+      "primary_source": "Lee & Nelson, WSC 2015",
+      "quantitative_evidence": "CRN normal slippage, k=20,n0=100,delta=.1: average N*=141 and PCS=.96 vs all-pairs bootstrap N*=257 and PCS=1.00 (~45.1% fewer samples). Monotone means k=20,n0=50,delta=.05: 581 vs 1024 (~43.3% fewer). The paper reports the savings increase with k and smaller indifference-zone delta.",
+      "operational_observable": "Track number of live candidates k, best-vs-rest intervals, sample count per candidate, bootstrap compute, PCS/selection error, CRN pairing/correlation, and whether all-pairs information is actually needed downstream. Use stronger all-pairs inference only when later decisions require it.",
+      "scope": "General-purpose bootstrap R&S for estimable performance measures under mild bootstrap regularity; examples include normal and mixed normal/exponential outputs and CRN. Asymptotic PCS support; finite-sample empirical performance only.",
+      "failure_conditions": "If downstream decisions need pairwise ordering beyond the best, MCB discards useful inference. Bootstrap compute can still be substantial. Small-sample PCS can undershoot nominal; the mixed-distribution study includes 0.90/0.92 cases. No demonstrated heavy-tail robustness beyond mild bootstrap assumptions.",
+      "transfer_hypothesis": "Research systems often over-evaluate candidate pairs when only the current best route matters. Replacing pairwise adjudication with best-vs-rest inference can cut evaluation and judge calls while preserving the decision-relevant statistic.",
+      "confidence": "high for source-domain result; high for generic evaluation-allocation principle"
+    },
+    {
+      "id": "cf-g1-r14-anytime-valid-cross-context-evidence-pooling",
+      "mechanism": "Accumulate sequential evidence with e-processes so stopping/continuing based on observed results does not invalidate false-positive control. Maintain separate evidence processes for plausible cross-context sharing assumptions and mix/switch among them; related contexts can improve growth, while the mixture remains valid if the assumed relation is wrong.",
+      "primary_source": "Turner & Grünwald, AISTATS 2023",
+      "quantitative_evidence": "For any stopping rule, crossing 1/alpha controls false rejection at alpha by the e-process/Ville construction. Theorem 2.1 gives expected log-evidence growth equal to the sum of stratum oracle GRO terms up to O(log m). Simulations show cross-talk improves power/interval width when strata share the modeled feature and no-cross-talk is better when they do not; exact effect-size deltas are figure-only and were not numerically inferred.",
+      "operational_observable": "For each reusable context relation, maintain an e-process, mixture weight, evidence threshold, optional-stopping history, and context-specific outcomes. If cross-context assumptions are uncertain, mix them with a no-sharing process rather than committing to one.",
+      "scope": "Sequential hypothesis/effect inference for stratified count/Bernoulli data, with theory for the stated e-processes. This certifies statistical evidence, not decision utility, target risk, or no-negative-transfer.",
+      "failure_conditions": "Anytime validity can require more data than fixed-n methods. Cross-talk that mismatches the true relation reduces power/produces wider intervals even though validity survives. Extension from Bernoulli strata to arbitrary research metrics needs a valid e-process for that metric.",
+      "transfer_hypothesis": "A research loop that repeatedly peeks at evidence should use optional-stopping-safe accumulation; cross-task evidence can be pooled through a hedge over multiple sharing hypotheses, preserving a no-sharing route rather than silently reusing history.",
+      "confidence": "high for optional-stopping evidence primitive; medium for research-system transfer"
+    },
+    {
+      "id": "cf-g1-r15-conformal-candidate-certification-under-proposal-shift",
+      "mechanism": "Separate aggressive candidate generation from expensive-candidate admission. After a surrogate proposes out-of-distribution candidates, attach a proposal-shift-corrected conformal lower bound to each candidate and execute only candidates whose certified lower bound exceeds the required target.",
+      "primary_source": "Choi, arXiv:2606.15217v1 (2026)",
+      "quantitative_evidence": "Controlled synthetic study: CCC passes/certifies 16.7% of the aggressive proposal pool with empirical lower-bound coverage 0.990 at nominal 0.90; standard unweighted conformal under the same proposal shift has coverage 0.416. Oracle-weight theorem gives finite-sample marginal P{Y* >= lower_bound(X*)} >= 1-alpha for a fresh proposal-distributed candidate.",
+      "operational_observable": "Keep proposal distribution/model, calibration split, proposal-vs-history density ratio or Gibbs-tilt approximation, one-sided candidate lower bound, target threshold, certification pass rate, empirical post-test coverage, and false-expensive-evaluation rate. Proposal and certification must use leakage-safe splits.",
+      "scope": "Offline MBO under covariate shift with invariant conditional response P(Y|X), no calibration-response leakage, and bounded oracle density ratios for the exact theorem. Marginal candidate-response coverage, not simultaneous coverage over an arbitrary adaptively reused candidate set.",
+      "failure_conditions": "Practical plug-in importance weights can be misspecified; exact finite-sample oracle guarantee then does not automatically hold. If conditional response changes rather than only design marginal, weighted conformal premise fails. With noisy outcomes, the theorem directly certifies future Y*, not latent objective f(x*) without extra noise assumptions. Certification may reject many genuinely good but unsupported OOD candidates.",
+      "transfer_hypothesis": "In autonomous research, exploration can stay aggressive if a statistically separate admission layer certifies which proposed experiments are trustworthy enough to spend scarce real-world evaluation budget on. This avoids forcing the generator itself to be overly conservative.",
+      "confidence": "high for source-domain mechanism and synthetic result; medium-high for research-system transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r12-target-confidence-local-transfer-gating",
+      "update": "The exact anytime-valid local-transfer analogue remains open. However, r14 supplies a compatible optional-stopping-safe evidence primitive, and r15 supplies finite-sample proposal-shift candidate certification. A future combined mechanism could use target-local gating plus e-process/CS evidence and a conformal admission layer, but no primary source found here proves that composed guarantee."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "General-purpose bootstrap R&S with CRN is already heavy-tail-safe at finite budget.",
+      "evidence": "Not established by the WSC 2015 paper. It supports broad distributional robustness and asymptotic PCS under mild conditions, with normal/exponential examples, but does not provide a finite-sample heavy-tail guarantee.",
+      "reason": "Keep the heavy-tail correlated-R&S frontier open."
+    },
+    {
+      "lead": "Anytime-valid e-process evidence is automatically a no-negative-transfer or target-utility guarantee.",
+      "evidence": "False. E-processes control false rejection/coverage under stopping for a specified hypothesis; they do not bound downstream target loss or regret.",
+      "reason": "Use e-processes as an evidence-validity primitive, then add a separate utility/admission safeguard."
+    },
+    {
+      "lead": "CCC's finite-sample certificate holds unchanged with its practical estimated Gibbs weights and arbitrary adaptive candidate reuse.",
+      "evidence": "The exact theorem assumes bounded oracle weights and a fresh proposal-distributed candidate with no calibration leakage. The paper explicitly identifies plug-in weight estimation as the main limitation and online updates as future work.",
+      "reason": "Do not overextend the 0.990 coverage result or oracle theorem to repeated online research loops without new validation."
+    }
+  ],
+  "frontier": [
+    "Find a direct primary method that combines optional-stopping-valid evidence with target-utility or target-only-regret safety for sequential transfer/adaptation, rather than merely composing two separate primitives.",
+    "Find an online/repeated-round extension of conformal candidate certification where candidates are proposed after earlier certified experiments, with validity under adaptive reuse and explicit evaluation-budget savings.",
+    "Find finite-budget covariance-aware ranking/selection under genuinely heavy-tailed paired/common-random-number observations, with exact PCS/sample-count guarantees or robust estimators.",
+    "Find a method that certifies a learned/misspecified task-context coordinate before DVCM-style source borrowing, preferably with a target-only fallback.",
+    "Quantify when best-vs-rest MCB loses necessary information relative to all-pairs comparison in multi-objective or branch-merging research decisions."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Followed the heavy-tailed correlated ranking/selection branch into the original WSC 2015 bootstrap-MCB paper and extracted exact sample-size/PCS tables.",
+      "Followed the optional-stopping branch into primary e-process work and separated evidence-validity guarantees from utility guarantees.",
+      "Followed the sequential certification branch into offline MBO candidate certification with an exact finite-sample oracle-weight theorem and synthetic coverage numbers.",
+      "Kept nonempty frontier because no single source yet combines sequential optional-stopping validity, adaptive repeated proposal, and target-only utility safety."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Prioritize a primary source that gives adaptive repeated-round candidate or transfer admission with time-uniform validity AND an explicit target-utility/regret fallback. Search online conformal/e-process decision rules for adaptively proposed candidates. If none qualifies, continue heavy-tailed paired R&S and quantify robust best-vs-rest allocation under non-Gaussian tails."
+}
