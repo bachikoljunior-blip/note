@@ -1,87 +1,103 @@
 # O / Chat continuity
 
-Updated: 2026-08-25 JST
+Updated: 2026-08-25 18:27 JST
 
 Mandatory continuity: read this file before every O-related answer/reasoning/action, then update it in the same turn whenever the conversation advances or materially clarifies the current design/state. Treat this as the chat-side reconstruction checkpoint so long conversation history is not required. Before sending new semantic context to O, show the wording and wait for user approval. Safe non-semantic operational defects may be repaired immediately.
 
-## Standing context
-- Goal: materially accelerate genuine real-world AGI; O is instrumental/replaceable.
-- User-side work should be minimized; repository/tool work belongs on the automated/Work side.
-- Treat O and this chat as same-base-model for idea-generation overlap. Before proposing a new idea to send to O, ask whether O could readily derive it from its actual current context. Prefer genuine context asymmetries, user-originated design choices, external evidence/observations, or concrete failures over duplicating reasoning O can readily do itself.
-- External ideas and user proposals are hypotheses, not automatic truth.
-- Context is an intervention with information value and interference cost; more context is not monotonically better. Prefer minimal, gated, on-demand context and judge usefulness by downstream behavior/results.
-- Evaluation itself is fallible. Distinguish measured improvement from metric validity; evaluator design may itself need falsification/calibration.
+## Main-session ownership
+- This chat is now the main user dialogue, design, and status-reconstruction session for O / O Engine.
+- The former main chat remains attached to the external-research automations and is automation-only; it is not the canonical ordinary-dialogue session.
+- Do not create duplicate research or O automations merely because this session changed.
+- This handoff preserves context, not prior conclusions. Latest repository state, durable execution records, source receipts, and evidence override this file when they conflict.
 
-## O inbox / uptake
-- Revisions 7-12: context-conditioning, asynchronous freshness, recursive context selection, context-to-action gaps, behavioral/outcome evaluation, scientist-agent external baselines.
-- Revision 13: ChatGPT Work primary; Claude stopped as executor.
-- Revision 14: recurring durable-authority reconciliation, not one-time cleanup.
-- Revision 15: O-centered context kernel.
-- Revision 16: withdrawn integrity quarantine for malformed/truncated write.
-- Revision 17: generation 7 resume.
-- Revision 18: recursive Skill-in-Skill Context Kernel architecture proposal, safely appended and acknowledged.
-- Revision 19: scientist-agent positive-control/evaluation-scope observation, safely appended and acknowledged.
-- Revision 20: negative evidence is scoped only to the actually tested candidate/configuration/conditions, no family-wide generalization, and no duplicate positive-control reproduction when provenance-equivalent original conditions are already established; now acknowledged in live execution.
+## Standing objective and dialogue policy
+- Goal: materially accelerate genuine real-world AGI; O is instrumental and replaceable.
+- Do not lower the achievement standard, relabel internal engineering as AGI, or blur observation, inference, and unknowns.
+- Minimize user-side work. Repository/tool work belongs on the automated/Work side; the user is smartphone-first.
+- Treat O and this chat as same-base-model for idea-generation overlap. Before proposing context to send, ask whether O could readily derive it from its actual current context. Prefer user-specific goals/constraints, genuine context asymmetries, external evidence, concrete failures, and durable meta-requirements over duplicating O's own reasoning.
+- External ideas and user proposals are hypotheses, not automatic technical truth.
+- Context is an intervention with information value and interference cost. Prefer minimal, gated, on-demand context and judge it by downstream behavior/results.
+- Evaluation is fallible. Distinguish measured improvement from metric validity and falsify/calibrate evaluators where needed.
+- When the user asks “where are we?”, “was it reflected?”, or similar, inspect current durable state instead of inferring from old chat.
+- When the user explicitly asks to send/apply something to O, inspect current state for duplication, supersession, acknowledgement, and conflicts; mutate only through a safe connected path and verify readback.
+
+## Authoritative restoration order
+1. Read current `bachikoljunior-blip/O/AGENTS.md`.
+2. Read latest remote `main`, especially `agi/WORK_EXECUTION_STATE.json` and `agi/USER_INPUT_INBOX.json`.
+3. Follow the exact active branch/run/snapshot/request references from `WORK_EXECUTION_STATE.json`; `.continual/runs/`, immutable Work invocations, episodes, candidates, and evidence ledgers are durable execution truth.
+4. Read `agi/WORK_STRATEGY.json` and any decision-relevant source receipts.
+5. Read current clean external-research state under `research_workers_clean_g1/`, `research_comparators_clean_g1/`, and `research_index_clean_g1/`.
+6. Treat this file and other summary pointers as reconstruction aids, not as authority over newer execution records.
+
+## Current O execution snapshot
+Observed at 2026-08-25 18:27 JST; re-read before relying on it.
+
+- Latest observed O `main`: `0fe3beea06f5970dd9590165d454cd7bf6054b7d` (`checkpoint: persist revision 22 Execute continuation`, committed 18:17:12 JST).
+- `agi/WORK_EXECUTION_STATE.json` reports generation 11, status `running`, sole fenced Work recovery writer, execution id `work-recovery-20260825T061506Z-33befd84ccb52a05`, and inbox revision 22 acknowledged.
+- Latest observed heartbeat: 18:15:57 JST with `stale_after_seconds: 900`; it was within the freshness window at the observation time. This is a timestamped snapshot, not a perpetual liveness guarantee.
+- Current branch: `work/recovery-gen11-rev22-native-lifecycle-v1`; checkpoint head `cbb8619f4d7dd6a12fed740fe80764c3c971c71e`, tree `ced01225faead09cf8390e12d7cf2dcccd56b812`.
+- Native run: `run-work-recovery-gen9-durability-repair`, snapshot revision 55, current unit `unit-3d61e557b2542d07c83fa354`, phase `execute` / `unit_pending`.
+- Exactly one current immutable Work request is pending: `invoke-248450c08547af10470c50e6`. At the checkpoint there were 51 requests, 50 responses, and no response, effect, scenario result, or partial success claim for this request.
+- The frozen unit compares the current Context Kernel route with a manifest-free control under three revision-22-bound held-out action-adherence scenarios: stale authority, safe supersession of revision 21 by revision 22 while preserving unrelated directives, and a fresh path-disjoint main advance that should proceed without unnecessary blocking. Scenarios, rubric, routes, budget, source clock, executor/model binding, and judge must be frozen before outputs; score actual action traces, not verbal comprehension.
+- If matched execution cannot be preserved, the exact unit should return `INSUFFICIENT_EVIDENCE`; any positive or negative conclusion is limited to the tested routes, three scenarios, exact revision, executor/model binding, budget, judge, and conditions.
+- The previous checkpoint-inheritance reconciliation/publication is complete and must not be rerun or generalized. Its negative result applies only to the exact tested bounded-stage configuration; it does not reject the scientist-agent family, original methods, adaptations, or untested mechanisms.
+- AGI remains unsupported. No independent production evidence or truthful completion of the user's upper objective is recorded.
+
+## Known state-coherence warning
+- At this snapshot, `agi/CONTINUATION.json`, `agi/WORK_MODE_HANDOFF.json`, and `agi/AUTONOMY_STATE.json` still contain generation-6-era top-level summaries and conflict with the generation-11 lease/run state.
+- Do not use those auxiliary summaries alone to answer current-status questions. Prefer `AGENTS.md`, latest `WORK_EXECUTION_STATE.json`, the referenced active branch/run snapshot and immutable request/response records, then reconcile auxiliary files as needed.
+- `agi/WORK_STRATEGY.json` contains current revision-22 policy, but individual descriptive fields such as `current_stage` may lag the exact active unit; use the active run records for execution position.
+- `agi/USER_REQUEST_QUEUE.json` contains old non-blocking requests with overdue reevaluation dates; do not assume they still require user action without a fresh Root/state review.
+
+## O inbox / durable user context
+- Revisions 7-12 cover context conditioning, asynchronous freshness, recursive context selection, context-to-action gaps, behavioral/outcome evaluation, and scientist-agent external baselines.
+- Revision 13 transferred primary execution to ChatGPT Work and stopped Claude as executor; later revisions establish the current fenced Work process.
+- Revision 14 requires recurring durable-authority reconciliation.
+- Revision 15 establishes the O-centered Context Kernel.
+- Revision 18 records the recursive Skill-in-Skill Context Kernel architecture.
+- Revision 19 records scientist-agent positive-control/evaluation-scope requirements.
+- Revision 20 requires exact tested-scope negative evidence and permits reuse of provenance-equivalent positive controls instead of duplicate reproduction.
+- Revision 21 points to legacy pre-independence research and is historical only.
+- Revision 22 supersedes revision 21 for current research intake: only `research_index_clean_g1/O_FEED.json` is the current bridge; it was acknowledged by generation 11 after PR 308 merge and exact readback.
 - PR 289 merged `append_remote_user_input_inbox` with expected revision, schema validation, one expected-blob CAS, and exact remote readback.
 
-## Current recursive Skill-in-Skill design
-- O Engine is a recursive Skill-in-Skill context-system candidate. All relevant durable context should be reachable from inside O Engine but not materialized all at once.
-- Kernel is conceptually the always-entered minimal root context/Skill.
-- Each Skill with children may support model-reasoned child selection; no mandatory Selector Skill at every level.
-- The model reasons over current context, opens one or multiple useful child Skills, reasons again, and recursively continues until enough context exists to decide/act.
-- Local Skill criteria/checklists/priors are optional, situation-dependent, falsifiable, and may guide local judgment and child selection.
-- Routing/context selection is evaluated by downstream decision/outcome quality, missed-needed context, unnecessary context load/interference, elapsed time, and cost.
+## Recursive Skill-in-Skill design
+- O Engine is a recursive Skill-in-Skill context-system candidate. Relevant durable context should be reachable from inside O Engine without materializing all of it at once.
+- Kernel is the always-entered minimal root context/Skill.
+- A Skill may expose multiple child Skills; the model can reason over current context, choose one or more useful children, recurse to arbitrary useful depth, and obtain only selected branches.
+- A mandatory Selector Skill at every level is not required. Local criteria/checklists/priors are optional, situation-dependent, falsifiable aids rather than a fixed routing table that replaces model reasoning.
+- Evaluate routing by downstream decision/outcome quality, missed-needed context, unnecessary context/interference, elapsed time, and cost.
+- Current repository infrastructure includes a Context Kernel / DecisionContextManifest / source-clock and invalidation control plane, but end-to-end semantic benefit is still under behavioral evaluation.
 
-## Scientist-agent evaluation scope
-- Scientist-agent family remains an external baseline/research source, not adopted or rejected wholesale.
-- Checkpoint inheritance was one extracted/adapted candidate; failure or insufficient evidence there does not disprove the family or untested mechanisms.
-- Positive controls are needed only where they disambiguate reproduction failure, adaptation/ablation loss, and evidence against the original method.
-- Negative evidence cannot exceed the exact tested candidate/configuration/conditions.
-- PR 291 merged a precommitted matched context comparison and scientist-agent causal-classification protocol.
+## Scientist-agent evidence scope
+- Scientist-agent systems remain external baselines/research sources, neither adopted nor rejected wholesale.
+- Always distinguish original method, published configuration/result, O-specific adaptation, actually tested configuration, untested components, and failure scope.
+- Checkpoint inheritance was one extracted/adapted candidate. Failure of its exact width-1 versus width-3 bounded configuration does not disprove the family or untested mechanisms.
+- Positive controls are required only when they distinguish reproduction failure, adaptation/ablation loss, and evidence against the original method. Reuse adequately provenance-equivalent controls rather than duplicating them.
+- Positive evidence also cannot exceed the tested scope.
 
-## Zero-Work external research acceleration — current user preference
-- User wants external acceleration without increasing ChatGPT Work usage.
-- Preferred architecture: keep Work/O primary execution call volume unchanged; run external research harvesting outside Work using free/non-Work infrastructure.
-- Strong default candidate is an LLM-free GitHub Actions research harvester: scheduled/matrix jobs query free public sources/APIs (for example arXiv, OpenAlex, Crossref, Semantic Scholar where permitted, GitHub public repos/releases, benchmark/result feeds), collect metadata/full public evidence where allowed, normalize, deduplicate, and score for novelty/evidence strength/relevance.
-- Parallelism should use available free GitHub Actions concurrency/quota dynamically; workers are read-only and produce artifacts only, never become main writers.
-- Avoid using extra Work model calls for each worker. Retrieval, provenance checks, dedupe, citation graph expansion, keyword/mechanism tagging, and first-pass ranking should be deterministic/programmatic where possible.
-- Only a small top-K decision-relevant digest/artifact reaches O, ideally consumed inside an already-existing Root/context-selection call rather than creating extra Work calls. Prefer replacing lower-value context with this digest instead of simply increasing prompt size.
-- Research index should persist seen papers/repos/mechanisms, source hashes, extracted claims, evidence type, O-known/tested status, and rejection reasons so later runs avoid repeated discovery.
-- If model-based external analysis is ever added, it should use a non-Work/free resource and remain optional; do not assume Copilot or other provider usage is free without checking current quota/terms.
+## Clean external-research status
+Observed at 2026-08-25 18:27 JST; re-read before relying on it.
 
-## Continuous external research status
-- `clean_g1` is the authoritative ongoing external-research generation. `research_index_clean_g1/INDEX.json` is revision 3, digest `4b463efb44299ecfd10540382b823d72b0a8bc89f7311023181b313b30e1a7af`; `research_index_clean_g1/O_FEED.json` is revision 3, digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90`.
-- All legacy `research_workers/`, `research_comparators/`, and `research_index/` material is explicitly `pre_independence` historical evidence only. It remains preserved for provenance/comparison, but it does not define or steer clean worker frontiers and is not bridged as clean evidence.
-- Clean worker health at integration cutoff `bachikoljunior-blip/note@f08a15edabf6fe39dab219ae96d876015f0f174d`: 11 clean workers have persisted 14 clean artifacts containing 73 raw candidate records, canonicalized into 31 scoped mechanism families. The latest added evaluation checkpoint contributes controlled-intervention, first-error/process-selection, bias/prompt-robustness, and cross-benchmark trajectory-evaluator evidence. All 11 worker frontiers remain nonempty.
-- Clean novelty comparator is current only for its 17:42:58 snapshot: it assessed 67 raw candidates as 11 known, 22 partially tested, 34 uncovered, 0 evaluated. Current coverage is 67/73; `self_improvement/C8` plus the five newer evaluation candidates are not yet assessed. Exact O-tested scope remains preserved and no narrow O failure is generalized to a candidate family.
-- Clean evidence comparator assessed the prior 68-candidate snapshot and then primary-verified several gaps. Notable scoped upgrades are `self_improvement/C3` A-, `self_improvement/C4` A-, `continual_learning/CLG1-CL-005` A-, `continual_learning/CLG1-CL-006` A, and `long_horizon/LH-Context-Folding` A-. Five newer evaluation candidates remain outside that evidence snapshot. The Integrator preserves these as evidence-strength judgments only, separate from novelty/relevance.
-- Clean decision-relevance comparator remains stale at its 16:43:27 state with 0 current candidate assessments. This is the principal non-fatal feed blocker; novelty/evidence are not collapsed into a substitute relevance score.
-- O_FEED revision 3 therefore intentionally contains zero items with status `held_pending_current_decision_relevance_and_full_comparator_coverage`. Current gates are novelty 67/73, evidence 68/73 plus verification deltas, relevance 0/73. No candidate is bridged until all required clean dimensions are current, scope-matched, and traceable.
-- Clean role separation remains intact: the Integrator used only `research_workers_clean_g1/` and `research_comparators_clean_g1/` as clean primary inputs; no O-derived/comparator/integrator information was written back into clean workers. Raw member-level comparator results are preserved rather than flattened where canonical-family members differ.
-- Clean Bridge remains separately stateful in `research_index_clean_g1/BRIDGE_STATE.json`. Its 2026-08-25T17:54:31+09:00 checkpoint observed feed revision 1 before the current Integrator advances; O's authoritative state still acknowledged inbox revision 21 while revision 22 clean-feed reconciliation was active on PR 308 at exact head `d03fd0bdaf7ec6386a0e2c283ac8ee8d509c33a1`. Highest acknowledged clean-feed revision therefore remains 0/digest null until the Bridge re-reads revision 3 at a normal safe boundary; no duplicate subscription and no extra Work invocation were created.
-- Legacy inbox revision 21 and legacy `research_index/O_FEED.json` remain `pre_independence`; their acknowledgement is not clean_g1 uptake. Detailed findings stay under `research_workers_clean_g1/`; comparator judgments under `research_comparators_clean_g1/`; canonical state/feed under `research_index_clean_g1/`; bridge cursor/health under `research_index_clean_g1/BRIDGE_STATE.json`.
+- `clean_g1` is the authoritative ongoing external-research generation. Legacy `research_workers/`, `research_comparators/`, and `research_index/` material is preserved only as `pre_independence` historical evidence and must not steer clean worker frontiers or be bridged as clean evidence.
+- The last integrated index/feed remains revision 3: `INDEX.json` digest `4b463efb44299ecfd10540382b823d72b0a8bc89f7311023181b313b30e1a7af`; `O_FEED.json` digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90`.
+- That feed still contains zero items and says relevance coverage is 0/73, but it is stale relative to newer comparator work.
+- Clean decision relevance is now assessed for all 73 candidates at the 18:02:15 JST snapshot: 38 high, 11 medium-to-high, 14 medium, 4 low-to-medium, and 6 low. Comparator input used clean worker artifacts only, O read-only, and did not feed judgments back to workers.
+- Clean novelty remains an older 17:42:58 JST snapshot covering 67 candidates: 11 known, 22 partially tested, 34 uncovered, 0 directly evaluated. Six newer candidates still require novelty reconciliation against current O.
+- Clean evidence has a 68-candidate base plus newer primary-verification/correction overlays. Current scoped upgrades include `self_improvement/C3` A-, `self_improvement/C4` A-, `continual_learning/CLG1-CL-004` A-, `CLG1-CL-005` A-, `CLG1-CL-006` A, `long_horizon/LH-Context-Folding` A-, and `LH-VendingBench` B+; preserve each exact claim scope and corrections.
+- Therefore external research has progressed beyond the current `O_FEED.json`: the remaining pipeline issue is Integrator/index/feed reconciliation across current novelty, evidence, and relevance dimensions, followed by Bridge resynchronization—not lack of worker activity.
+- `research_index_clean_g1/BRIDGE_STATE.json` is also stale: it predates O's revision-22 acknowledgement and still describes PR 308 as open. Re-read O and feed before using its cursor/blockers.
+- Keep worker independence and diversity: workers do not read O; a separate Comparator may read O read-only; Comparator/Integrator results do not flow back into worker state; exploration biases remain heterogeneous without becoming rigid.
+- Do not create extra Work calls solely to poll or acknowledge the feed. O should inspect it at already-occurring safe Root/equivalent boundaries and continue normal work when it is missing, stale, empty, or non-qualifying.
 
-## Evaluated mechanism/candidate status so far
-- Checkpoint inheritance: harness/provenance built in PRs 263-265; genuine matched native observations initially unavailable; not adopted or disproven in principle. Generation 9 later began reconciling 12 bounded-stage measurement receipts under Revision 20 scope rules.
-- Deterministic recursive history commitment v2: adopted/merged in PR 266; internal engineering only.
-- Lazy recursive Skill context-routing infrastructure: adopted/merged in PR 268; semantic child-selection benefit still under evaluation.
-- Held-out recursive routing activation: not adopted after contaminated/insufficient observations.
-- Four-way CI sharding: adopted/merged in PR 270 and reduced feedback-loop latency.
-- O-centered Context Kernel / DecisionContextManifest + Event-Ledger: selected under revision 15 and actively engineered; not yet proven end-to-end superior.
-- Full-context-everywhere/raw-copy default: not selected.
+## Automation observability
+- The repository monitor record names an hourly automation `O Work監視・復旧` and says it was last observed enabled, while explicitly warning that repository state is not control-plane proof.
+- This chat currently has GitHub connectivity but no direct automation-list/control-plane connector. Actual automation count, titles, enabled states, schedules, and latest run outcomes are therefore unverified here.
+- Keep the old automation-bound chat in place and do not duplicate automations from this session without first observing the actual control plane through an available connected tool.
+- Configured/scheduled is not the same as fired; mutation success is not downstream success; prompt intent is not platform guarantee.
 
-## Current execution process / latest known checkpoint
-- Work runtime is the outer executor; O Engine owns semantic decision cycles. A single fenced writer holds development mutation authority.
-- O semantic cycle: Root -> Candidate/Preflight -> Execute -> Task Evaluate -> Consolidate/Learn -> Root.
-- External effects are fenced/idempotent, exact-head validated, and read back before completion.
-- Generation 9 is active after fail-closed recovery from a generation-8 checkpoint durability inconsistency.
-- Revision 20 is acknowledged and applied.
-- Generation 9 implemented a checkpoint-integrity verifier and then returned to scientist-agent/checkpoint measurement evidence reconciliation.
-- Latest observed active work: PR 303 `agi: reconcile checkpoint measurement evidence`, exact head `a175150e05452f28d6b32a78260ad3e65dbfa7d6`, reconciling 12 bounded-stage checkpoint-inheritance receipts, reusing 3 provenance-equivalent controls rather than duplicating them, and explicitly limiting the negative result to the tested candidate/configuration/executor-model/budget/tasks/rubric/conditions. At last check its exact-head CI run `32803793697` was queued.
-- AGI remains unsupported; internal engineering progress is not AGI evidence.
-
-## Chat operating policy
-- Before each O-related response, restore from this file first.
-- Update this file after each substantive conversational step so current design can be reconstructed if old chat context drops.
-- Do not automatically send every derived idea to O. Distinguish user-originated design/context, concrete external observation/failure, and inference O can probably derive itself.
-- When drafting O input, preserve user semantics while minimizing redundant context and avoiding premature architecture lock-in.
+## Chat operating baseline after handoff
+- No new semantic directive was sent to O during this handoff/reconstruction turn.
+- This file was updated only as chat-side continuity and must not be confused with O's user-input inbox or technical evidence.
+- Before drafting O input, distinguish user-originated requirement, external observation, concrete failure, and reasoning O can probably derive itself. Preserve user semantics while minimizing redundant context and premature architecture lock-in.
+- Future status answers should label observed facts, inferences, and unverified items explicitly.
