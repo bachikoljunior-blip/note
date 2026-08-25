@@ -1,42 +1,50 @@
 # Open Source clean_g1 — continuation
 
 Status: active; frontier nonempty.
-Latest detailed run: `RUN_20260825_2304.md`.
+Latest detailed run: `RUN_20260825_2358.md`.
 Latest raw-sample evidence: `EVIDENCE_20260825_2100_MEMENTO_SAMPLE.md`.
 Base candidate ledger: `STATE.md` (001–004); later candidate/refinement detail is in run files until ledger reconciliation.
 
 ## Current high-value findings
 
-### `clean-os-g1-003` — memory/skill negative transfer is multi-factor; released Memento router validation is leakage-prone, while the paper-era protocol remains unverified
+### `clean-os-g1-003` — memory/skill negative transfer is multi-factor; released Memento router validation is leakage-prone, and iteration-curve claims need a matched no-memory control
 
-ReasoningBank and Memento released paths both retrieve without an absolute admission threshold, so threshold presence does not explain divergent EvoAgentBench cells. ReasoningBank uses top-1 prior-task retrieval, <=3 generalized success/failure lessons, system-message injection, and explicit model discretion. Memento's public parametric CBR uses up to 8 concrete `Question + Plan` examples, stronger planner-directed user-message injection, LLM-judged case labels, and persistent cross-query planner history.
+ReasoningBank and Memento released paths both retrieve without an absolute admission threshold, so threshold presence does not explain divergent behavior. ReasoningBank uses top-1 prior-task retrieval, <=3 generalized success/failure lessons, system-message injection, and explicit model discretion. Memento's public parametric CBR uses up to 8 concrete `Question + Plan` examples, stronger planner-directed user-message injection, LLM-judged case labels, and persistent cross-query planner history.
 
-Memento's public runner writes the current query's final `is_correct` result as `truth_label` for every retrieved case. The released pair-classifier training script then makes its default validation split by individual row indices stratified on that label, not grouped by query/task/episode. The checked-in data contains repeated same-query rows and exact duplicate pairs, so the documented `--val_ratio 0.1 --save_best` path can place correlated or duplicate examples across train and validation. Validation AUC/F1 therefore cannot by itself establish unseen-query memory utility.
+Memento's public runner writes the current query's final `is_correct` result as `truth_label` for every retrieved case. The released pair-classifier training script then makes its default validation split by individual rows, not grouped by query/task/episode. The checked-in data contains repeated same-query rows and exact duplicate pairs, so the documented Oct-2025 `--val_ratio 0.1 --save_best` path can place correlated/duplicate examples across train and validation. Pair-level validation AUC/F1 therefore cannot by itself establish unseen-query memory utility.
 
-**Critical scope correction:** arXiv v1 was submitted 2025-08-22 and v2 on 2025-08-25. The v1/AgentFly paper already described the parametric single-step Q-function, supervised reduction, binary cross-entropy and TopK retrieval, so the mechanism is paper-era. But the official README said on 2025-08-27 that Parametric Memory code would arrive the next month and records its release on 2025-10-05. Git path history for `memory/train_memory_retriever.py` has one introduction commit, `92ce185a2ceb93688cb0d9ebe2fad7a87af653da` at 2025-10-05T13:55:06Z; the file is absent at parent `f3441042959dfca6ce7b1c7894232240bdc5a0fd`. At public commit `e63b899f5a8a4e5ee6105dc440ad4fff52fa73f3`, dated 2025-08-25T23:35:05Z after arXiv v2, the README already described neural case selection but the repository `memory/` path was still absent.
+**Paper-era provenance is now sharply bounded.** The paper mechanism is paper-era: arXiv v1/v2 describe a parametric Q-function, binary cross-entropy training, and Top-K retrieval. But the official public repository at 2025-08-25 commit `8ec09ef4b1ee0cab640b20f903d5bae3deab0b19` contains no `memory/` directory, no retriever training script, no training data/checkpoint, and no experiment-time retriever validation configuration. The official README later says Parametric Memory code would arrive the next month and records its 2025-10-05 release. Therefore the row-level validation defect is established for the **released Oct-2025 implementation**, not proven to be the protocol used for the **Aug-2025 paper results**. The paper itself does not report a retriever train/validation split or held-out retriever AUC.
 
-The paper specifies the parametric objective/TopK mechanism but no retriever AUC or train/validation split. Therefore the validation flaw is established for the **released Oct-2025 implementation**, not proven to be the protocol used for the **Aug-2025 paper results**. No official issue/PR describing a grouped-query fix was found. Issue #34 asks authors to clarify the supervised implementation versus the RL framing and currently has zero comments. A public reproduction copy in `Hieurezdev/appworld-ace` retains the same row-level split.
+**New evaluation-scope correction from paper Table 4 (DeepResearcher):**
 
-Operational implication: evaluate learned memory routers with group-held-out units matching deployment (query/task/episode), group duplicates together, and require downstream held-out task delta against no-memory/non-parametric controls rather than selecting on pair-level AUC alone.
+- AgentFly without CBR: 78.65 → 84.47 (**+5.82 pp** across Iter1→5)
+- non-parametric CBR: 79.84 → 84.85 (**+5.01 pp**)
+- parametric CBR: 80.46 → 85.44 (**+4.98 pp**)
 
-### `clean-os-g1-005` — actual Argus stage-admission invariant is fail-closed validation before mutation plus read-side authority revalidation
+Parametric-minus-no-CBR gaps by iteration are +1.81, +1.91, +1.48, +1.32, +0.97 pp. Thus the **raw upward iteration slope is not memory-specific**: the no-CBR control rises slightly more. The supported memory signal is the positive between-arm gap at each reported iteration, not the shared upward trend. The reason the no-CBR arm improves across iterations remains unresolved and must be identified before interpreting the curves causally.
 
-Earlier tracing showed `stage-certificates.json` is written after stage-decision processing and can be absent with fallback to reviewed backlog; it is a durable review receipt/re-proposal control, not the root gate.
+GAIA also needs scope separation. The paper says validation starts with empty memory and stores successful/failed trajectories over three iterations; that validation score is therefore an adaptation-stream measurement. The GAIA test score uses the case bank accumulated during validation and is stronger held-out transfer evidence. OOD gains of 4.7–9.6 pp support the CBR family, but the paper text does not establish that the OOD figure specifically validates the later released neural-retriever checkpoint-selection protocol.
 
-At public Argus commit `455da6cb2fe10e9fbaeab5126f2f3b363237cf57`:
+Operational implication: adaptive memory evaluations should separately report (1) within-stream adaptation, (2) frozen-memory held-out transfer, and (3) memory-specific delta versus a matched no-memory/no-write control under the same iteration/order/resampling regime. Learned routers should use group-held-out units matching deployment, group duplicates, and prefer downstream held-out task utility over pair-level AUC for checkpoint selection.
 
-- Manager `_apply_stage_decision_to_disk` delegates advances to `skills.stage_machine.advance_stage(...)`; `StageCompletionError` becomes a hold.
-- `advance_stage` calls `_ensure_stage_completion(...)` **before** `_set_stage` writes `PIPELINE_STATE.json`.
-- `_ensure_stage_completion` invokes the active vertical's deterministic completion validator. Returned issues raise `StageCompletionError`; validator exceptions are converted to `completion validator unavailable: ...` and also raise — fail closed.
-- Only after this check passes does `_set_stage` mark the previous stage done, set the target stage, append transition history, and atomically write state.
+### `clean-os-g1-005` — Argus shows why evidence validity and transition authority must be separate gates
 
-The source explicitly notes caller identity is not authenticated (`advanced_by` is free text); the protection is the evidence-backed deterministic validator, not trust in the Manager label.
+At public Argus commit `455da6cb2fe10e9fbaeab5126f2f3b363237cf57`, ordinary forward advancement is materially well-guarded:
 
-A separate regression test around `complete_final_stage` adds the read-side lesson. It snapshots `PIPELINE_STATE.json` and proves a refused non-final completion leaves it byte-for-byte unchanged. It also forges an old internally consistent completion record with a valid recomputable fingerprint and proves `vertical_completion_certificate_status` rejects it on read. The test explains why: a write-side lock does not repair invalid state already durable, and a recomputable fingerprint proves contract freshness rather than authority.
+- Manager delegates advance to `skills.stage_machine.advance_stage(...)`.
+- `advance_stage` calls `_ensure_stage_completion(...)` before `_set_stage` mutates `PIPELINE_STATE.json`.
+- validator issues raise `StageCompletionError`; validator exceptions become `completion validator unavailable: ...` and also fail closed.
+- only after the check passes does `_set_stage` mark status/history/current stage and atomically write state.
 
-Transferable invariant: `semantic decision -> deterministic evidence/standing validation at transition primitive -> fail closed before write -> atomic durable mutation -> revalidate durable authority when consumed`.
+However the current source and regression test document a real prior failure, testbed run 13 (`s-d9ea298f`). An Engineer at math stage `scope` imported `complete_final_stage(...)` directly; the primitive validated only `scope`, stamped a genuine contract fingerprint, and marked later `solve`/`review` stages skipped. The resulting state passed structural completion audit because it was minted by the legitimate primitive. This demonstrates that **valid evidence for the current stage is not the same thing as authority to perform a terminal transition**.
 
-Scope caveat: this is an internal transition contract, not filesystem tamper-proofing against arbitrary direct writers. Further work should determine whether intermediate `advance_stage` has equally explicit negative immutability tests and whether any alternate mutator bypasses the same checks.
+The repair now refuses completion off the final stage unless `allow_early_completion=True`, and read-side validation rejects old staged early-completion records even when their fingerprint is genuine. A dedicated regression proves refusal happens before any write and leaves `PIPELINE_STATE.json` byte-for-byte unchanged. The normal Manager path derives the flag from `workflow_mode=direct`.
+
+But the source/test explicitly describes this as **"a lock, not a signature"**: `completed_by` is free text, the fingerprint is recomputable, and an in-process caller determined to pass `allow_early_completion=True` still can. Therefore the stronger transferable invariant is:
+
+`semantic proposal -> authoritative workflow-state read -> transition-specific authorization/capability -> deterministic evidence validation -> fail closed before write -> atomic durable mutation -> read-side authority revalidation`
+
+Avoid treating a caller-supplied boolean or free-text `by=` as authority. Prefer a private mediator or opaque capability whose standing is derived internally from authoritative state. This is an architectural residual-risk finding, not evidence that the current normal Manager path routinely mis-completes projects.
 
 ### `clean-os-g1-006` — separate within-task failure repair from cross-task durable memory admission
 
@@ -56,13 +64,13 @@ The public `google-research/reasoning-bank` repository exposes runner/evaluation
 ## Primary source pointers
 
 - https://arxiv.org/abs/2508.16153
-- https://arxiv.org/html/2508.16153v1
-- https://arxiv.org/html/2508.16153v2
 - https://github.com/Memento-Teams/Memento
+- https://github.com/Memento-Teams/Memento/commit/8ec09ef4b1ee0cab640b20f903d5bae3deab0b19
 - https://github.com/Memento-Teams/Memento/blob/main/memory/train_memory_retriever.py
 - https://github.com/Memento-Teams/Memento/blob/main/memory/training_data.jsonl
 - https://github.com/Memento-Teams/Memento/issues/34
 - https://github.com/Hieurezdev/appworld-ace/blob/main/MementoExperiment/memory/train_memory_retriever.py
+- https://github.com/microsoft/ArgusAgent/tree/455da6cb2fe10e9fbaeab5126f2f3b363237cf57
 - https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/manager/_stage_ops.py
 - https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/skills/stage_machine.py
 - https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/tests/skills/test_stage_completion_authority.py
@@ -71,13 +79,13 @@ The public `google-research/reasoning-bank` repository exposes runner/evaluation
 
 ## Nonempty frontier
 
-1. **Highest priority:** search Memento arXiv source/supplementary material, author repos/forks, archived pre-Oct history, and experiment bundles for the paper-era parametric-retriever train/validation protocol. Do not assume the Oct release matches the Aug paper.
-2. If a full structured-file path becomes available, quantify `training_data.jsonl` under seed 42: total rows, unique queries, rows/query distribution, exact duplicate rate, train/validation query overlap, exact-pair overlap, and mixed `case_label` signs per query.
-3. Search public reproductions/global code-search hits for a query-group split fix or a downstream row-level-vs-grouped validation comparison. Task outcome is the target metric; retriever AUC alone is insufficient.
-4. Search Argus `advance_stage`-specific negative tests and alternate stage-mutation paths to determine whether the same before-write immutability/read-side principle covers every transition path or whether completion has stronger regression protection than intermediate advancement.
-5. Continue independent matched persistent-memory evaluations with official task scoring and group-held-out transfer tests.
-6. Continue EvoAgentBench adapter/config artifact search; keep the cause of Memento 45.8→9.5 versus ReasoningBank 45.8→53.0 unresolved until matched public evidence exists.
+1. **Highest priority — Memento control slope:** identify what changes between the five DeepResearcher iterations when CBR is disabled (resampling/order/pass@k/model stochasticity/other changing factor). Until then, do not interpret the common iteration rise as causal continual learning.
+2. **Memento paper-era retriever provenance:** search arXiv source/supplement, author mirrors, archived experiment bundles, or author-side artifacts for the actual Aug-2025 parametric-retriever training/checkpoint protocol. Official public repository history is now exhausted for this question because the implementation was absent.
+3. **Memento matched evaluation:** find or reproduce a row-level-vs-query-group split comparison; quantify total rows, unique queries, duplicate rate, query/pair overlap under seed 42, and whether retriever validation AUC predicts frozen held-out task utility.
+4. **Argus authority surface:** trace `allow_early_completion`, `reset_stage_for_replacement_intent`, `persist_vertical(force_replacement=...)`, and actual in-process import/sandbox permissions. Determine which privileged transitions are capability-bound versus caller-asserted.
+5. **Argus intermediate immutability:** locate or add evidence of an explicit regression test that failed `_ensure_stage_completion` during ordinary `advance_stage` leaves state byte-for-byte unchanged. Code ordering implies this, but a direct test would strengthen it.
+6. Continue independent matched persistent-memory evaluations with official task scoring/group-held-out transfer tests, and keep EvoAgentBench Memento-vs-ReasoningBank causal attribution unresolved without matched public artifacts.
 
 ## Exact continuation
 
-Search Memento arXiv source/supplement and paper-era repository history for an experiment-time neural-retriever validation protocol. If unavailable, inspect public reproductions for grouped-query validation/downstream reruns. Then inspect Argus alternate stage-mutator/import paths and `advance_stage`-specific refusal tests for bypass/immutability coverage. Keep the frontier nonempty.
+Inspect Memento paper/arXiv source or author-side experiment artifacts for how the five DeepResearcher iterations and the no-CBR control were generated, specifically what changes between iterations when CBR is disabled. If no public artifact exists, mark causal attribution unresolved rather than infer. Then trace Argus early-completion/reset authorization from Manager decision to primitive, including whether agent execution sandboxes can directly import/call stage-machine privileged operations after the run-13 repair. Keep the frontier nonempty.
