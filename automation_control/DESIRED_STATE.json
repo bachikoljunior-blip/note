@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "control_revision": 7,
-  "updated_at": "2026-08-26T04:38:40+09:00",
+  "control_revision": 8,
+  "updated_at": "2026-08-26T05:36:15+09:00",
   "purpose": "Sanitized root control manifest. It is intentionally safe for clean exploration workers to read because substantive role policies are not co-located here.",
   "config_resolution": {
     "clean_exploration_role_path_template": "automation_control/roles/{role}.json",
@@ -15,21 +15,22 @@
     "anti_stop": true,
     "logical_disable_supported": true,
     "physical_scheduler_separate_from_repository": true,
-    "control_freshness": "At run start observe the latest note main SHA and fetch this manifest plus the role's designated config at that exact SHA. Before substantive semantic work, recheck note main; if control_revision or the role config_revision changed, refetch and use the newer config. Once substantive semantic work begins, freeze the selected config snapshot for that run and record source SHA/blob so a concurrent control change is not mixed into the same semantic execution."
+    "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus the role's designated config at that exact SHA. Before substantive semantic work, repeat the SHA-only ref lookup; if control_revision or the role config_revision changed, refetch and use the newer config. Once substantive semantic work begins, freeze the selected config snapshot for that run and record source SHA/blob so a concurrent control change is not mixed into the same semantic execution. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead."
   },
   "clean_exploration_boundary": {
     "semantic_inputs_allowed": ["own role-local clean state", "public sources", "own sanitized feedback", "this sanitized root manifest", "own role-local config"],
-    "semantic_inputs_forbidden": ["O or O-derived state", "other clean-worker state or role config", "downstream comparator/integrator/index/feed/audit state", "DOWNSTREAM_STATE.json", "O_OPERATIONS.json", "legacy/pre_independence research", "shared EXECUTION_LEDGER.json", "other-role receipts"],
+    "semantic_inputs_forbidden": ["O or O-derived state", "other clean-worker state or role config", "downstream comparator/integrator/index/feed/audit state", "DOWNSTREAM_STATE.json", "O_OPERATIONS.json", "legacy/pre_independence research", "shared EXECUTION_LEDGER.json", "other-role receipts", "commit messages/diffs/file snippets or other semantic payload obtained only while resolving repository head SHA"],
     "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content",
     "feedback_rule": "own sanitized feedback is mechanical self-local quality control only and cannot convey novelty, relevance, acceptance/rejection, ranking, preferred mechanisms, O knowledge, or other-worker information",
     "own_state_resolution": "Use role-local LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology and minimum predecessor chain. Quarantine accidentally opened stale/cross-role observability content and do not use it semantically.",
-    "scope_guard": "never broaden positive or negative evidence beyond tested scope"
+    "scope_guard": "never broaden positive or negative evidence beyond tested scope",
+    "head_lookup_transport": "For cleanliness/freshness checks use Git ref object lookup only. Do not use generic commit search, commit detail, branch detail, repository search, or any endpoint/tool response that may bundle unrelated commit messages, diffs, file snippets, or receipt bodies merely to learn the head SHA."
   },
   "migration": {
-    "from_control_revision": 6,
-    "reason": "Revision 6 stored all worker biases plus O/downstream policies in one file that every clean worker was required to read. Even when workers reported no downstream semantic reads, the shared control document itself exposed other-worker and O/downstream semantic policy, violating the intended clean independence boundary. Revision 7 splits clean role configs into role-local files and moves all substantive non-clean policy to DOWNSTREAM_STATE.json.",
-    "clean_role_config_revision": 4,
-    "downstream_state_control_revision": 7,
-    "rollback": "Restore DESIRED_STATE blob 9d466043149f4d7276896dcfa4d18b9bfc210ac0 only if role-local config resolution fails, while treating that rollback as contamination-risk degraded mode and not as clean steady state."
+    "from_control_revision": 7,
+    "reason": "Repository-head lookup transport can expose unrelated semantic payload even when the role intends to retrieve only a SHA. Revision 8 requires SHA-only Git-ref transport and explicit quarantine of any excess connector text, while retaining the role-local clean-control split.",
+    "clean_role_config_revision": 5,
+    "downstream_state_control_revision": 8,
+    "rollback": "Restore DESIRED_STATE blob ae605e09eb3bcdc7aa18238d2c42218b0272d2e6 only if SHA-only ref resolution prevents execution; treat any fallback that exposes unrelated head metadata as contamination-risk degraded mode rather than clean steady state."
   }
 }
