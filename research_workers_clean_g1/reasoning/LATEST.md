@@ -17,6 +17,7 @@ Latest checkpoints in order:
 14. `2026-08-26T0302JST-followup2.md`
 15. `2026-08-26T0302JST-followup3.md`
 16. `2026-08-26T0302JST-followup4.md`
+17. `2026-08-26T0400JST.md`
 
 Read `STATE.md` for accumulated findings through 18:15 JST, then read the source-qualified checkpoints above in order for newest evidence and exact continuation.
 
@@ -35,7 +36,11 @@ Top unresolved frontier:
 Important updates from the newest checkpoints:
 - **OpenProver** supplies a strong direct free-form Lean controller baseline. On 185 ProofNet formal theorems with a 100k output-token budget per problem, Kimi-K2.5 improves from linear rollout **36.8% to 57.3%** and Leanstral from **21.1% to 28.1%**. Its Planner chooses heterogeneous actions (`spawn`, repository read/write, Whiteboard update, theorem reread, search, submit), while Lean Workers can verify/store/search. This is matched on total output-token budget but not on wall-clock/input/verifier/parallel overhead.
 - OpenProver also implements an explicit context-pollution defense: Workers do not see prior Workers' or Planner reasoning traces; Verifiers do not see Worker reasoning traces; the Planner gets a compact Whiteboard plus only summaries/slugs of large repository items, retrieving full items on demand. This converges with AxProverBase's compact-memory result and gives a concrete branch-independence baseline.
-- Targeted searches for Lean `contextual bandit`, `offline RL`, `meta-action`, `tool routing`, and `compute allocation` did **not** surface a primary direct Lean system learning the full heterogeneous meta-action policy. Pantograph exposes machine-readable tactic transitions suitable for offline RL, but is an interface/data primitive, not that controller. Keep this absence as an active search gap, not proof of nonexistence.
+- **New C56:** the released OpenProver code already provides a parser-friendly offline-controller substrate. `prompts.py` defines a typed Planner action set (`submit_proof`, `submit_lean_proof`, `read_items`, `write_items`, `spawn`, `literature_search`, `read_theorem`, `write_whiteboard`) in structured TOML action blocks; `inspect.py` parses per-step Planner/Worker calls, Lean outcomes, tokens, elapsed time, cache tokens and cost. However `runs/` is gitignored and the ProofNet harness only aggregates theorem status/elapsed/error for OpenProver, so published action-frequency/tool-use trajectories are not recoverable from the repository without rerunning or a separate artifact.
+- **New C57 — Meta-Reasoner transfer:** a non-Lean ACL 2026 contextual-bandit controller uses a compact progress report plus typed strategies such as continue/restart/backtrack/alternative. GPT-4o-mini Game-of-24 is 89% full vs 85% with raw full-CoT history and 82% with direct LLM arm selection; TheoremQA is 84.13% vs 79.42% and 80.74%. Dynamic strategy expansion reaches 89%/84.13% versus fixed K=3 65%/72.34% and K=5 72%/79.17%. This is strong transfer evidence for compact meta-state + learned strategy selection, but not direct Lean evidence and its rewards are not kernel-grounded.
+- **New C58 — Learning When to Think:** a 1.5B model learns `NoThink/Short/Long` as a first-token compute decision inside GRPO. MATH500 stays near base accuracy (0.782 vs 0.796) while mean output falls 4,796→2,811 tokens (41%); GSM8K reports 76% token reduction. This supports learned compute purchase as a controller action, but the decision is one-shot at trajectory start, not stateful mid-proof routing.
+- **New C59 — Search as Computation Allocation:** VOC theory shows information gain can rank computations arbitrarily poorly under terminal simple-regret objectives; route expensive proof actions by expected terminal decision improvement net of real cost, not uncertainty/information gain alone.
+- Targeted searches for Lean `contextual bandit`, `offline RL`, `meta-action`, `tool routing`, and `compute allocation` still did **not** surface a primary direct Lean system learning the full heterogeneous meta-action policy. Pantograph exposes machine-readable tactic transitions suitable for offline RL, but is a lower-level interface/data primitive, not that controller. Keep this absence as an active search gap, not proof of nonexistence.
 - **AxProverBase** directly rejects raw-history accumulation as the default: on its 100-problem PutnamBench ablation subset, a compact self-managed notebook proves **7% more** than `n=5` full-attempt history at **20% lower total cost** (10% lower at equal iterations), with about half the run dispersion. It still uses a fixed 50-iteration cap.
 - AxProverBase also shows thinking-budget value is model dependent: Opus benefits from 10k→32k and can match doubling iterations at lower cost, while some Gemini settings are flat. Compute actions must be backbone-conditioned.
 - **Numina-Lean-Agent** is another free-form heterogeneous-tool baseline, reporting 12/12 Putnam 2025. Public author clarification says displayed large A5/B6 budgets were calculated after completion, not autonomously pre-routed; A5 subagent isolation was agent-selected. B4 equal-call evidence favors iterative refinement (success in 5 rounds) over independent sampling (failure by 10).
@@ -47,10 +52,12 @@ Important updates from the newest checkpoints:
 - `research_feedback_clean_g1/reasoning/FEEDBACK.json` remains absent; no sanitized feedback was consumed.
 
 Exact continuation:
-1. inspect OpenProver public benchmark/run artifacts for action-frequency, Worker-spawn, Whiteboard/repository-read, verifier and tool-use statistics suitable as an offline multi-action dataset;
-2. search Pantograph/OpenProver/LeanFlow/HILBERT citations and forks for released offline-RL/contextual-bandit/controller learning on machine-readable formal-agent traces;
-3. search stateful sequential value-of-computation/metareasoning under global resource constraints, preserving transfer-vs-direct-Lean scope;
-4. continue matched fixed-vs-free-form-vs-learned controller, subgoal scheduling, backbone-conditioned action values, triggered reretrieval, trajectory compression and snapshot+semantic-repair searches;
-5. keep the frontier nonempty and preserve exact source/version/model/budget/cost-accounting/tested-scope caveats.
+1. inspect OpenProver action parsing/execution and specify a deterministic event schema for `planner action -> worker/tool/Lean result -> cost -> next compact state`;
+2. search once for a separate public OpenProver `runs/`/benchmark archive; if absent, record benchmark rerun as required and move on rather than repeatedly searching broadly;
+3. search Lean/formal-agent follow-ups and forks for learned heterogeneous role/tool routing, keeping tactic-level RL distinct from planner-level policy learning;
+4. search conservative offline contextual bandit, IPS/doubly-robust off-policy evaluation, and sequential VOC methods applicable to logged partial-feedback Lean trajectories;
+5. search mid-trajectory adaptive compute/model/worker purchase rather than only first-token `NoThink/Short/Long` routing;
+6. continue matched fixed-vs-free-form-vs-learned controller, subgoal scheduling, backbone-conditioned action values, triggered reretrieval, trajectory compression, snapshot+semantic-repair, and benchmark robustness searches;
+7. keep the frontier nonempty and preserve exact source/version/model/budget/cost-accounting/tested-scope caveats.
 
 Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, other-worker state, shared execution ledger, or other-role receipts.
