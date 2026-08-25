@@ -1,0 +1,153 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T00:59:21+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T235756_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 4,
+    "config_revision": 3,
+    "enabled_desired": true,
+    "source": "automation_control/DESIRED_STATE.json"
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; exact task-as-block anytime-valid inference for few independent tasks",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Estimating means of bounded random variables by betting",
+      "authors": "Ian Waudby-Smith, Aaditya Ramdas",
+      "date": "2024 journal version / 2020 preprint",
+      "url": "https://arxiv.org/abs/2010.09686",
+      "primary": true,
+      "action": "Verified that the sequential model is [0,1]-valued observations with a shared deterministic conditional mean given the entire past, strictly broader than iid; extracted exact nonasymptotic CS/optional-stopping scope and a fixed-time Hoeffding benchmark."
+    },
+    {
+      "title": "Closed-form empirical Bernstein confidence sequences for scalars and matrices",
+      "authors": "Ben Chugg, Aaditya Ramdas",
+      "date": "2025-12-24 preprint",
+      "url": "https://arxiv.org/abs/2512.21300",
+      "primary": true,
+      "action": "Verified nonasymptotic time-uniform CSs for the average conditional mean of bounded observations with no constant-mean assumption; extracted the key heterogeneity scope and the authors' small-sample comparison warning."
+    },
+    {
+      "title": "Time-uniform, nonparametric, nonasymptotic confidence sequences",
+      "authors": "Steven R. Howard, Aaditya Ramdas, Jon McAuliffe, Jasjeet Sekhon",
+      "date": "2021",
+      "url": "https://doi.org/10.1214/20-AOS1991",
+      "primary": true,
+      "action": "Revisited the nonparametric nonasymptotic empirical-Bernstein/martingale CS foundation used to track average conditional means and to justify task-block monitoring."
+    },
+    {
+      "title": "Safe testing",
+      "authors": "Peter D. Grunwald, Rianne de Heide, Wouter M. Koolen",
+      "date": "2024",
+      "url": "https://doi.org/10.1093/jrsssb/qkae011",
+      "primary": true,
+      "action": "Verified study-level conditional e-variable composition: each sequential study/batch may have arbitrary internal structure; if its e-variable is conditionally valid given prior studies, products remain safe under optional continuation."
+    },
+    {
+      "title": "Comparing Sequential Forecasters",
+      "authors": "Yo Joong Choe, Aaditya Ramdas",
+      "date": "2023 online / 2024 volume",
+      "url": "https://doi.org/10.1287/opre.2021.0792",
+      "primary": true,
+      "action": "Verified distribution-free anytime-valid inference for a time-varying average difference in bounded scores, supporting paired same-task score-difference evaluation rather than two independent model streams."
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-task-block-average-conditional-mean-cs-v1",
+      "mechanism": "Collapse all repeated rollouts for one completed task into one bounded task-level statistic X_t in [0,1] (for a paired difference D_t in [-1,1], use X_t=(D_t+1)/2). Then run a nonasymptotic time-uniform confidence sequence for the average conditional mean mu_t=t^{-1} sum_{j<=t} E[X_j|F_{j-1}]. This permits arbitrary dependence inside the current task block as far as the outer CS is concerned: the inner rollouts are not counted as independent observations; only the final bounded task statistic enters the outer sequence.",
+      "evidence": "Chugg-Ramdas explicitly define mu_t as the average of E[X_j|F_{j-1}] for bounded X_j and state that their results place no assumptions on mu_t beyond measurability; Howard et al. supply the nonparametric nonasymptotic martingale CS foundation. This directly relaxes the shared-conditional-mean assumption of Waudby-Smith-Ramdas and therefore tolerates heterogeneous task difficulty/expected score across time while preserving anytime-valid coverage for the running average conditional mean.",
+      "scope": "The target is the average conditional mean of the actual task sequence observed so far. It is not automatically a population-generalization claim over an unseen task distribution, and it does not make adaptive task selection ignorable. The task-level statistic must be bounded and the stopping/selection filtration must not use hidden finer information not represented in the validity argument.",
+      "uncertainty": "Need a benchmark-specific definition of the task-level statistic that is invariant to variable rollout counts and cannot be gamed by adaptive within-task sampling. For paired model comparison, predefine how multiple rollouts are aggregated before opening the task block."
+    },
+    {
+      "candidate_id": "eval-g1-constant-mean-task-block-betting-cs-v1",
+      "mechanism": "When task blocks can defensibly be modeled as sharing one deterministic conditional mean, use the Waudby-Smith-Ramdas betting CS on one bounded task aggregate per task. Independence across task observations is not required; the paper allows the conditional distribution at each time to depend on the past as long as E[X_t|F_{t-1}]=mu. This is an exact small-task route that preserves within-task pairing/dependence by never exposing individual rollouts to the outer sequential statistic.",
+      "evidence": "The paper defines P^mu as all laws on [0,1]^infinity with E[X_t|X_1,...,X_{t-1}]=mu, explicitly noting that iid is only a special case. Confidence sequences are nonasymptotic and valid at arbitrary stopping times via nonnegative (super)martingales. Chugg-Ramdas report that at smaller sample sizes (roughly below 1000) the newer drift-capable closed-form approximation is reliably wider than the WSR closed-form bound under constant conditional mean, making the stationary betting route especially relevant for only 10-50 task blocks when stationarity is credible.",
+      "scope": "The shared deterministic conditional mean is a substantive stationarity/exchangeability-style assumption on the task-block estimand. Heterogeneous/adaptively selected tasks can violate it even if each task aggregate is bounded. Do not use this route merely because task blocks are independent.",
+      "uncertainty": "Need direct small-n simulations of the hedged/implicit WSR betting CS on paired agent-score distributions; published comparisons mostly use much larger horizons and generic bounded distributions."
+    },
+    {
+      "candidate_id": "eval-g1-study-level-conditional-evariable-wrapper-v1",
+      "mechanism": "Treat each task as an entire study/batch and construct one conditional e-variable from all internal rollouts, judges, or paired outcomes for that task. Multiply task-level conditional e-variables across tasks. This separates arbitrary internal task complexity from cross-task optional continuation: the outer controller only requires each task's e-variable to have conditional expectation <=1 under the null given all prior completed tasks.",
+      "evidence": "Safe Testing formalizes a sequence of study outcomes Y^(m) without requiring internal study structure, defines F_(m-1)-conditional e-variables, and proves their running product is a test supermartingale/e-process safe under arbitrary optional continuation. This is the cleanest generic route when a mean-CS reduction is too restrictive but an exact within-task null-specific e-variable can be constructed.",
+      "scope": "Validity is only as good as each task-level conditional e-variable. Arbitrary within-task dependence is not magically solved: it must be accounted for inside that task's e-variable construction. Cross-task product safety does not justify plugging in a fixed-sample p-value or an invalid within-task likelihood ratio.",
+      "uncertainty": "Need concrete e-variable constructions for common agent task blocks: paired Bernoulli success, bounded reward difference, and judge-agreement/failure-detection outcomes with variable rollout counts."
+    },
+    {
+      "candidate_id": "eval-g1-paired-bounded-score-weak-null-cs-v1",
+      "mechanism": "For candidate-vs-incumbent evaluation, compute one paired bounded score difference on each common task and monitor the time-varying average score difference with a variance-adaptive CS/e-process. Test the weak null 'candidate is no better on average' rather than the stronger and usually false claim that it never performs better taskwise.",
+      "evidence": "Choe-Ramdas derive anytime-valid distribution-free inference for time-varying differences in bounded forecast scores, including e-processes for the weak null that one forecaster does not outperform another on average. The structural match to agent evaluation is direct when both systems are scored on the same task and the score difference is bounded.",
+      "scope": "Their main application is sequential forecasting, not repeated-rollout agent benchmarks. Repeated rollouts within a task should first be collapsed to one paired task statistic, or otherwise modeled inside the task block; treating every rollout pair as a new forecast event can recreate pseudo-replication.",
+      "uncertainty": "Need direct comparison of this weak-null score-difference route with sign/McNemar-style task wins for highly discrete success metrics at n=10-50 tasks."
+    }
+  ],
+  "small_n_calibration": {
+    "purpose": "transparent conservative sanity check, not the recommended CS",
+    "assumptions": "X_t in [0,1], alpha=0.05",
+    "fixed_time_hoeffding_halfwidth": {"n10":0.429,"n20":0.304,"n30":0.248,"n50":0.192},
+    "simple_all_times_union_bound_halfwidth": {"allocation":"alpha_n=alpha/[n(n+1)]","n10":0.648,"n20":0.493,"n30":0.419,"n50":0.340},
+    "paired_difference_note": "For D in [-1,1] rescaled as X=(D+1)/2, multiply these half-widths by 2. Thus 10-50 independent task blocks only certify fairly large effects under worst-case boundedness; variance-adaptive betting/empirical-Bernstein methods or more informative task-level e-variables are important for practical resolution."
+  },
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Arbitrary within-task repeated-rollout dependence invalidates any bounded-mean CS.",
+      "reason": "Rejected as too broad. If the entire task is summarized into one bounded observation and the outer target is its conditional mean/average conditional mean, the outer martingale CS does not need rollout-level independence. What remains nontrivial is defining a valid bounded task summary and the cross-task estimand."
+    },
+    {
+      "lead": "The WSR bounded-mean betting CS handles arbitrary heterogeneous task expectations.",
+      "reason": "Rejected. WSR's main sequential model requires a shared deterministic conditional mean. For varying task expectations, use an average-conditional-mean CS such as Howard et al./Chugg-Ramdas or a different design-based target."
+    },
+    {
+      "lead": "Average-conditional-mean anytime validity proves population benchmark generalization under adaptive task selection.",
+      "reason": "Rejected. The CS covers the running average of conditional expectations for the realized/adaptive sequence; transport to an external task population requires a separate sampling/design argument."
+    },
+    {
+      "lead": "A task-level e-variable wrapper makes arbitrary within-task statistics safe automatically.",
+      "reason": "Rejected. The wrapper only composes e-variables that are already conditionally valid; internal dependence and nuisance parameters must be handled in the per-task e-variable."
+    }
+  ],
+  "agent_evaluation_design_map": {
+    "few_task_default": "one completed task = one outer statistical unit; never use rollout count as the independent-unit count",
+    "stationary_target": "if a shared task-block conditional mean is defensible, use tight bounded betting CS/e-process",
+    "heterogeneous_target": "if task expectations vary, target the running average conditional mean with a drift-valid bounded CS",
+    "complex_inner_task": "if a mean summary discards too much structure, construct a valid task-level conditional e-variable and compose across completed tasks",
+    "paired_models": "prefer one same-task bounded score difference per task and a weak-null average-performance test",
+    "generalization_gate": "separate anytime validity on the realized task sequence from generalization to an unseen task population"
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Construct/locate exact task-level conditional e-variables for paired Bernoulli success and bounded reward differences when each task contains a variable, adaptively chosen number of correlated rollouts; require validity after the within-task stopping rule."
+    },
+    {
+      "priority": 2,
+      "action": "Quantify actual 95% CS widths at n=10,20,30,50 for WSR hedged betting, Howard empirical-Bernstein, and Chugg-Ramdas drift-valid bounds under agent-like paired distributions; report unresolved rates, not only average width."
+    },
+    {
+      "priority": 3,
+      "action": "Find exact sequential randomization/permutation/McNemar-style e-processes for matched task pairs that exploit discordant outcomes and remain valid with optional stopping across tasks."
+    },
+    {
+      "priority": 4,
+      "action": "Develop a two-layer protocol: within-task safe stopping for rollout collection plus outer task-level anytime-valid inference, and verify the filtration boundary when the outer controller observes within-task partial results."
+    },
+    {
+      "priority": 5,
+      "action": "Separate realized-sequence average conditional mean from external task-population generalization using randomized/without-replacement benchmark sampling or finite-population confidence sequences."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "This run resolved the previous top frontier by identifying an exact task-as-block route that does not require rollout-level independence and, via average-conditional-mean CSs, does not require constant task difficulty. It also exposed the remaining boundary: within-task adaptive stopping/e-variable validity and external population generalization are separate unsolved layers, so the research frontier remains nonempty.",
+  "exact_next_action": "Search and derive exact per-task conditional e-variables for variable-count paired rollouts, especially Bernoulli success/McNemar-type outcomes, then numerically compare small-n widths of stationary betting CS versus drift-valid average-conditional-mean CS at 10-50 tasks."
+}
