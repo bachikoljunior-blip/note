@@ -1,0 +1,80 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 5,
+  "config_revision": 3,
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T020209+0900.json",
+  "started_local": "2026-08-26T02:02:10+09:00",
+  "checkpointed_local": "2026-08-26T02:04:52+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed": false,
+    "read_other_worker_state": false,
+    "own_sanitized_feedback": "not_found_404",
+    "shared_execution_ledger_read": false,
+    "other_receipts_read": false,
+    "note": "Continuation used only own prior checkpoint and public primary source; no downstream or cross-worker semantic input."
+  },
+  "checked_sources": [
+    {
+      "source": "Julia Kostin, Kasra Jalaldoust, Elias Bareinboim, Samory Kpotufe, Fanny Yang, How Useful is Causal Invariance for Domain Adaptation in Finite-Sample Settings?, arXiv:2606.12680v1, 2026",
+      "type": "primary preprint HTML",
+      "url": "https://arxiv.org/html/2606.12680v1",
+      "result": "Primary-verified a finite-sample safe-transfer mechanism under explicit structural assumptions. Algorithm 1 trains source candidate predictors defined by full/partial causal-invariance knowledge, splits target data in two, and first compares every source candidate to a target-only ERM using a target confidence band. If no candidate passes, it returns the target-only model. Accepted candidates are then aggregated and iteratively refined on the second target fold. Theorem 3.1 gives, with probability at least 1-alpha under bounded linear-regression and covariance-conditioning assumptions, target excess risk bounded by the minimum of the target-only rate C(d+log(1/alpha))/n_Q and a best-source-candidate-plus-margin-error rate; the paper explicitly identifies the first term as the no-negative-transfer guarantee. Favorable target-risk margins of order at least log|I|/n_Q and sufficiently large source data allow the method to match the best candidate; in favorable settings the paper contrasts Omega(d) target samples with Omega(d/epsilon) for target-only linear regression to achieve epsilon excess risk. Matching lower bounds show that when margins are too small, n_Q less than order 1/Delta cannot reliably exploit even a two-candidate collection. Real Causal Chamber experiments report that the method interpolates between the best source candidate and target model while naive candidate ERM exhibits negative transfer, but exact plotted MAE values were not extracted from image-only figures."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r10-causal-invariance-target-safe-aggregation",
+      "mechanism": "Use auditable structural knowledge (full or partial causal/invariance restrictions) only to generate a finite dictionary of source-trained candidates; reserve labeled target data for a hard admission guard against the target-only estimator. Reject source candidates outside a target confidence band, fall back immediately to target-only if none survive, and aggregate/refine only the admitted candidates. Structural knowledge proposes candidates but target evidence decides whether any transfer is allowed.",
+      "primary_source": "Kostin et al., arXiv:2606.12680v1 (2026)",
+      "quantitative_evidence": "Theorem 3.1 gives with probability at least 1-alpha E_Q(h_tilde) <= min{ C(d+log(1/alpha))/n_Q, epsilon_best + Delta_max(n_P,n_Q)+3r(n_P) }, so the target-only rate is an explicit finite-sample upper envelope. Under favorable margins inf Delta_I roughly >= log|I|/n_Q and sufficiently small source estimation error, the procedure can reach the best candidate's risk. The introduction states favorable regimes can require only Omega(d) target samples for epsilon risk versus Omega(d/epsilon) for target-only regression. Matching lower bounds establish n_Q=Omega(1/Delta) dependence: if the candidate risk margin is too small, no algorithm can reliably obtain the faster candidate-driven rate.",
+      "operational_observable": "For every transferred hypothesis/source mechanism, maintain a target-only shadow model, target-split admission confidence radius, accepted/rejected candidate set, target-risk margin estimates, source estimation residual, and post-transfer target loss. If the accepted set is empty, return target-only; do not relax the guard merely to force reuse. Track whether empirical confidence constants are theory-certified or heuristic.",
+      "scope": "Primary theorem is for bounded linear regression with positive-definite source/target covariance and controlled covariate-shift conditioning, a finite candidate dictionary induced by causal/invariance feature subsets, sufficient n_Q, and constants satisfying stated concentration requirements. The real experiments extend the implementation to linear probes but do not extend the theorem to arbitrary models.",
+      "failure_conditions": "If candidate target-risk margins are below order 1/n_Q, even infinite source data cannot make the candidates reliably distinguishable; lower bounds rule out uniform faster adaptation. Finite-source error and severe conditioning/covariate shift enlarge the margin error. Practical experiments estimate confidence constants heuristically from limited target data; the authors explicitly note this heuristic need not satisfy the theorem's constant conditions. Outside linear/weak-confidence-set settings, the no-negative-transfer construction requires new theory.",
+      "transfer_hypothesis": "For research reuse, the weakest useful safe-transfer structure may not be an estimated scalar source-target bias bound. It can instead be a structural generator of plausible invariant candidates plus a current-task target-only confidence guard. This converts causal/invariant knowledge into hypotheses rather than authority, while retaining an explicit finite-sample fallback.",
+      "confidence": "high for source-domain theorem; medium-high for research-system transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r8-bias-bounded-historical-evidence-with-online-shadow",
+      "update": "The structure-free unknown-bias frontier now has a qualifying weaker-assumption alternative: instead of requiring a supplied scalar bias bound, causal/invariance knowledge can define a candidate set, and labeled target data can certify candidate admission relative to a target-only ERM. Under the paper's linear-regression assumptions this yields an explicit finite-sample no-negative-transfer envelope. This does not contradict the prior impossibility result because it adds structural restrictions and target labels."
+    },
+    {
+      "candidate": "cf-g1-r9-conservative-transfer-gain-admission",
+      "update": "Causal-invariance adaptation supplies a concrete high-probability admission geometry: candidates are retained only when their target covariance-weighted distance to the target ERM lies inside a confidence band, with empty-set fallback to target-only. This is an alternative to scalar estimated transfer-gain admission and suggests structural candidate generation plus target-certified filtering."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Causal invariance alone guarantees useful transfer even with very few target labels",
+      "evidence": "False in the paper's own lower bounds. When target-risk margins are too small relative to n_Q, no algorithm can reliably exploit the candidate collection for a faster finite-sample rate; even a perfect invariant candidate may be statistically indistinguishable from alternatives.",
+      "reason": "Treat margin/separation and target evidence as necessary admission resources, not causal labels as automatic trust."
+    },
+    {
+      "lead": "The real-experiment heuristic choice of confidence constants is covered by the theorem",
+      "evidence": "The authors estimate C1/C2 from a residual-variance upper confidence bound in experiments and explicitly state the theorem's required relationship is not guaranteed for this heuristic choice.",
+      "reason": "Any transfer implementation must distinguish theorem-certified confidence calibration from empirically tuned guard thresholds."
+    }
+  ],
+  "frontier": [
+    "Find a more general online/distributional analogue of the causal-invariance admission pattern: source candidates generated by structural constraints plus target-only conformal or anytime-valid confidence filtering, preferably beyond linear regression and with explicit adversarial-source experiments.",
+    "Quantify exact finite-sample MAE/risk savings and target-label counts for safe causal/invariance adaptation versus target-only and naive transfer from an open numerical table or reproducible code artifact; do not estimate values from plots.",
+    "Obtain an open primary finite-sample bootstrap-R&S/CRN benchmark with exact PCS, sample-count and resampling-compute overhead under non-Gaussian/heavy-tailed outputs.",
+    "Find finite-budget covariance-aware ranking/selection under heavy-tailed correlated observations with pairing-aware confidence guarantees.",
+    "For proxy-assisted evaluation, find a sequential value-of-information rule that decides whether buying proxy calibration is worthwhile before correlation is known, while retaining a reward-only shadow."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Followed the newly found causal-invariance branch to the primary HTML rather than relying on a secondary review.",
+      "Verified the exact target-only fallback step, theorem-level finite-sample min-of-rates bound, favorable-margin sample-complexity regime, and matching small-margin lower bound.",
+      "Kept the theorem scope separate from broader transfer hypotheses and flagged heuristic experimental confidence calibration."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search for target-certified structural transfer beyond linear regression—prefer conformal/anytime-valid source-admission filters or invariant candidate aggregation with explicit target-only finite-sample fallback and adversarial sources. If unavailable, extract exact reproducible numerical results for the causal-invariance method and continue the heavy-tailed correlated R&S branch."
+}
