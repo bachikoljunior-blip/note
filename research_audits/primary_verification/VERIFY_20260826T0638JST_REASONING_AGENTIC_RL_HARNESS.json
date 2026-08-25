@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T06:38:14+09:00",
+  "role": "primary_source_verifier",
+  "candidate": {
+    "id": "reasoning/Agentic-RL-harness-behavior-policy-and-ablation-scope",
+    "source_namespace": "reasoning",
+    "worker_artifact": "research_workers_clean_g1/reasoning/2026-08-26T0458JST-followup2.md",
+    "worker_blob": "7702fd1ac5abf243e729427e2199c4766c8bc3cb"
+  },
+  "control_snapshot": {
+    "note_main_sha": "ce4ea67c6e12bdd403efc3091658ffe6353b409d",
+    "control_revision": 8,
+    "role_config_revision": 4,
+    "desired_state_blob": "508c9f92dd965d2b5074932b99847411cb66bef4",
+    "downstream_state_blob": "8dfdac9e15d0ff28fc7354dad4277288a4cab00e",
+    "config_frozen_before_semantic_work": true
+  },
+  "primary_source": {
+    "title": "Learning to Control LLM Agent Harnesses with Offline Reinforcement Learning",
+    "authors": ["Haiwen Yi", "Xinyuan Song"],
+    "identifier": "arXiv:2607.05458v1",
+    "version_date": "2026-07-05",
+    "url": "https://arxiv.org/html/2607.05458",
+    "official_repository": "https://github.com/Hik289/Agentic-RL-harness",
+    "repository_tree_inspected": "5d577632ef4803f819125fc9ef9ef9dd257c077d"
+  },
+  "status": "primary_verified_with_ablation_results_and_propensity_reconstruction_scope_clarification",
+  "claim_checks": [
+    {
+      "claim": "AW's reported gains are not explained by plain behavior cloning or uniformly forcing checks.",
+      "assessment": "verified_with_exact_table_scope",
+      "evidence": "The paper's Table 4 reports AW, BC and Forced CHECK lifts relative to each method's own Base evaluation. AW is stronger than BC in all eight settings and stronger than both BC and FC in five: knowledge-work, coding, planning, adapted tau-bench retail and adapted DB-Bench. Examples: coding AW +10.0pp vs BC -8.3pp vs FC +0.0pp; tau-bench AW +18.2 vs BC +8.2 vs FC +0.1; DB-Bench AW +13.2 vs BC +5.8 vs FC -0.5.",
+      "scope": "AW does not beat Forced CHECK in every setting: research, multi-tool and long-memory have AW-FC differences -0.1, -1.6 and -0.3pp. The result supports state-dependent control most clearly in the five positive settings, not a universal dominance claim."
+    },
+    {
+      "claim": "The held-out evaluation protocol is 80/20 controlled-domain split and 16/20 adapter split with three seeds and three rollouts per held-out task.",
+      "assessment": "verified",
+      "evidence": "Paper Section 5 and Appendix C/D state 100 controlled tasks per domain, 80 buffer-collection and 20 held-out, stratified by difficulty with disjoint task identifiers/templates/entities/starter artifacts. Public adapters use 16 training and 20 held-out evaluation tasks; all evaluations use three independent seeds and three rollouts. The official README exposes reproduction commands for the adapter settings under the Harness-MDP scoring protocol.",
+      "scope": "Adapter scores are explicitly not official upstream tau-bench or AgentBench scores."
+    },
+    {
+      "claim": "The paper trains on a shaped reward containing rubric, verifier, format, cost and process-event bonuses.",
+      "assessment": "contradicted_for_primary_training_objective",
+      "evidence": "The paper states the controller is trained using only terminal task-rubric rewards; HMS is post-hoc and never a training reward. Section 4 says experiments use the special case Phi_t=0, i.e. no intermediate action bonuses. The official offline_aw.py computes trajectory advantage from return_G and applies clipped exp(A/beta) weights to per-step cross-entropy.",
+      "scope": "The repository contains reward-aggregation utilities, but the primary paper's reported AW experiment is described as terminal rubric reward only."
+    },
+    {
+      "claim": "The released epsilon-perturbed behavior policy makes exact action propensities reconstructable.",
+      "assessment": "conditionally_verified_but_not_self_contained_in_logged_records",
+      "evidence": "Official running_main_driver.py uses a perturbed Base behavior policy with default eps=0.25. In generic_harness.py and kw_harness.py, each decision takes the deterministic masked Base action with probability 1-eps, otherwise uniformly samples from the currently legal action set. Hence for legal action a, the code-level propensity is (1-eps)*I[a=base(s)] + eps/|L(s)|, given the exact code/config and legal mask L(s). Invalid actions are masked. However trajectory_logger.py records chosen action and state/observation fields but does not record eps, behavior-policy version, legal-action mask, or full action-probability vector.",
+      "scope": "Propensities are reconstructable only if the exact policy code/config/action-space/masking semantics are pinned and the mask can be replayed from the logged state. They are not directly auditable from a standalone trajectory record. This is adequate as a starting point for a new OPE collector, but weaker than a dataset that logs mu(a|s) explicitly."
+    },
+    {
+      "claim": "The published Agentic-RL study itself performs planner-level off-policy evaluation with IPS/DR/TDR/FQE or reports propensity-based OPE estimates.",
+      "assessment": "not_supported",
+      "evidence": "The primary paper trains advantage-weighted regression from a fixed buffer and evaluates learned policies online on held-out tasks. The inspected paper text and official code path do not report IPS/DR/TDR/FQE estimates or use behavior propensities in offline_aw.py. The reasoning worker's OPE proposal is therefore a transfer/design extension, not a reported result of this source.",
+      "scope": "Do not cite this paper as empirical evidence that OPE accurately ranks learned harness controllers."
+    },
+    {
+      "claim": "The current public repository fully exposes the exact BC and Forced CHECK ablation implementation and raw paper result artifacts.",
+      "assessment": "not_verified_from_current_public_tree",
+      "evidence": "The paper reports exact BC/FC ablation values, but targeted search of the current public tree did not surface named Behavior-Cloning or Forced-CHECK implementation code, while README states generated data/results/caches are not tracked. Main-table analysis currently analyzes Base versus AW outputs. Therefore the numerical ablation is primary-paper evidence, but independent code-level reproduction of BC/FC was not established in this audit.",
+      "scope": "Absence from the inspected current tree/search is not proof that no historical commit or unindexed file contains the baseline implementation."
+    }
+  ],
+  "reported_ablation_lifts_pp": {
+    "knowledge_work": {"AW": 1.4, "BC": -0.4, "FC": 0.1},
+    "coding": {"AW": 10.0, "BC": -8.3, "FC": 0.0},
+    "research": {"AW": -0.3, "BC": -4.2, "FC": -0.2},
+    "multi_tool": {"AW": -1.3, "BC": -6.8, "FC": 0.3},
+    "long_memory": {"AW": -0.3, "BC": -5.8, "FC": 0.0},
+    "planning": {"AW": 2.6, "BC": 0.0, "FC": -2.3},
+    "tau_bench_retail_adapter": {"AW": 18.2, "BC": 8.2, "FC": 0.1},
+    "db_bench_adapter": {"AW": 13.2, "BC": 5.8, "FC": -0.5}
+  },
+  "material_correction_to_worker": "The proposal to use this harness as a propensity-aware OPE starting point is technically plausible but should be phrased conditionally: the released epsilon policy has an exactly derivable probability law under a pinned mask/config, yet the trajectory schema does not directly log eps, legal actions, policy version or mu_chosen. For a robust OPE dataset those fields should be added at collection time rather than reconstructed after the fact. Also, Agentic-RL is evidence for outer-loop structural-action learning and BC/Forced-CHECK ablations, not evidence that IPS/DR/TDR/FQE already work for these trajectories.",
+  "unresolved": [
+    "Locate a historical or supplemental artifact with the exact BC and Forced CHECK implementation, seed mapping and raw ablation outputs.",
+    "Verify coding_harness perturbation and all adapter-specific masking rules before claiming one propensity formula covers every domain without exceptions.",
+    "Add explicit behavior_policy_id, epsilon/mixture weight, legal-action mask and full probability vector to future trajectory logs if OPE is implemented.",
+    "No zero-support action becomes evaluable merely because the epsilon policy is reconstructable; support must still be audited under each mask/state region."
+  ],
+  "exact_next_verification": {
+    "namespace": "evaluation",
+    "artifact": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T050518_JST.json",
+    "blob": "6ed70b7d72c7b84d3f9a1be8c576fc2d075a4efd",
+    "task": "Rotate to the current sealed-wave evaluation artifact and verify its highest-value un-audited quantitative candidate against primary sources, prioritizing benchmark-validity/ranking-sensitivity or sequential-evaluation claims that could alter downstream admission. Preserve source-qualified identity and exact tested scope."
+  }
+}
