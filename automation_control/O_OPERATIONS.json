@@ -1,8 +1,22 @@
 {
-  "schema_version":1,
-  "control_revision":1,
-  "roles":{
-    "o_work_monitor_recovery":{"enabled_desired":true,"config_revision":1,"class":"o_execution_safety","policy":"Inspect latest O authoritative state and fresh owner activity. Never create duplicate writer while current owner is fresh. Recover only after actual stop is established, using existing lease/fence/CAS contracts. Individual blockers are not global completion. Never self-disable; only explicit user stop. Apply least-Work routing and do not interrupt valid frozen Work-exclusive execution. Persist monitoring/recovery evidence durably."},
-    "o_human_request_monitor":{"enabled_desired":true,"config_revision":1,"class":"user_request_monitor","policy":"Read durable O user-request queue from current main, notify only newly open/changed/reopened requests, do not mutate O/queue, do not duplicate unchanged notifications, transient read failures are retried next run and never become completion."}
+  "schema_version": 1,
+  "control_revision": 2,
+  "updated_at": "2026-08-25T23:28:12+09:00",
+  "slot_reservation_semantics": "The active o_work_monitor_recovery role is the reserved O main/recovery execution slot. Do not require an additional empty physical automation slot unless O authoritative state proves the main execution path is physically separate.",
+  "roles": {
+    "o_work_monitor_recovery": {
+      "enabled_desired": true,
+      "config_revision": 2,
+      "class": "o_execution_safety",
+      "receipt_namespace": "automation_control/receipts/o_work_monitor_recovery/",
+      "policy": "Inspect latest O authoritative repository state first. Treat WORK_EXECUTION_STATE owner/fence plus heartbeat_at/last_progress_at and same-owner remote branch/PR/CI progress as primary liveness evidence; automation UI last_run_time is secondary and must never override a fresh authoritative owner. Fresh owner/activity means no duplicate writer and no recovery mutation. Only after stale lease/heartbeat and absence of same-owner fresh progress is actual stop established; then recover using the existing lease/fence/CAS/readback contracts. Revision 23 least-Work is already acknowledged, so route repository/GitHub-capable work outside Work and never interrupt an existing frozen Work-exclusive invocation. Individual blockers, no-change, reports, checkpoints, CI completion, or one milestone are never global completion. Transient tool/network/API failures are checkpointed and retried. Never self-disable; only explicit user stop. Persist exact observations/actions/blocker/termination/continuation and rollback-relevant evidence durably."
+    },
+    "o_human_request_monitor": {
+      "enabled_desired": true,
+      "config_revision": 2,
+      "class": "user_request_monitor",
+      "receipt_namespace": "automation_control/receipts/o_human_request_monitor/",
+      "policy": "Read the durable O user-request queue from current main and compare only against the last successful repository baseline. Notify only newly open, materially changed, or reopened requests; unchanged open, fulfilled, withdrawn, superseded, missing queue, or no-change cases do not notify. A reevaluate_by date passing is not itself a synthetic new request or notification trigger unless the authoritative queue object changes. Read-only: never mutate O or queue. Transient read failure does not advance the comparison baseline and is retried next run. Persist exact successful baseline and receipt durably."
+    }
   }
 }
