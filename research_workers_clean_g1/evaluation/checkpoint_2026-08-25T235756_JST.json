@@ -1,0 +1,156 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T23:57:56+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T230429_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "control_revision": 3,
+    "config_revision": 2,
+    "enabled_desired": true,
+    "source": "automation_control/DESIRED_STATE.json"
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_state": false,
+    "read_other_worker_state": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; few-independent-unit sequential inference, paired/stratified anytime-validity, and dependence-aware stopping",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Safe Sequential Testing and Effect Estimation in Stratified Count Data",
+      "authors": "Rosanne J. Turner, Peter D. Grunwald",
+      "date": "2023-04-25",
+      "url": "https://arxiv.org/abs/2302.11401",
+      "primary": true,
+      "action": "Extracted exact e-process/confidence-sequence construction for stratified 2x2 count streams, block-level optional stopping, adaptive past-determined block sizes, and cross-talk power tradeoffs."
+    },
+    {
+      "title": "Martingale Methods for Sequential Estimation of Convex Functionals and Divergences",
+      "authors": "Tudor Manole, Aaditya Ramdas",
+      "date": "2023",
+      "url": "https://arxiv.org/abs/2103.09267",
+      "primary": true,
+      "action": "Extracted paired-sample time-uniform two-sample bounds that permit within-pair dependence and are tighter than generic two-stream bounds, plus stopping-time/filtration scope."
+    },
+    {
+      "title": "Near-Optimal Non-Parametric Sequential Tests and Confidence Sequences with Possibly Dependent Observations",
+      "authors": "Aurelien Bibaut, Nathan Kallus, Michael Lindon",
+      "date": "2024 revision",
+      "url": "https://arxiv.org/abs/2212.14411",
+      "primary": true,
+      "action": "Extracted delayed-start uSPRT/nmSPRT guarantees under possibly dependent nonparametric observations, burn-in calibration, finite simulation protocol, and exact-vs-asymptotic validity boundary."
+    },
+    {
+      "title": "Design-Based Confidence Sequences: A General Approach to Risk Mitigation in Online Experimentation",
+      "authors": "Dae Woong Ham, Iavor Bojinov, Michael Lindon, Martin Tingley",
+      "date": "2023",
+      "url": "https://arxiv.org/abs/2210.08639",
+      "primary": true,
+      "action": "Extracted design-based time-uniform inference for randomized sequential experiments, finite-study-participant estimands, panel/time-series support, and the Netflix early-stop example."
+    },
+    {
+      "title": "Group sequential methods for cluster randomization trials with binary outcomes",
+      "authors": "Guang Yong Zou, Allan Donner, Neil Klar",
+      "date": "2005",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/16422308/",
+      "primary": true,
+      "action": "Revisited finite-cluster binary group-sequential evidence: four of five statistics reportedly satisfactory with 10 clusters per intervention under the tested CRT design, with asymptotic independent-increment structure."
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-stratified-block-eprocess-v1",
+      "mechanism": "For binary/paired agent outcomes that can be organized into completed independent task blocks or prespecified strata, use block-level e-variables and multiply them into an e-process. Let block composition/sample size depend only on past completed blocks, and permit optional stopping only on completed blocks. If heterogeneity structure is useful, combine stratum-specific e-processes through past-determined pseudo-Bayesian weighting/switching rather than pooling all records as iid.",
+      "evidence": "Turner and Grunwald construct exact e-processes for stratified 2x2 streams. Their setup treats each arriving block as one stratum-specific batch and permits n_a,n_b to be chosen adaptively between blocks from the past. Ville-type control gives optional-stopping validity. In simulations, 40 batches were collected in each of three strata (maximum m=120) across 1000 repeated experiments; all stratification-aware combination methods outperformed the unstratified approach in the heterogeneous setting. The paper also constructs exact anytime-valid risk-difference confidence sequences and allows past-determined cross-talk between strata, with simulations showing narrower intervals when the borrowed structure matches and worse behavior when strata truly differ.",
+      "scope": "Exact under the paper's block model: completed blocks are independent, and outcomes within each group/stratum block follow the specified Bernoulli stream structure. This is not an exact certificate for arbitrary repeated trajectories inside the same task cluster or crossed task x judge dependence.",
+      "uncertainty": "Agent benchmarks need a mapping from task/seed/judge hierarchy to valid completed blocks. If repeated rollouts within a task are correlated, either summarize them into one bounded task-level block statistic or derive a conditional e-variable for the correlated block rather than importing the Bernoulli-block proof."
+    },
+    {
+      "candidate_id": "eval-g1-paired-arrival-timeuniform-v1",
+      "mechanism": "When incumbent and candidate are evaluated on the same task and arrive as a pair, build the sequential statistic on paired arrivals rather than treating the two model streams as independent. Exploit the paired filtration so within-pair dependence is preserved; monitor only after complete pairs. For distributional/regression-style diagnostics, use paired time-uniform bounds for convex functionals/divergences where applicable.",
+      "evidence": "Manole and Ramdas show that when X_t,Y_t arrive together as pairs, the filtration can be replaced by D_t=sigma(X_t,Y_t), yielding a paired two-sample bound that is tighter than their generic two-stream result. Crucially, the paired result need not assume independence between the X and Y observations within the pair. Their offline-to-sequential construction pays only an iterated-logarithmic price over corresponding fixed-time concentration bounds and supports arbitrary stopping times under the stated filtration.",
+      "scope": "The theorem is for the paper's exchangeable/iid-sequence conditions and convex-function/divergence estimands. It removes within-pair X-vs-Y independence, not arbitrary serial dependence across task pairs. It is therefore a pairing correction, not a cluster-dependence cure.",
+      "uncertainty": "Need direct specialization to bounded paired accuracy/reward differences and comparison against paired-Bernoulli e-processes; for only 10-50 tasks, constants may matter more than asymptotic rate."
+    },
+    {
+      "candidate_id": "eval-g1-dependent-usprt-burnin-gate-v1",
+      "mechanism": "For sequential evaluation statistics that are genuinely dependent over time but can be transformed into a stabilized martingale-difference/estimating-equation sequence, use a delayed-start universal/normal-mixture SPRT with an explicit burn-in and calibrated threshold. Treat it as an asymptotic high-efficiency track, never as a finite-sample exact certificate. Require the dependence/martingale conditions and burn-in diagnostics to be declared before allowing continuous monitoring.",
+      "evidence": "Bibaut, Kallus and Lindon give asymptotic Type-I and expected-rejection-time guarantees under general nonparametric, possibly dependent observations using martingale strong approximation and delayed monitoring. Their numerical experiments explicitly show Type-I error converging toward nominal alpha as burn-in increases. Figure-2 experiments use 5,000 trajectories per point for several alpha levels, and 100,000/200,000 trajectories in the burn-in vs no-burn-in comparison; the authors report that no-burn-in sequences can over-reject because early data are far from the Gaussian approximation. Their stopping-efficiency experiments use 8,000 trajectories with t0=200, and a Netflix reanalysis shows Type-I error approaching 5% as the simulation horizon/burn-in grows.",
+      "scope": "Asymptotic validity indexed by burn-in and regularity assumptions, not finite-sample exact validity. The method focuses on martingale-difference/stabilized estimating sequences; generic arbitrary cluster dependence is outside scope.",
+      "uncertainty": "With only 10-50 independent tasks, the required burn-in may consume too much of the sample and the asymptotic approximation may be poor. A small-task benchmark should prefer an exact/design-based track unless simulation under the benchmark's dependence structure calibrates the asymptotic screen."
+    },
+    {
+      "candidate_id": "eval-g1-design-based-randomization-cs-v1",
+      "mechanism": "When evaluation assignment itself is randomized sequentially, construct confidence sequences from the randomization design rather than a sampling iid model. Define the finite-population/study-participant estimand in advance, make treatment/model assignment probabilities part of the evidence contract, and stop only according to the design-based confidence sequence. This is a candidate route for task-level randomized model comparisons and switchback/panel-style evaluation where assignment is under evaluator control.",
+      "evidence": "Ham, Bojinov, Lindon and Tingley develop design-based confidence sequences with uniform Type-I/coverage guarantees for sequential randomized experiments and finite-study-participant estimands, including multi-arm bandits, time series and panel experiments. They also provide covariate/model-based variance reduction. In one Netflix sign-up experiment originally sized around 30,000 potential customers, their retrospective confidence sequence would have stopped the harmful experiment on the first day before 100 observations.",
+      "scope": "Requires known randomized assignment/design structure and the paper's positivity/boundedness-style conditions; it is not a generic observational benchmark method and does not automatically solve interference or unknown clustering. The <100 observation result is one retrospective application, not a universal sample-size guarantee.",
+      "uncertainty": "Need to determine whether a task-pair randomized evaluation can be expressed with independent task assignment while allowing multiple correlated rollouts inside each task, or whether a cluster-level Horvitz-Thompson/design-based construction is required."
+    },
+    {
+      "candidate_id": "eval-g1-few-cluster-group-sequential-fallback-v1",
+      "mechanism": "If exact anytime-valid e-process construction is unavailable but the experiment is a genuine cluster-randomized binary design, use prespecified group-sequential looks at cluster-aware statistics whose joint covariance/information fraction has been derived for that CRT design. Treat the number of clusters, not individual outcomes, as the sample-size bottleneck and require finite-cluster simulation before deployment.",
+      "evidence": "Zou, Donner and Klar derive joint distributions for five sequential cluster-randomized binary test statistics and report that four of five performed satisfactorily with as few as 10 clusters allocated to each of two interventions. Their asymptotic covariance satisfies the independent-increments structure needed by standard group-sequential monitoring under the tested design.",
+      "scope": "Classical group-sequential, not fully anytime-valid at arbitrary looks. Specific to cluster-randomized binary outcomes and its asymptotic covariance assumptions. Effect estimation after group-sequential stopping was explicitly not investigated in that paper.",
+      "uncertainty": "For agent evaluation, category/task clusters may be heterogeneous and not randomized interventions; the required covariance/information-fraction structure must be rederived or simulation-validated rather than assumed."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "Paired-sample confidence sequences automatically solve repeated-rollout task clustering.",
+      "reason": "Rejected. Pairing removes the need for X-vs-Y independence within a complete pair, but the Manole-Ramdas result does not grant arbitrary serial dependence across pairs/tasks."
+    },
+    {
+      "lead": "A possibly-dependent uSPRT is an exact anytime-valid solution for 10-50 tasks.",
+      "reason": "Rejected. Its key validity is asymptotic in burn-in under martingale/regularity conditions; simulations specifically show early over-rejection without sufficient burn-in."
+    },
+    {
+      "lead": "Cross-talk between strata can only improve a stratified e-process.",
+      "reason": "Rejected. Turner-Grunwald simulations show borrowing improves interval width when the borrowed structure matches, but no-cross-talk can be better when strata truly differ, including sign differences."
+    },
+    {
+      "lead": "Design-based confidence sequences eliminate the need to model clustering/interference.",
+      "reason": "Rejected. Design-based validity depends on the randomized assignment and estimand; interference or within-cluster correlated outcomes still require a design/estimand that treats the correct assignment unit and exposure structure."
+    },
+    {
+      "lead": "Classical group-sequential CRT evidence implies arbitrary-look validity.",
+      "reason": "Rejected. Group-sequential methods protect only the prespecified interim design/boundaries; they are not equivalent to an e-process valid at every stopping time."
+    }
+  ],
+  "agent_evaluation_design_map": {
+    "exact_small_task_route": "Prefer completed task-pair or task-cluster blocks with exact/design-based e-process or randomization inference; stop only at valid block boundaries.",
+    "paired_efficiency_route": "Exploit same-task pairing and discordance/paired statistics; do not double-count correlated rollouts as independent pairs.",
+    "dependent_asymptotic_route": "If a stabilized martingale-difference representation exists, delayed-start uSPRT can be an efficient screen after explicit burn-in; retain a separate exact/design-based certificate for high-stakes claims.",
+    "classical_cluster_route": "For genuine CRT-style randomized clusters, prespecified group-sequential boundaries can be a fallback when arbitrary-look e-process construction is unavailable.",
+    "failure_gate": "If the stopping policy can inspect finer information than the evidence process or if task/cluster assignment/dependence assumptions are unverified, return unresolved rather than reusing a nominal confidence level."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Find an exact or nonasymptotic confidence sequence/e-process for bounded paired task-level mean differences that allows within-task repeated-rollout dependence by treating each task as one predictable bounded block; quantify constants for only 10-50 tasks."
+    },
+    {
+      "priority": 2,
+      "action": "Deep-read design-based confidence-sequence formulas for panel/time-series experiments and determine whether cluster-level treatment assignment plus arbitrary within-cluster outcomes is explicitly covered or needs a new cluster estimator."
+    },
+    {
+      "priority": 3,
+      "action": "Search sequential randomization/permutation tests for matched pairs or cluster-randomized outcomes with exact finite-sample optional-stopping validity, not merely two-stage/group-sequential monitoring."
+    },
+    {
+      "priority": 4,
+      "action": "Benchmark exact block e-process, design-based CS, classical group-sequential CRT and delayed-start uSPRT on synthetic agent-like data with 10-50 tasks, heterogeneous task difficulty and repeated correlated rollouts; compare Type-I, coverage, unresolved rate and stopping time."
+    },
+    {
+      "priority": 5,
+      "action": "Search selection-aware methods that choose between task-level, task-family-level and crossed dependence structures while retaining valid later sequential inference without full sample splitting."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "The prior frontier asked for cluster-aware/paired bounded anytime-valid inference with only 10-50 independent tasks. This run split that frontier into four non-equivalent routes: exact stratified block e-processes, paired-arrival time-uniform bounds, randomized design-based confidence sequences, and asymptotic dependent uSPRTs, plus a prespecified group-sequential CRT fallback. None is declared a universal solution; their distinct assumptions and failure modes are checkpointed for the next run.",
+  "exact_next_action": "Prioritize exact/nonasymptotic task-as-block paired-difference confidence sequences for 10-50 tasks and inspect whether design-based confidence sequences explicitly support cluster-level assignment with arbitrary within-cluster repeated outcomes; then search exact sequential randomization/McNemar-style methods beyond fixed two-stage monitoring."
+}
