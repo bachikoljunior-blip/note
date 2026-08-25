@@ -1,0 +1,152 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T20:01:09+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T190455_JST.json",
+  "inherits_prior_candidates": true,
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_feedback": false
+  },
+  "search_bias": "benchmark-design and measurement-validity first; sequential evaluation validity, critical-failure localization, environment-grounded process verification, policy-conditioned verifier calibration, and abstaining reward ensembles",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Stop Guessing When to Stop Testing: Efficient Model Evaluation with Just Enough Data",
+      "date": "2026-07-09",
+      "url": "https://arxiv.org/abs/2607.08522",
+      "primary": true,
+      "action": "extracted sequential-testing design, confidence-width sample requirements, pairwise distinguishability, and practical stopping case studies"
+    },
+    {
+      "title": "AgentRx: Diagnosing AI Agent Failures from Execution Trajectories",
+      "date": "2026-02-02",
+      "url": "https://arxiv.org/abs/2602.02475",
+      "primary": true,
+      "action": "extracted first-unrecoverable critical-failure definition, structured constraint/violation pipeline, ablations, horizon-dependent judging protocol, and long-trajectory limitations"
+    },
+    {
+      "title": "Rewarding the Scientific Process: Process-Level Reward Modeling for Agentic Data Analysis",
+      "date": "2026-04-30; revised 2026-06-20",
+      "url": "https://arxiv.org/abs/2604.24198",
+      "primary": true,
+      "action": "extracted environment-grounded process verification, recoverable-vs-irrecoverable labels, Best-of-N/beam-search ablations, annotation reliability, and cost"
+    },
+    {
+      "title": "Know What You Don’t Know: Uncertainty Calibration of Process Reward Models",
+      "date": "2025-06-11; NeurIPS 2025",
+      "url": "https://arxiv.org/abs/2506.09338",
+      "primary": true,
+      "action": "extracted policy-conditioned calibration rationale, calibration metrics, OOD results, and calibrated-vs-uncalibrated instance-adaptive compute allocation"
+    },
+    {
+      "title": "CUARewardBench: A Benchmark for Evaluating Reward Models on Computer-using Agent",
+      "date": "2025-10-21",
+      "url": "https://arxiv.org/abs/2510.18596",
+      "primary": true,
+      "action": "follow-up frontier action; extracted strict-unanimous abstention protocol, precision/NPV versus recall/specificity tradeoff, benchmark scale, and failure modes"
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-sequential-evaluation-stopping-v1",
+      "mechanism": "Use pre-specified group-sequential testing with valid alpha spending and explicit practical margins/precision targets to stop evaluation when evidence is sufficient or futile, rather than selecting a fixed arbitrary benchmark subset or repeatedly peeking at ordinary confidence intervals.",
+      "evidence": "Across 206 vision-language models and 31 multimodal benchmarks, roughly 15% of samples suffice for a ±3-point confidence interval, ~30% for ±2, and ~50% for ±1.5. One 14.4K-example benchmark reached width 2.9 using ~8K examples (~55%) versus 2.7 at full size. In 1,000 pairwise comparisons among top-50 models, gaps below ~1.2 points often required the full dataset and only ~24% became distinguishable early, while gaps above 2 points typically saved at least 60% of evaluation effort. A fixed 1.2K-sample heuristic distinguished 55% of pairs at 95% confidence versus 76% with the sequential framework. A ≥2-point improvement/futility case study used ~63% of examples on average across 100 pairs.",
+      "quantitative": "±3pp CI ~15% samples; ±2pp ~30%; ±1.5pp ~50%; 8K/14.4K gives width 2.9 vs 2.7 full; fixed 1.2K resolves 55% vs sequential 76%; >2pp gaps typically save >=60%; practical-improvement case averages 63% examples.",
+      "scope": "sample-level multimodal benchmark evaluation under the paper's sequential assumptions and Pocock-style alpha spending; not yet validated for dependent long-horizon agent trajectories or clustered repeated-task outcomes.",
+      "uncertainty": "The paper notes independence/normality assumptions depending on test, repeated-check overhead, stopping-point variability, simplified multiple-comparison handling, and user-chosen equivalence margins. Agent evaluation likely needs cluster/dependence-aware extensions."
+    },
+    {
+      "candidate_id": "eval-g1-auditable-critical-failure-localization-v1",
+      "mechanism": "For failed agent trajectories, evaluate the critical failure as the earliest unrecoverable failure rather than the first observed error. Generate explicit global and dynamically inferred constraints, attach an auditable step-indexed violation log, and localize the root cause using evidence from that log. Choose whole-trajectory versus localized stepwise judging based on trajectory horizon rather than assuming one protocol dominates.",
+      "evidence": "AgentRx evaluates 115 failed trajectories across tau-bench, Flash and Magentic-One; human diagnosis required 42.7 hours. In Magentic-One, 68% of trajectories contain at least two failures, motivating distinction between recoverable errors and the first unrecoverable one. On tau-bench, baseline step-index accuracy 32.2±3.2 rises to 54.0±1.6 in the best AgentRx setting, category accuracy 25.3±1.6 to 40.2±1.6, and average step distance 5.7 to 2.4. Violations alone raise step accuracy to 47.1 and category to 37.9. On filtered Magentic trajectories (width<=50), step accuracy rises 42.0 to 46.9 and category 39.5 to 44.4, but full long-context gains are weak; full Magentic trajectories average 16,484 tokens. Shorter tau-bench favored one-shot judging while long Magentic settings benefited more from localized stepwise verification.",
+      "quantitative": "115 failed trajectories; 42.7 human annotation hours; Magentic 68% with >=2 failures; tau-bench step 32.2±3.2->54.0±1.6, category 25.3±1.6->40.2±1.6, distance 5.7->2.4; filtered Magentic step 42.0->46.9, category 39.5->44.4.",
+      "scope": "failure diagnosis on failed trajectories in three agent domains; does not provide an abstention/calibration guarantee and does not show universal superiority of stepwise judging.",
+      "uncertainty": "Structured constraints may themselves be wrong; long-context full-set results are weaker. Need meta-evaluation of constraint false positives, per-instance uncertainty, and transfer beyond the three tested domains."
+    },
+    {
+      "candidate_id": "eval-g1-environment-grounded-process-verification-v1",
+      "mechanism": "For executable/tool-using steps, let the process verifier actively query or re-execute against the environment and use a graded label that distinguishes correct, recoverable/correctable, and irrecoverable states. Do not treat every intermediate execution/grounding error as fatal, and test the verifier under increasing selection/search pressure rather than only pointwise classification.",
+      "evidence": "DataPRM labels process states with ternary rewards {0 irrecoverable, 0.5 correctable, 1 correct} and uses environment interaction. A 100-example human spot-check reports 86.0% raw agreement and quadratic-weighted Cohen kappa 0.83. With Qwen3-235B policy, DataPRM-4B Best-of-N average scores at N=4/8/16 are 37.11/39.77/40.89 versus majority vote 34.66/37.11/38.00, LLM-as-judge 33.11/35.33/36.89, and Qwen2.5-Math-PRM-72B 30.22/31.33/29.11. Increasing beam-search compute makes the general math PRM degrade 33.56->30.89->32.44, while DataPRM rises 35.33->38.00->38.89. Full DataPRM N=16 average 40.89 exceeds CoT-only 38.89; environment interaction and multi-turn verification contribute in ablations.",
+      "quantitative": "annotation check 86.0%, kappa=.83; DataPRM BoN avg N4/8/16 37.11/39.77/40.89; general Math-PRM 30.22/31.33/29.11; beam scaling general PRM 33.56/30.89/32.44 vs DataPRM 35.33/38.00/38.89.",
+      "scope": "agentic data-analysis tasks with available execution environments and a task-specific 4B PRM; not evidence that environment interaction is sufficient or portable to all tool domains.",
+      "uncertainty": "Downstream answer evaluation still uses imperfect evaluators in parts of the study. Need external replication, domain-transfer tests, and a direct decomposition of benefit from re-execution versus task-specific training data."
+    },
+    {
+      "candidate_id": "eval-g1-policy-conditioned-prm-calibration-v1",
+      "mechanism": "Interpret a process reward score as a success probability only after calibrating it against Monte Carlo completions from the actual downstream policy/model. Treat calibration as policy-conditional and use conservative quantile estimates for abstention/backtracking or compute allocation; do not assume a PRM trained/calibrated on one policy transfers its probabilities to another.",
+      "evidence": "The calibration study constructs a 500-question MATH validation set, samples 8 initial trajectories per question and 8 Monte Carlo completions per prefix, then calibrates with quantile regression. On MATH500, Qwen-PRM-7B paired with Llama-3.2-1B drops Brier 0.2414->0.0692 and AdaptiveCE 0.2830->0.0811. On OOD AIME24-25, calibrated Brier/AdaptiveCE for Llama-3.2-1B are 0.003/0.011 versus uncalibrated 0.194/0.236; R1-Qwen-7B improves 0.414/0.558 to 0.069/0.090. Calibrated 7B also beats uncalibrated 72B on all six reported policy models in the paper's Brier table. In Best-of-64 adaptive sampling on MATH500, uncalibrated PRM collapses budgets to ~0.0162 and largely falls back to Pass@1 (e.g. Llama-3.2-1B 0.2278 vs fixed BoN 0.4760), whereas calibrated IAS gets 0.4623 at budget ratio 0.6381; Qwen2.5-1.5B gets 0.7537 vs fixed 0.7660 at budget 0.2461. On difficult AIME, calibrated IAS often conservatively uses ~0.91-1.00 of the full budget rather than pretending confidence transfers.",
+      "quantitative": "MATH500 Llama1B Brier .2414->.0692, AdaCE .2830->.0811; AIME Llama1B Brier .194->.003, AdaCE .236->.011; AIME R1-Qwen Brier .414->.069, AdaCE .558->.090; MATH500 calibrated IAS Llama1B accuracy .4623 at .6381 budget vs fixed BoN .4760; Qwen1.5B .7537 at .2461 vs .7660 fixed.",
+      "scope": "mathematical reasoning PRMs and policy-conditioned rollout success probabilities; authors explicitly leave code/LLM-agent extension to future work.",
+      "uncertainty": "Calibration is unnecessary for pure ranking if monotonic ordering is preserved; value is for interpretable uncertainty, abstention/backtracking, and budget allocation. Direct transfer to tool-using agent trajectories remains untested."
+    },
+    {
+      "candidate_id": "eval-g1-strict-unanimous-reward-abstention-v1",
+      "mechanism": "When false reward labels are more costly than lower sample efficiency, use heterogeneous prompt/model ensembles with strict unanimity and abstain on disagreement rather than forcing majority-vote labels. Evaluate precision and NPV jointly with recall/specificity so reliability gains are not mistaken for free accuracy.",
+      "evidence": "CUARewardBench contains 272 trajectory-level and 346 step-level expert annotations across 10 software categories and 7 policy models. Its strict-unanimous UPE emits no prediction when members disagree. UPE reaches 89.8% precision and 93.3% NPV for outcome reward and 81.7% precision and 85.1% NPV for process reward. For the reported PRM UPE configuration, precision/NPV are 81.7/85.1 but recall/specificity fall to 48.9/24.4, making the reliability-coverage tradeoff explicit. The paper's best single ORM still reaches only 82.9% precision and 80.1% overall accuracy; error analysis of 53 ORM failures attributes 35.8% to reasoning and 30.2% to visual understanding.",
+      "quantitative": "272 trajectory + 346 step annotations; UPE ORM P/NPV 89.8/93.3; UPE PRM P/NPV/R/S 81.7/85.1/48.9/24.4; 53-error breakdown reasoning 35.8%, visual 30.2%, action 17.0%, knowledge 15.1%.",
+      "scope": "computer-use reward evaluation on OSWorld-derived tasks with VLM judges; benchmark trajectories are <25 steps and scale is limited.",
+      "uncertainty": "The paper describes reduced recall/specificity as acceptable for its reliability-first training use case, but the coverage loss is large for PRM and may be unacceptable for evaluation-only settings. Unanimity should be treated as abstention with an explicit utility/cost model, not as universally superior aggregation."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "A fixed arbitrary benchmark subset, or repeated ordinary-significance peeking, is sufficient for efficient evaluation",
+      "reason": "Rejected in the sequential-evaluation study: valid alpha-spending resolves more model pairs than a fixed 1.2K heuristic while retaining type-I control, and required sample sizes vary sharply with effect size and target precision."
+    },
+    {
+      "lead": "The first detected trajectory error is automatically the root cause",
+      "reason": "Rejected on AgentRx's failed-trajectory annotation: 68% of Magentic trajectories contain multiple failures, and the target is the earliest unrecoverable failure after allowing recovery from earlier mistakes."
+    },
+    {
+      "lead": "Whole-trajectory judging or stepwise judging is universally superior",
+      "reason": "Rejected as a global rule. Shorter tau-bench favored one-shot judging, while long Magentic settings benefited more from localized stepwise verification; protocol choice is horizon/context dependent."
+    },
+    {
+      "lead": "Every process error should receive a fatal/zero reward",
+      "reason": "Rejected in the DataPRM setting: correctable grounding/exploration errors are explicitly distinguished from irrecoverable failures, and environment-grounded ternary supervision outperforms general PRMs in the tested agentic data-analysis tasks."
+    },
+    {
+      "lead": "Increasing Best-of-N/search pressure cannot make a verifier worse",
+      "reason": "Rejected in the DataPRM study for the tested general math PRM: N=8 to N=16 Best-of-N falls 31.33->29.11, and larger beam-search budgets also degrade before partially recovering. Selection-mode reliability must be measured under the actual pressure used downstream."
+    },
+    {
+      "lead": "A PRM probability calibrated on one policy/model remains a calibrated success probability for another policy/model",
+      "reason": "Rejected by the PRM-calibration formulation and experiments: future-success probability is completion-policy dependent; mismatch produces systematic overestimation, especially for weaker target policies."
+    },
+    {
+      "lead": "Larger PRM scale by itself solves calibration",
+      "reason": "Rejected in the tested math setting: uncalibrated 72B PRM remains miscalibrated, and explicitly calibrated 7B has lower Brier/positive-Brier than uncalibrated 72B across all six reported policy models."
+    },
+    {
+      "lead": "Unanimous reward voting improves reliability without a material coverage cost",
+      "reason": "Rejected/qualified by CUARewardBench: PRM UPE precision/NPV improve to 81.7/85.1 while recall/specificity drop to 48.9/24.4. The mechanism is abstention, so coverage/sample-efficiency must be reported and valued explicitly."
+    }
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Find primary work on confidence sequences or group-sequential tests for clustered/dependent repeated agent outcomes; determine how to preserve anytime-valid stopping when multiple steps from one trajectory and multiple trajectories from one task are correlated."
+    },
+    {
+      "priority": 2,
+      "action": "Search for process-reward calibration or abstention on tool-using/agent trajectories, especially success-probability calibration conditioned on a specific policy and environment, to test whether the math-PRM policy-dependence result transfers."
+    },
+    {
+      "priority": 3,
+      "action": "Meta-evaluate AgentRx-style constraint and violation generation: locate evidence measuring false-positive constraints, missed violations, and whether per-instance uncertainty predicts critical-failure localization error on long trajectories."
+    },
+    {
+      "priority": 4,
+      "action": "Revisit Resolution Diagnostics full primary tables/methods and reconcile its paired MDE/clustering analysis with the new sequential-stopping candidate; derive a measurement design that can return unresolved rather than a forced directional result."
+    },
+    {
+      "priority": 5,
+      "action": "Follow CUARewardBench into abstaining reward-model literature and quantify utility as precision/NPV versus retained coverage, including whether disagreement correlates with actual instance difficulty rather than merely removing minority cases."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "After the sequential-evaluation and agent-failure findings were sufficient for a report, exploration continued into environment-grounded PRMs, policy-conditioned PRM calibration, and then a separate CUA unanimous-abstention branch. The next frontier remains concrete and nonempty.",
+  "exact_next_action": "Search primary literature for anytime-valid confidence sequences or sequential hypothesis tests that explicitly support clustered/dependent observations, then extract a quantitative example and assumptions relevant to repeated steps within agent trajectories and repeated trajectories within tasks."
+}
