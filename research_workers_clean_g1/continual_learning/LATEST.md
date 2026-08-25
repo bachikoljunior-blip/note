@@ -1,23 +1,27 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260826T0559_JST.md`.
+Latest durable checkpoint: `RUN_20260826T0659_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0559_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0559_JST.md` and `RUN_20260826T0659_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
-The current UC8 DriftLens scoring contract is now frozen from public commit `0b7b943b128f8e23b56e5cd56fa40bc3dd35119e`: 5 runs, 250-sample windows, 100 windows per condition, 0/5/10/15/20% drift pools, batch/per-label PCA 150/25, 10,000 random threshold windows, MMD/LSDD reference targets 8,500/14,000, CVM/KS full train, and CLI `seed=42`.
+Current DriftLens/STL-10 provenance corrections:
+- the final IEEE TKDE 2025 paper explicitly defines use case 8 Gaussian blur with **radius 2**; the inspected public ViT notebook's executed radius-8 path is therefore not the published UC8 artifact lineage;
+- the paper describes batch/per-label PCA as 150/75 for all use cases except use case 10, but the current official UC8 wrapper passes 150/25;
+- this 150/25 mismatch predates the later use-case renumbering: the February 2025 semantic STL-blur wrapper (`use_case_7_stl_blur`) already used 150/25 and the same `*_radius2.hdf5` filenames;
+- both the historical semantic blur wrapper and current UC8 wrapper omit `--run_driftlens`, so the public wrappers do not enter the DriftLens path without manual correction;
+- the public `stl_to_pickle.py` assigns class IDs from unsorted filesystem directory order before deterministic `random_state=42` stratified splits. Any reconstruction must impose the experiment README's documented class map explicitly;
+- expected radius-2 HDF5s remain absent from the public UC8 tree, and no public generator/receipt has yet linked them to the notebook. Do not silently substitute radius 8.
 
-Important reproduction defects/scope guards from the exact entrypoint:
-- the official UC8 wrapper omits `--run_driftlens`, while the Python path gates DriftLens on that flag, so that exact wrapper executes `DriftLens skipped` and records DriftLens accuracy `-1`;
-- `--seed 42` is parsed but never applied, while threshold/window/subsample paths use NumPy global RNG, so the 5 runs are not reproducible from the CLI seed;
-- `--threshold_sensitivity 99` is parsed but unused in the UC8 threshold calculation; the effective DriftLens threshold (if the flag is manually enabled) is the maximum distance strictly inside the empirical 1%-to-99% trimmed set of 10,000 threshold-sampling distances;
-- the wrapper expects `train_embedding.hdf5`, `test_embedding.hdf5`, `new_unseen_embedding.hdf5`, and `drift_{5,10,15,20}_embedding_radius2.hdf5`, whereas the inspected public notebook writes extensionless `Stl_*` names and its executed blur path uses radius 8. Do not claim these are the same artifact lineage without a public generator/receipt linking them.
+Scope guard: the publication-vs-wrapper 75/25 PCA discrepancy is unresolved. Neither configuration is treated as the exact execution behind the published UC8 table until execution provenance or supplementary evidence resolves it. Public wrapper defects are reproducibility defects, not method-failure evidence.
 
-UC8 evaluation windows are balanced 25 samples per each of 10 labels. Sampling is without duplicate indices within a label/window; because a fresh generator is used per window and replacement is logically enabled across calls, samples may repeat across windows. All 100 windows are no-drift at 0% and all 100 are drift for each nonzero pool, so UC8 is independent-window classification, not temporal change-point detection; it does not directly identify Episode Recall/FAR/NDT.
+UC8 remains independent-window drift/no-drift classification, not temporal change-point evaluation. It cannot directly establish Episode Recall, event-level FAR or NDT.
 
-Exact next action: resolve the public-paper/artifact lineage for the `radius2` embeddings. Inspect UC8 experiment README/paper mapping, Git tags/history/issues/releases and any public artifact links for `radius2` generation/checkpoints. In parallel, inspect `stl_to_pickle.py` and source acquisition to freeze class/file ordering and split membership. If `radius2` artifacts remain unavailable, explicitly define a deterministic reconstruction contract rather than silently substituting the notebook's radius-8 path.
-
-After provenance is fixed, freeze one common representation/score trace and compare the exact UC8 trimmed-max empirical threshold against preregistered quantile, LargeMonitor-style CUSUM reconstruction, TFIDD-inspired quantile+persistence+freeze, ADWIN and Page-Hinkley using held-out calibration and separate Episode Recall + FAR + NDT.
+Exact next action:
+1. trace the earliest semantic STL-blur wrapper/config and any supplementary/public author material to resolve whether a 150/75 UC8 execution exists or the paper text is inconsistent with the public implementation;
+2. continue `radius2` artifact lineage search across releases/supplementary artifacts/public demo data and freeze explicit reconstruction provenance if unavailable;
+3. resolve STL source acquisition/folder layout and freeze deterministic class map/source/split/model/embedding/RNG hashes;
+4. only then build one frozen stable→same-label radius-2 score trace and compare empirical threshold, preregistered quantile, CUSUM reconstruction, quantile+persistence+freeze, ADWIN and Page-Hinkley under held-out calibration with separate Episode Recall + FAR + NDT.
 
 Continue broader frontier: LargeMonitor missing CUSUM parameters/wiring; HESTIA/ODDL/DEMD event-level boundary quality; independent replication searches; ARROW model-free dual-buffer matched control; adaptive replay allocation; plasticity-specific controls; curriculum selection under unknown future streams.
 
