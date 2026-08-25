@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 5,
+  "config_revision": 3,
+  "run_started_at": "2026-08-26T03:02:02+09:00",
+  "continues_from_latest": "RUN_20260826T0201.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "comparator_state_read": false,
+    "integrator_state_read": false,
+    "o_state_read": false,
+    "feedback_read": false,
+    "feedback_status": "research_feedback_clean_g1/neuroscience/FEEDBACK.json absent (404)",
+    "sources": "own clean neuroscience state plus public external sources only"
+  },
+  "actions": [
+    "Executed the exact-next-action: a fixed-seed corrected-Hamming reproduction of the official Vivet-Arenas Model_comparison benchmark using the public Model_comparison.py equations, N=20, Time=10, dt=0.001 and 50 independent pattern realizations per sampled cell.",
+    "Implemented algebraically equivalent batched PyTorch versions of Hopfield, proposed Astrocytes, and Kozachkov-style Astro_neuro dynamics only to make the reproduction tractable. Checked the batched proposed-model and Astro_neuro implementations against the original public single-sample equations on held examples; final signs and both signed/corrected distances matched exactly in those checks.",
+    "Computed both the public-script signed distance 0.5*sum(target-sign(prediction)) and the paper Eq.15 hard Hamming distance 0.5*sum(abs(target-sign(prediction))) from the same final states, avoiding any confound from separate dynamics runs.",
+    "Ran a five-cell 50-repetition matched subset spanning low/high load and corruption for all three models, then a 10-cell K=200 corruption sweep (n=1..10, 50 repetitions per cell) for Hopfield and the proposed model plus the neuron-astrocyte baseline at the same fixed-seed pattern sets.",
+    "Searched the official repository for a corrected Hamming implementation/raw Figure-4 artifact; no matching source/result artifact was found."
+  ],
+  "reproduction": {
+    "protocol": {
+      "N": 20,
+      "Time": 10,
+      "dt": 0.001,
+      "repetitions_per_cell": 50,
+      "target": "patterns[0]",
+      "seed_policy": "deterministic per-cell torch seeds; K=200 sweep seeds 2026082701..2026082710",
+      "metric_bug": "official script omits abs() and therefore computes a signed cancellation-prone quantity",
+      "corrected_metric": "paper Eq.15 hard Hamming distance"
+    },
+    "representative_all_three": [
+      {"K":2,"flips":1,"hopfield_hamming_mean":0.0,"astro_neuro_hamming_mean":0.0,"proposed_hamming_mean":0.0},
+      {"K":2,"flips":10,"hopfield_hamming_mean":9.80,"astro_neuro_hamming_mean":9.86,"proposed_hamming_mean":10.34},
+      {"K":90,"flips":5,"hopfield_hamming_mean":5.10,"astro_neuro_hamming_mean":4.94,"proposed_hamming_mean":6.04},
+      {"K":200,"flips":1,"hopfield_hamming_mean":1.00,"astro_neuro_hamming_mean":0.88,"proposed_hamming_mean":0.00},
+      {"K":200,"flips":10,"hopfield_hamming_mean":10.02,"astro_neuro_hamming_mean":10.00,"proposed_hamming_mean":10.12}
+    ],
+    "K200_corrected_sweep": [
+      {"flips":1,"hopfield":1.02,"astro_neuro":0.98,"proposed":0.00},
+      {"flips":2,"hopfield":2.02,"astro_neuro":1.96,"proposed":0.08},
+      {"flips":3,"hopfield":3.00,"astro_neuro":3.00,"proposed":0.86},
+      {"flips":4,"hopfield":3.98,"astro_neuro":3.94,"proposed":3.94},
+      {"flips":5,"hopfield":5.02,"astro_neuro":5.02,"proposed":6.54},
+      {"flips":6,"hopfield":5.98,"astro_neuro":6.00,"proposed":7.28},
+      {"flips":7,"hopfield":7.00,"astro_neuro":7.06,"proposed":7.96},
+      {"flips":8,"hopfield":7.98,"astro_neuro":8.00,"proposed":8.26},
+      {"flips":9,"hopfield":9.00,"astro_neuro":9.02,"proposed":9.52},
+      {"flips":10,"hopfield":9.98,"astro_neuro":10.02,"proposed":9.90}
+    ],
+    "signed_metric_examples_same_runs": [
+      {"K":200,"flips":5,"hopfield_signed_mean":-0.18,"hopfield_hamming_mean":5.02,"proposed_signed_mean":-0.62,"proposed_hamming_mean":6.54},
+      {"K":200,"flips":10,"hopfield_signed_mean":0.38,"hopfield_hamming_mean":9.98,"proposed_signed_mean":0.46,"proposed_hamming_mean":9.90}
+    ],
+    "result": "The corrected-Hamming reproduction does not support the paper's literal statement that the proposed model has lower mean retrieval error than both baselines across the tested grid. At K=200 the proposed model has a clear low-corruption advantage for n=1..3, is roughly tied at n=4, is worse than both baselines for n=5..9 in this fixed-seed 50-repetition sweep, and is only slightly better again at n=10. The public signed metric can collapse true errors near 5-10 bits toward zero through cancellation and is therefore not a valid implementation of Eq.15.",
+    "scope": [
+      "This is an independent local reproduction of sampled cells and the full K=200 corruption line, not the full 10x10 K/noise grid.",
+      "The result directly challenges the broad across-grid Figure-4 comparative claim but does not invalidate the analytical fixed-point/softmax, Lyapunov/convergence, or qualitative routing mechanism results.",
+      "Because the repository does not preserve raw published Figure-4 matrices or a fixed seed, this cannot prove which exact code revision/metric generated the published heatmap; author clarification or raw data would be required for that provenance claim.",
+      "The proposed model may still have a genuine high-load/low-corruption benefit; the corrected reproduction narrows that benefit substantially rather than rejecting the mechanism family."
+    ]
+  },
+  "candidate_update": {
+    "id": "neuro-g1-astrocyte-gated-emergent-self-attention-2026",
+    "status": "corrected_metric_partial_reproduction_contradicts_broad_across_grid_claim",
+    "evidence_change": "downgrade Figure-4 broad comparative evidence; retain low-corruption K=200 positive effect as reproduced within tested scope",
+    "artifacts": [
+      "Physical Review Research 8, 023276 (2026), DOI 10.1103/6q3q-vfs9",
+      "official Model_comparison.py blob dd2377d9ae6bed3b183f46c3c26b3bb07d49e00b"
+    ]
+  },
+  "frontier": [
+    "Extend the corrected fixed-seed reproduction from the K=200 line to selected intermediate/high K values (especially K=90,112,156,178) across corruption to map the actual boundary where astrocytic gain helps versus hurts; use 50 repetitions for cells that determine sign changes.",
+    "Search author communication, releases, archived artifacts or later commits for raw Figure-4 matrices, the exact generation script used for the paper, or a correction/erratum; do not infer publication provenance from the current repository file alone.",
+    "Test a parameter-matched control where p is replaced by an instantaneous softmax over the same f scores, separating benefit from the slow replicator dynamics versus merely query-dependent softmax reweighting.",
+    "Continue AGMP task-boundary-state/code audit and Fisher-information-diffusion final numeric/code recovery after the corrected retrieval boundary is mapped.",
+    "Search for independent reproduction/failure evidence of the astrocyte-gated model now that the public metric discrepancy is concretely reproducible."
+  ],
+  "exact_next_action": "Run corrected-Hamming 50-repetition sweeps at K=90,112,156,178 over n=1..10 with the same official dynamics, first Hopfield versus proposed and then Astro_neuro where the ranking boundary is ambiguous; identify whether the reproduced advantage is specifically a high-load/low-corruption phase rather than an across-grid effect, and persist the boundary map with fixed seeds."
+}
