@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T01:45:00+09:00",
+  "candidate": {
+    "worker_namespace": "self_improvement",
+    "candidate_id": "self_improvement/C3-MetaSkill-Evolve",
+    "source_artifact": "research_workers_clean_g1/self_improvement/STATE.md",
+    "source_blob": "72d7ae45050cbb8bd346b1d57484baf4da2ccfb8",
+    "claim": "Two-timescale meta-skill evolution improves held-out performance over single-level skill evolution, with component ablations indicating domain-dependent contributions."
+  },
+  "primary_source": {
+    "title": "MetaSkill-Evolve: Recursive Self-Improvement of LLM Agents via Two-Timescale Meta-Skill Evolution",
+    "authors": ["Zefeng Wang","Minxi Yan","Jinhe Bi","Sikuan Yan","Volker Tresp","Yunpu Ma"],
+    "arxiv": "2607.05297v1",
+    "date": "2026-07-06",
+    "html": "https://arxiv.org/html/2607.05297v1"
+  },
+  "verification": {
+    "evaluation_design": {
+      "status": "verified",
+      "backbone": "single frozen Gemma-4 31B shared by Analyzer/Retriever/Allocator/Proposer/Evolver",
+      "benchmarks": ["OfficeQA","SealQA","ALFWorld"],
+      "data_split": "stratified train/validation/held-out-test partitions; test is not observed by evolution loop",
+      "default_iteration_budget": "5 fast iterations; H=2; two meta-updates under the default"
+    },
+    "main_results": {
+      "status": "verified",
+      "OfficeQA": {"No-Skill":31.78,"Static":36.09,"Single-Level":48.94,"MetaSkill-Evolve":55.32,"delta_vs_raw":23.54,"reported_delta_vs_single_level":6.38},
+      "SealQA": {"No-Skill":29.17,"Static":29.41,"Single-Level":37.21,"MetaSkill-Evolve":45.26,"delta_vs_raw":16.09,"reported_delta_vs_single_level":8.05},
+      "ALFWorld": {"No-Skill":92.31,"Static":90.38,"Single-Level":92.31,"MetaSkill-Evolve":94.23,"delta_vs_raw":1.92,"reported_delta_vs_single_level":1.92}
+    },
+    "component_ablation_table": {
+      "status": "verified",
+      "Full": {"OfficeQA":55.32,"SealQA":45.26,"ALFWorld":94.23},
+      "minus_psi": {"OfficeQA":39.09,"SealQA":39.63,"ALFWorld":88.46},
+      "minus_sigma_no_inspirations": {"OfficeQA":39.09,"SealQA":40.54,"ALFWorld":88.46},
+      "minus_alpha_K_fixed_2": {"OfficeQA":35.58,"SealQA":40.54,"ALFWorld":88.46},
+      "minus_pi": {"OfficeQA":37.59,"SealQA":36.84,"ALFWorld":86.54},
+      "no_cross_branch_retrieval": {"OfficeQA":39.84,"SealQA":41.44,"ALFWorld":92.31},
+      "no_meta_updates": {"OfficeQA":48.94,"SealQA":37.21,"ALFWorld":92.31}
+    },
+    "meta_update_horizon": {
+      "status": "verified",
+      "design": "three meta-updates held fixed; H=2/4/8 implies 6/12/24 fast iterations, respectively",
+      "OfficeQA": {"H2":48.94,"H4":41.35,"H8":39.84},
+      "SealQA": {"H2":44.14,"H4":44.14,"H8":43.24},
+      "ALFWorld": {"H2":90.38,"H4":90.38,"H8":88.46},
+      "important_difference": "The paper explicitly notes this H=2 sweep point has 6 fast iterations and 3 meta-updates and therefore is not the same operating point as the default main-table full system with 5 fast iterations and 2 meta-updates."
+    }
+  },
+  "material_scope_and_attribution_corrections": [
+    {
+      "issue": "slow_loop_marginal_attribution_is_not_cleanly_single_factor_in_the_primary_description",
+      "detail": "The paper's baseline definition says Single-Level Evolution uses the fast loop with slow loop frozen AND K_max=1 AND no cross-branch sharing AND no meta-skill updates. The main-results prose then says the +6.38/+8.05/+1.92 difference is attributable to meta-skill adaptation because 'the only difference' is whether meta-skill files evolve. These statements are not fully consistent. Appendix Table 3 says the `disable_meta_updates` row exactly reproduces Single-Level but does not clarify in the text whether that flag also enforces the K_max=1/no-cross-branch restrictions. Therefore the numerical Full-vs-Single-Level gap is primary-verified, but causal wording should be 'full two-timescale configuration over the paper's Single-Level baseline' rather than a clean one-factor estimate of meta-skill rewriting alone unless implementation/config provenance resolves the ambiguity."
+    },
+    {
+      "issue": "compute_matching_not_established_for_main_slow_loop_delta",
+      "detail": "The accessible v1 text reports no token/dollar cost table and no matched-compute Single-Level control. Full slow-loop execution entails additional pipeline calls, and the Single-Level baseline is described with a smaller child budget/no cross-branch. Do not interpret +6.38/+8.05/+1.92 as gain at matched inference cost."
+    },
+    {
+      "issue": "horizon_sweep_compute_wording",
+      "detail": "Section 4.4 says the horizon sweep probes the trade-off 'while holding total compute fixed', but it simultaneously scales fast iterations as 6/12/24 while holding only the number of meta-updates fixed at three. Unless a narrower compute definition is intended, total execution work is not obviously matched. Preserve the reported accuracy sweep, but do not use it as a clean compute-matched causal comparison."
+    },
+    {
+      "issue": "uncertainty_reporting",
+      "detail": "No occurrence of 'seed' was found in the accessible arXiv v1 HTML and the main/ablation tables report point accuracies without run-to-run standard deviations or confidence intervals. Treat the reported differences as exact outcomes of the documented experimental runs, not estimates with demonstrated between-run stability."
+    },
+    {
+      "issue": "component_removal_interpretation",
+      "detail": "The remove-one-component rows establish that each altered configuration scores below Full on these held-out partitions, but each intervention changes operational behavior (e.g. -alpha fixes K=2; -pi feeds raw analysis to Evolver). This supports component sensitivity under the tested implementation, not orthogonal additive causal contributions."
+    }
+  ],
+  "status": "primary_verified_with_baseline_confounding_and_compute_matching_warning",
+  "confidence": "high for primary table values and held-out protocol; medium for the paper's causal attribution of the Full-vs-Single-Level difference to slow-loop meta-skill adaptation alone because the v1 baseline description is internally ambiguous",
+  "resolved_gap": "The self-improvement worker's previously secondary +6.38/+8.05/+1.92 Full-vs-Single-Level values are now directly primary-verified, as are component-ablation and horizon-sweep values.",
+  "unresolved": [
+    "Official implementation/config inspection that determines whether `disable_meta_updates` alone preserves Full K_max/cross-branch behavior or whether it is the composite Single-Level configuration described in Section 4.1.",
+    "Matched-inference-cost comparison of Full vs fixed-meta fast-loop evolution.",
+    "Multi-seed/run stability and uncertainty for the main and component-ablation results.",
+    "Independent numerical reproduction of the primary benchmark tables."
+  ],
+  "downstream_instruction": "Upgrade the worker's C3 marginal numbers from secondary-pending to primary-verified numeric evidence. However, do not phrase +6.38/+8.05/+1.92 as a clean cost-matched one-factor effect of meta-skill rewriting; bind it to the paper's Full-vs-Single-Level configurations and retain the baseline-definition ambiguity, absence of repeated-run uncertainty, and compute-matching warning."
+}
