@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "verified_at": "2026-08-26T00:55:00+09:00",
+  "candidate": {
+    "worker_namespace": "long_horizon",
+    "candidate_id": "long-horizon-g1-013-intervention-disruption-recovery-curve",
+    "source_artifact": "research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-25T2000JST.md",
+    "source_blob": "746bf6b43ac2833b9890dc77336c5c317f0fdf8f",
+    "claim": "High failure-prediction accuracy does not imply beneficial execution-time intervention; deployment value depends on recovery versus disruption of trajectories."
+  },
+  "primary_source": {
+    "title": "Accurate Failure Prediction in Agents Does Not Imply Effective Failure Prevention",
+    "authors": ["Rakshith Vasudev","Melisa Russak","Dan Bikel","Waseem Alshikh"],
+    "arxiv": "2602.03338v1",
+    "submitted": "2026-02-03",
+    "url": "https://arxiv.org/abs/2602.03338"
+  },
+  "verification": {
+    "critic_setup": {
+      "status": "verified",
+      "critic": "Qwen3-0.6B + LoRA rank 16",
+      "training_steps": 7636,
+      "training_benchmarks": ["HotPotQA","GAIA"],
+      "task_disjoint_split": "158 train / 19 validation / 21 test unique tasks; zero task overlap",
+      "ALFWorld": "complete domain transfer for critic weights; no ALFWorld trajectories in critic training",
+      "agent_budget": "15 actions",
+      "intervention_budget": 3,
+      "default_calibrated_threshold": 0.6,
+      "interventions": ["ROLLBACK","APPEND"]
+    },
+    "critic_quality": {
+      "status": "verified",
+      "Qwen-3-8B": {"AUROC":0.982,"F1":0.989,"n":474},
+      "GLM-4.7": {"AUROC":0.966,"F1":0.976,"n":234},
+      "MiniMax-M2.1": {"AUROC":0.897,"F1":0.937,"n":664},
+      "overall": {"AUROC":0.936,"F1":0.963,"n":1372}
+    },
+    "end_to_end_table4": {
+      "status": "verified",
+      "HotPotQA": {
+        "Qwen-3-8B": {"baseline":57.0,"best_intervention":54.7,"best_delta_pp":-2.3},
+        "GLM-4.7": {"baseline":70.3,"best_intervention":70.3,"best_delta_pp":0.0},
+        "MiniMax-M2.1": {"baseline":64.0,"best_intervention":38.5,"best_delta_pp":-25.5}
+      },
+      "GAIA": {
+        "Qwen-3-8B": {"baseline":18.9,"best_intervention":14.5,"best_delta_pp":-4.4},
+        "GLM-4.7": {"baseline":34.4,"best_intervention":31.1,"best_delta_pp":-4.4},
+        "MiniMax-M2.1": {"baseline":46.7,"best_intervention":16.7,"best_delta_pp":-30.0}
+      },
+      "ALFWorld": {
+        "Qwen-3-8B": {"baseline":5.8,"best_intervention":8.6,"best_delta_pp":2.8,"best_condition":"uncalibrated APPEND","reported_p":0.014},
+        "GLM-4.7": {"baseline":14.7,"best_intervention":15.8,"best_delta_pp":1.1},
+        "MiniMax-M2.1": {"baseline":16.1,"best_intervention":16.6,"best_delta_pp":0.5}
+      }
+    },
+    "disruption_recovery_framework": {
+      "status": "verified",
+      "definitions": "p=baseline failure rate, r=recovery rate among baseline failures, d=disruption rate among baseline successes",
+      "net_success_change": "p*r - (1-p)*d",
+      "benefit_condition": "p > d/(r+d)",
+      "Qwen_ALFWorld_50_task_pilot": {"failure_rate_approx":0.89,"recovery_rate_approx":0.12,"disruption_rate_approx":0.56,"threshold_approx":0.82},
+      "scope": "pilot estimates are used as a pre-deployment directional test; they are not population-invariant constants"
+    },
+    "critic_scaling": {
+      "status": "verified",
+      "0.6B_overall_AUROC":0.936,
+      "14B_same_hyperparams_AUROC":0.905,
+      "best_14B_AUROC":0.927,
+      "clarification":"This supports 'scaling critic size did not improve AUROC in this data/config regime', not a general inverse scaling claim."
+    }
+  },
+  "scope_clarifications": [
+    "Detector AUROC/F1 and intervention utility are distinct objectives. The paper's causal intervention evidence is specific to the tested base agents, benchmarks, ROLLBACK/APPEND mechanics, thresholds/calibration, action budget and intervention budget.",
+    "ALFWorld is zero-shot transfer for the critic weights, but temperature scaling is fitted on ALFWorld validation data; calling the entire deployed intervention pipeline fully zero-shot would be too broad.",
+    "The worker's 'best intervention' values are correctly taken as the best of the four Table-4 intervention cells for each model/benchmark. They should not be confused with the pilot's larger +4.7pp ROLLBACK improvement reported for Qwen ALFWorld; the full 202-task Table-4 best is +2.8pp uncalibrated APPEND.",
+    "The p/r/d threshold is a matched-outcome accounting framework for this intervention setting, not proof that any monitor with the same p/r/d estimates will behave identically under a different intervention mechanism.",
+    "The paper reports paired task-level bootstrap testing and Holm-Bonferroni correction across intervention conditions per benchmark-model pair; downstream summaries should avoid treating every raw cell difference as independently significant."
+  ],
+  "status": "primary_verified_with_zero_shot_calibration_and_pilot_vs_full_scope_clarification",
+  "confidence": "high for primary paper setup, tables and framework; no independent rerun performed",
+  "unresolved": [
+    "Direct replication with other intervention policies that reduce disruption d rather than only ROLLBACK/APPEND.",
+    "Cluster/dependence-aware evaluation when trajectory-level steps/interventions create stronger within-task dependence than the paper's task-level paired outcome analysis captures.",
+    "Whether deterministic or tool-grounded verification can materially lower disruption while preserving recovery on the same agents/tasks."
+  ],
+  "downstream_instruction": "Retain the candidate as strong evidence that monitor accuracy cannot substitute for joint monitor+intervention end-to-end evaluation. Preserve the ALFWorld calibration nuance and distinguish the 50-task pilot estimates from the full 202-task outcome table."
+}
