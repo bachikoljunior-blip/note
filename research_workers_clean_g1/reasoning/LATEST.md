@@ -9,36 +9,38 @@ Latest checkpoints in order:
 6. `2026-08-25T2258JST.md`
 7. `2026-08-26T0002JST.md`
 8. `2026-08-26T0002JST-followup.md`
+9. `2026-08-26T0102JST.md`
 
 Read `STATE.md` for accumulated findings through 18:15 JST, then read all checkpoints above in order for the newest evidence and exact continuation.
 
 Top unresolved frontier:
-1. Lean proof-router probability calibration under real distribution shift: Brier/ECE/reliability/selective-risk for next-attempt success, repairability and future-cost predictors, not only ranking/AUC;
-2. coverage-aware routing: finite-sample/selective-risk abstention when compiler/retrieval/trajectory evidence is partial or low-coverage;
-3. learned gating among uninterrupted iteration, compact proof-state branching, richer agent-context branching, and restart;
-4. triggered global re-retrieval: learned escalation from failure-conditioned local retrieval to a fresh global proof-route sketch/retrieve/reflect cycle;
-5. end-to-end use of Delta/trajectory state-transition representations inside a cost-quality proof-search router;
-6. learned gating among lexical/symbol retrieval, dependency-graph expansion and expensive reasoning retrieval under fixed token/latency budgets;
-7. execution-substrate-aware cost models: snapshot/persistent-server vs rebuild-per-branch, separating generation, retrieval, Lean tactic/verifier, state reconstruction and wall-clock;
-8. exact Lean composite of proof-state snapshot/forking + learned tactic/transition-semantic diversity + compiler-guided repair + calibrated multi-action routing under equal token/verifier/wall-clock budget;
-9. benchmark-audited robustness with pinned Lean/mathlib/repository/harness versions and candidate-access sensitivity.
+1. calibrated Lean progress/value under real search-policy and theorem-distribution shift: Brier/ECE/reliability/selective-risk for next-attempt success, repairability, remaining-step/future-cost predictions;
+2. variable-perspective action allocation: learned gating of critic/progress/semantic-diversity/repair/retrieval actions instead of fixed MPS/CARTS/3D-Prover branching counts;
+3. AND-goal/subgoal routing: branch-specific remaining-cost prediction and learned scheduling on factorized Lean states, comparing longest-branch, total-work and risk-sensitive objectives;
+4. coverage-aware routing: finite-sample/selective-risk abstention when compiler/retrieval/trajectory evidence is partial or OOD;
+5. learned gating among uninterrupted iteration, compact proof-state branching, richer agent-context branching, and restart;
+6. triggered global re-retrieval: learned escalation from failure-conditioned local retrieval to a fresh global proof-route sketch/retrieve/reflect cycle;
+7. end-to-end use of Delta/trajectory state-transition representations alongside proof-history/progress features inside a cost-quality proof-search router;
+8. learned gating among lexical/symbol retrieval, dependency-graph expansion and expensive reasoning retrieval under fixed token/latency budgets;
+9. execution-substrate-aware cost models: snapshot/persistent-server vs rebuild-per-branch, separating generation, retrieval, Lean tactic/verifier, state reconstruction and wall-clock;
+10. exact Lean composite of proof-state snapshot/forking + learned tactic/transition-semantic diversity + compiler-guided repair + calibrated multi-action routing under equal token/verifier/wall-clock budget;
+11. benchmark-audited robustness with pinned Lean/mathlib/repository/harness versions and candidate-access sensitivity.
 
-Important updates from the latest checkpoints:
-- `Risk-Controlled Lean-as-Judge` (CovCal, arXiv:2605.28365) supplies a directly Lean-grounded selective-prediction pattern: formal evidence is partial and coverage-dependent, so finite-sample risk control and abstention are required. On MATH-500 the proof-winning answer is ~96% correct at high proved coverage but only 20% at low coverage; a generic 7B formalizer has ~28% proof coverage and no feasible Bonferroni certificate across 20 bootstrap splits, while a prover-specialized formalizer reaches ~79% coverage and makes 17/20 partitions feasible, accepting ~48% at ~0.98 accepted accuracy. This is answer judging, not proof search, so transfer to routing remains an experiment rather than a result.
-- The current v3 `Optimizing the Cost-Quality Tradeoff of Agentic Theorem Provers in Lean` router uses a logistic-regression success probability directly in `q_hat - lambda*c_hat`, but the primary paper reports no Brier/ECE/reliability/selective-risk diagnostics. Its 28.9% parity-accuracy cost reduction is therefore a tested decision result, not evidence of robust probability calibration under theorem/prover/policy shift.
-- Cross-paper cost evidence exposes a portability issue: that router treats Lean compilation as negligible and prices attempts by generated-token/SFLOP cost, whereas `Keep the Proof State Live` shows rebuild-per-branch Lean execution can spend >99% of wall time on import/elaboration and snapshotting yields 5.6–50x speedups. A future multi-action router therefore needs execution-substrate-aware cost estimates.
-- `Automating Formal Verification with Agent-Guided Tree Search` gives direct Lean evidence that search structure is difficulty-dependent: a mathlib-search agent reaches 95.0% on 423 specs at K=50, context-based branching is better for a broader intermediate-difficulty region at lower token cost, while uninterrupted iteration remains better on the hardest specs. Branching/context search should therefore be routed, not universally enabled.
-- LeanSearch v2's public repository/paper surface still exposes the one-shot global-reasoning retrieval design; this pass surfaced no released trigger-based re-invocation after compiler failure. This is not proof of nonexistence, so the matched reasoning-once vs trigger-reretrieve experiment remains open.
-- Neighboring adaptive-retrieval work independently supports triggered mid-course retrieval: REPAIR reports +5.6pp on reasoning-intensive retrieval, and ReaLM-Retrieve reports +10.1 absolute F1 while reducing retrieval calls 47% versus fixed-interval retrieval. These are not Lean results, but they strengthen the controller hypothesis behind dynamic global re-retrieval.
+Important updates from the newest checkpoint:
+- `LeanProgress` directly predicts remaining Lean proof steps and improves ReProver Mathlib4 search from 41.4% to 45.2%. Proof history materially improves the predictor: 75.8% exact-step accuracy / MAE 3.15 with history versus 61.8% / 5.22 without. This adds a direct future-cost/progress feature but does not supply probability-calibration/OOD guarantees.
+- AlphaProof supplies a high-scale precedent for a learned remaining-return value, dynamic progressive sampling, reusable Lean states, and hardest-subgoal AND routing. Tree search from about 2 TPU minutes to 12 TPU hours adds >10 absolute points on formal-imo/PutnamBench-test; TTRL adds roughly another 15 points but at hundreds of TPU-days per target. Treat TTRL as an extreme-budget meta-action, not ordinary low-cost repair.
+- LeanTree factorizes multi-goal Lean states into independently searchable/reusable branches. White-box rollouts reach 18.36% +/-0.60 on MiniF2F versus 5.32% +/-0.37 black-box rollouts and 9.59% +/-0.71 whole-proof generation in the reported protocol, but factorization itself is not isolated causally.
+- MPS-Prover shows a learned critic plus three different heuristic perspectives beats critic/random alternatives under approximately matched expansion budget: full 177/244 miniF2F, critic replaced by random 164/244, individual perspective ablations 172–174/244. Its fixed four-way allocation remains a target for learned/calibrated variable branching.
+- Earlier key gaps remain: the current v3 cost-quality router reports no Brier/ECE/reliability/selective-risk diagnostics; CovCal gives only answer-judging selective-risk transfer evidence; LeanSearch-v2 reasoning retrieval remains one-shot in the public implementation; and the exact snapshot + semantic selection + compiler repair composite remains unlocated.
 - `research_feedback_clean_g1/reasoning/FEEDBACK.json` remains absent; no sanitized feedback was consumed.
 
 Exact continuation:
-1. inspect citations/follow-ups and public code of the v3 cost-quality Lean router for calibration, OOD, threshold-sensitivity, or hidden probability post-processing;
-2. search selective-prediction/formal-methods work applying finite-sample risk control directly to proof-search actions;
-3. find primary quantitative tables for Yao's state/context orchestrators and search learned policies deciding preserve-vs-branch in Lean;
-4. inspect LeanSearch-v2 forks/commits/follow-ups for triggered reasoning-mode re-retrieval after failure;
-5. search end-to-end Lean proof search using Delta Tokens / proof-trajectory direction fields;
-6. search for public integration of snapshot/forking with learned semantic branch selection and compiler-guided repair;
-7. keep the frontier nonempty and preserve exact tested-scope caveats.
+1. search LeanProgress/AlphaProof citations and public implementations for OOD/generalization, value calibration, proof-depth/domain error stratification and stronger progress/value ablations;
+2. search learned dynamic branching-factor/progressive-widening policies in Lean that choose the number/type of actions rather than fixed MPS/CARTS/3D-Prover expansion counts;
+3. search factorized multi-goal Lean work comparing hardest-branch vs total-work value targets and learned subgoal scheduling;
+4. continue selective-prediction/formal-methods work applying finite-sample risk control directly to proof-search actions;
+5. inspect LeanSearch-v2 follow-ups for triggered reasoning-mode re-retrieval after failure;
+6. search end-to-end Delta/trajectory integration and public snapshot/fork + learned semantic branch selection + compiler repair;
+7. keep the frontier nonempty and preserve exact source/version/tested-scope caveats.
 
 Do not read legacy `research_workers/reasoning/`, O, comparator, integrator, feed, other-worker state, shared execution ledger, or other-role receipts.
