@@ -1,0 +1,125 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "f49c6f2062d12c0a67bf314b763c5c7a3152ca2f",
+    "desired_state_blob": "508c9f92dd965d2b5074932b99847411cb66bef4",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024"
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T050330+0900.json",
+  "started_local": "2026-08-26T06:02:29+09:00",
+  "checkpointed_local": "2026-08-26T06:06:42+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404",
+    "note": "Semantic inputs were only own role-local clean state, sanitized root/own role config, and public sources. Repository-head freshness used SHA-only git-ref transport."
+  },
+  "checked_sources": [
+    {
+      "source": "Luigi Berducci, Radu Grosu, Safe Policy Improvement in Constrained Markov Decision Processes, arXiv:2210.11259",
+      "type": "primary preprint",
+      "url": "https://arxiv.org/abs/2210.11259",
+      "result": "Primary-verified an iterative current-policy safe-update gate with multiple separate cost channels. Candidate policies are released only when high-confidence off-policy upper bounds for all constrained costs clear their thresholds; a threshold can be an absolute application bound or the estimated performance of the last deployed policy. The paper proves simultaneous high-confidence non-increase of all modeled expected cumulative costs under its HCOPE assumptions. This is close to the desired adaptive-baseline plus independent constraints pattern, but the guarantee is expected cumulative cost, not pathwise hard safety, and its Student-t HCOPE is not an anytime-valid optional-stopping construction."
+    },
+    {
+      "source": "Harsh Satija, Philip S. Thomas, Joelle Pineau, Romain Laroche, Multi-Objective SPIBB: Seldonian Offline Policy Improvement with Safety Constraints in Finite MDPs, NeurIPS 2021",
+      "type": "primary NeurIPS/arXiv",
+      "url": "https://arxiv.org/abs/2106.00099",
+      "result": "Primary-verified that multiple reward/cost objectives can remain separate safety certificates while a user scalarization is used only for optimization. The new policy is constrained to be no worse than the known baseline along every individual objective with high probability. In 100 random CMDPs across 12 hyperparameter combinations (1200 datapoints), the optimized safe methods remained in the low-failure region while unconstrained/linearized alternatives violated more often. This is offline and uses a fixed baseline, so it does not by itself solve adaptive current-baseline sequential deployment."
+    },
+    {
+      "source": "Ioannis Karampatziakis, John Langford, Paul Mineiro, Aaditya Ramdas, Off-Policy Confidence Sequences, ICML 2021; and Ian Waudby-Smith et al., Anytime-valid off-policy inference for contextual bandits, 2024",
+      "type": "primary PMLR/arXiv",
+      "url": "https://proceedings.mlr.press/v139/karampatziakis21a.html",
+      "result": "Primary-verified a uniform-over-time off-policy evaluation primitive valid at arbitrary stopping times. Gated deployment can monitor a confidence sequence for candidate-minus-current-policy value and switch only when the lower bound clears zero. In the ICML 2021 demonstration with a true value gap about 0.17, the off-policy gate concluded the candidate was better after 657 logged samples; a direct A/B confidence sequence needed 440 total samples but exposed users to the candidate during testing. Waudby-Smith et al. extend anytime-valid OPE to predictable adaptive logging policies and time-varying contextual-bandit data. These papers provide sequential validity, not a complete multi-constraint safe-policy-improvement controller."
+    },
+    {
+      "source": "Daniel Molitor, Anytime-valid Optimal Policy Identification, arXiv:2606.17515, 2026",
+      "type": "primary preprint",
+      "url": "https://arxiv.org/abs/2606.17515",
+      "result": "Primary-verified the current frontier's adaptive-stopping side for a fixed finite policy class: construct a time-indexed candidate set S_t that retains the true optimal policy set uniformly over time with probability at least 1-alpha, eliminate suboptimal policies as confidence sequences separate, and stop when the set is a singleton. With a unique optimum and linear variance growth, the stopping-time complexity scales as O((log |Pi| + log log(1/Delta_min))/Delta_min^2). In 1000 simulations per gap-misspecification setting, a true gap only 25% larger than planned saved about 20% samples on average, while true gaps 2-3x the planned gap saved about 60-80%. The theorem assumes a fixed finite candidate class and therefore does not certify arbitrary data-dependent generation of new candidate policies from the same evaluation stream."
+    },
+    {
+      "source": "Yash Chandak et al., Towards Safe Policy Improvement for Non-Stationary MDPs, NeurIPS 2020",
+      "type": "primary NeurIPS",
+      "url": "https://proceedings.neurips.cc/paper/2020/file/680390c55bbd9ce416d1d69a9ab4760d-Paper.pdf",
+      "result": "Primary-verified the adaptive-selection failure mode: if the same data are used both to search over candidate policies and to safety-test the selected maximum lower-confidence-bound policy, multiple comparisons can make the test unreliable. Their SPIN framework explicitly partitions data into mutually exclusive candidate-search and safety-test sets. This supplies a concrete guardrail for any repository optimizer that proposes configurations adaptively from execution evidence."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r21-vector-certificate-current-baseline-gate",
+      "mechanism": "Keep utility/progress and safety/validity as separate certificate channels. Maintain a current deployed/target-only baseline. For each proposed policy or automation change, require a lower confidence certificate that utility is no worse than the current baseline and independent upper confidence certificates that each absolute safety/calibration cost remains under its bound; deploy only when every channel passes, otherwise retain the baseline. For continuous monitoring, use confidence sequences/e-process-compatible off-policy estimates rather than repeatedly peeking at fixed-N confidence intervals.",
+      "primary_sources": [
+        "Berducci & Grosu 2022, Safe Policy Improvement in Constrained MDPs",
+        "Satija et al. 2021, Multi-Objective SPIBB",
+        "Karampatziakis et al. 2021 / Waudby-Smith et al. 2024, off-policy confidence sequences"
+      ],
+      "quantitative_evidence": "The individual primitives are source-supported rather than a single end-to-end theorem. Off-policy gated deployment identified a candidate with true value gap about 0.17 after 657 logged samples without deploying it during evaluation. Multi-Objective SPIBB evaluates 100 random CMDPs across 12 parameter combinations and demonstrates low failure for its constrained optimized methods. Berducci & Grosu prove simultaneous high-confidence control of multiple expected cumulative costs relative to configured absolute or current-policy thresholds under their HCOPE assumptions.",
+      "scope": "Synthesis across adjacent source domains. Berducci/Grosu: CMDP expected cumulative costs with fixed-batch Student-t HCOPE assumptions. MO-SPIBB: offline finite MDP, fixed known baseline. Off-policy confidence sequences: contextual-bandit OPE with appropriate logging support and bounded/nonparametric conditions depending construction. The exact composed dual-certificate controller is a transfer hypothesis, not a published single-method theorem.",
+      "failure_conditions": "Expected-cost guarantees are not pathwise hard safety. Repeated Student-t peeking is not anytime-valid. Importance-weight/support failure can make off-policy evidence unstable or impossible. A policy chosen adaptively using the same finite test data can overfit the safety certificate unless uniform inference, a fresh holdout, predictable policy construction, or explicit sequential multiplicity control is used. Scalarizing safety and utility before certification can hide regressions in one channel.",
+      "operational_observable": "baseline policy/config revision; candidate generation cutoff; logging propensities/support; per-certificate metric identity; alpha/e-value budget; utility lower bound versus current baseline; safety/calibration upper bounds versus fixed limits; candidate frozen-before-test flag; gate outcome; fallback; evidence stream lineage; next eligibility time/state.",
+      "transfer_hypothesis": "For research automation optimization, let the optimizer generate aggressive candidate configurations but make adoption a downstream gate: progress/throughput must clear the current repository-defined baseline with time-uniform evidence, while contamination/scope/termination-safety metrics independently clear hard bounds. Keep the old config if either certificate fails. Do not let later progress compensate for contamination or evidence-validity debt.",
+      "confidence": "medium-high for the composition principle; high for each source-domain primitive; medium for end-to-end transfer"
+    },
+    {
+      "id": "cf-g1-r22-anytime-fixed-class-policy-elimination",
+      "mechanism": "For a finite set of already-generated candidate policies/configurations evaluated from an external logged stream, maintain simultaneous time-uniform value confidence sequences, eliminate a candidate only when its upper bound falls below another candidate's lower bound, and stop/elect only when the survivor set is sufficiently small. This replaces fixed evaluation horizons with evidence-driven stopping without invalidating inference.",
+      "primary_source": "Daniel Molitor, Anytime-valid Optimal Policy Identification, arXiv:2606.17515 (2026)",
+      "quantitative_evidence": "With a unique optimum and linear variance growth, stopping time is O((log |Pi| + log log(1/Delta_min))/Delta_min^2). In 1000 simulations for each gap-misspecification ratio, a true gap 1.25x the planned gap saved about 20% samples on average; gaps 2-3x larger saved about 60-80%. In a 15,292-observation misinformation experiment, clearly inferior policies were sequentially eliminated at roughly 1k, 4k, 11k and 13k observations while three policies remained unresolved at study end.",
+      "scope": "Logged contextual-bandit data, predictable logging policy, bounded rewards, fixed finite candidate policy class, overlap/variance-growth conditions for the stated sample-complexity rate. The policy class is fixed before the sequential elimination theorem is applied.",
+      "failure_conditions": "Does not validate arbitrarily adding policies that are adaptively generated after observing the same evaluation stream. Poor/zero overlap prevents evaluation; rapidly exploding importance-weight variance breaks the linear-variance condition. A large near-tied policy class can keep the survivor set broad for a long time.",
+      "transfer_hypothesis": "Once the automation optimizer freezes a candidate batch, evaluate that batch with anytime-valid survivor elimination and stop spending evaluation budget as soon as evidence separates candidates. Generate the next batch only behind an explicit data-lineage boundary or selection-valid mechanism rather than continually adding candidates to the same unadjusted confidence family.",
+      "confidence": "high for source-domain fixed-class sequential identification; medium-high for batched automation-config evaluation transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r20-adaptive-baseline-deficit-shield-with-meta-episode-stitching",
+      "update": "The missing second-certificate direction is now partially resolved: multiple independent expected-cost constraints can coexist with a current deployed-policy baseline (Berducci/Grosu), while separate anytime-valid off-policy confidence sequences supply an optional-stopping-safe evaluation primitive. No inspected paper proves the exact pathwise-hard-safety + adaptive-utility-floor + adaptive-candidate-generation composition end to end."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "A single scalar conservative reward certificate can safely stand in for both utility and independent safety/calibration requirements.",
+      "evidence": "Not supported. Multi-Objective SPIBB explicitly preserves each objective constraint separately even when optimization uses a scalarization, and constrained-MDP safe improvement keeps multiple cost channels separate.",
+      "reason": "Retain vector certificates and require all channels to pass."
+    },
+    {
+      "lead": "Anytime-valid off-policy policy identification automatically permits arbitrary adaptive generation of new candidate policies from the same monitored data stream.",
+      "evidence": "Not established. Molitor 2026 proves the candidate-set guarantee for a fixed finite policy class. Chandak et al. show that reusing the same data for candidate search and safety testing creates a multiple-comparisons failure mode unless the selection/test dependency is controlled.",
+      "reason": "Keep adaptive candidate generation as the next unresolved frontier; use frozen batches, fresh holdouts, uniform OPE, alpha/e-value spending, or a theorem explicitly allowing data-dependent candidates."
+    },
+    {
+      "lead": "Expected cumulative cost safety is equivalent to pathwise hard safety.",
+      "evidence": "False. The constrained-MDP safe-improvement results inspected here bound expected cumulative costs with high confidence; rare trajectory-level violations can still occur unless a separate invariant/shield/pathwise mechanism is supplied.",
+      "reason": "Search for orthogonal pathwise shields or barrier/invariant certificates that compose with the current-baseline utility gate."
+    }
+  ],
+  "frontier": [
+    "Find an anytime-valid policy-selection method whose candidate policies may themselves be generated adaptively from the same data stream, with explicit control of selection/multiplicity rather than a fixed finite class.",
+    "Search 2025-2026 off-policy e-process/confidence-sequence work for simultaneous multiple-outcome constraints and data-dependent policy classes; quantify whether alpha-spending or mixture e-processes preserve useful sample efficiency.",
+    "Find a sequential-decision method combining a pathwise invariant/control-barrier/shield safety certificate with a separate adaptive current-policy utility floor, so expected-cost safety is not asked to serve as hard safety.",
+    "Quantify support/overlap diagnostics that should trigger automatic refusal to compare a candidate rather than producing a high-variance off-policy certificate.",
+    "Compare frozen-batch anytime policy elimination against fresh-holdout candidate-search/test splitting on wall-clock evidence cost, including the cost of repeatedly generating new candidate batches."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Followed the prior exact frontier into multi-constraint current-policy safe improvement and anytime-valid off-policy inference.",
+      "Separated directly proven source-domain guarantees from the synthesized vector-certificate automation gate rather than presenting the composition as one published theorem.",
+      "Continued into a 2026 anytime-valid optimal-policy-identification paper and identified its fixed-policy-class boundary as the next substantive selection-validity bottleneck.",
+      "Primary-verified the multiple-comparisons failure mode of candidate search plus safety testing on the same data and retained a nonempty adaptive-selection frontier."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search 2025-2026 anytime-valid off-policy selection / policy-learning papers for guarantees that explicitly allow data-dependent or adaptively generated candidate policies and simultaneous multiple outcome constraints. If no direct theorem exists, characterize the weakest sufficient composition of (i) uniform OPE over a policy class or fresh candidate-search/test split, (ii) time-uniform per-metric confidence/e-processes with familywise control, and (iii) an orthogonal pathwise shield/invariant, then quantify the evidence and wall-clock cost of that composition against fixed-batch evaluation."
+}
