@@ -1,6 +1,6 @@
 # O / Chat continuity
 
-Updated: 2026-08-25 19:56 JST
+Updated: 2026-08-25 20:55 JST
 
 Mandatory continuity: read this file before every O-related answer/reasoning/action, then update it in the same turn whenever the conversation advances or materially clarifies the current design/state. Treat this as the chat-side reconstruction checkpoint so long conversation history is not required. Before sending new semantic context to O, show the wording and wait for user approval. Safe non-semantic operational defects may be repaired immediately.
 
@@ -30,7 +30,7 @@ Mandatory continuity: read this file before every O-related answer/reasoning/act
 6. Treat this file and other summary pointers as reconstruction aids, not as authority over newer execution records.
 
 ## Current O execution snapshot
-Observed at 2026-08-25 19:56 JST; re-read before relying on it.
+Observed at 2026-08-25 20:55 JST; re-read before relying on it.
 
 - Latest observed O `main`: `e76c4e9d6d75c30769fc7c93ba6c1f0531779b46` (`Checkpoint generation 12 at last durable native request`, committed 19:16:52 JST).
 - `agi/WORK_EXECUTION_STATE.json` reports generation 12, status `checkpointed`, execution id `work-recovery-20260825T100803Z-9a82cfcc7affd1e3a617ba9e2c512ec0`, and inbox revision 22 acknowledged.
@@ -85,8 +85,8 @@ Observed at 2026-08-25 20:54 JST; re-read before relying on it.
 - Comparator health: novelty remains at 19:39:30 JST, covering 149/149 then-observed semantic candidate instances (`24 known / 0 evaluated / 49 partially tested / 76 uncovered`) but not the current source wave. Evidence `CURRENT_OVERLAY_RUN4_DELTA.json` at 20:45 covers exact current artifacts for all 11 namespaces with 32 new assessments, 6 updates, and 10 holds/scope corrections. Decision relevance `DELTA_2026-08-25T2043_JST.json` at 20:43:26 also covers exact current artifacts for all 11 namespaces with 38 assessments (`24 high / 8 medium-to-high / 3 medium / 2 low-to-medium / 1 low`).
 - Integrator blocker: `CURRENT_WAVE_AWAITS_NOVELTY`. Evidence strength and decision relevance are current for the exact clean source versions, but novelty is not. No current-wave source claim, candidate, or scope update enters O_FEED until the separate novelty comparator covers the same exact sources; evidence/relevance are not used as substitutes for novelty.
 - Exact next Integrator action: re-read only clean worker/comparator namespaces for an exact-source novelty update. When it exists, reconcile aliases/mechanisms against evidence Run4 and relevance 20:43, preserve contradictions/tested scope/uncertainty, and admit only candidates with traceable three-dimension provenance that remain genuinely novel or materially under-evaluated and decision-relevant. Otherwise keep feed revision 5 unchanged and never feed Comparator/Integrator judgments back into workers.
-- Bridge independently last re-read clean feed revision 4 at 19:56 JST. At that bridge snapshot O's durable clean cursor was revision 3 / digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90` / blob `9ed59f3429f8ea65763a5df615146b1be1948058`, last polled at 18:05 JST with zero items ingested. Revision-22 clean subscription was present and acknowledged, and the Bridge correctly did not create/resume O Work solely to poll.
-- Feed revision 5 was published after that last observed Bridge readback. This Integrator does not infer that revision 5 has been ingested or acknowledged by O. Bridge state must independently re-read the current feed and O durable cursor at an already-occurring safe Root/equivalent boundary; no extra O Work should be created solely for polling.
+- Bridge independently re-read the clean feed and O durable state at 20:55 JST. The current clean feed is revision 5 / digest `d456657bc025ef518343e2065643d9ec79f0df77c896570f8579791a22732bf1` / blob `8579e592632f9f4611f6861134989ccd7782c3ce` with 12 items, while O's durable clean cursor remains revision 3 / digest `d339314cfc52566ebba3db89501d2c16de07f0f2b35fce81460b1d451b932f90` / blob `9ed59f3429f8ea65763a5df615146b1be1948058`, last polled at 18:05 JST with zero items ingested. Revision-22 clean subscription is present and acknowledged.
+- Bridge health: revision 5 is pending an already-occurring safe Root/equivalent logical-unit boundary. O generation 12 is checkpointed with its frozen pending Execute, so the Bridge did not create/resume O Work solely for feed polling, ingestion, or acknowledgement and did not append individual feed items to the inbox. `research_index_clean_g1/BRIDGE_STATE.json` records blocker `CLEAN_FEED_REV5_AWAITS_ALREADY_OCCURRING_O_SAFE_BOUNDARY`. Legacy `research_index/O_FEED.json` and all `pre_independence` research remain historical-only and are not bridged as clean evidence.
 
 ## Automation observability
 - The repository monitor record names an hourly automation `O Work監視・復旧` and says it was last observed enabled, while explicitly warning that repository state is not control-plane proof.
