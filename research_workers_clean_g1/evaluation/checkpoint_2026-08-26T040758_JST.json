@@ -1,0 +1,67 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T04:07:58+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T040340_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {"control_revision":6,"config_revision":3,"enabled_desired":true,"source":"automation_control/DESIRED_STATE.json"},
+  "independence": {"read_O":false,"read_O_derived_state":false,"read_legacy_worker_state":false,"read_comparator_or_integrator_state":false,"read_other_worker_state":false,"read_shared_execution_ledger":false,"feedback_status":"absent_404"},
+  "search_bias": "evaluation/verifiers; measurement-validity/benchmark-design; composite-test sequentialization under nuisance parameters",
+  "sources_reused_from_immediate_predecessor": [
+    {"title":"Anytime Validity is Free: Inducing Sequential Tests","url":"https://academic.oup.com/jrsssb/advance-article/doi/10.1093/jrsssb/qkag050/8493290","primary":true,"relevance":"Composite induction is not uniquely determined by a terminal composite test; the paper notes that choosing the P-specific family is nontrivial and that the naive same-test family can yield an uninteresting path."},
+    {"title":"The McNemar test for binary matched-pairs data: mid-p and asymptotic are better than exact conditional","url":"https://doi.org/10.1186/1471-2288-13-91","primary":true,"relevance":"The nonrandomized exact conditional McNemar terminal test is conservative for many discordance counts, leaving size slack under each simple P_rho."}
+  ],
+  "construction": {
+    "setup": "Let phi be the one-sided nonrandomized exact conditional McNemar terminal test at N=50 and alpha=0.05 from the predecessor checkpoint. Let s(rho)=E_{P_rho}[phi] <= alpha.",
+    "simple_test_family": "For each simple null P_rho, define phi^rho = phi + c(rho)(1-phi), where 0 <= c(rho) <= (alpha-s(rho))/(1-s(rho)). Then E_{P_rho}[phi^rho]=s(rho)+c(rho)(1-s(rho)) <= alpha, so every phi^rho is individually valid.",
+    "terminal_recovery": "If inf_rho c(rho)=0, then pointwise inf_rho phi^rho = phi: on terminal rejection states every phi^rho=1, while on nonrejection states the infimum equals inf c=0. Thus the composite terminal test remains exactly the original nonrandomized McNemar test.",
+    "example_c": "Choose rho0=0.4 and c(rho)=0.9*cmax(rho)*(rho-rho0)^2/((rho-rho0)^2+0.05^2), with cmax(rho)=(alpha-s(rho))/(1-s(rho)). This is zero at rho0 but positive near rho->0 and elsewhere.",
+    "induced_process": "For V_t^rho=E_{P_rho}[phi|F_t], the induced P-specific process is c(rho)+(1-c(rho))V_t^rho. The composite process is the infimum over rho. It is therefore different from the naive inf V_t^rho even though both end at exactly the same terminal McNemar test."
+  },
+  "numerical_sanity_check": {
+    "terminal_size_s_rho": {"rho_0.0":0.0,"rho_0.1":0.0123857516,"rho_0.2":0.0234175011,"rho_0.4":0.0325786742,"rho_0.6":0.0355846353,"rho_0.8":0.0368757662,"rho_1.0":0.0324543235},
+    "example_lower_envelope": [
+      {"state":"t=20,d=8,w=6","current_exact_p":0.14453125,"naive_composite":0.0,"constructed_composite_approx_inf":0.0443},
+      {"state":"t=30,d=12,w=9","current_exact_p":0.072998046875,"naive_composite":0.0,"constructed_composite_approx_inf":0.0443},
+      {"state":"t=40,d=16,w=11","current_exact_p":0.1050567626953125,"naive_composite":0.0,"constructed_composite_approx_inf":0.0443}
+    ],
+    "starting_value_constructed_composite":0.0325786742,
+    "scope":"The lower envelopes were numerically evaluated on a dense rho grid/limits under the iid common-rho model. This family is deliberately simple and artificial; it demonstrates existence/nonuniqueness, not optimality or practical usefulness."
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id":"eval-g1-composite-terminal-decomposition-nonuniqueness-v1",
+      "mechanism":"The same composite terminal McNemar test can admit different P_rho-specific valid decompositions, which induce materially different anytime-valid interim paths. Terminal equivalence therefore does not identify a unique early-stopping signal.",
+      "evidence":"The explicit top-up family phi^rho=phi+c(rho)(1-phi) is individually level-valid when c is bounded by size slack, has pointwise infimum exactly phi when inf c=0, and changes the induced composite path from exact zeros on nonrejecting states to positive fractional values in the numerical example.",
+      "scope":"Constructed for the iid common-rho McNemar null and a one-sided nonrandomized exact terminal test. The example uses artificial outcome-independent top-up randomization and is not asserted to be decision-optimal.",
+      "implication":"An evaluation system must justify the P-specific decomposition/utility used to sequentialize a composite terminal test. Reporting only 'we sequentialized exact McNemar and preserved terminal power' leaves early behavior underdetermined."
+    },
+    {
+      "candidate_id":"eval-g1-anytime-free-does-not-mean-path-free-v1",
+      "mechanism":"Anytime validity may be obtainable without terminal power loss, but the shape, interpretation, and usefulness of the preterminal path can depend strongly on nuisance-handling choices that are invisible in the final test.",
+      "evidence":"The predecessor's naive same-test family and this checkpoint's top-up family share the same terminal exact McNemar decision yet have different interim lower envelopes. Koning-van Meer explicitly identify selection of the P-specific test family as nontrivial.",
+      "scope":"This is a measurement-validity conclusion about composite sequentialization, not a criticism of the anytime-validity theorem itself.",
+      "implication":"Benchmark evaluators should assess early-path calibration/resolution/stability directly, not infer it from terminal-test equivalence."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {"lead":"The zero-progress result in the predecessor proves every composite backward induction of exact McNemar is degenerate.","reason":"Rejected. A valid P-specific top-up family can preserve the identical terminal composite test while producing a different positive interim path."},
+    {"lead":"Any P-specific family that avoids zero progress is automatically a useful evidence process.","reason":"Rejected. The exhibited positive values are partly generated by artificial terminal randomization slack, may remain near the level-alpha baseline, and need not be monotone or utility-optimal."},
+    {"lead":"The terminal exact test alone determines the correct sequential path.","reason":"Rejected for composite hypotheses. The P-specific decomposition is an additional design choice."
+    }
+  ],
+  "design_implications": {
+    "new_gate":"For composite terminal-test sequentialization, document the P-specific test family/decomposition, not only the terminal test and level.",
+    "evaluation":"Meta-evaluate the induced path itself: early resolution, calibration, path stability, nuisance sensitivity, and utility under the intended stopping policy.",
+    "practical_preference":"Forward betting remains attractive because its update rule has direct operational meaning on discordant signs; a backward composite construction should beat that baseline on a declared utility before adoption."
+  },
+  "frontier_queue": [
+    {"priority":1,"action":"Turn P_rho-specific family selection into an explicit optimization problem: maximize worst-case or Bayes early-path utility subject to individual simple-null validity, terminal pointwise infimum equaling exact McNemar, and interpretable/randomization constraints. Determine whether the optimum materially exceeds alpha on nonrejecting interim states."},
+    {"priority":2,"action":"Derive the fixed-discordant-count M route completely and compare it against forward betting and optimized composite backward induction under N=10-50 total-task deadlines."},
+    {"priority":3,"action":"Check whether task-specific predictable discordance rates rho_t break the common-rho P-specific decomposition while leaving conditional-sign forward betting valid."},
+    {"priority":4,"action":"Develop a reporting standard separating terminal equivalence, anytime validity, preterminal utility, and nuisance sensitivity for induced classical tests."}
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance":"A nonzero P-specific construction exists, so the predecessor's exact-zero obstruction has been scoped rather than treated as a dead end. The optimization/interpretability question is now the live frontier.",
+  "exact_next_action":"Formulate and solve a finite-state optimization for P_rho-specific terminal-test families under N=10-50, then compare optimized induced paths with direct forward sign betting on matched terminal and Type-I constraints."
+}
