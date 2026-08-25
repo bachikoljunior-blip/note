@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "candidate_id": "continual_learning/CLG1-CL-005",
+  "canonical_id": "Infinite learning-rate schedule for continual pretraining without repeated re-warm",
+  "source": {
+    "paper": "Beyond Cosine Decay: On the effectiveness of Infinite Learning Rate Schedule for Continual Pre-training",
+    "arxiv": "2503.02844",
+    "pmlr": "PMLR 330:672-695 (CoLLAs; PMLR publication 2026)",
+    "author_repository": "https://github.com/Pauljanson002/beyond-cosine",
+    "audited_branch": "beyond-cosine",
+    "audited_commit": "394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57",
+    "audited_tree": "6cacb06e7afd810f9db870ab383ced3548dd595a",
+    "audited_commit_date": "2025-10-21T19:43:23Z",
+    "commit_author": "Paul Janson"
+  },
+  "input_boundary": {
+    "o_read_as_exploration_direction": false,
+    "worker_state_written": false,
+    "worker_feedback_written": false
+  },
+  "paper_claim_boundary": {
+    "mechanism": "replace repeated task-wise cosine warmup/re-warm with an effectively unbounded schedule: first-task warmup/cooldown toward a nonzero constant LR, long constant phase, then final anneal; subsequent continual tasks avoid repeated warmup and use the retained constant-rate region before a terminal anneal",
+    "reported_scope": "small and large MAE continual pretraining plus a 570M LLaMA-3-like language-model sequence; worker-verified results show the strongest consistent effect on old-task retention/BWT, with current-task performance often near-tied",
+    "optimizer_scope": "the large MAE setup resets optimizer state before each task; paper evidence therefore supports an LR-schedule intervention under that reset regime, not a claim that seamless optimizer-state continuation is optimal",
+    "generalization_limit": "does not establish that one fixed nonzero plateau is optimal for arbitrary streams, optimizers, model scales or unbounded distribution drift"
+  },
+  "artifact_evidence": {
+    "repository_provenance": "strong author provenance: repository owner Paul Janson is a paper coauthor; README cites the paper and describes the implementation as MAE continual learning with the infinite schedule",
+    "public_scope": "the audited repository is a vision/MAE implementation. The tree contains MAE/ViT training, replay samplers, ImageNet/Places365/FireRisk/MRI dataset support and infinite-LR scheduling. No public LLM training implementation corresponding to the paper's 570M DCLM->Stack->German experiments was identified in this repository tree.",
+    "scheduler": {
+      "implementation": "util/lr_infinite.py implements first-task warmup, cooldown to constant_lr, constant phase and exponential final decay; later tasks skip warmup/cooldown and start from the constant phase before terminal decay",
+      "training_wrapper": "util/lr_sched.py maps the CLI scheduler choices to infinite_lr and hard-codes warmup_ratio=0.13 and constant_ratio=0.86 while passing cooldown_ratio from args and setting constant_lr = args.lr * args.constant_lr_ratio and min_lr = args.lr * 0.01",
+      "defaults": "main_pretrain.py defaults cooldown_ratio=0.58, constant_lr_ratio=0.1, warmup_epochs=40, lr_scheduler=cosine, task_id=0 and seed=0. For the infinite wrapper, warmup_epochs is not the actual warmup control; the wrapper's 0.13 ratio is.",
+      "checkpoint_transition": "engine_pretrain.py saves a checkpoint-before-annealing for non-cosine schedules at the constant_ratio boundary. util.misc.load_model deliberately does not restore optimizer/scaler state when the resume path contains 'annealing', which can implement model-weight continuation with optimizer reset if that checkpoint is explicitly selected."
+    },
+    "environment": {
+      "install_script": "bin/install_env.sh creates a venv and pins torch==2.4.0, torchvision==0.19.0, torchaudio==2.4.0 for CUDA 12.1, timm==0.3.2, tensorboard==2.18.0, wandb==0.18.5 and matplotlib==3.9.2; it patches timm 0.3.2 in-place for PyTorch 2.x compatibility",
+      "lock_quality": "better than an unspecified environment but not hermetic: there is no frozen lockfile/container digest in the audited tree and the script does not pin Python itself or all transitive packages",
+      "dataset_dependency_gap": "README manual installation includes `datasets`, but bin/install_env.sh as audited does not install it even though FireRisk is described as loaded via HuggingFace datasets; reproducing that task therefore needs an extra dependency not installed by the advertised script"
+    },
+    "documentation_execution_gaps": {
+      "sequential_example": "README sequential-task pretraining examples pass `--finetune` to main_pretrain.py, but the audited main_pretrain argument parser exposes `--resume` and does not define a `--finetune` pretraining argument. Those examples are not directly executable as written.",
+      "automatic_preanneal_resume": "main_pretrain.py contains code intended to load the previous task's pre-annealing checkpoint, but that block is commented out. A paper-faithful multi-task run must therefore orchestrate the correct checkpoint explicitly rather than relying on the public entry point to do so automatically.",
+      "helper_path_inconsistency": "util.misc.save_model_before_annealing writes under args.annealed_checkpoint_dir with name `checkpoint-before-annealing_task_<id>`, while the separate load_annealed_model helper constructs a path directly under args.output_dir with name `checkpoint-before-annealing_task<id>` (different directory and underscore pattern). The helper is also not active in main_pretrain. This is a concrete continuation-script defect, not evidence against the schedule mechanism."
+    },
+    "result_artifacts": "the audited tree contains source, tests, run scripts and one LR visualization artifact but no committed paper-scale model checkpoints, task-by-task raw metric ledgers or cell-addressable result manifests for the published MAE or LLM tables. Exact numerical result replay therefore requires rerunning training and reconstructing data/launcher choices.",
+    "llm_artifact_gap": "because the public repository is MAE-focused, the paper's 570M LLM schedule results are supported by the primary study but not by a corresponding inspected public training artifact in this audit"
+  },
+  "reproducibility_assessment": {
+    "grade": "B-",
+    "official_artifact_support": "strong for the core infinite-LR function and MAE mechanism; moderate for exact multi-task MAE replay because checkpoint handoff/documentation contains concrete inconsistencies; weak for exact LLM numerical replay because the LLM implementation/result artifacts were not identified in the public repo",
+    "independent_replication": "no clear independent provenance-equivalent numerical reproduction of the paper's continual-pretraining results was identified in the targeted public search on 2026-08-25. Search results surfaced the primary paper, author code, paper pages and survey/index references. Absence of located evidence is not evidence that no reproduction exists.",
+    "failed_independent_replication": "none identified in the targeted search; do not infer failure from absence",
+    "judgment": "The schedule mechanism is unusually easy to inspect and reimplement: the exact phase logic is public and the MAE environment is substantially specified. However, the repository is not a turnkey reproduction package for the paper. The sequential pretraining README examples use an unsupported argument, automatic loading of the pre-anneal checkpoint is commented out, the dormant helper disagrees with the saver path/name, and raw paper result artifacts are absent. Most importantly, the public code audited here covers MAE but not the paper's LLM experiments. Downstream use should therefore treat the LR schedule itself as strongly reproducible, the MAE quantitative results as author-study evidence with a reconstructable but imperfect public path, and the LLM quantitative cells as primary-study evidence pending a public matched implementation or independent rerun.",
+    "exact_blockers": [
+      "README's sequential pretraining examples use `--finetune`, which main_pretrain.py does not accept; paper-faithful task handoff must be reconstructed with `--resume` or another explicit launcher.",
+      "Automatic previous-task pre-anneal loading is commented out in the audited main entry point, and the dormant loader's directory/filename convention does not match the active saver.",
+      "No immutable experiment manifest binds each MAE paper result to exact commit, CLI arguments, scheduler parameters, dataset versions, replay reduction factor, hardware and checkpoint lineage.",
+      "No public LLM training implementation corresponding to the 570M DCLM->Stack->German cells was identified in the audited repository tree.",
+      "No committed paper checkpoints/raw table ledgers sufficient for numerical recomputation were identified.",
+      "Environment setup is not fully locked and advertised install_env.sh omits the HuggingFace `datasets` dependency used for the FireRisk task.",
+      "No independent provenance-equivalent numerical rerun was located in the targeted search window."
+    ],
+    "scope": "Supports exact inspection/reimplementation of the infinite-LR phase function and a practical MAE continual-learning code path. It does not independently verify the published MAE/LLM gains, and it does not justify generalizing beyond the tested task sequences, optimizer-reset conditions and schedule parameterization."
+  },
+  "recommended_matched_reproduction": {
+    "stage_1": "Use one small MAE sequence and explicitly bind the scheduler wrapper parameters, data hashes, seed and exact checkpoint-before-annealing handoff. Verify that later tasks begin from the intended model checkpoint with fresh optimizer state and no re-warm.",
+    "stage_2": "Run repeated-cosine and infinite-schedule routes with identical data/replay/compute, persist the full LR trace and per-task linear-probe metrics, and reproduce the qualitative BWT improvement before scaling.",
+    "stage_3": "Treat LLM validation as a separate artifact problem: require the actual LM code/config/data/model manifest before attempting to reproduce the worker-recorded 570M cells. A MAE success must not be promoted to LLM replication."
+  },
+  "provenance": [
+    "https://proceedings.mlr.press/v330/singh26b.html",
+    "https://arxiv.org/abs/2503.02844",
+    "https://github.com/Pauljanson002/beyond-cosine/commit/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/README.md",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/util/lr_infinite.py",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/util/lr_sched.py",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/main_pretrain.py",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/engine_pretrain.py",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/util/misc.py",
+    "https://github.com/Pauljanson002/beyond-cosine/blob/394a15aa45b4b8f9109ac57a2b8821fcf0cc9d57/bin/install_env.sh"
+  ]
+}
