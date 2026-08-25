@@ -1,0 +1,170 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T17:00:20+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_feedback": false
+  },
+  "search_bias": "benchmark-design and measurement-validity first; then judge reliability, process verification, downstream-valid reward-model evaluation, and uncertainty calibration",
+  "sources_checked": [
+    {
+      "title": "LiveBench: A Challenging, Contamination-Free LLM Benchmark",
+      "date": "2024-06-27",
+      "url": "https://arxiv.org/abs/2406.19314"
+    },
+    {
+      "title": "RewardBench 2: Advancing Reward Model Evaluation",
+      "date": "2025-06-02",
+      "url": "https://arxiv.org/abs/2506.01937"
+    },
+    {
+      "title": "Let's Verify Step by Step",
+      "date": "2023-05-31",
+      "url": "https://arxiv.org/abs/2305.20050"
+    },
+    {
+      "title": "ProcessBench: Identifying Process Errors in Mathematical Reasoning",
+      "date": "2024-12-09",
+      "url": "https://arxiv.org/abs/2412.06559"
+    },
+    {
+      "title": "Process Reward Models That Think",
+      "date": "2025-04-23",
+      "url": "https://arxiv.org/abs/2504.16828"
+    },
+    {
+      "title": "Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge",
+      "date": "2024-06-12",
+      "url": "https://arxiv.org/abs/2406.07791"
+    },
+    {
+      "title": "Self-Preference Bias in LLM-as-a-Judge",
+      "date": "2024-10-29",
+      "url": "https://arxiv.org/abs/2410.21819"
+    },
+    {
+      "title": "Revisiting Uncertainty Estimation and Calibration of Large Language Models",
+      "date": "2025-05-29",
+      "url": "https://arxiv.org/abs/2505.23854"
+    },
+    {
+      "title": "Benchmarking Uncertainty Calibration in Large Language Model Long-Form Question Answering",
+      "date": "2026-01-30",
+      "url": "https://arxiv.org/abs/2602.00279"
+    },
+    {
+      "title": "Diagnosing LLM Judge Reliability: Conformal Prediction Sets and Transitivity Violations",
+      "date": "2026-04-16",
+      "url": "https://arxiv.org/abs/2604.15302"
+    },
+    {
+      "title": "Time to REFLECT: Can We Trust LLM Judges for Evidence-based Research Agents?",
+      "date": "2026-05-18",
+      "url": "https://arxiv.org/abs/2605.19196"
+    }
+  ],
+  "candidate_findings": [
+    {
+      "candidate_id": "eval-g1-dynamic-objective-assurance",
+      "mechanism": "Use dynamic, recently sourced, objectively scored benchmark slices as an assurance layer separate from development-tuned evaluations.",
+      "evidence": "LiveBench updates from recent sources and uses objective ground truth specifically to reduce contamination and judge/crowd bias; its initial study reports top-model accuracy below 65%, preserving headroom.",
+      "quantitative": "top models below 65% accuracy in the reported evaluation",
+      "scope": "general LLM capability benchmarking across math, coding, reasoning, language, instruction following, and data analysis",
+      "uncertainty": "Does not by itself solve open-ended agent evaluation where objective ground truth is unavailable."
+    },
+    {
+      "candidate_id": "eval-g1-controlled-intervention-metaeval",
+      "mechanism": "Meta-evaluate judges using controlled, localized interventions that create verifiable reasoning/tool/evidence/report failures rather than relying only on human preference correlation.",
+      "evidence": "REFLECT constructs fine-grained process/outcome failures by controlled interventions on quality-screened research-agent traces; even the best judges remain below 55% overall accuracy, with evidence verification especially weak.",
+      "quantitative": "best-performing judges <55% overall accuracy",
+      "scope": "evidence-based deep research agents",
+      "uncertainty": "Need category-level breakdown and intervention recipes before claiming transfer to other agent families."
+    },
+    {
+      "candidate_id": "eval-g1-per-instance-judge-reliability",
+      "mechanism": "Attach per-instance judge reliability diagnostics using transitivity tests and calibrated prediction sets instead of only aggregate judge accuracy/correlation.",
+      "evidence": "On SummEval, aggregate directed 3-cycle rates were only 0.8-4.1%, yet 33-67% of documents had at least one cycle. Conformal set width correlated with error/difficulty (Spearman +0.576, N=1,918, p<1e-100) and had cross-judge agreement around 0.32-0.38.",
+      "quantitative": "0.8-4.1% aggregate cycle rate; 33-67% documents with a cycle; r_s=+0.576",
+      "scope": "NLG evaluation on SummEval with four judges/four criteria",
+      "uncertainty": "Requires testing on agent traces and binary/pairwise decision settings."
+    },
+    {
+      "candidate_id": "eval-g1-downstream-validated-reward-benchmark",
+      "mechanism": "Treat evaluation quality as downstream predictive validity, not leaderboard discrimination alone; validate reward-model benchmarks against actual inference-time and training behavior.",
+      "evidence": "RewardBench 2 is about 20 points harder on average than RewardBench and reports strong downstream relation. In the paper's Best-of-N study across 113 reward models, benchmark-average vs downstream-average Pearson correlation is 0.87; PPO behavior is more configuration-sensitive, including on/off-policy or model-lineage mismatch.",
+      "quantitative": "~20-point average score drop vs RewardBench; Pearson r=0.87 for Best-of-N downstream average across 113 RMs",
+      "scope": "reward-model evaluation; Best-of-N and PPO downstream uses",
+      "uncertainty": "High benchmark score is not sufficient for PPO quality; deployment distribution matters."
+    },
+    {
+      "candidate_id": "eval-g1-ood-process-verifier-testing",
+      "mechanism": "Evaluate process verifiers on out-of-distribution error-localization benchmarks and prefer data-efficient generative verification where supported, instead of trusting in-domain PRM scores.",
+      "evidence": "ProcessBench reports that existing PRMs often fail to generalize beyond GSM8K/MATH and can underperform prompted critic models. ThinkPRM reports outperforming LLM-as-a-Judge and discriminative verifiers using only 1% of PRM800K labels, including +8% on a GPQA-Diamond subset and +4.5% on a LiveCodeBench subset over discriminative verifiers trained on the full PRM800K; under equal token budget it reports +7.2% on a ProcessBench subset over LLM-as-a-Judge.",
+      "quantitative": "1% process labels; +8% GPQA-Diamond subset; +4.5% LiveCodeBench subset; +7.2% ProcessBench subset under equal token budget",
+      "scope": "step-wise mathematical/reasoning verification with selected OOD generalization tests",
+      "uncertainty": "Results are concentrated in reasoning domains; broader tool-use/process domains remain open."
+    },
+    {
+      "candidate_id": "eval-g1-process-supervision-active-labeling",
+      "mechanism": "Use process-level supervision with active selection of informative steps when reliable intermediate labels are feasible.",
+      "evidence": "Let's Verify Step by Step reports process supervision outperforming outcome supervision on a representative MATH subset, with the process-supervised model solving 78%; it also reports active learning improving process-supervision efficacy and releases 800,000 step-level labels.",
+      "quantitative": "78% on the reported representative MATH subset; 800,000 step-level human labels",
+      "scope": "mathematical reasoning and reward-model training",
+      "uncertainty": "The strongest evidence is math-specific and uses costly human step labels."
+    },
+    {
+      "candidate_id": "eval-g1-judge-order-and-self-bias-audit",
+      "mechanism": "Audit pairwise judges for order stability and model-family/self-style preference before using them as benchmark or training signals.",
+      "evidence": "The position-bias study spans 12 judges, MTBench/DevBench, 22 tasks, about 40 candidate models and >100,000 evaluation instances, finding systematic position bias varying by judge/task and solution quality gap. Separate self-preference work finds GPT-4 significantly favors lower-perplexity/familiar outputs more than humans, suggesting familiarity can masquerade as quality.",
+      "quantitative": ">100,000 pairwise evaluation instances in the position-bias study",
+      "scope": "pairwise LLM-as-a-judge evaluation",
+      "uncertainty": "Exact mitigation efficacy needs direct ablation of order randomization, repeated trials, and cross-family judging."
+    },
+    {
+      "candidate_id": "eval-g1-multimetric-uncertainty",
+      "mechanism": "Evaluate uncertainty with at least two distinct objectives—calibration and error ranking/selective risk—and avoid single-metric ECE-only conclusions.",
+      "evidence": "A 2025 study over 80 models finds linguistic verbal uncertainty generally stronger than token-probability and numerical-verbal methods while emphasizing that high accuracy does not imply reliable uncertainty and good calibration need not imply good error ranking. A 2026 long-form QA benchmark over up to 20 models, seven scientific QA datasets and 685,000 responses reports answer-frequency consistency as the most reliable calibration signal in its setting and warns that ECE alone can be misleading.",
+      "quantitative": "80-model study; 685,000 long-form responses across seven scientific QA datasets in the 2026 benchmark",
+      "scope": "black-box uncertainty estimation and scientific QA",
+      "uncertainty": "Method ranking changes by task and response format; no universal uncertainty estimator established."
+    }
+  ],
+  "rejected_or_scoped_leads": [
+    {
+      "lead": "Single aggregate LLM-judge accuracy/correlation as sufficient reliability evidence",
+      "reason": "Per-instance cycles, controlled-intervention failures, order bias, and calibration gaps can remain hidden by aggregate metrics."
+    },
+    {
+      "lead": "Reward-model benchmark score alone predicts RLHF quality",
+      "reason": "RewardBench 2 shows strong Best-of-N predictive validity but PPO is much more sensitive to policy/RM distribution and lineage."
+    },
+    {
+      "lead": "In-domain PRM benchmark performance implies general process-verifier reliability",
+      "reason": "ProcessBench explicitly reports OOD generalization failures for existing PRMs."
+    },
+    {
+      "lead": "ECE alone is a sufficient uncertainty benchmark metric",
+      "reason": "2026 long-form UQ benchmarking reports misleading conclusions when ECE is used alone; calibration and ranking/selective behavior separate."
+    }
+  ],
+  "frontier": [
+    "Extract REFLECT category-level failure accuracies and exact controlled-intervention construction, especially evidence-verification failures.",
+    "Test whether conformal prediction-set width and transitivity violations transfer from SummEval to research-agent judging and tool-use trace evaluation.",
+    "Collect direct ablations for judge order randomization, repeated judgments, and heterogeneous judge juries; compare reliability gain per unit inference cost.",
+    "Extract RewardBench 2 domain-wise correlations and PPO on/off-policy ablations to identify when downstream predictive validity collapses.",
+    "Search for non-math process-verification benchmarks covering tool use, code execution, retrieval, citation correctness, and long-horizon agent trajectories.",
+    "Compare dynamic contamination-resistant benchmark construction methods that preserve objective scoring while preventing benchmark gaming over repeated model-development cycles.",
+    "Investigate statistically valid certification with noisy LLM judges using small human calibration sets and explicit TPR/FPR modeling.",
+    "Compare uncertainty metrics by decision utility: abstention/selective accuracy, ranking of failures, calibration, and cost—not only ECE/Brier."
+  ],
+  "termination_diagnostics": {
+    "frontier_empty": false,
+    "report_readiness_used_as_stop_condition": false,
+    "additional_frontier_action_before_checkpoint": "After identifying judge-bias/process-verifier leads, searched 2026 meta-evaluation work and added REFLECT plus conformal/transitivity diagnostics as a new branch.",
+    "current_blockers": []
+  },
+  "exact_next_action": "Open the REFLECT paper/repository and extract per-failure-category judge accuracies plus the controlled-intervention taxonomy; then search each hardest category for an objective or intervention-based evaluator and record quantitative ablations. In parallel, retrieve direct mitigation ablations for order bias / heterogeneous judge aggregation to estimate reliability gain per inference cost."
+}
