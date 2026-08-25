@@ -1,14 +1,13 @@
 # Reasoning Systems — CLEAN generation g1 state
 
-Last updated: 2026-08-25 17:00 JST
+Last updated: 2026-08-25 18:15 JST
 
 ## Independence / provenance guard
 
-- This is the first clean-g1 reasoning checkpoint.
 - No `bachikoljunior-blip/O` content or O-derived state was read.
 - No legacy `research_workers/reasoning/` artifacts were read.
 - No comparator/integrator/feed output was read.
-- Initial search for existing `research_workers_clean_g1/reasoning/` records returned no results, so this run started from public external sources only.
+- Continuation used only this clean-g1 state plus public external sources.
 
 ## Search bias / seed trajectory
 
@@ -18,186 +17,263 @@ Reproducible benchmark-leader first, then mechanism-ablation branching across:
 3. Process-level verifier rewards for RL credit assignment.
 4. Hierarchical proof decomposition for verified code.
 5. Joint program-and-proof planning for verified synthesis.
+6. Learned refinement/search policies over compiler failure modes.
+7. Repository-context selection for real-world verification.
 
-Primary-source preference: arXiv/OpenReview plus released code when available.
+Primary-source preference: arXiv/OpenReview plus released code/artifacts when available.
 
 ## Candidate findings
 
-### C1 — Verifier-guided iterative repair is much more sample-efficient than pure resampling in Lean
+### C1 — Verifier-guided iterative repair is more sample-efficient than pure resampling in Lean
 
-Primary source: Goedel-Prover-V2 paper, arXiv:2508.03613, and released code at `Goedel-LM/Goedel-Prover-V2`.
+Primary source: Goedel-Prover-V2, arXiv:2508.03613.
 
 Evidence:
-- Goedel-Prover-V2-32B: MiniF2F pass@32 = 88.1%; with two rounds of Lean-compiler-guided self-correction = 90.4%.
-- PutnamBench at pass@32: 43 solved without correction vs 57 with correction.
-- Extended self-correction (128k context, up to 5 revisions) reaches 92.7% MiniF2F pass@32, slightly above the same model’s 92.2% vanilla result at pass@8192.
-- Ablations remove specific compiler error messages and previous reasoning traces. Removing exact compiler errors materially degrades correction; removing prior reasoning also degrades somewhat.
-- The paper reports late-stage SFT/RL diversity collapse: pass@1 can rise while pass@N falls. Interpolating trained weights with the base model restores some sample diversity and improves pass@N.
+- Goedel-Prover-V2-32B MiniF2F pass@32: 88.1%; with two rounds Lean-compiler-guided self-correction: 90.4%.
+- PutnamBench pass@32: 43 solved without correction vs 57 with correction.
+- Extended correction reaches 92.7% MiniF2F pass@32, slightly above vanilla 92.2% at pass@8192.
+- Compiler-error ablations show exact verifier feedback is materially useful; prior reasoning context also helps.
+- Late-stage SFT/RL can raise pass@1 while reducing pass@N diversity; checkpoint/model averaging restores some strategic coverage.
+
+Scope:
+- Long-context repair means pass count alone is not a token-cost comparison.
+
+Source: https://arxiv.org/abs/2508.03613
+
+### C2 — Same-budget structural diversification can beat more i.i.d. sampling, but it is training-regime dependent
+
+Primary source: arXiv:2601.16172.
+
+Evidence on DeepSeek-Prover-V1.5-RL / MiniF2F-test:
+- i.i.d.: k=16 38/244; k=32 42/244; k=64 42/244.
+- 15 tactic-skeleton schedule: k=16 55/244; k=32 58/244; k=64 60/244.
+- Across 3 seeds at k=16: +12.3 ± 4.2 solved theorems; positive in every seed.
+- Paraphrase diversity matches baseline; irrelevant comments degrade, supporting structural rather than surface-prompt diversity.
+- Counterevidence: on SFT-trained Goedel-Prover the intervention is -10.0 ± 4.4 theorems across 3 seeds.
 
 Mechanism hypothesis:
-- Spend inference compute on conditional repair using high-information verifier diagnostics rather than independent retries.
-- Maintain explicit diversity pressure during post-training because RL can increase single-sample quality while shrinking strategic coverage.
+- Detect RL-induced strategic mode collapse and diversify proof openings only when collapse is present.
 
-Scope / uncertainty:
-- Self-correction uses long contexts (40k in the main setup, 128k in the extended study), so token cost is not directly comparable to pass count alone.
-- Exact Figure-7 ablation point values for "without error messages" / "without prior CoT" were not extracted in this run; only the direction and headline full-model result are recorded.
+Source: https://arxiv.org/abs/2601.16172
 
-Sources:
-- https://arxiv.org/abs/2508.03613
-- https://github.com/Goedel-LM/Goedel-Prover-V2
+### C3 — Lean can supply dense process-level RL credit, but gains are modest and benchmark-dependent
 
-### C2 — Same-budget structural diversification can beat more i.i.d. sampling, but only for some training regimes
+Primary sources: arXiv:2606.20068 and ICLR 2026 OpenReview `Process-Verified Reinforcement Learning for Theorem Proving via Lean`.
 
-Primary source: "Inference-Time Diversity in RL-Trained Lean Theorem Provers" / arXiv:2601.16172.
-
-Evidence on DeepSeek-Prover-V1.5-RL, MiniF2F-test (244 theorems):
-- i.i.d. sampling: k=16: 38/244; k=32: 42/244; k=64: 42/244.
-- Fixed schedule of 15 tactic skeletons: k=16: 55/244; k=32: 58/244; k=64: 60/244.
-- Across 3 seeds at k=16, mean gain is +12.3 ± 4.2 theorems; sign positive in every seed.
-- Prompt-paraphrase diversity matches the ordinary baseline; irrelevant Lean-comment perturbations degrade it. This supports a structural-strategy, not surface-prompt-diversity, mechanism.
-- Important counterevidence/scope limit: the same intervention on SFT-trained Goedel-Prover is reported as -10.0 ± 4.4 theorems across 3 seeds. Therefore tactic-skeleton forcing is not universally beneficial and appears tied to RL-induced mode narrowing.
-
-Mechanism hypothesis:
-- Detect strategic mode collapse (e.g., repeated first-tactic heads) and allocate samples across semantically distinct proof openings rather than merely increasing temperature/sample count.
-- Gate structural diversification on evidence of policy collapse; do not apply it blindly to SFT-like policies.
-
-Source:
-- https://arxiv.org/abs/2601.16172
-
-### C3 — Lean can act as a process oracle for dense, verifier-grounded RL credit assignment
-
-Primary sources: arXiv:2606.20068 and ICLR 2026 OpenReview paper "Process-Verified Reinforcement Learning for Theorem Proving via Lean".
-
-Setup:
-- Proofs are parsed into tactic sequences.
-- Lean identifies locally valid tactics and the earliest failing tactic.
-- Outcome advantage and tactic-level advantage are combined in a GRPO-style objective.
-- First-error propagation and first-token tactic credit are used.
-
-Matched whole-proof results on STP-Lean, MiniF2F-test:
-- supervised STP-Lean baseline: 55.9% pass@32, 56.7% pass@64.
+Evidence on STP-Lean / MiniF2F:
+- supervised: 55.9% / 56.7% pass@32/64.
 - outcome-only GRPO: 55.7% / 57.9%.
-- tactic-only: 55.6% / 56.8%.
-- outcome+tactic: 57.1% / 59.2%.
-Thus the combined signal is +1.4 pp over outcome-only at pass@32 and +1.3 pp at pass@64, and +2.5 pp over the underlying STP-Lean baseline at pass@64.
-
-Credit-assignment ablation (STP-Lean, MiniF2F):
-- tactic advantage to all tactic tokens: 56.3% / 57.8% (pass@32/64)
-- last token: 56.7% / 57.5%
-- first token: 57.1% / 59.2%
-- removing first-error propagation: 56.4% / 58.2%
-
-Generalization / mixed evidence:
-- On DeepSeek-Prover-V1.5 + STP, outcome+tactic gives 56.3% / 57.8% vs supervised 54.9% / 57.2%, so the effect is positive but smaller at pass@64.
-- ProofNet gains are mixed: STP-Lean + process rewards improves pass@32 by 1.4 pp but is ~0.1 pp lower at pass@64 than the supervised STP-Lean baseline.
-- Therefore dense verifier credit is promising but not a uniformly monotone improvement across all models/benchmarks/budgets.
-
-Compute/reporting:
-- 10k STP examples used for RL; 4×A6000; about 21–23 hours; 15s Lean timeout.
+- outcome+tactic reward: 57.1% / 59.2%.
+- tactic advantage on first tactic token: 57.1% / 59.2%; all tactic tokens: 56.3% / 57.8%; last token: 56.7% / 57.5%.
+- removing first-error propagation: 56.4% / 58.2%.
+- ProofNet results are mixed, including one pass@64 setting roughly flat/slightly worse than supervised.
 
 Mechanism hypothesis:
-- Symbolic process feedback can replace a learned PRM in domains with an executable verifier.
-- Credit concentrated at decision-boundary tokens (tactic heads) is better aligned than spreading the same reward over all generated tokens.
+- Symbolic verifier feedback is most useful when credit is placed at decision boundaries rather than smeared across all generated tokens.
 
 Sources:
 - https://arxiv.org/abs/2606.20068
 - https://openreview.net/pdf?id=P00k4DFaXF
 
-### C4 — Hierarchical decomposition dominates brute-force whole-proof generation on long verified-code proofs; RL is a smaller refinement
+### C4 — Hierarchical decomposition is the dominant contributor on long verified-code proofs; RL is a smaller refinement
 
-Primary source: Goedel-Code-Prover, arXiv:2603.19329. Public implementation source was also surfaced at `goedelcodeprover/Goedel-Code-Prover`.
+Primary source: Goedel-Code-Prover, arXiv:2603.19329.
 
-Evidence:
-- Across Verina, Clever, AlgoVeri (427 tasks), Goedel-Code-Prover-8B reports 62.0% overall prove success under its search setting.
-- Verina module swap ablation:
-  - no decomposition + Gemini-3-Flash completion: 19.6%
-  - GPT-5.2-Pro decomposition + Gemini completion: 54.4%
-  - trained decomposer + Gemini completion: 58.2%
-  - GPT-5.2-Pro decomposition + trained completion: 59.2%
-  - trained decomposer + trained completion: 68.8%
-- Matched-budget SFT-vs-RL on the same hierarchical policy (Verina):
-  - pass@1 26.9 → 29.1 (+2.2 pp)
-  - pass@10 44.9 → 46.0 (+1.1)
-  - pass@20 53.9 → 57.1 (+3.2)
-  - pass@32 66.1 → 68.8 (+2.7)
-- The paper explicitly concludes the bulk of the gain comes from hierarchical search + supervised training; RL is a modest, consistent refinement, with only one RL training run and no significance estimate.
-- The unnormalized decomposition score predicts downstream provability on Verina with AUROC 0.903. The same score is used as training reward and inference-time ranking criterion, aligning optimization with deployment.
-- Quickcheck rejects 31.8–46.4% of parallel decomposition runs depending on benchmark; proof reconstruction rejects 44.9–59.4% of decomposition iterations, showing strong value in cheap structural filters before expensive proof completion.
-- Applying the framework to off-the-shelf GPT-OSS-120B raises Verina from 20.1% whole-proof to 44.9% hierarchical search, suggesting decomposition benefits are not only from the trained 8B policy.
+Verina module-swap evidence:
+- no decomposition + Gemini-3-Flash completion: 19.6%.
+- GPT-5.2-Pro decomposition + Gemini completion: 54.4%.
+- trained decomposer + Gemini completion: 58.2%.
+- GPT-5.2-Pro decomposition + trained completion: 59.2%.
+- trained decomposer + trained completion: 68.8%.
 
-Critical limitation:
-- Baseline and hierarchical inference budgets are not compute-matched; the authors explicitly lack comparable token/API/GPU-hour accounting. Do not interpret 62.0% vs 23.8% as a pure algorithmic efficiency ratio.
+Matched hierarchical SFT→RL:
+- pass@1 26.9→29.1; pass@10 44.9→46.0; pass@20 53.9→57.1; pass@32 66.1→68.8.
+- decomposition score predicts downstream provability with AUROC 0.903.
+- cheap quickcheck/reconstruction filters reject a large fraction of bad branches before expensive completion.
 
-Mechanism hypothesis:
-- For long proof obligations, first search over verified decompositions with a dense structural score, then solve leaves.
-- Use cheap falsification/reconstruction filters to prune bad plans before expensive completion.
-- Align the decomposition reward used in training with the ranking score used at inference.
+Scope:
+- whole-proof vs hierarchical headline comparisons are not compute-matched.
 
 Sources:
 - https://arxiv.org/abs/2603.19329
 - https://github.com/goedelcodeprover/Goedel-Code-Prover
 
-### C5 — Jointly planning the artifact and its proof beats sequential "build then prove" planning across models and benchmarks
+### C5 — Jointly planning program and proof beats sequential build-then-prove planning
 
-Primary source: P^3, arXiv:2608.09277 (submitted 2026-08-10).
+Primary source: P^3, arXiv:2608.09277.
 
-Evidence across four frontier backends and three Lean verification benchmarks:
-- P^3 beats the stronger of plain vs program-then-proof baselines in all 12 benchmark/model cells, by +4.6 to +11.2 percentage points.
-- Claude-Opus-4.7 controlled planning ablation:
-  - Verina: implementation-only Plan-Seq 69.8% vs joint P^3 74.6% (+4.8)
-  - AlgoVeri: 44.8% vs 48.1% (+3.3)
-  - Lean4Commit0: 13.9% vs 22.2% (+8.3)
-- On difficult-task subsets, P^3 reduces API cost by 3.0–39.6% and wall-clock by 3.1–37.2% relative to the better baseline for each cell.
-- On Verina with Claude-Opus-4.7, 131/141 successful traces (92.9%) retain the initial plan. Only 4/48 failures (8.3%) are attributed to an inadequate plan; plan retention is only a proxy, not causal proof.
-- Seq often pays for full-restart repair after committing to a hard-to-prove implementation; P^3 checks implementation/proof structural compatibility before elaboration.
+Evidence:
+- Across 4 frontier backends × 3 Lean verification benchmarks, P^3 beats the stronger baseline in all 12 cells by +4.6 to +11.2 pp.
+- Claude-Opus-4.7 controlled planning ablation: Verina 69.8→74.6; AlgoVeri 44.8→48.1; Lean4Commit0 13.9→22.2.
+- On difficult subsets, API cost drops by up to 39.6% and wall-clock by up to 37.2%.
 
-Scope / uncertainty:
-- Each task/model/method configuration is run once; results aggregate across tasks and do not estimate within-task variance.
-- Uses expensive frontier models; transfer to smaller open models is untested in this paper.
+Scope:
+- One run per task/model/method; no within-task variance estimate.
+- Frontier-model transfer to small open models remains untested.
 
-Mechanism hypothesis:
-- In synthesis under formal constraints, choose an implementation representation partly by its expected proof burden, not only runtime/code-quality criteria.
-- Prevent downstream repair loops by jointly selecting implementation invariants, decomposition, and proof strategy before committing.
+Source: https://arxiv.org/abs/2608.09277
 
-Source:
-- https://arxiv.org/abs/2608.09277
+### C6 — Learned refinement search over compiler failure modes gives large fixed-budget gains and adaptively balances restart vs repair
 
-## Cross-finding synthesis (hypotheses, not established universal laws)
+Primary source: `Compile to Compress: Boosting Formal Theorem Provers by Compiler Outputs`, arXiv:2604.18587.
 
-The strongest repeated pattern across independent primary sources is not simply "more search" but **better allocation of search over verifier-relevant structure**:
+Core idea:
+- Lean maps many syntactically diverse failed proofs into a compact distribution of recurring compiler-error classes.
+- The method learns conditional repair on `(problem, failed proof, compiler feedback)` and performs a tree search where expanding the root means a fresh proof and expanding an internal node means repairing a failure.
+- A learned value function chooses which state to expand rather than always preferring restart or repair.
 
-1. **Condition on verifier information** rather than resample blindly (C1, C3).
-2. **Diversify at semantic decision points** when RL has collapsed the policy (C2), but gate this because the same forcing can hurt SFT policies.
-3. **Plan/decompose before local proof generation** for deep obligations (C4, C5).
-4. **Align training signal with inference selection** (C3 first-token credit; C4 same decomposition score at train/inference).
-5. **Use cheap rejectors early** (compiler diagnostics, quickcheck, proof reconstruction) to avoid spending expensive generation on structurally doomed branches.
+Fixed sampling budget = 64:
+- Kimina base: MiniF2F 77.46, ProofNet 14.56, MOBench 7.78, Putnam 10 solved.
+- Kimina + random refinement tree: 81.15, 15.63, 8.61, Putnam 17.
+- Kimina + value-guided tree: 81.97, 15.36, 8.61, Putnam 20.
+- Goedel-V2 base: 84.43, 15.63, 14.72, Putnam 32.
+- Goedel + random refinement: 84.43, 23.72, 30.28, Putnam 63.
+- Goedel + value-guided: 86.89, 24.26, 34.44, Putnam 63.
 
-A high-value composite experiment suggested by the evidence is a fixed-compute comparison among:
-- i.i.d. whole-proof sampling,
-- structural opening diversification,
-- verifier-guided repair,
-- hierarchical decomposition,
-- and combinations such as structural diversity on initial branches + diagnostic repair within each branch,
-all normalized by verifier calls, generated tokens, and wall-clock rather than pass@K alone.
+Putnam scaling:
+- Goedel random: 63 / 80 / 104 solved at budgets 64 / 128 / 256.
+- Goedel value: 63 / 82 / 110.
+- Kimina value: 20 / 23 / 25.
 
-## Rejected / deprioritized leads this run
+Controlled evidence against the explanation “just more supervised data”:
+- Under inference budget 2 on 477 MiniF2F val+test problems: two independent Kimina samples solve 277; Kimina + Claude repair solves 280; SFT repair model solves 284.
+- Goedel cold-start direct-SFT vs expert-iteration refinement under random search on Putnam: direct 32 solved; base refinement 46; cold-start SFT refinement 47; expert-iteration refinement 63. This isolates most of the gain to on-policy iterative repair training rather than merely adding Claude-generated examples.
 
-- **Purely larger pass@K as the main mechanism:** repeatedly shows diminishing returns (Goedel scaling plateaus; DeepSeek V1.5-RL 42/244 at both k=32 and k=64 in the structural-diversity study).
-- **Surface prompt diversity as a substitute for structural diversity:** paraphrase controls do not reproduce tactic-skeleton gains; irrelevant comments can hurt.
-- **Treating RL as the dominant contributor in hierarchical verification:** Goedel-Code-Prover ablation shows hierarchical search/SFT provides most of the gain; RL adds only ~1.1–3.2 pp in the matched-budget ablation.
-- **Treating process rewards as universally better:** ProofNet pass@64 is essentially flat/slightly worse in one STP comparison; model/budget dependence must be preserved.
-- **Raw leaderboard comparisons with unmatched compute:** explicitly rejected for Goedel-Code-Prover vs parallel-generation baselines.
+Search-policy evidence:
+- On a Putnam case study, random tree expansion found a proof after 45 node expansions; value-guided search found one after 5. This is anecdotal, not an aggregate efficiency estimate.
+- Value guidance can select the root when restart is predicted to be better, so the useful mechanism is adaptive budget allocation between exploration and repair, not unconditional repair.
+
+Token accounting:
+- Goedel-V2 vs Goedel-Expert at Putnam budget 256: avg input 336.49 vs 3560.39 tokens; avg output 10145.58 vs 3555.41. Refinement spends more prompt/input context but far fewer generated tokens.
+- On MiniF2F budget 64: input 271.30 vs 2799.80; output 6267.47 vs 3538.73.
+
+Important scope:
+- This is the closest Lean study found to a fixed-budget composite of direct exploration + verifier-guided repair, but it does not explicitly impose tactic-skeleton/semantic branch diversity like C2.
+- Therefore the exact composite “structurally diversified initial branches + learned compiler-guided repair” remains untested in a matched Lean benchmark.
+
+Source: https://arxiv.org/abs/2604.18587
+
+### C7 — A direct diversity+repair composite exists in deductive program verification, though not yet as a matched Lean theorem-proving study
+
+Primary source: `Diversifying to Verify: When Task-Equivalent Programs Differ in Verifiability`, arXiv:2607.09366.
+
+Setup:
+- 73 programming tasks.
+- For each task, generate four structurally distinct Why3/WhyML variants: array-recursive, array-imperative, list-recursive, list-imperative.
+- Freeze the accepted representation-specific contract, then perform bounded verifier-guided annotation repair for up to two passes.
+
+Evidence:
+- 292 artifacts total; 96 verify initially (32.9%).
+- Repair pass 1 verifies 35 more; pass 2 verifies 23 more; final 154/292 (52.7%).
+- Task level: at least one variant verifies for 49/73 tasks (67.1%).
+- Strongest single family verifies 44/73 tasks, so cross-structure diversity adds 5 solved tasks beyond that family.
+- Per-family final rates: array-recursive 60.3%, array-imperative 47.9%, list-recursive 54.8%, list-imperative 47.9%.
+
+Interpretation:
+- This supports a composite architecture: diversify artifact structure first, then perform local verifier-guided repair within each branch.
+- The benefit is not merely multiple stochastic samples; the variants deliberately alter representation/control structure.
+
+Critical limitations:
+- Why3/SMT-backed program verification, not Lean theorem proving.
+- No same-compute comparison against four i.i.d. implementations, so the marginal gain attributable specifically to structural diversity is not fully isolated.
+- Representation-specific contracts are intended to express the same task semantics but are not formally proved equivalent to one another.
+
+Source: https://arxiv.org/abs/2607.09366
+
+### C8 — Targeted repair supervision can make a 4B model outperform a 32B prover on isolated Lean repair, but end-to-end impact is not established
+
+Primary source: `Learning to Repair Lean Proofs from Compiler Feedback` (APRIL), arXiv:2602.02990.
+
+Dataset:
+- ~260k supervised tuples of erroneous proof, fixed proof, compiler diagnostics/proof state, natural-language explanation, and repair suggestion.
+- Errors are constructed by mutating known verified proofs; theorem-level splitting is used to limit direct leakage.
+
+Single-shot repair accuracy:
+- Goedel-Prover-V2-8B baseline: 15.5% overall.
+- Goedel-Prover-V2-32B baseline: 26.8%.
+- Kimina-Prover-8B baseline: 11.1%.
+- Qwen3-4B-Instruct baseline: 1.1%.
+- finetuned Goedel-8B: 34.6%.
+- finetuned Kimina-8B: 31.9%.
+- finetuned Qwen3-4B: 27.4%, slightly above the 32B Goedel baseline under this repair-only protocol.
+
+Error-type results for finetuned Goedel-8B:
+- tactic 41.7%, line 18.5%, theorem 36.8%, multi-line 20.8%.
+
+Interpretation:
+- Explicit supervised error diagnosis/repair is a learnable capability distinct from end-to-end proof generation, and specialized repair data can outweigh model scale on that narrow task.
+
+Critical limitations:
+- Evaluation is on the same synthetic mutation family used to construct the training distribution; transfer to naturally occurring failed proofs is not established here.
+- The paper evaluates isolated single-shot repair, not whether APRIL finetuning improves end-to-end theorem-solving pass@K when integrated with a search policy.
+- Therefore APRIL is best treated as a candidate training signal for a repair module, not evidence by itself of system-level theorem-proving gains.
+
+Source: https://arxiv.org/abs/2602.02990
+
+### C9 — Repository-scale verification needs retrieval/context selection; curated dependency context materially beats dumping the repository
+
+Primary source: VeriSoftBench, arXiv:2602.18307.
+
+Benchmark:
+- 500 Lean proof obligations from 23 real-world formal-methods repositories.
+- Average 68 transitive dependencies per task, max 480; project-specific definitions/lemmas are common.
+- General-purpose models use pass@8 plus up to 3 compiler-feedback repair rounds.
+
+Curated dependency context vs full-repository context:
+- Gemini-3-Pro: 41.0% vs 34.8%.
+- Claude Opus 4.5: 31.2% vs 23.2%.
+- GPT-5.2: 12.6% vs 10.8%.
+- Goedel-Prover-v2: 5.6% curated on 496 tasks; 0% full-context on a 44-task subset constrained by context limits.
+
+Important nuance:
+- Curated context is derived using dependencies of the ground-truth proof, so it is an oracle/best-case premise-selection condition, not a deployable retrieval method by itself.
+- Full context can sometimes contain useful analogous proofs/abstraction patterns absent from the curated set, so “less context is always better” is not supported.
+- The real unresolved problem is learned retrieval/selection that approximates the dependency closure without access to the ground-truth proof while retaining useful structural analogies.
+
+Source: https://arxiv.org/abs/2602.18307
+
+## Cross-finding synthesis (hypotheses, not universal laws)
+
+The evidence now supports a more precise search architecture than “sample more”:
+
+1. **Allocate test-time compute adaptively between fresh branches and repair** (C1, C6), rather than choosing only restart or only refinement.
+2. **Diversify at semantic/structural decision points when policy collapse exists** (C2), while gating because forced structure can hurt SFT policies.
+3. **Repair locally using high-information verifier diagnostics** (C1, C6, C8), ideally with a repair model explicitly trained on failures.
+4. **Search over artifact/proof structure before local completion** (C4, C5, C7).
+5. **Use verifier-compatible dense scores/cheap rejectors to route budget early** (C3, C4, C6).
+6. **Treat premise/context selection as part of reasoning** on repository-scale problems (C9), not as a passive prompt-construction detail.
+7. **Do not infer system-level theorem-solving gains from isolated repair benchmarks** (C8), and do not infer structural-diversity gains without matched i.i.d. controls (C7).
+
+A high-value composite experiment remains:
+- same base Lean prover and same total verifier-call/token/wall-clock budget;
+- initial branches allocated either i.i.d. or by structural tactic/opening diversity;
+- each failed branch optionally repaired by a learned compiler-conditioned model;
+- a learned value/router chooses restart vs which failed branch to refine;
+- repository tasks add a learned context selector;
+- evaluate both pass@budget and efficiency, plus diversity/repairability diagnostics.
+
+## Rejected / deprioritized leads
+
+- **Pure pass@K scaling as the primary mechanism:** repeated plateaus/diminishing returns.
+- **Surface prompt paraphrases as structural diversity:** controlled evidence says no.
+- **Unconditional structural forcing:** can hurt SFT provers.
+- **Unconditional repair:** C6 shows value-guided search sometimes correctly prefers fresh generation.
+- **Treating extra SFT data as the explanation for refinement gains:** C6 expert-iteration ablation argues against this.
+- **Using APRIL headline “4B > 32B” as evidence of a generally stronger prover:** it is repair-only and distribution-specific.
+- **Raw full-repository context as a substitute for premise selection:** C9 consistently degrades relative to oracle-curated dependencies and can exceed model context limits.
+- **Leaderboard comparisons with unmatched compute or different tool budgets:** preserve as descriptive only.
 
 ## Nonempty frontier queue
 
-1. **Composite same-budget test:** find or construct existing studies combining structural-diverse initial proof branches with compiler-guided repair under the same verifier-call/token budget.
-2. **APRIL proof-repair branch:** extract exact single-shot repair gains, error taxonomy, and whether repair training improves end-to-end theorem solving rather than only isolated repair.
-3. **Repository-context branch:** study VeriSoftBench’s dependency-closure context result and retrieval/selection mechanisms; quantify how much repository-context curation moves verified success.
-4. **Hierarchical search compute accounting:** look for independent replication or token/verifier-call accounting for Goedel-Code-Prover / related hierarchical provers.
-5. **P^3 replication/open-artifact branch:** inspect released harness/data and seek open-model replication; distinguish planning benefit from frontier-model capability.
-6. **Mode-collapse diagnostic branch:** identify cheap metrics (first tactic head entropy, semantic proof-tree diversity, verifier-state diversity) that predict when structural prompting will help vs hurt.
-7. **Program synthesis branch beyond Lean:** compare CEGIS/test-driven repair/SMT counterexample loops with Lean diagnostic repair under matched generation budgets.
+1. **Exact Lean composite test remains open:** find a study combining explicit structural/tactic diversity with learned compiler-guided repair/value routing under matched verifier-call/token budgets. `Compile to Compress` covers adaptive fresh-vs-repair search but not explicit structural branch diversification.
+2. **End-to-end APRIL integration:** search for follow-up work integrating APRIL-style repair finetuning into theorem-solving search and report pass@K/compute, not isolated repair accuracy.
+3. **Mode-collapse diagnostics:** find cheap predictors for when tactic-skeleton diversification helps vs hurts (first-tactic entropy, proof-state diversity, semantic tactic clusters, verifier-error diversity).
+4. **Learned context selection on VeriSoftBench:** identify retrieval methods that approximate oracle dependency closure without using ground-truth proofs, and compare against full context under the same model/repair budget.
+5. **Hierarchical search compute accounting:** seek token/verifier-call/wall-clock matched replication of Goedel-Code-Prover-style decomposition.
+6. **P^3 open-model replication:** distinguish planning benefit from frontier-model capability.
+7. **Cross-verifier generalization:** compare CEGIS/SMT counterexample loops, Why3 repair, Lean compiler repair, and Dafny/Verus feedback using normalized generation/verifier budgets.
+8. **Failure-mode routing:** test whether compiler-error category predicts repair success sufficiently well to allocate attempts per error class rather than a single global repair policy.
 
 ## Exact next action
 
-Next run should begin with frontier item 1: search for experiments that combine **semantic/structural branch diversity + verifier-guided repair** and report matched verifier-call/token budgets. If none exist, branch to APRIL (item 2) and extract exact repair-vs-regeneration ablations, while preserving the absence of a direct composite study as a research gap rather than inferring synergy.
+Begin with frontier item 1 using targeted queries for Lean systems that combine explicit tactic/semantic branch diversity with compiler-guided learned repair or restart-vs-repair routing. If no matched study is found, move immediately to item 3 and extract quantitative predictors of RL mode collapse / strategy diversity that could serve as a routing gate. Preserve “no direct matched study found” as a research gap rather than assuming the combination is synergistic.
