@@ -1,0 +1,304 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T06:58:06+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T060525_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "bef75c9992d531894760890e0a092f1e7eb0da0e",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "head_changed_after_freeze_to": "6d0039cf600317152acdc9a08704cf5c9ab3cf16",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": [
+      "own evaluation LATEST/checkpoint",
+      "public sources",
+      "sanitized DESIRED_STATE",
+      "evaluation role config"
+    ],
+    "head_resolution": "SHA-only refs/heads/main; no commit messages/diffs used semantically."
+  },
+  "search_bias": "evaluation/verifiers; measurement validity; paired anytime-valid acceptance, nuisance-discordance adaptation, and finite-horizon power",
+  "public_sources": [
+    {
+      "title": "PACE: Anytime-Valid Acceptance Tests for Self-Evolving Agents",
+      "authors": "Zayx Shawn",
+      "date": "2026-06-06",
+      "url": "https://arxiv.org/abs/2606.08106",
+      "used_scope": "Direct agent application of a paired discordant-outcome betting e-process. Default alpha=0.05, lambda=0.5. The theorem is per candidate conditional on its evaluation stream, not a run-level familywise guarantee; the paper explicitly treats loop-level adaptive reuse of the dev set as empirical rather than a theoretical claim. Demonstrated only for prompt-level Qwen2.5 agents on GSM8K, SVAMP and ARC-Challenge."
+    },
+    {
+      "title": "E-values for k-Sample Tests with Exponential Families",
+      "authors": "Yunda Hao; Peter Grünwald; Tyron Lardy; Long Long; Reuben Adams",
+      "date": "2024-01-24",
+      "url": "https://link.springer.com/article/10.1007/s13171-024-00339-9",
+      "used_scope": "For k=2 Bernoulli blocks, conditioning on the pair sum makes concordant outcomes e-factor 1; sequential block e-variables can be multiplied for optional-stopping-safe tests. Composite alternatives can be handled by mixtures or plug-in methods. Used only to support the general conditioning/mixture design principle, not the worker-local finite-horizon optimization."
+    }
+  ],
+  "new_derivations": {
+    "pace_parameter_translation": {
+      "pace_update": "E <- E * (1 + lambda*(2w-1))",
+      "sign_bet_form": "factor = 2a for candidate-only win; 2(1-a) for incumbent-only win; 1 for concordance",
+      "identity": "a=(1+lambda)/2",
+      "pace_default": "lambda=0.5 => a=0.75",
+      "implication": "PACE's default is exactly a fixed q=0.75 directional sign bet. Its anytime validity follows from the conditional sign null, but fixed a need not be finite-horizon or schedule-robust power-optimal."
+    },
+    "posterior_rho_mixture_projection": {
+      "setup": "Fixed total-task horizon T=50, terminal one-sided exact McNemar rejection geometry. A reference model is used only to choose the predictable sign bet; null validity remains sign-only and therefore does not require the reference discordance model to be correct.",
+      "rho_grid": [
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9
+      ],
+      "posterior": "For history with t tasks and d discordances, posterior weight for fixed rho is proportional to prior(rho)*rho^d*(1-rho)^(t-d).",
+      "bet": "For the next discordant sign, combine reference continuation values with posterior*rho weights, then set a = weighted_H_plus / weighted_(H_plus+H_minus). Because a is predictable, factor 2a/2(1-a)/1 remains a conditional e-variable under any actual predictable discordance schedule satisfying sign symmetry.",
+      "priors_tested": "uniform, center-heavy, extreme-heavy, low-rho-heavy, high-rho-heavy, plus power-law low-rho priors proportional to (1-rho)^gamma.",
+      "scope": "Worker-local derivation/simulation. This is not a published theorem of PACE or Hao et al.; only the one-step sign-e validity is analytic."
+    }
+  },
+  "simulation": {
+    "alpha": 0.05,
+    "T": 50,
+    "alternative_discordant_candidate_win_prob": 0.75,
+    "reps_per_schedule_alternative": 250000,
+    "reps_per_schedule_null": 250000,
+    "actual_discordance_schedules": {
+      "rho0.2": "constant 0.2",
+      "rho0.4": "constant 0.4",
+      "rho0.6": "constant 0.6",
+      "increasing": "linear 0.1 -> 0.7 over tasks",
+      "decreasing": "linear 0.7 -> 0.1 over tasks",
+      "ahead_high": "predictable: rho=0.7 when cumulative discordant sign lead >=0, else 0.1",
+      "ahead_low": "predictable: rho=0.1 when cumulative discordant sign lead >=0, else 0.7"
+    },
+    "policies": {
+      "PACE": "fixed a=0.75 (lambda=0.5)",
+      "ref0.1": "fixed reference-rho rejection projection",
+      "ref0.2": "fixed reference-rho rejection projection",
+      "ref0.4": "fixed reference-rho rejection projection",
+      "mix_lowpow4": "posterior rho-mixture, prior weights proportional to (1-rho)^4",
+      "mix_lowpow6": "posterior rho-mixture, prior weights proportional to (1-rho)^6"
+    },
+    "reject_by_T_alternative": {
+      "rho0.2": {
+        "PACE": 0.157024,
+        "ref0.1": 0.309436,
+        "ref0.2": 0.337152,
+        "ref0.4": 0.237684,
+        "mix_lowpow4": 0.320748,
+        "mix_lowpow6": 0.322432
+      },
+      "rho0.4": {
+        "PACE": 0.539316,
+        "ref0.1": 0.418072,
+        "ref0.2": 0.577636,
+        "ref0.4": 0.651676,
+        "mix_lowpow4": 0.60278,
+        "mix_lowpow6": 0.583304
+      },
+      "rho0.6": {
+        "PACE": 0.746732,
+        "ref0.1": 0.45752,
+        "ref0.2": 0.661528,
+        "ref0.4": 0.799832,
+        "mix_lowpow4": 0.74122,
+        "mix_lowpow6": 0.708328
+      },
+      "increasing": {
+        "PACE": 0.540924,
+        "ref0.1": 0.376208,
+        "ref0.2": 0.52592,
+        "ref0.4": 0.647276,
+        "mix_lowpow4": 0.524528,
+        "mix_lowpow6": 0.505528
+      },
+      "decreasing": {
+        "PACE": 0.543136,
+        "ref0.1": 0.43278,
+        "ref0.2": 0.584108,
+        "ref0.4": 0.585896,
+        "mix_lowpow4": 0.507328,
+        "mix_lowpow6": 0.512792
+      },
+      "ahead_high": {
+        "PACE": 0.732456,
+        "ref0.1": 0.46758,
+        "ref0.2": 0.6627,
+        "ref0.4": 0.780572,
+        "mix_lowpow4": 0.769956,
+        "mix_lowpow6": 0.748368
+      },
+      "ahead_low": {
+        "PACE": 0.013972,
+        "ref0.1": 0.141704,
+        "ref0.2": 0.112568,
+        "ref0.4": 0.037672,
+        "mix_lowpow4": 0.120388,
+        "mix_lowpow6": 0.125768
+      }
+    },
+    "cross_by_T_null_sanity": {
+      "rho0.2": {
+        "PACE": 0.00618,
+        "ref0.1": 0.036524,
+        "ref0.2": 0.028404,
+        "ref0.4": 0.014328,
+        "mix_lowpow4": 0.026992,
+        "mix_lowpow6": 0.027948
+      },
+      "rho0.4": {
+        "PACE": 0.0222,
+        "ref0.1": 0.040592,
+        "ref0.2": 0.03824,
+        "ref0.4": 0.034012,
+        "mix_lowpow4": 0.033964,
+        "mix_lowpow6": 0.03418
+      },
+      "rho0.6": {
+        "PACE": 0.030496,
+        "ref0.1": 0.038592,
+        "ref0.2": 0.040632,
+        "ref0.4": 0.038872,
+        "mix_lowpow4": 0.035232,
+        "mix_lowpow6": 0.035388
+      },
+      "increasing": {
+        "PACE": 0.02262,
+        "ref0.1": 0.041412,
+        "ref0.2": 0.039468,
+        "ref0.4": 0.038932,
+        "mix_lowpow4": 0.038588,
+        "mix_lowpow6": 0.038612
+      },
+      "decreasing": {
+        "PACE": 0.021696,
+        "ref0.1": 0.036212,
+        "ref0.2": 0.035328,
+        "ref0.4": 0.023144,
+        "mix_lowpow4": 0.020452,
+        "mix_lowpow6": 0.023068
+      },
+      "ahead_high": {
+        "PACE": 0.0304,
+        "ref0.1": 0.038548,
+        "ref0.2": 0.0418,
+        "ref0.4": 0.040156,
+        "mix_lowpow4": 0.039292,
+        "mix_lowpow6": 0.03928
+      },
+      "ahead_low": {
+        "PACE": 0.000508,
+        "ref0.1": 0.018528,
+        "ref0.2": 0.011656,
+        "ref0.4": 0.002756,
+        "mix_lowpow4": 0.013444,
+        "mix_lowpow6": 0.014464
+      }
+    },
+    "summary": {
+      "PACE": {
+        "min_across_schedules": 0.013972,
+        "mean_across_schedules": 0.46765057142857147,
+        "max_empirical_null_cross": 0.030496
+      },
+      "ref0.1": {
+        "min_across_schedules": 0.141704,
+        "mean_across_schedules": 0.37189999999999995,
+        "max_empirical_null_cross": 0.041412
+      },
+      "ref0.2": {
+        "min_across_schedules": 0.112568,
+        "mean_across_schedules": 0.49451600000000007,
+        "max_empirical_null_cross": 0.0418
+      },
+      "ref0.4": {
+        "min_across_schedules": 0.037672,
+        "mean_across_schedules": 0.5343725714285714,
+        "max_empirical_null_cross": 0.040156
+      },
+      "mix_lowpow4": {
+        "min_across_schedules": 0.120388,
+        "mean_across_schedules": 0.5124211428571429,
+        "max_empirical_null_cross": 0.039292
+      },
+      "mix_lowpow6": {
+        "min_across_schedules": 0.125768,
+        "mean_across_schedules": 0.5009314285714286,
+        "max_empirical_null_cross": 0.03928
+      }
+    },
+    "interpretation": [
+      "The fixed PACE default is powerful when discordances are plentiful but is highly brittle in the ahead_low schedule: reject-by-50 is about 1.4%, versus 12.0-12.6% for the low-rho posterior mixtures and 14.2% for an extreme static rho_ref=0.1.",
+      "Pure maximin across these seven schedules favors rho_ref=0.1 (about 14.2% worst-case) but its average reject rate is only about 37.2%. A posterior mixture with low-rho prior is a better robustness/typical-power compromise: gamma=4 gives about 12.0% worst-case and 51.2% average; gamma=6 gives about 12.6% worst-case and 50.1% average.",
+      "A rho_ref tuned to common rho=0.4 has the highest average among the selected policies (about 53.4%) but only about 3.8% worst-case, exposing strong nuisance-schedule mismatch.",
+      "All selected sign e-processes had maximum empirical null crossing below 0.05 in the 250k-rep sanity checks, including outcome-adaptive schedules; this is consistent with, but is not a substitute for, the analytic one-step martingale argument."
+    ]
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-pace-agent-commit-gate-v1",
+      "mechanism": "Use identical evaluation instances for incumbent/candidate, discard concordant binary pairs, multiply a sign betting e-process over discordances, and accept only at E>=1/alpha.",
+      "evidence": "PACE primary preprint reports 30-42% false and 10-33% harmful greedy commits in controlled prompt-evolution experiments, versus 0/5 audit-labelled false commits for PACE, ~18% lower evaluation cost, and strong churn suppression in stochastic experiments.",
+      "scope_guard": "Prompt-level Qwen2.5 0.5B-3B on GSM8K/SVAMP/ARC; 3-5 seeds; audit labels are finite-sample measurements. The guarantee is per candidate conditional on its evaluation stream, not loop-level FWER/FDR. System-level transfer is argued, not demonstrated."
+    },
+    {
+      "candidate_id": "eval-g1-posterior-rho-mixture-directional-projection-v1",
+      "mechanism": "Use a posterior mixture over possible discordance rates only to choose the finite-horizon directional sign bet; keep e-validity anchored to predictable sign factors so actual rho may be misspecified or outcome-adaptive.",
+      "evidence": "Worker-local 250k-rep/schedule simulations at T=50, q=0.75 show low-rho posterior mixtures materially reduce schedule brittleness relative to PACE's fixed lambda=0.5 and to a single rho_ref tuned for typical conditions.",
+      "scope_guard": "Simulation model only; binary paired outcomes, one-sided sign null, T=50, specific rho schedules and q=0.75. No claim of universal optimality."
+    },
+    {
+      "candidate_id": "eval-g1-utility-explicit-rho-reference-selection-v1",
+      "mechanism": "Choose reference-rho prior by explicit decision utility (maximin, average power, or weighted deployment prior), rather than labeling one finite-horizon betting policy globally optimal.",
+      "evidence": "In the same seven-schedule stress test, static rho_ref=0.1 maximizes observed worst-case rejection but loses large average power; rho_ref=0.4 maximizes selected average but collapses under low-when-ahead adaptation; low-rho mixtures occupy the middle Pareto region.",
+      "scope_guard": "The schedule set is a stress-test family, not a deployment distribution. Utility weights must be predeclared or separately justified."
+    }
+  ],
+  "measurement_validity_rules": {
+    "rule_1": "Separate anytime validity from power robustness: a fixed betting fraction can remain exactly valid yet have near-zero resolution under plausible adaptive discordance schedules.",
+    "rule_2": "For paired agent acceptance, report the conditional sign-null assumption explicitly. 'McNemar-style' pairing alone does not establish loop-level validity when candidate generation and dev-set reuse are adaptive.",
+    "rule_3": "Per-candidate false-commit control is not run-level familywise/FDR control. Report which guarantee is actually claimed.",
+    "rule_4": "When a nuisance model is used only for bet selection, validate by the true one-step filtration identity and stress-test nuisance mismatch separately.",
+    "rule_5": "Select finite-horizon betting/reference policies against an explicit utility or deployment prior; do not infer universal superiority from one rho/q/horizon."
+  },
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Analyze finite reused-dev-set validity for PACE-style gates when candidates are generated adaptively from the same D across rounds. Determine conditions under which the within-candidate conditional sign null remains defensible, and distinguish optional stopping within a candidate from adaptive data reuse across candidates."
+    },
+    {
+      "priority": 2,
+      "action": "Derive a continuous/Beta prior rho-mixture projection and optimize prior hyperparameters under explicit maximin versus Bayes-weighted utilities; compare to static rho_ref, PACE fixed lambda, and prior Bellman results across T=10,20,30,50."
+    },
+    {
+      "priority": 3,
+      "action": "Generalize the directional projection to uncertain/varying sign effect q and to two-sided superiority/noninferiority gates; include boundary randomization/discreteness handling where exact terminal tests leave alpha slack."
+    },
+    {
+      "priority": 4,
+      "action": "Search online-FWER/FDR/e-value allocation methods suitable for repeated candidate commits, while preserving the per-candidate paired e-process and without conflating run-level control with within-candidate optional stopping."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Investigate the reused finite dev-set / adaptive-candidate-generation gap exposed explicitly by PACE: formalize when Pr(w_i=1 | within-candidate history)<=1/2 still follows after D has already steered earlier candidate generation, then compare remedies such as fresh audit data, reusable-holdout mechanisms, or run-level e-value allocation without sacrificing paired anytime-valid stopping."
+}
