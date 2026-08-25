@@ -1,0 +1,134 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-25T21:59:03+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-25T210603_JST.json",
+  "inherits_prior_candidates": true,
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_comparator_or_integrator_feedback": false,
+    "read_other_worker_state": false,
+    "feedback_path_checked": "research_feedback_clean_g1/evaluation/FEEDBACK.json",
+    "feedback_status": "absent_404"
+  },
+  "search_bias": "benchmark-design and measurement-validity first; post-selection validity for dependency-unit choice, few-cluster robustness, leverage/effective-cluster diagnostics, and multi-way dependence",
+  "sources_checked_or_revisited": [
+    {
+      "title": "Testing for the appropriate level of clustering in linear regression models",
+      "date": "2023-08",
+      "url": "https://doi.org/10.1016/j.jeconom.2023.03.005",
+      "primary": true,
+      "action": "deep extraction of sequential cluster-level testing, family-wise-error guarantee for the clustering diagnostic itself, and the separate pre-test inference failure when the selected level is reused for confidence intervals"
+    },
+    {
+      "title": "Testing for the appropriate level of clustering in linear regression models — 2020 working-paper version",
+      "date": "2020-10-30",
+      "url": "https://econ.ucsb.edu/sites/default/files/2021-01/James_MacKinnon_Paper.pdf",
+      "primary": true,
+      "action": "visually inspected the RMSE and coverage simulation figures; extracted 400,000-replication undercoverage pattern caused by Type-II cluster-selection errors"
+    },
+    {
+      "title": "Fast and reliable jackknife and bootstrap methods for cluster-robust inference",
+      "date": "2023-02-13",
+      "url": "https://doi.org/10.1002/jae.2969",
+      "primary": true,
+      "action": "extracted WCR-S/CV3 finite-sample evidence, leverage/effective-cluster diagnostics, and failure modes under small or heterogeneous clusters/few treated clusters"
+    },
+    {
+      "title": "Cluster-robust inference: A guide to empirical practice",
+      "date": "2023-02",
+      "url": "https://doi.org/10.1016/j.jeconom.2022.04.001",
+      "primary": true,
+      "action": "cross-checked practical guidance that cluster-level testing is a diagnostic but same-data pre-testing can over-reject; extracted bootstrap/few-treated-cluster caveats"
+    },
+    {
+      "title": "Wild Bootstrap and Asymptotic Inference With Multiway Clustering",
+      "date": "2021",
+      "url": "https://doi.org/10.1080/07350015.2019.1677473",
+      "primary": true,
+      "action": "opened a multi-way dependence branch: one-way clustering under two-way dependence can produce severe inference error; bootstrap accuracy is generally better especially when a clustering dimension has few clusters"
+    },
+    {
+      "title": "Estimation and inference for causal functions with multi-way clustered data",
+      "date": "2025",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0304407625002313",
+      "primary": true,
+      "action": "identified a newer multi-way cluster-robust sieve-score bootstrap and cross-fitting branch with valid uniform bands asymptotically and better finite-sample size control than full-sample pointwise inference; detailed table extraction remains frontier work"
+    }
+  ],
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-dependency-unit-selection-is-diagnostic-not-inferential-v1",
+      "mechanism": "Use tests of candidate dependence/clustering levels to diagnose and document the likely independent evaluation unit, but do not automatically use the same data to choose a finer variance model and then treat downstream confidence intervals, sequential stopping, or pass/fail gates as if the clustering level had been fixed ex ante. For decision-critical inference, pre-specify a defensible coarse unit, use an independently calibrated/split sample for level selection, or employ a selection-aware procedure; otherwise keep the diagnostic separate from the final inferential gate.",
+      "evidence": "MacKinnon, Nielsen and Webb's bottom-up score-variance procedure uses the intersection-union principle and determines a nested clustering level without inflating the family-wise rejection rate of the clustering tests themselves. But Section 3.5/6.4 explicitly separates that guarantee from coefficient inference: selecting fine versus coarse clustering by the test is pre-testing. In 400,000-replication simulations, pre-test confidence intervals slightly over-cover when the fine/no-clustering null is exactly true, then under-cover more than always-coarse intervals at intermediate coarse-correlation strength because Type-II errors select an interval that is too short. The undercoverage is more pronounced with a 0.05 pre-test than a 0.20 pre-test; larger N reduces the problematic region by raising selection power.",
+      "quantitative": "Final-paper experiment: 12 coarse clusters; 4,800 or 24,000 observations; 400,000 replications. Earlier working-paper figure C.5: N=5,000,G=10 and N=5,000,G=20 pre-test coverage falls to roughly 0.91-0.93 over intermediate dependence for the 0.05 selector before recovering; N=20,000,G=20 narrows that bad region. The final paper states fine/HC3 coverage rapidly falls below 0.90 once coarse dependence is present, while pre-test intervals still under-cover more than coarse CV3 intervals at intermediate dependence.",
+      "scope": "Nested one-dimensional clustering in linear regression, not a direct theorem for agent benchmarks. The transferable point is the separation between 'selection test has controlled error' and 'post-selection downstream inference remains valid'.",
+      "uncertainty": "Need a direct method for selection-aware sequential inference when the task/trajectory/step hierarchy itself is estimated from evaluation data. Sample splitting is safe conceptually but may waste scarce independent tasks."
+    },
+    {
+      "candidate_id": "eval-g1-few-effective-clusters-bootstrap-gate-v1",
+      "mechanism": "Before trusting asymptotic benchmark uncertainty or small apparent score deltas, compute diagnostics at the candidate independent-unit level: raw cluster count, effective cluster count, cluster-size imbalance, leverage/influence, and treatment/success-condition concentration. When clusters are few or heterogeneous, prefer a cluster-jackknife-aware restricted wild bootstrap (WCR-S-like resampling) or another validated small-cluster method over naive normal/t inference. Treat bootstrap validity itself as configuration-dependent rather than automatic.",
+      "evidence": "MacKinnon, Nielsen and Webb show conventional CV1 inference can fail badly even with many nominal clusters when leverage/size imbalance is strong. Their WCR-S bootstrap transforms restricted scores with a cluster-jackknife correction. In 400,000-replication experiments with 24 clusters, 9,600 observations and varying cluster imbalance or regressor dimension, WCR-S consistently improves on classic WCR-C and often performs extremely well. With clusters G from 12 to 84, WCR-S is the best method in the skewed-regressor design for every G and performs remarkably well for G>=30. At G=84, nominal 5% rejection was 4.97% for WCR-S versus 9.04% for CV1 and 7.15% for CV2; even CV3 was 5.49%. The authors recommend WCR-S as their single default bootstrap choice, while warning that extreme few-treated-cluster cases can still defeat bootstrap variants.",
+      "quantitative": "Representative null rejection at G=84: WCR-S 4.97%, CV3 5.49%, CV2 7.15%, CV1 9.04%. Simulations use 400,000 replications; the paper generally uses B=399 or 999 for simulation and recommends >=9,999 bootstrap draws in practice. An empirical example has CV3 SE 47% larger than CV1 despite 70 clusters, demonstrating raw G alone is not enough.",
+      "scope": "Linear regression cluster inference. For agent evaluation, the candidate mechanism is the diagnostic structure and cluster-level resampling principle, not literal use of WCR-S unless the score estimator fits its assumptions.",
+      "uncertainty": "Agent outcomes are often bounded, paired, multi-model, and adaptively sampled rather than OLS residuals. Need analogous bootstrap/e-process constructions for paired task-level score differences and sequential looks."
+    },
+    {
+      "candidate_id": "eval-g1-multiway-dependence-map-v1",
+      "mechanism": "Do not assume a single task-level cluster axis is sufficient when evaluation records can share dependence along multiple crossed dimensions. Explicitly map plausible dependence axes (for example task/task-family, generator or policy instance, judge/evaluator, environment seed/source) and test whether one-way clustering materially understates uncertainty. If multiple non-nested axes remain plausible, use a multi-way cluster-aware bootstrap/covariance construction or design the benchmark so one axis is randomized/blocked away.",
+      "evidence": "MacKinnon, Nielsen and Webb's multi-way clustering work shows that using a one-way CRVE when two-way clustering is present can cause extremely severe inference errors, especially at larger sample sizes; conventional t inference with multi-way CRVEs can also be unreliable when either dimension has few clusters, while appropriate wild bootstrap procedures are much more accurate in most simulated cases. A newer 2025 causal-function paper extends score-bootstrap logic to multi-way clustering and proves asymptotically valid uniform confidence bands; its simulations report better finite-sample size control with multi-way cross-fitting than full-sample pointwise inference.",
+      "quantitative": "Evidence here is primarily structural plus extensive simulation direction; exact 2025 Table 6.1 cells are not yet extracted. The older multi-way paper explicitly reports that one-way inference can be 'extremely severe' under true two-way dependence and that bootstrap gains are largest when at least one dimension has few clusters.",
+      "scope": "Crossed/multi-way dependence, distinct from nested step→trajectory→task dependence. Multi-way cluster bootstrap does not by itself solve optional stopping or a hierarchy chosen after seeing outcomes.",
+      "uncertainty": "Need agent-specific simulations with crossed task×judge or task×policy dependence and exact size/coverage comparisons against simple task clustering."
+    }
+  ],
+  "scoped_or_rejected_leads": [
+    {
+      "lead": "A clustering-level test that controls family-wise error makes downstream confidence intervals valid after choosing the cluster level on the same data.",
+      "reason": "Rejected. The clustering diagnostic's FWER and downstream post-selection inference are different guarantees. MacKinnon et al.'s simulations show Type-II selection errors can create substantial intermediate-region undercoverage."
+    },
+    {
+      "lead": "Choose the finest cluster level that a 5% diagnostic fails to reject, because stricter testing is always safer.",
+      "reason": "Rejected. A lower-alpha pre-test makes fewer Type-I errors but more Type-II errors; the paper finds 0.05 pre-test intervals under-cover more severely than 0.20 pre-test intervals at intermediate dependence."
+    },
+    {
+      "lead": "Raw number of clusters is an adequate reliability diagnostic.",
+      "reason": "Rejected. Cluster imbalance, leverage/influence, regressor concentration and treated-cluster count can dominate nominal G; an empirical example has a 47% CV3-vs-CV1 SE gap even with 70 clusters."
+    },
+    {
+      "lead": "Wild cluster bootstrap is automatically trustworthy whenever clusters are few.",
+      "reason": "Rejected. WCR variants can under-reject severely with very few treated clusters, and unrestricted variants can badly over-reject; bootstrap configuration and balance diagnostics matter."
+    },
+    {
+      "lead": "Once task-level clustering is used, additional crossed dependence axes can be ignored.",
+      "reason": "Rejected as a general rule. Multi-way clustering results show one-way methods can fail badly under crossed dependence. Whether an agent benchmark actually has such axes must be diagnosed rather than assumed."
+    }
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Find primary post-selection/selective-inference methods that can choose among nested cluster levels and still support valid downstream intervals or sequential stopping without a wasteful full sample split; extract finite-sample simulations."
+    },
+    {
+      "priority": 2,
+      "action": "Build a primary-source map of few-cluster methods for bounded/paired outcomes rather than OLS: randomization inference, wild/bootstrap methods for paired task differences, t procedures on cluster summaries, and exact/permutation methods; extract size/power when independent task count is 10-50."
+    },
+    {
+      "priority": 3,
+      "action": "Deep-extract Table 6.1 and related simulations from the 2025 multi-way cluster-robust sieve-score bootstrap paper; record nominal vs empirical coverage/size and sample dimensions."
+    },
+    {
+      "priority": 4,
+      "action": "Search for anytime-valid or group-sequential inference with multi-way/crossed clusters; determine whether cluster bootstrap can be safely repeated at interim looks or requires a prespecified alpha-spending/bootstrap construction."
+    },
+    {
+      "priority": 5,
+      "action": "Design an external agent-evaluation simulation blueprint with steps nested in trajectories/tasks plus a crossed judge or policy axis, comparing raw-record CI, task-cluster CI, multi-way CI, pre-test-selected clustering, and selection-aware alternatives."
+    }
+  ],
+  "frontier_nonempty": true,
+  "early_termination_avoidance": "After resolving the prior exact-next-action on cluster-level selection, exploration continued into a distinct few-effective-clusters/bootstrap branch and then into crossed multi-way dependence. This produced two additional mechanism candidates and multiple rejected overgeneralizations; the frontier remains concrete and nonempty.",
+  "exact_next_action": "Search primary selective/post-selection inference literature for a method that can choose nested dependency levels without invalidating downstream confidence intervals or sequential stopping; in parallel prioritize bounded/paired few-cluster inference because agent evaluation scores are not naturally OLS residual models."
+}
