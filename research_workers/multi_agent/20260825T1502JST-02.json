@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "worker": "multi_agent",
+  "checkpoint_at": "2026-08-25T15:02:00+09:00",
+  "checkpoint_phase": "extended_evidence_after_initial_frontier",
+  "prior_checkpoint": "research_workers/multi_agent/20260825T1502JST.json",
+  "new_covered_sources": [
+    {
+      "id": "romera-paredes2023-funsearch",
+      "title": "Mathematical discoveries from program search with large language models",
+      "venue": "Nature",
+      "date": "2023-12-14",
+      "source": "https://www.nature.com/articles/s41586-023-06924-6",
+      "primary": true
+    },
+    {
+      "id": "hu2025-partevo",
+      "title": "Partition to Evolve: Niching-enhanced Evolution with LLMs for Automated Algorithm Discovery",
+      "venue": "NeurIPS 2025",
+      "date": "2025",
+      "source": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/e389b15166cf98966ba058965a8c17e3-Abstract-Conference.html",
+      "primary": true
+    },
+    {
+      "id": "choi2025-debate-or-vote",
+      "title": "Debate or Vote: Which Yields Better Decisions in Multi-Agent Large Language Models?",
+      "venue": "NeurIPS 2025",
+      "date": "2025",
+      "source": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/934252acd87f254d5d4672fbde283bd2-Abstract-Conference.html",
+      "primary": true
+    },
+    {
+      "id": "novikov2025-alphaevolve",
+      "title": "AlphaEvolve: A coding agent for scientific and algorithmic discovery",
+      "date": "2025-06-16",
+      "source": "https://arxiv.org/abs/2506.13131",
+      "primary": true,
+      "status": "covered_at_architecture-level_only; exact ablations remain next-step"
+    }
+  ],
+  "new_mechanism_findings": [
+    {
+      "mechanism": "islanded asynchronous evolutionary exploration with objective evaluation",
+      "evidence": "FunSearch uses separate islands evolved independently, periodically discards the worst half every 4 hours, and reseeds them from the best individuals of surviving islands. Its distributed system typically used 15 LLM samplers and 150 CPU evaluators asynchronously. Authors explicitly motivate islands as multiple smaller parallel experiments that avoid local minima and allocate more time to promising lineages.",
+      "quantitative_signal": "On admissible-set and online-bin-packing problems every FunSearch run surpassed baseline; for a much rarer direct n=8 cap-set discovery only 4 of 140 independent runs found size 512. This is strong evidence that parallel repetition is particularly valuable when success is rare but objectively verifiable.",
+      "decision_relevance": "For external AGI research exploration, prefer many semi-isolated lineages with cheap independent verification and periodic exploit/reseed over a giant all-to-all discussion. Parallel count is most useful when each lineage has a meaningful chance of reaching different local basins and candidate quality can be scored without peer persuasion.",
+      "scope": "Program search in mathematics/algorithm design with executable evaluators; not direct evidence that arbitrary open-ended autonomous research can be scored reliably."
+    },
+    {
+      "mechanism": "feature-assisted niches plus local/global collaborative search",
+      "evidence": "PartEvo partitions language-space candidates into feature-defined niches, then combines within-/cross-niche evolutionary operators with prompt-centric reflection/summarization. In its four-problem ablation, removing subspace-based collaborative search operators caused a 451.31% degradation metric versus full PartEvo; removing prompt-centric operators caused 553.74% degradation; retaining only basic crossover/mutation caused 2509.76% degradation. The paper also reports up to 90.1% improvement over widely used baselines on resource scheduling.",
+      "additional_signal": "Across 500 samples, PartEvo starts with much lower candidate similarity (CodeBLEU ~0.36-0.41 on P1-P4 for first 50 samples) than FunSearch/EoH/ReEvo (~0.54-0.66), then becomes more exploitative later (~0.60-0.70 in last 50), consistent with deliberate early diversity followed by convergence.",
+      "decision_relevance": "Diversity should be structured into niches and budgeted explicitly, not created only by spawning more interchangeable workers. A shared archive can support cross-lineage recombination while preserving separate search regions.",
+      "scope": "Automated algorithm discovery on four optimization benchmarks; the reported degradation metric is defined by the authors and is not a universal effect size."
+    },
+    {
+      "mechanism": "vote-before-debate / communication only when correction-biased",
+      "evidence": "NeurIPS 2025 separates ensembling from debate across seven benchmarks. With five Qwen2.5-7B agents, majority voting averaged 0.7691 versus single-agent 0.7205; the best listed debate average was 0.7377. With Llama3.1-8B, voting averaged 0.7242 versus single-agent 0.6203; the best listed debate average was 0.6990. On Qwen2.5-32B, voting was 0.9433 GSM8K / 0.8667 HellaSwag, comparable to the best debate configurations. The authors' theory models neutral debate as a martingale, so interaction alone does not improve expected correctness; they obtain gains only after biasing updates toward correct signals.",
+      "heterogeneity_caveat": "Task-specific heterogeneous personas can occasionally help: on Qwen2.5-7B MMLU Professional Medicine, sparse MAD T=2 reached 0.8419 versus majority vote 0.8235, while on GSM8K majority vote 0.9367 beat the listed heterogeneous debate variants. Diversity is therefore conditional, not free gain.",
+      "decision_relevance": "Before paying communication cost, aggregate independent answers/candidates first. Add interaction only when the protocol has an external or otherwise calibrated way to privilege corrective evidence; otherwise communication can erase independent signal.",
+      "scope": "Mostly QA and text-generation benchmarks; interaction costs and correction conditions may differ in tool-using research agents."
+    },
+    {
+      "mechanism": "breadth/depth model specialization under evaluator-driven evolution",
+      "evidence": "AlphaEvolve uses a fast model for breadth and a stronger model for depth, with an evolutionary programs database and automated evaluators. This supports asymmetric worker roles rather than identical agents, but exact matched-cost ablations have not yet been extracted in this run.",
+      "decision_relevance": "Candidate architecture: cheap/high-throughput proposers explore broadly, scarce stronger-model calls refine or mutate selected lineages, objective evaluators gate archive entry.",
+      "scope": "Architecture-level evidence only until exact ablations/comparisons are extracted."
+    }
+  ],
+  "updated_decision_rule": {
+    "summary": "Do not maximize interactive agent count. Maximize independently verifiable exploration throughput, then dynamically allocate communication and compute where evidence says it helps.",
+    "operational_principles": [
+      "Use independent or islanded lineages by default for discovery; preserve lineage diversity in an archive.",
+      "Centralize or otherwise insulate verification from peer persuasion; candidate acceptance should follow evidence rather than consensus rhetoric.",
+      "Exploit/reseed weak lineages from strong ones periodically, but retain enough isolated niches to escape local minima.",
+      "Prefer simple aggregation of independent candidates before multi-round debate; only add debate when the protocol has a correction-biased update mechanism.",
+      "Scale agent count adaptively: stop adding interacting agents after marginal quality per unit compute/latency turns negative; separate this from independent rare-hit search where many repetitions may still be valuable.",
+      "Create diversity through niches, independent context, seeds, problem decompositions and search operators before introducing weaker model families purely for heterogeneity."
+    ]
+  },
+  "dead_ends_or_cautions_added": [
+    "A larger number of workers is not the same intervention across paradigms: independent sampling, debate, niche evolution, and evaluator pools have different scaling laws and failure modes.",
+    "FunSearch's 15 samplers + 150 evaluators are heterogeneous pipeline roles, not 165 equal reasoning agents.",
+    "PartEvo's very large degradation percentages are its own aggregate degradation metric across four optimization problems; do not read them as percent accuracy loss.",
+    "The debate-vs-vote results show communication often adds little beyond ensembling, but heterogeneous specialized roles can produce task-specific exceptions."
+  ],
+  "next_queries": [
+    "Extract AlphaEvolve population/database/evaluator ablations, model-mix comparisons, and any wall-clock or sample-efficiency measurements.",
+    "Inspect PartEvo resource-scheduling tables and niche-count/feature-mapping sensitivity to estimate when niche overhead pays back.",
+    "Search direct quality-diversity/MAP-Elites ablations in LLM-guided discovery that compare archive diversity against single-population evolution at matched sampling budgets.",
+    "Search swarm/distributed-exploration evidence in embodied or tool-using agent settings with matched compute, especially tasks where communication topology is explicitly ablated.",
+    "Look for empirical work on adaptive stopping/agent-count allocation rather than fixed N, ideally reporting marginal gain per token or wall-clock.",
+    "Relate the new island/niche evidence to the 2026 Nature capability-saturation rule without conflating evolutionary search with interactive MAS."
+  ],
+  "exact_continuation": "Next prioritize AlphaEvolve exact ablations and matched-cost evidence, then QD/MAP-Elites archive-vs-single-population comparisons and adaptive agent-count stopping. Preserve the current distinction: interactive MAS often saturates or degrades, while independent evaluator-gated rare-hit exploration can benefit from very large populations. Do not re-search debate/vote or FunSearch basics unless extracting a missing exact table."
+}
