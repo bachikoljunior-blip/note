@@ -1,0 +1,127 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 1,
+  "config_revision": 1,
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-25T220736+0900.json",
+  "started_local": "2026-08-25T23:01:15+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed": false,
+    "read_other_worker_state": false,
+    "own_sanitized_feedback": "not_found_404",
+    "note": "This run read only DESIRED_STATE for the cross_field role, the immediately prior clean_g1 cross_field checkpoint, attempted the worker's own sanitized feedback (404), and public external sources."
+  },
+  "search_bias": "optimization/OR/control/information theory/distributed systems/scientific discovery; continue unresolved quantitative frontiers and preserve exact source-domain scope, failure conditions, and transfer uncertainty",
+  "checked_sources": [
+    {
+      "source": "Michael C. Fu, Jian-Qiang Hu, Chun-Hung Chen, Xiaoping Xiong, Optimal Computing Budget Allocation Under Correlated Sampling, Winter Simulation Conference 2004, pp. 595-603",
+      "type": "primary conference paper",
+      "url": "https://www.informs-sim.org/wsc04papers/072.pdf",
+      "result": "Derives covariance-aware computing-budget allocation when designs are sampled with common random numbers. For two designs the exact optimum depends on variance ratio c=sigma1/sigma2 and correlation rho; when positive correlation is high enough (2rho >= c-1/c for c>=1), equal allocation is optimal. For k designs the allocation conditions depend on variances, mean gaps to the current best, and correlations with the current best. Numerical experiments used 10 designs, T=500, n0=10. Equal-variance case: at rho=0.2, PCS EBA/CBA/IBA=0.808/0.893/0.889; at rho=0.9, 0.996/0.996/0.964. Unequal-variance case: at rho=0.2, 0.691/0.771/0.741; at rho=0.9, 0.957/0.957/0.827. In a U/U/1 queue with CRN, PCS EBA/CBA/IBA/seqCBA=0.857/0.943/0.935/0.977; EBA required total budget 1020 to match CBA and 1680 to match seqCBA, versus T=500 for CBA/seqCBA."
+    },
+    {
+      "source": "Yunlong Hou, Vincent Y. F. Tan, Zixin Zhong, Almost Minimax Optimal Best Arm Identification in Piecewise Stationary Linear Bandits, NeurIPS 2024",
+      "type": "primary conference paper",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2024/file/e92b8441b702d142435f243806f9ec5a-Paper-Conference.pdf",
+      "result": "Introduces PS-epsilon-BAI+ for fixed-confidence best-arm identification with unknown changepoints and latent piecewise-stationary contexts. The procedure combines active changepoint detection and context alignment with a naive fallback run in parallel, yielding finite expected sample complexity and a lower-bound match up to logarithmic factors in analyzed regimes. In the paper's main numerical instance, both methods identify an epsilon-optimal arm, while PS-epsilon-BAI+ uses at most 1% of the sample complexity of the naive N-epsilon-BAI baseline. The paper reports robustness to slight Lmax/change-detection-frequency misspecification, but retains assumptions on piecewise stationarity and changepoint structure."
+    },
+    {
+      "source": "Bjorn Gorder, Michael Kolonko, Ranking and Selection: A New Sequential Bayesian Procedure for Use with Common Random Numbers, ACM TOMACS 29(1), 2019, arXiv:1410.6782",
+      "type": "primary journal/preprint",
+      "url": "https://arxiv.org/abs/1410.6782",
+      "result": "Uses posterior covariance under dependent/common-random-number observations and allocates iterative simulation effort according to posterior error probabilities. The computational study spans correlations from negative to strongly positive; the authors report large savings under positive correlation and generally fewer simulations than KN++ at comparable error control. Exact graph values were not extracted in this run, so no additional numeric speedup claim is recorded beyond the 2004 CBA paper."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r7-common-scenario-covariance-aware-allocation",
+      "mechanism": "Evaluate competing candidates on shared stochastic scenarios/seeds when this induces useful positive correlation, then allocate additional replications using the variance of pairwise differences, including covariance, rather than using each candidate's marginal variance independently. Estimate correlations to the current best and update the allocation sequentially. Do not assume that stronger positive correlation always means more skew: when correlation is sufficiently high relative to variance imbalance, equal allocation can itself be optimal.",
+      "primary_source": "Fu, Hu, Chen, Xiong, WSC 2004",
+      "quantitative_evidence": "At T=500 in a 10-design U/U/1 queue under common random numbers, PCS was 0.857 EBA, 0.943 covariance-aware CBA, 0.935 independence-derived IBA, and 0.977 sequential CBA. EBA needed budget 1020 to reach CBA's PCS and 1680 to reach seqCBA's PCS, versus 500 for those procedures. In an unequal-variance Gaussian example at rho=0.2, PCS was 0.691/0.771/0.741 for EBA/CBA/IBA; at rho=0.9 it was 0.957/0.957/0.827, illustrating that ignoring covariance can misallocate badly at high positive correlation.",
+      "operational_observable": "For each candidate i relative to current best b, maintain mean gap, marginal variances, and paired covariance C_bi from shared scenarios. Base allocation on the uncertainty of the difference, approximately sigma_b^2/N_b + sigma_i^2/N_i - 2 C_bi/max(N_b,N_i), not on marginal uncertainty alone. Track whether estimated correlation is positive, negligible, or negative before deciding to pair scenarios. Recompute allocations in batches/iterations rather than once when estimates are still changing.",
+      "scope": "Finite-design simulation ranking and selection with correlated sampling/common random numbers; Gaussian derivation plus paper-stated extensions under additional conditions. The numerical savings are specific to the tested examples and should not be generalized as a universal factor.",
+      "failure_conditions": "Negative correlation can reduce simulation efficiency. Very high positive correlation may make equal allocation optimal. Correlation estimates themselves are noisy early in a run, so aggressive covariance-aware skew should be delayed until paired covariance is stable enough to change the allocation materially.",
+      "transfer_hypothesis": "When evaluating alternative research mechanisms on stochastic benchmarks, reuse the same seeds/scenarios across candidates and allocate repeats according to uncertainty in candidate differences. This can reduce noise in pairwise decisions and prevent an independence-based scheduler from wasting evaluations, but only after verifying the induced correlation regime.",
+      "confidence": "high for source-domain mechanism and quantitative examples; medium-high for research-evaluation transfer"
+    },
+    {
+      "id": "cf-g1-r7-changepoint-detect-context-align-evidence",
+      "mechanism": "Treat evaluation evidence as piecewise stationary rather than indefinitely exchangeable. Detect changepoints, segment observations, align recurring latent contexts when possible, and reuse evidence only within or across demonstrably aligned contexts. Run a conservative fallback identification path in parallel so failed change detection cannot create unbounded stopping behavior.",
+      "primary_source": "Hou, Tan, Zhong, NeurIPS 2024",
+      "quantitative_evidence": "In the paper's main numerical piecewise-stationary linear-bandit instance, PS-epsilon-BAI+ and the naive baseline both identified an epsilon-optimal arm, but PS-epsilon-BAI+ used <=1% of the naive baseline's sample complexity. The method is proved fixed-confidence PAC with finite expected sample complexity and near-optimality up to logarithmic factors in the analyzed regimes.",
+      "operational_observable": "Maintain a change statistic over recent evaluation windows, a segment/context identifier, and an evidence-compatibility test between the current segment and previously observed contexts. On detected drift, stop pooling stale samples unless context alignment passes. Keep a naive/no-reuse fallback running conceptually in parallel as a correctness/termination guard.",
+      "scope": "Piecewise-stationary linear bandits with the paper's latent-context and changepoint assumptions. The <=1% result is from a synthetic numerical instance, not a generic guarantee for arbitrary nonstationary evaluation streams.",
+      "failure_conditions": "Requires structure sufficient for change detection and context alignment; severe violation of the piecewise-stationary assumptions is not covered. Slight parameter misspecification was empirically tolerated, but this should not be treated as robustness to arbitrary drift.",
+      "transfer_hypothesis": "Research-evaluation schedulers should stop letting old benchmark results dominate when the environment/model/toolchain has changed. Explicit change detection plus context-specific evidence reuse can preserve useful history without treating stale observations as current truth.",
+      "confidence": "high for source-domain result; medium for general evaluation-drift transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r5-budget-adaptive-confidence-allocation",
+      "update": "The allocation observable should include covariance when evaluations are paired/common-scenario. Independence-derived gap/variance allocation is not generally optimal under correlated sampling; in the cited examples covariance-aware allocation improved PCS, and at sufficiently high positive correlation equal allocation became optimal."
+    },
+    {
+      "candidate": "cf-g1-r6-heavy-tail-evidence-regime-guardrail",
+      "update": "A separate stale-evidence regime guardrail is now supported: under piecewise-stationary change, explicit changepoint detection/context alignment can drastically reduce sample complexity versus naively treating changing contexts without such structure. Heavy-tail and nonstationarity are distinct failure modes and should trigger different safeguards."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Always skew allocation more aggressively when common random numbers create stronger positive correlation",
+      "evidence": "Fu et al. derive regimes where sufficiently high positive correlation makes equal allocation optimal; their examples at rho=0.9 show CBA coinciding with EBA while independence-derived IBA is worse.",
+      "reason": "Use covariance in the allocation equation rather than a monotone 'more correlation => more concentration' heuristic."
+    },
+    {
+      "lead": "Pool all historical evaluation data with a forgetting factor but no changepoint/context model",
+      "evidence": "The piecewise-stationary BAI result attributes its gain specifically to changepoint detection and context alignment, while the naive procedure's complexity grows with the spacing between changepoints.",
+      "reason": "Prefer explicit evidence-regime detection/alignment when the environment has discrete structural changes; a generic decay rule may discard reusable recurring-context data or retain incompatible stale data."
+    },
+    {
+      "lead": "Adversarial/misleading-source transfer-BO with a clean same-experiment negative-transfer frequency or regret endpoint",
+      "evidence": "A brief search found modern work on negative transfer and safe/multi-task BO, but this run did not recover a primary experiment matching the frontier's exact requirement of deliberately misleading source tasks plus a target-only fallback and clean negative-transfer endpoint.",
+      "reason": "Keep open; do not strengthen the prior safe-transfer claim beyond the already supported learned-mismatch/target-only fallback mechanism."
+    }
+  ],
+  "prior_candidates_preserved_by_reference": [
+    "cf-g1-r1-racing-elimination",
+    "cf-g1-r1-instance-conditioned-portfolio",
+    "cf-g1-r1-randomized-work-stealing",
+    "cf-g1-r1-closed-loop-transfer",
+    "cf-g1-r1-delta-debugging-failure-minimization",
+    "cf-g1-r2-ocba-compute-budget-allocation",
+    "cf-g1-r2-dual-control-active-identification",
+    "cf-g1-r2-cause-aware-straggler-mitigation",
+    "cf-g1-r2-sparse-statistical-observability",
+    "cf-g1-r3-finite-budget-allocation-guardrail",
+    "cf-g1-r3-adaptive-independent-checkpointing",
+    "cf-g1-r3-cost-sensitive-cross-task-experiment-transfer",
+    "cf-g1-r4-application-oriented-active-identification",
+    "cf-g1-r4-semantics-aware-checkpoint-sparsity",
+    "cf-g1-r4-sparse-unbiased-diagnostic-telemetry",
+    "cf-g1-r5-budget-adaptive-confidence-allocation",
+    "cf-g1-r5-sequential-hypothesis-discrimination",
+    "cf-g1-r6-similarity-estimated-safe-transfer-bo",
+    "cf-g1-r6-heavy-tail-evidence-regime-guardrail"
+  ],
+  "frontier": [
+    "Find transfer-BO or experimental-design primary work that deliberately includes misleading/anti-correlated source tasks, reports a clean negative-transfer frequency/regret endpoint, and demonstrates an automatic target-only fallback in the same experiment.",
+    "Find sequential wet-lab model-discrimination work with a random/uniform/nonadaptive experimental-design baseline and explicit experiments-to-identification numbers, including what happens when the true mechanism is outside the initial model set.",
+    "Find statistical-debugging/fault-localization primary studies with diagnosis latency, inspected-code reduction, or runs-to-localize under sparse versus dense/adaptive telemetry; derive a failure-rarity-dependent telemetry-density switch.",
+    "Stress-test semantics-aware checkpointing beyond process/filesystem labels: seek primary evidence on device/kernel/network/socket/GPU state, hidden side effects, or adversarial workload shifts that can create false-negative checkpoint decisions.",
+    "Find covariance-aware ranking-and-selection under non-Gaussian/heavy-tail correlated observations, ideally with finite-budget guarantees, to combine the covariance and tail-regime guardrails without assuming normality."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Resolved the prior correlated-observation frontier with an open primary WSC paper, extracted the covariance-aware allocation equations and exact PCS/budget comparisons, and identified the high-positive-correlation equal-allocation boundary.",
+      "Continued immediately into nonstationary evidence allocation and recovered a NeurIPS 2024 fixed-confidence piecewise-stationary BAI result with changepoint detection/context alignment and <=1% empirical sample complexity versus the naive baseline in its main numerical instance.",
+      "Continued into the next safe-transfer frontier after report readiness; found related negative-transfer work but withheld a new candidate because the exact deliberately misleading-source + target-only-fallback + clean endpoint requirement was not met in this pass."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Search primary transfer-BO/experimental-design papers that intentionally inject misleading or anti-correlated source tasks and report negative-transfer regret/frequency against target-only BO while implementing an automatic source-disabling fallback. If no qualifying matched experiment is recovered quickly, move to wet-lab sequential model discrimination and extract experiments-to-identification versus a nonadaptive/random DOE baseline plus model-set misspecification handling."
+}
