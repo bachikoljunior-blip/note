@@ -1,0 +1,99 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_kind": "primary_source_verification",
+  "publication_state": "final",
+  "bootstrap_valid": true,
+  "audited_at": "2026-08-26T11:42:14+09:00",
+  "frozen_control": {
+    "note_main_sha": "d5bd18ed9f3ffe31b2a87283e1151b46033c677b",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 14,
+    "downstream_control_blob": "8998681e35baedc88dc16ad2bfde68c3874970b9",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c11-20260826T0958JST-2f7dbe30",
+    "source_set_digest": "2f7dbe3041e4ff4b85ea605c843776735cb82c294f79cb50df3b6c3d0842454a",
+    "source_namespace": "open_source",
+    "source_artifact": "research_workers_clean_g1/open_source/RUN_20260826_0858_PIPELINE_STATE_AUTHORITY_CAS.md",
+    "source_blob": "4431c2e2019cbf4729243c1fa14133ac957d7d4f"
+  },
+  "candidate_identity": "open_source/clean-os-g1-005@Argus-962cb06554daaede17b786c495e13ee3b6530e6e+Snaplist-bf1e631ec8b01b53938f81b3e66764d6b151f792",
+  "status": "primary_verified_with_concurrency_scope_narrowing_and_transaction_precedent_confirmation",
+  "primary_sources": [
+    {
+      "repo": "lbx154/Argus",
+      "commit": "962cb06554daaede17b786c495e13ee3b6530e6e",
+      "paths": [
+        "argus_skill/core/pipeline_state.py",
+        "argus_skill/manager/_session_ops.py",
+        "argus_skill/daemon/_life_worker_run.py",
+        "argus_skill/skills/stage_machine.py",
+        "argus_skill/skills/vertical_select.py",
+        "argus_skill/apps/cli/_core.py",
+        "argus_skill/manager/control_state.py",
+        "tests/core/test_pipeline_state.py",
+        "tests/manager/test_manager_locks_portable.py",
+        "tests/skills/test_stale_framework_stage_write.py"
+      ]
+    },
+    {
+      "repo": "azizu06/snaplist",
+      "commit": "bf1e631ec8b01b53938f81b3e66764d6b151f792",
+      "paths": [
+        "supabase/migrations/20260801230000_mobile_guided_correction_identity_and_idempotency.sql",
+        "supabase/tests/mobile_guided_correction.test.sql"
+      ]
+    }
+  ],
+  "verified_findings": [
+    {
+      "finding": "Argus PIPELINE_STATE write is atomic replacement but not optimistic concurrency control.",
+      "evidence": "write_pipeline_state serializes the caller-supplied whole dict to a sibling temp file and calls os.replace. The primitive has no state_revision, expected prior revision/digest, CAS check, or inter-process lock, and contains no file fsync or parent-directory fsync. tests/core/test_pipeline_state.py covers legacy-to-primary migration and primary precedence, not competing-writer lost-update behavior.",
+      "scope": "This proves primitive-level lost-update susceptibility for overlapping whole-object read-modify-write writers; it does not prove that the ordinary resident daemon currently races."
+    },
+    {
+      "finding": "The normal daemon drain is protected by the Manager pipeline lock, materially narrowing present race claims.",
+      "evidence": "manager_pipeline_lock uses a portalocker exclusive advisory file lock with bounded wait. daemon/_life_worker_run.py acquires manager.pipeline_lock() around each supervisor drain pass. tests/manager/test_manager_locks_portable.py verifies exclusion/timeout against a real peer process.",
+      "scope": "A normal-daemon stage-race claim is unsupported by these sources. The concrete concern is cross-surface writers that do not participate in the same lock."
+    },
+    {
+      "finding": "A real standalone writer surface exists outside the Manager pipeline-lock path.",
+      "evidence": "The CLI _cmd_learn function directly calls persist_vertical(base, 'learning'); persist_vertical first loads the whole current pipeline state, mutates selected fields, then persists it. The CLI path itself does not acquire manager_pipeline_lock.",
+      "scope": "This is a concrete unlocked writer surface, but an actual lost update additionally requires that the chosen base/state root overlap a live writer and execution overlap in time. No such race was executed in this audit."
+    },
+    {
+      "finding": "Stage evidence validation and transition authorization are distinct in Argus, and the low-level primitive does not authenticate caller identity.",
+      "evidence": "stage_machine.py explicitly states that advance_stage/rollback_stage are intended to be Manager-only but nothing there authenticates the caller; advanced_by is free text. The same source describes complete_final_stage's early-completion defense as 'a lock, not a signature' and says a determined caller can still pass the argument. advance_stage runs the active vertical deterministic completion validator; rollback/reset semantics are different and should not be mischaracterized as completion-validation bypasses.",
+      "scope": "This supports capability/authority hardening at the low-level mutation boundary. It does not show that the normal Manager path routinely bypasses its own semantic checks."
+    },
+    {
+      "finding": "CampaignControlStore is a strong same-codebase precedent for revisioned locked control state, but its revision is not a PIPELINE_STATE CAS token.",
+      "evidence": "control_state.py stores immutable revision snapshots, writes HEAD.json last as the current commit point, increments state_revision under a portalocker control lock, and fsyncs the file handle before os.replace. It is a separate state object and separate lock from PIPELINE_STATE. The helper shown does not fsync the parent directory after rename.",
+      "scope": "Useful implementation precedent only. Reusing that state_revision directly as an expected prior PIPELINE_STATE version would require a new atomic binding/transaction design."
+    },
+    {
+      "finding": "Snaplist provides direct regression evidence for the exact-once invariant bundle used as an external precedent.",
+      "evidence": "The migration implements expected review-revision checks, attempt_generation fencing, claim/capability state, row locking and a privileged complete_mobile_guided_correction function. The SQL tests deny authenticated callers direct EXECUTE on the completion primitive while granting service_role, verify expired-lease generation advance and stale-generation rejection, deliberately force a late receipt failure and assert whole-transaction rollback, and verify exact retry replays the previously committed receipt.",
+      "scope": "This is PostgreSQL-backed application workflow evidence. It validates the systems invariant and test shape, not the unimplemented file-backed Argus adaptation or any AGI/performance effect."
+    }
+  ],
+  "material_corrections": [
+    "Do not state or imply that current ordinary Argus daemon execution has a demonstrated stage race. The daemon supervisor path is pipeline-lock serialized at the reviewed commit.",
+    "Do not describe os.replace as providing CAS, freshness, or crash-durable commit by itself. It prevents torn replacement visibility but does not reject a stale whole-object writer; power-loss durability remains uncharacterized without a file+directory durability contract.",
+    "Do not treat rollback/reset lacking a completion validator as evidence of a validator bypass. The load-bearing issue there is transition authority; completion validation is semantically required only on transitions that claim completion.",
+    "Do not transfer Snaplist's database transaction guarantees to a file-backed one-object design without direct crash/concurrency tests."
+  ],
+  "decision_relevance": "The worker's central refinement is supported: if Argus wants one-shot transition authority and exact stale-writer rejection across daemon/admin/direct-library surfaces, it must centralize all PIPELINE_STATE mutations behind a common locked revisioned boundary or otherwise fence legacy writers. Merely adding capability fields to the JSON object is insufficient while unlocked whole-object writers remain.",
+  "uncertainty": [
+    "No concurrent Argus mutation experiment was run.",
+    "No full inventory of every direct raw PIPELINE_STATE write outside write_pipeline_state was completed here; reviewed production call sites and CLI evidence are sufficient for the narrower unlocked-writer claim but not exhaustive closure.",
+    "manager_pipeline_lock reentrancy/nested-lock behavior under the exact proposed inner-lock design was not tested.",
+    "File and parent-directory crash-durability behavior for a future Argus single-object transaction remains untested."
+  ],
+  "exact_next_action": "Rotate to ACTIVE_WAVE scientist_agents source research_workers_clean_g1/scientist_agents/2026-08-26T0904JST.json@975287d6a729db198d3be27d4d49b3513bbe6147. Independently verify the preregistered AutoResearchEval task W4390519793 eight-model coding against the source-qualified raw trajectories/dataset revision, especially the 6/8 explicit severe-self-critique, 1/6 complete closure, 5/6 unresolved-at-termination and 0/5 durable repair_pending counts. Preserve the one-task scope and distinguish explicit critique coding from underlying scientific truth."
+}
