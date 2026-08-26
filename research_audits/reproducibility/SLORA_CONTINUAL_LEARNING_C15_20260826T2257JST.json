@@ -1,0 +1,83 @@
+{
+  "schema_version": 3,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "8897fc01f662fdb0c12c5d123f03c761fc41c537",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role_config_revision": 2,
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c15-20260826T2156JST-a94bf8db",
+    "active_wave_blob": "506d27e808efad141b4f9df54734182504b83eb7",
+    "source_set_digest": "a94bf8db640fbba0c1db5690d4caf6fba4adfbff9a0a9714f44f8cdded4f69c0",
+    "status_at_freeze": "sealed_awaiting_comparators"
+  },
+  "source": {
+    "namespace": "continual_learning",
+    "path": "research_workers_clean_g1/continual_learning/RUN_20260826T2104_JST.md",
+    "source_artifact_blob": "d41f468c56f2aa858f46219ef0a4f3f9b73588fa",
+    "source_section_anchor": "New lifecycle result — SLoRA has constant active routing state but linear archival/reconstruction state unless compacted",
+    "source_local_candidate_id": null,
+    "candidate_identity_status": "The sealed source section does not declare a machine candidate id. This audit is source-qualified by exact namespace/path/blob/section but is not eligible for schema-2 canonical-key joining until a bootstrap-valid final pair supplies the exact source_local_candidate_id/canonical_candidate_key for this section. Do not fuzzy-map by the display label."
+  },
+  "target": {
+    "paper": "SLoRA: Balancing Plasticity and Forgetting in Large Language Models for Continual Learning",
+    "paper_url": "https://aclanthology.org/2026.acl-long.247/",
+    "paper_date": "2026-07",
+    "venue": "ACL 2026",
+    "paper_linked_repo": "alina1031/SLoRA",
+    "repo_commit": "0faf15fd6562ed3e146e8733205f59ef9742ba0f"
+  },
+  "published_claim": {
+    "method": "SLoRA denoises LoRA updates post hoc using subspace similarity to the frozen base model, with online SLoRA-Pre and offline SLoRA-Post variants and no rehearsal data or historical gradients.",
+    "headline": "The paper reports up to 12% final-accuracy improvement, up to 29% forgetting reduction, and removal of more than 30% of LoRA parameters identified as noisy.",
+    "trace_protocol": "Eight TRACE tasks in fixed order C-STANCE, FOMC, MeetingBank, Py150, ScienceQA, NumGLUE-cm, NumGLUE-ds, 20Minuten; LoRA r=64, alpha=128, AdamW lr=2e-4, 3% warmup, cosine schedule, task epochs 5/3/7/5/3/5/5/7; paper states experiments were conducted on four NVIDIA A100 GPUs."
+  },
+  "official_artifact_support": {
+    "grade": "B overall; A- for public mechanism implementation; C for exact headline replay readiness",
+    "positive": [
+      "The paper links an official public repository and the pinned commit contains the SLoRA training, denoising, continual merge/load, and evaluation code paths.",
+      "The released SLoRA-Pre training script matches the paper's TRACE task order, epoch schedule, r=64, alpha=128, lr=2e-4, warmup=0.03 and cosine schedule.",
+      "The training code explicitly denoises every current-task adapter after training and stores max.safetensors; before later tasks it loads each prior denoised task artifact and merges it into a fresh base model, confirming the worker's lifecycle observation that no inference router is required while reconstruction replays historical deltas.",
+      "The model loader likewise iterates order* task directories, loads each denoised max.safetensors and merge_and_unload()s it, supporting the source claim that active deployed routing state can be constant while retained archive/reconstruction work grows with task count."
+    ],
+    "reproducibility_defects": [
+      "The pinned repository root contains README, img, scripts and src only: no requirements/lockfile/environment specification, no TRACE data snapshot, no trained checkpoints and no paper result tables/raw metrics. The README has no installation or end-to-end reproduction recipe.",
+      "The released launcher uses local placeholders such as /LLMs/Meta-Llama-3-8B-Instruct and data/<task>/train.json, so the exact model revision and data preprocessing snapshot are not pinned by the repository.",
+      "The denoising implementation uses randomized projection (torch.randn) independently for each candidate retained rank and the repository search found no explicit seed/manual_seed/set_seed control in the SLoRA code. Exact rank-selection replay therefore depends on ambient RNG state unless external framework state happens to reproduce it.",
+      "A clean-room synthetic stress of the published/code rank-selection logic (rank=64, 128x128 synthetic low-rank update/base subspace, fixed matrix seed 123, projection seeds 0..19) selected multiple retained ranks rather than one invariant rank: {6:2,12:1,19:3,25:4,32:1,38:1,44:2,51:1,57:5}. This is only a mechanism-level nondeterminism diagnostic, not evidence that the paper's real model results materially vary.",
+      "There is a scale-contract difference between training and historical-delta merge. Released training uses vanilla PEFT LoRA r=64, alpha=128, whose standard scaling is alpha/r=2. denoising() reconstructs raw B@A without applying that factor. load_denoised_lora() then explicitly overwrites cur_config.lora_alpha=rank before merge, making merge scaling 1 for vanilla LoRA. Thus a saved denoised factorization is merged at raw B@A scale rather than the training adapter's alpha/r-scaled effective update. The code labels alpha=rank as a non-trivial empirical trial. This may be intentional, but it is an implementation-specific amplitude choice that is not explicit in the paper pseudocode and must be reproduced for matched results.",
+      "The paper states all experiments were conducted on four A100 GPUs, while the released slora_pre launcher shown here runs one process on one visible GPU. This does not by itself invalidate the method, but the exact multi-GPU execution mapping used for headline experiments is not captured in the public launcher."
+    ]
+  },
+  "independent_replication": {
+    "grade": "C / not located",
+    "result": "Fresh web search found the ACL paper and the official repository but no protocol-matched independent reproduction of the TRACE headline table or independent numerical rerun of the reported up-to-12% accuracy / 29% forgetting improvements.",
+    "scope": "No independent reproduction found in this search is not proof that none exists."
+  },
+  "scope_corrections": [
+    "The worker's lifecycle claim is supported: public scripts can use one active current LoRA during training and no inference router, but faithful reconstruction from released experiment artifacts replays prior task deltas and therefore retained archive size and startup merge work grow with the number of tasks unless a compact merged checkpoint is separately materialized.",
+    "Do not call SLoRA storage strictly constant without specifying the accounting boundary. Active adapter/routing state can be constant; retained per-task denoised artifacts and released reconstruction work are linear in task count.",
+    "Do not treat the public repository as an exact reproduction bundle for the paper's headline numbers because model/data revisions, dependency environment, trained artifacts/raw metrics and deterministic denoising seeds are not pinned.",
+    "The alpha/r versus alpha=rank merge-scale behavior is part of the observed public implementation contract. Reimplementations that denoise/merge with the original alpha=128 scaling are not protocol-matched to this pinned code even if they otherwise follow the paper equations.",
+    "The randomized-SVD diagnostic only establishes that the released selection procedure can be RNG-sensitive on synthetic inputs; it does not establish material instability on the paper's actual model matrices."
+  ],
+  "assessment": {
+    "overall_grade": "B",
+    "paper_linked_implementation_artifact": "A-",
+    "lifecycle_archive_reconstruction_claim": "A-",
+    "exact_environment_replay_readiness": "C",
+    "headline_numeric_exact_replay_readiness": "C",
+    "protocol_matched_independent_replication": "C/not located",
+    "implementation_paper_contract_consistency": "B- due to undocumented merge-scale and RNG details"
+  },
+  "exact_next_action": "Do not re-audit unchanged SLoRA sources. Reopen if authors publish a dependency/data/model lock plus raw TRACE checkpoints/results/seeds, clarify the alpha=rank historical-merge scaling in the paper/reproduction recipe, or a protocol-matched independent rerun appears. On the next invocation audit a different exact sealed-wave non-evaluation candidate with executable official material; if a final schema-2 pair maps this SLoRA section to an exact candidate key, publish an immutable identity supplement rather than fuzzy-joining this audit.",
+  "observed_at": "2026-08-26T22:57:09+09:00"
+}
