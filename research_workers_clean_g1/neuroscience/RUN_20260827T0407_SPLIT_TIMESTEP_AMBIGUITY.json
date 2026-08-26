@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 10,
+  "config_revision": 5,
+  "control_source_main_sha": "84cc27e64fdd4d41057d347a7cf8f6c2b8261f10",
+  "control_root_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+  "role_config_blob": "f8b9cec681279d8dbd14c5db87ee79bc743a27b0",
+  "invocation_started_at": "2026-08-27T04:02:29+09:00",
+  "checkpointed_at": "2026-08-27T04:07:36+09:00",
+  "chronology_valid": true,
+  "continues_from_latest": "RUN_20260827T0301_SPLIT_SOURCE_RECOVERY.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "downstream_state_read": false,
+    "o_state_read": false,
+    "aggregate_ledger_read": false,
+    "other_role_receipt_read": false,
+    "own_feedback_present": false,
+    "semantic_control_freeze": "main 84cc27e64fdd4d41057d347a7cf8f6c2b8261f10, control 10, config 5"
+  },
+  "public_source_update": {
+    "paper": "Godin C, Thivierge J-P (2026), Manifold-constrained plasticity enables stable learning in recurrent neural circuits, PLOS Computational Biology, DOI 10.1371/journal.pcbi.1014719, published 2026-08-25",
+    "confirmed_from_public_article": [
+      "SPLiT updates the empirical activity basis with Oja's rule and re-orthonormalizes the tracked subspace at every time step, described in the article text as 1 ms.",
+      "The MNIST tracing protocol presents one trajectory point per time step and also labels that time step as 1 ms.",
+      "The 2-Hz sine-wave task is trained for 10 seconds; S11 compares frozen versus adaptive tracked subspace and S12 applies 25-80 degree rotational perturbations.",
+      "The public article exposes S1 Code as DOI 10.1371/journal.pcbi.1014719.s002, but this invocation could not obtain the ZIP bytes through the available public transports."
+    ],
+    "preexisting_own_state_parameter_conflict": "The prior role-local source recovery recorded Table 1 Delta t = 0.01 while the article prose says 1 ms for per-step orthonormalization/MNIST presentation. Official code remains the authority needed to resolve whether this is task-specific notation, a prose mismatch, or an implementation convention."
+  },
+  "bounded_ambiguity_audit": {
+    "status": "source-derived_not_exact_reproduction",
+    "purpose": "Measure whether the unresolved 10 ms versus 1 ms timestep distinction can be safely ignored before official-code recovery.",
+    "shared_setup": {
+      "paired_seeds": 20,
+      "physical_duration_seconds": 10,
+      "target": "2-Hz sine",
+      "N": 100,
+      "k": 3,
+      "tau": 0.3,
+      "g": 1.5,
+      "eta_U": 0.01,
+      "eta_D": 0.1,
+      "alpha": 1.5,
+      "noise": 0,
+      "network": "constrained low-rank recurrent dynamics using a random orthonormal Q and W=Q W_k Q^T",
+      "audit_only_assumptions": [
+        "External input was a random unit population vector multiplied by the 2-Hz target; the source-exact I(t) remains unknown until Code.zip inspection.",
+        "Tracked U began random orthonormal, decoder D began at zero, epsilon was set to 1e-6.",
+        "These assumptions are intentionally bounded and must not be called a reproduction of Fig.2, S11 or S12."
+      ]
+    },
+    "conditions": {
+      "continuous_rate_interpretation": {
+        "definition": "Euler-integrate neural dynamics and multiply both Oja and decoder differential updates by dt.",
+        "dt_0.01_adaptive_mean_mse": 0.5537557997,
+        "dt_0.01_adaptive_sd": 0.1768014260,
+        "dt_0.001_adaptive_mean_mse": 0.4615321313,
+        "dt_0.001_adaptive_sd": 0.0093030017,
+        "paired_dt_difference_dt001_minus_dt01": -0.0922236684,
+        "paired_bootstrap_95pct_ci": [-0.1730548288, -0.0256603815],
+        "mse_ratio_dt001_over_dt01": 0.8334578736,
+        "interpretation": "A 10x timestep change still moved this reduced audit, but the physical-time learning exposure stayed comparable because learning increments scale with dt."
+      },
+      "per_step_learning_interpretation": {
+        "definition": "Euler-integrate neural state with dt but apply Oja and normalized-LMS learning increments once per simulation step without an extra dt factor.",
+        "dt_0.01_adaptive_mean_mse": 0.3243102432,
+        "dt_0.01_adaptive_sd": 0.0172697744,
+        "dt_0.001_adaptive_mean_mse": 0.0155882139,
+        "dt_0.001_adaptive_sd": 0.0115654976,
+        "paired_dt_difference_dt001_minus_dt01": -0.3087220293,
+        "paired_bootstrap_95pct_ci": [-0.3182437784, -0.2998360744],
+        "mse_ratio_dt001_over_dt01": 0.0480657464,
+        "interpretation": "At fixed physical duration, 1 ms supplies 10x as many learning updates as 10 ms, producing a roughly 20.8x lower mean MSE in this audit. The timestep convention is therefore materially outcome-changing if eta_U/eta_D are implemented per step."
+      }
+    },
+    "negative_scope": [
+      "This audit does not test the source-exact external input, epsilon, initialization, noise scaling, update ordering or rotational-drift implementation.",
+      "The toy input directly contains the target and is therefore unsuitable for judging whether adaptive U is better than frozen U; method-ranking conclusions are explicitly forbidden from this audit.",
+      "Do not infer a paper error from the timestep sensitivity alone. The official code may resolve the apparent discrepancy through task-specific dt or explicit dt scaling."
+    ],
+    "decision_relevant_inference": "The source-level 10 ms versus 1 ms ambiguity cannot be treated as cosmetic before code inspection. In particular, whether eta_U and eta_D are physical-time rates or per-step increments changes effective learning exposure by an order of magnitude. Exact reproduction and fair matched baselines should wait for official-code resolution of dt and update scaling."
+  },
+  "candidate_update": {
+    "id": "neuro-g1-split-manifold-tracking-2026",
+    "status": "source_code_still_blocked_timestep_convention_now_shown_material",
+    "new_interpretation": "Adaptive low-dimensional tracking remains an interesting mechanism, but the next highest-value uncertainty is implementation semantics rather than another unconstrained synthetic comparison. The official code must establish task-specific dt and whether Oja/decoder updates are dt-scaled before source-exact claims or effect-size comparisons are trusted.",
+    "scope": [
+      "Prior reduced evidence that generic online PCA can match or beat Oja remains bounded to those reduced controls.",
+      "This run adds no evidence for or against the source paper's reported adaptive-versus-frozen advantage because the audit intentionally did not reproduce source I(t) or S11/S12."
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Recover the official PLOS S1 Code ZIP (DOI 10.1371/journal.pcbi.1014719.s002 / prior Figshare metadata article 33331919) through a file-capable public transport. Inspect the 2-Hz sine and rotational-drift scripts first for task-specific dt, whether U and D updates multiply dt, epsilon, initial U/D/r, I(t), noise scaling, update ordering, QR/re-orthonormalization frequency and seed handling. Then reproduce S11 or S12 source-exactly and add same-seed frozen-U, generic online-subspace plus identical coordinate-NLMS, full-space NLMS and tuned RLS/ridge/pseudoinverse controls. If ZIP retrieval remains blocked, derive two explicitly non-exact source-equation implementations that differ only in learning-rate time semantics and quantify which published qualitative claims are invariant to that choice."
+}
