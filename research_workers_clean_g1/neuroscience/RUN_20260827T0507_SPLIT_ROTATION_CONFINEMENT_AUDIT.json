@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 10,
+  "config_revision": 5,
+  "control_source_main_sha": "57b44c6166ffc99fc3232b32dffa07376768c008",
+  "control_root_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+  "role_config_blob": "f8b9cec681279d8dbd14c5db87ee79bc743a27b0",
+  "invocation_started_at": "2026-08-27T04:59:46+09:00",
+  "checkpointed_at": "2026-08-27T05:07:30+09:00",
+  "chronology_valid": true,
+  "continues_from_latest": "RUN_20260827T0407_SPLIT_TIMESTEP_AMBIGUITY.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "downstream_state_read": false,
+    "o_state_read": false,
+    "aggregate_ledger_read": false,
+    "other_role_receipt_read": false,
+    "own_feedback_read": false,
+    "semantic_control_freeze": "main 57b44c6166ffc99fc3232b32dffa07376768c008, control 10, config 5"
+  },
+  "public_source_update": {
+    "paper": {
+      "title": "Manifold-constrained plasticity enables stable learning in recurrent neural circuits",
+      "authors": "Camille Godin; Jean-Philippe Thivierge",
+      "journal": "PLOS Computational Biology",
+      "published": "2026-08-25",
+      "doi": "10.1371/journal.pcbi.1014719"
+    },
+    "official_code_artifact": {
+      "status": "exact Figshare record and download file id recovered; ZIP bytes still blocked by redirect transport",
+      "figshare_article_id": 33331919,
+      "filename": "pcbi.1014719.s002.zip",
+      "size_mb": 1.99,
+      "file_id": 67830038,
+      "download_endpoint": "https://plos.figshare.com/ndownloader/files/67830038",
+      "doi": "10.1371/journal.pcbi.1014719.s002"
+    },
+    "source_equations_checked": [
+      "Eq.1 uses elementwise tanh in tau*r_dot = -r + tanh(Wr + I + I_fb + noise).",
+      "Q is N x k with orthonormal columns; the paper defines the structural manifold M = span(Q).",
+      "Eq.4 uses W = Q W_k Q^T and states that rank-k W makes all outside-manifold components decay exponentially.",
+      "Eq.34 defines rotational drift as Q(t+dt) = Q(t) R(dtheta), with R explicitly k x k and a rotation matrix.",
+      "Methods Eqs.35-37 measure empirical subspace drift by principal angles from singular values of U0^T Ut."
+    ]
+  },
+  "bounded_source_consistency_audit": {
+    "status": "mathematical/source-level audit; not an empirical reproduction",
+    "rotation_invariance": {
+      "proof": "For orthonormal Q in R^{N x k} and orthogonal R in R^{k x k}, span(QR)=span(Q) and (QR)(QR)^T = QQ^T. Therefore Eq.34 as printed rotates coordinates/basis inside the same ambient k-dimensional structural subspace; it does not rotate that structural subspace in R^N.",
+      "numerical_sanity": {
+        "trials": 1000,
+        "N": 100,
+        "k": 3,
+        "max_projector_spectral_norm_difference": 1.470482761551348e-15,
+        "max_principal_angle_radians": 4.712160915387242e-08,
+        "mean_of_mean_principal_angles_radians": 9.840371369794325e-09
+      },
+      "source_tension": "The paper describes Eq.34 as an evolving manifold basis and later says frozen U becomes poorly aligned with an evolving population subspace. That can still occur if the empirical activity covariance changes inside/leaks outside the structural span, or if code implements a different rotation; however Eq.34 alone does not move span(Q). Official code is required before interpreting S8/S11/S12 as ambient subspace rotation."
+    },
+    "nonlinear_confinement_guard": {
+      "derivation": "Low-rank W alone does not mathematically guarantee exact confinement for Eq.1 as printed. Even if Wr+I+I_fb lies in span(Q), elementwise tanh(Qa) is generically not in span(Q), so P_perp*tanh(Qa) can drive outside-manifold activity. Full-dimensional iid noise is an additional potential leakage source unless projected in code.",
+      "random_dense_Q_sanity": {
+        "N": 100,
+        "k": 3,
+        "trials_per_scale": 1000,
+        "relative_outside_component_of_tanh_median": {
+          "input_coordinate_scale_0.1": 0.0002235007,
+          "input_coordinate_scale_1.0": 0.02001682,
+          "input_coordinate_scale_3.0": 0.11936341
+        }
+      },
+      "scope": "This does not show that the published constrained runs materially leave the manifold. At small activation amplitudes leakage is tiny, and the implementation may explicitly project states/inputs/noise even though that projection is not shown in Eq.1. It does show that the printed rank-k argument is not sufficient by itself for exact confinement."
+    },
+    "interpretation": "The highest-value unresolved issue is now source-versus-code semantics for constrained and rotational-drift dynamics, ahead of further effect-size comparisons. The right-multiplication rotation is structurally span-invariant, while the printed nonlinear state equation can introduce empirical leakage. S11 can therefore only be interpreted cleanly after inspecting how the official code updates Q/W/r, projects noise/input, and computes principal angles."
+  },
+  "candidate_update": {
+    "id": "neuro-g1-split-manifold-tracking-2026",
+    "status": "promising_mechanism_but_rotation_and_confinement_implementation_semantics_unresolved",
+    "new_interpretation": "Adaptive empirical-subspace tracking remains plausible and prior reduced controls support the value of tracking drifting representations. However the paper's rotational-drift experiment is more implementation-dependent than its prose suggests: Eq.34 is a within-span basis rotation, while exact confinement is not guaranteed by Eq.1+rank-k W alone. Do not treat S8/S11/S12 as clean evidence for ambient structural-manifold rotation until the official code resolves these semantics.",
+    "scope": [
+      "No paper-wide refutation is claimed.",
+      "No conclusion is drawn about the reported decoding-error advantage until code-level reproduction.",
+      "Prior timestep ambiguity remains active and separate."
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Recover official file 67830038 through a redirect-safe file-capable transport and inspect the rotational-drift/constrained scripts before anything else: determine whether code uses Q = Q@R (k x k right rotation) or an ambient left rotation, whether W is rebuilt from Q, whether r/input/noise are explicitly projected, how U dimension/rank is handled, and whether principal angles use the published U0^T Ut metric. If code matches Q@R and the published metric, reproduce S11 to identify what generates nonzero empirical subspace angle (nonlinear/noise leakage, rank degeneracy, feedback-induced covariance change, or another mechanism). If code differs, record the source/code divergence. Then resolve the separate dt/update-scaling ambiguity and proceed to same-seed frozen-U, generic subspace+coordinate-NLMS, full-space NLMS and tuned RLS/ridge controls."
+}
