@@ -1,0 +1,119 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "844b6dc7c395bf56dded26d7b445a8468873f7d6",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "4f0eb1c6ed781733e34a6481a5e71483b27392c1",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T143915+0900-r61.json",
+  "started_local": "2026-08-26T14:39:16+09:00",
+  "checkpointed_local": "2026-08-26T14:47:13+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false
+  },
+  "checked_sources": [
+    {
+      "source": "Kotłowski & Grünwald 2011, Maximum Likelihood vs. Sequential Normalized Maximum Likelihood in On-line Density Estimation, COLT/PMLR 19, Sections 5.4-6",
+      "url": "https://proceedings.mlr.press/v19/kotlowski11a.html",
+      "result": "Primary source. For one-dimensional Gaussian density estimation with unknown mean and variance, the unrestricted SNML conditional predictor is an explicit Student-t-like proper density after initialization. Its per-round regret increment is data-independent and equals a closed gamma/log expression growing as 1/n+O(n^-2), so cumulative conditional regret after the problematic initial iteration(s) is log n+O(1), optimal for the two-dimensional Gaussian family. The paper also states that the unrestricted model has infinite first-iteration worst-case regret, while the examples become properly conditionable after initial outcomes; initial conditioning must therefore be handled explicitly rather than hidden."
+    },
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection, arXiv:2607.28322v1, Sections 5.2, 6.1-6.3, Appendix C",
+      "url": "https://arxiv.org/pdf/2607.28322",
+      "result": "Primary source. The full-Gaussian point-null ratio is a test martingale for a predictable density numerator against a fixed Gaussian denominator; the paper instantiates it with predictable Gaussian densities. Section 6 explicitly identifies loss of pure pre-change evidence after the change and fixes it with a growth-preserving adjuster applied to the running maximum, yielding nondecreasing e-processes with only lower-order log-growth loss. The generic late-change theorem then uses a nondecreasing long prefix to reject candidate laws away from P and a post-change restart to reject candidates near P. Separately, the bounded-mean universal-portfolio ARL detector has a deterministic pathwise stopping cap of order A^2, which the source uses to turn exponentially small bad-event probabilities into a CADD expectation bound."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r62a-proper-universal-numerator",
+      "claim": "The full-Gaussian point-null martingale does not mathematically require the predictable numerator to itself be Gaussian: any proper predictable density can replace q without changing candidate-null convexity.",
+      "derivation": "For fixed R=N(theta,r), L_t=L_{t-1} q_t(X_t)/phi_R(X_t). Under R, conditional expectation of q_t(X_t)/phi_R(X_t) is integral q_t(x) dx=1 whenever q_t is F_{t-1}-measurable and a proper density. The numerator contributes only the eta-independent log constant c_{s:t}=sum log q_i(X_i), so the scalar pair dual and centered Gaussian candidate-null kernel from r60-r61 are unchanged. This permits a universal Student-t/SNML numerator while retaining exact point-null e-validity and the same denominator optimization geometry."
+    },
+    {
+      "id": "cf-g1-r62b-snml-log-regret-lower-bound",
+      "claim": "Conditioned Gaussian SNML turns predictor uncertainty into an explicit O(log n) pathwise penalty relative to the best fitted Gaussian, replacing the source plug-in predictor's asymptotic-consistency-only control.",
+      "derivation": "After a finite initialization that makes the unrestricted Gaussian conditional SNML proper, the source per-round regret increments telescope to log n+O(1). Hence for a block x_1:n, with an initialization-dependent finite term C_init, log q_SNML(x_1:n) >= sup_{mu,sigma} log phi_{mu,sigma}(x_1:n) - log n - O(1) - C_init. Since the Gaussian MLE likelihood is at least the likelihood of any fixed Q, for X_i iid Q this yields log L_n^R >= sum_i log(phi_Q(X_i)/phi_R(X_i)) - log n - O(1) - C_init. For R in a compact set separated from Q, Gaussian log-likelihood ratios have uniform exponential lower tails, so the post-change short-block failure probability can be made exponentially small while retaining exact D_KL(Q||R) first-order growth. The initialization term must be given a proper full-support treatment; it is not a universal constant on the unrestricted family."
+    },
+    {
+      "id": "cf-g1-r62c-exterior-mle-separation",
+      "claim": "The same SNML regret inequality gives a direct exterior-prefix certificate in terms of Gaussian MLE separation, with exponential concentration under a long Gaussian pre-change prefix.",
+      "derivation": "For observed prefix statistics (mhat,vhat), sup_G log phi_G(x_1:n)-log phi_R(x_1:n)=n D_KL(N(mhat,vhat)||R) exactly. Therefore inf_{R outside U} log L_n^R >= n inf_{R outside U}D_KL(N(mhat,vhat)||R) - log n - O(1)-C_init. If U is an open neighborhood of P=N(a,u) whose closure remains in the positive-variance parameter domain, then whenever (mhat,vhat) lies in a smaller neighborhood of P, the infimum outside U is bounded below by a positive constant. Gaussian mean and chi-square variance concentration make failure exponentially small in n. This is stronger tail information than mere almost-sure uniform convergence and is tailored to the exterior witness needed by the source late-change proof."
+    },
+    {
+      "id": "cf-g1-r62d-adjusted-prefix-cadd-route",
+      "claim": "Combining the SNML exponential-tail certificates with the source's adjusted running maximum removes the main CADD obstruction identified in r60: once the long pre-change exterior certificate succeeds, it can be retained permanently while independent post-change blocks retry the local certificate.",
+      "derivation": "For each candidate R, apply a growth-preserving adjuster to the running maximum of the start-1 point-null SNML e-process. By the source adjuster lemma this is a nondecreasing e-process under R and loses only o(log evidence). On the high-probability pre-change event from r62c, every R outside U has adjusted prefix evidence above the required threshold before or near T and it cannot later decay. For R in U, restartable post-change SNML blocks have exact first-order information at least D_KL(Q||P)-eta and exponentially small block-failure probability by r62b. With all starts available for the proof, disjoint block boundaries can be selected after the fact for geometric retry analysis. Thus, conditional on the exterior event, expected additional delay is one first-order block plus a vanishing retry correction rather than merely a high-probability statement."
+    },
+    {
+      "id": "cf-g1-r62e-polynomial-backup-tail-killer",
+      "claim": "A low-weight bounded-transform backup e-detector can provide the deterministic polynomial stopping cap needed to make exponentially rare exterior failures negligible in expectation, without changing the full-Gaussian leading delay constant.",
+      "derivation": "Map X deterministically to Z=1/2+arctan(X)/pi in (0,1) and run the source bounded-mean universal-portfolio ARL e-detector as a backup channel. Its source proof gives a pathwise stop cap C A^2 for threshold A, regardless of the realized bounded sequence. Average the main Gaussian composite e-detector and backup e-detector with fixed positive weights; the average remains an e-detector, so the backup reaches the combined threshold by at most C_w A^2 paths while the main channel pays only an O(1) log-threshold penalty. If the exterior-SNML failure probability is <=exp(-cT), then under the late-change regime T/log A -> infinity, A^2 exp(-cT)=o(log A). This is exactly the type of bad-event-times-pathwise-cap argument used in the source bounded-mean CADD proof, now serving as a generic expectation-tail safety net rather than the main information channel.",
+      "status": "proof route, not yet a fully typeset theorem: combined e-detector accounting, initialization-tail constants, and uniform short-block concentration still need line-by-line formalization"
+    },
+    {
+      "id": "cf-g1-r62f-warm-start-lambda",
+      "claim": "Adjacent monitoring times make the scalar lambda optimum stable enough that a simple expanding warm bracket materially reduces average pair evaluations in a synthetic stream.",
+      "experiment": "In a synthetic sequence P=N(0,1) for 500 observations followed by Q=N(1,1.5), using a start-1 prefix and a post-change start with the regularized predictive numerator, a cold tangent bracket averaged about 3.27 lambda evaluations per monitored pair. Warm-starting from the previous optimum with an expandable local bracket averaged about 2.06 evaluations, roughly 37% fewer; medians were 3 versus 2 and 90th percentiles 4 versus 2. Warm-start expansion occasionally used more evaluations on abrupt moves, so this is an average-case engineering result, not a worst-case bound."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r62-universal-snml-full-kl-channel",
+      "mechanism": "Replace the plug-in Gaussian numerator of the full-Gaussian point-null e-process with conditioned Gaussian SNML/Jeffreys-style Student-t prediction, keeping the same centered scalar denominator dual. Use its pathwise logarithmic regret to obtain quantitative Gaussian concentration tails instead of only predictor consistency.",
+      "quantitative_or_formal_evidence": "Primary SNML source gives per-round regret 1/n+O(n^-2) after initialization, hence cumulative log n+O(1). Derived point-null martingale validity is exact for any proper predictable density. This preserves D_KL first-order evidence while creating a deterministic sublinear predictor-regret term.",
+      "scope": "Derived adaptation to the Saha-Ramdas Gaussian change detector. Initialization on the unrestricted mean/variance family and finite-sample constants are not closed yet.",
+      "confidence": "high for martingale substitution and asymptotic regret transfer; medium-high for uniform finite-tail use after explicit initialization"
+    },
+    {
+      "id": "cf-g1-r62-cadd-tail-safety-architecture",
+      "mechanism": "Nondecreasing adjusted start-1 Gaussian exterior witness + restartable local SNML blocks + fixed-weight bounded-transform universal-portfolio backup with deterministic O(A^2) cap.",
+      "quantitative_or_formal_evidence": "Source adjuster preserves e-validity and log-growth up to lower-order terms; source bounded-mean backup has pathwise C*A^2 stopping cap. Derived Gaussian SNML exterior and local failures are expected to have exponential tails, making A^2 times the exterior bad-event probability negligible whenever T/log A diverges.",
+      "scope": "Proof architecture requiring formal constants and exact detector composition before promotion to a theorem. It targets ARL-CADD; PFA CADD remains inherently infinite in the source setting.",
+      "confidence": "medium-high"
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The full-Gaussian source theorem already supplies CADD once the adjuster is noticed.",
+      "evidence": "Rejected. The source generic and full-Gaussian late-change results are still high-probability. The adjuster solves evidence forgetting, but an expectation proof additionally needs quantitative bad-event tails and a cap/uniform-integrability argument.",
+      "reason": "Use SNML quantitative regret plus the bounded backup cap; do not relabel the source theorem as CADD."
+    },
+    {
+      "lead": "Unrestricted Gaussian SNML has a uniform finite regret from the first observation.",
+      "evidence": "Rejected by the primary source: the unrestricted model has infinite first-iteration worst-case regret. Conditional/proper initialization is mandatory.",
+      "reason": "Keep initialization explicit and include its random/parameter-dependent tail in the formal proof."
+    }
+  ],
+  "frontier": [
+    "Formalize a concrete proper initialization for unknown-mean/unknown-variance Gaussian SNML (for example a fixed full-support density for the first two observations followed by conditional SNML), and derive an explicit exponential tail for its finite initialization regret under every fixed Gaussian Q.",
+    "Write the ARL-CADD proof end-to-end: exact combined e-detector scaling, adjusted prefix exterior event, uniform compact short-block Chernoff bound, disjoint retry expectation, backup C*A^2 cap, and conditioning on survival to T.",
+    "Determine whether the proof channel can be made computationally sparse without losing retry independence: construct deterministic multiscale restart blocks that contain disjoint near-optimal blocks at every unknown information scale, or bound dependence for the recycled K-grid.",
+    "Prototype the conditioned SNML numerator with the centered interval-safe pair kernel and benchmark power/delay against the original regularized plug-in Gaussian predictor.",
+    "Warm-start the certified lambda bracket in the end-to-end detector and measure score evaluations, not only pair-level synthetic examples."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Verified the Gaussian SNML primary formula and its logarithmic conditional regret.",
+      "Observed that proper predictable non-Gaussian numerators preserve the point-null martingale and denominator convexity.",
+      "Converted SNML regret into local and exterior likelihood lower bounds with Gaussian exponential-concentration potential.",
+      "Connected the source's adjusted running-maximum construction to the exact exterior-evidence forgetting gap found in r60.",
+      "Added a deterministic polynomial-cap backup architecture to control rare-event contribution to CADD.",
+      "Measured an average 37% reduction in scalar pair evaluations from warm-started lambda brackets in a synthetic stream."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Close the SNML initialization tail and typeset the combined adjusted-prefix/restart/backup ARL-CADD argument with explicit constants; then test whether a multiscale sparse restart family can preserve the same expectation result while retaining the r59-r61 computational savings."
+}
