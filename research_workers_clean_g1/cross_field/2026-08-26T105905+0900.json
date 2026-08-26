@@ -1,0 +1,147 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "5100a4afc3c9a09ecde9b238989357ac39020f9e",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "ebcfa779ac2634d1ded90b37c6d1d4104d0581bb",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T100017+0900.json",
+  "started_local": "2026-08-26T10:57:04+09:00",
+  "checkpointed_local": "2026-08-26T10:59:05+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404"
+  },
+  "checked_sources": [
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection, arXiv:2607.28322v1",
+      "url": "https://arxiv.org/pdf/2607.28322",
+      "result": "Full-paper verification. The construction needs conditionally valid s-delay e-processes for each candidate no-change law. The unweighted SR-style aggregate is an e-detector with ARL >= A and finite-horizon false-alarm bound P(tau<=m)<=m/A. The weighted aggregate with deterministic pi_s>0 summing to at most one is an e-process with global PFA <= alpha. Exact explicit implementations can cost O(t) per update and quadratic total work through horizon N. The paper's internal start-time aggregation is not a theorem that repeatedly resetting the whole detector after each alarm at the same alpha preserves global PFA."
+    },
+    {
+      "source": "Ramdas 2026, Universality of e-detectors for ARL control, arXiv:2608.12660v1",
+      "url": "https://arxiv.org/pdf/2608.12660",
+      "result": "Primary verification that strong e-detectors imply optional-horizon control P(T_b<=sigma)<=E[sigma]/b for every data-dependent stopping horizon, while bare ARL permits eventual false alarm with probability one. The clocked formulation allows predictable exposure/cost clocks. This sharpens the distinction between ARL routing and global-PFA routing."
+    },
+    {
+      "source": "Dziugaite & Roy 2018, Data-dependent PAC-Bayes priors via differential privacy, NeurIPS 2018",
+      "url": "https://papers.neurips.cc/paper_files/paper/2018/file/9a0ee0a9e7a42d2d69b8f86b3a0756b1-Paper.pdf",
+      "result": "Primary theorem-level verification that an epsilon-differentially-private prior selected from the same iid bounded-loss sample can still yield a PAC-Bayes bound holding simultaneously for all posteriors Q, with an explicit privacy/max-information penalty. This is an explicit way to charge for prior adaptation rather than requiring a fully data-independent prior, but it is static iid and not itself time-uniform/off-policy."
+    },
+    {
+      "source": "Tian & Ramdas 2021, Online control of the familywise error rate",
+      "url": "https://arxiv.org/abs/1910.04900",
+      "result": "Primary-source confirmation that a potentially infinite sequence of tests needs online FWER accounting to keep the probability of any false discovery over the full sequence controlled. Alpha-spending is the basic construction; adaptive improvements exist under additional assumptions. This supplies the correct accounting analogy for repeated detector resets when global no-false-alarm probability matters."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r40-composite-unknown-baseline-e-router",
+      "mechanism": "Use a non-partitioned e-detector as an evidence-staleness router when no single stable pre-change distribution is known. Aggregate point-null delayed e-processes over candidate changepoints and minimize over candidate common laws instead of hard-coding one baseline partition.",
+      "primary_sources": ["Saha & Ramdas 2026"],
+      "quantitative_or_formal_evidence": "Finite-sample ARL mode: E[tau]>=A and P(tau<=m)<=m/A. Global-PFA mode: with deterministic start weights summing to <=1, P(tau<infinity)<=alpha. Under stated late-change regularity the delay is first-order optimal; for canonical PFA weights the delay numerator pays log(1/alpha)+log T+2 log log(eT)+O(1).",
+      "scope": "Single continuously running detector over a composite no-change class, with conditionally valid delayed e-process primitives. It does not by itself certify repeated whole-detector reset cycles at unchanged alpha.",
+      "failure_conditions": "Exact all-start implementations may accumulate O(t) per-update and O(N^2) total cost; global-PFA weighting pays a late-start penalty; ARL mode allows eventual false alarm and cannot be interpreted as an ever-false-alarm probability guarantee.",
+      "transfer_hypothesis": "For adaptive system memory routing, prefer composite unknown-baseline monitoring when a fixed calibration mean/distribution is not defensible; choose ARL or PFA semantics explicitly instead of treating them as interchangeable.",
+      "confidence": "high for statistical component; medium for optimizer-memory transfer"
+    },
+    {
+      "id": "cf-g1-r41-restart-alpha-budget",
+      "mechanism": "If an alarm causes a full detector reset and monitoring continues, treat alarm epochs as an online multiple-testing sequence. Allocate a global false-alarm budget across reset epochs (alpha_j with sum alpha_j<=alpha, or a stronger online-FWER rule) rather than restarting every epoch at the same alpha.",
+      "primary_sources": ["Saha & Ramdas 2026 Theorem 2.3", "Tian & Ramdas 2021"],
+      "quantitative_or_formal_evidence": "A single Saha-Ramdas PFA detector controls probability of ever alarming at alpha because its start-time weights sum to <=1. Online FWER work shows the analogous infinite-test guarantee requires explicit error-budget accounting across tests. Reusing the same positive alpha after each full reset has no supplied global-PFA theorem and a naive union bound diverges over infinitely many resets.",
+      "scope": "Global probability of any false reset across a continuing sequence. This is not needed if only per-cycle ARL is the intended metric.",
+      "failure_conditions": "Aggressive alpha spending can make later drift detection very slow. Recycling or adaptive FWER methods require their own dependence assumptions. Random alarm-time restart validity of the inner delayed e-process must also be verified separately.",
+      "transfer_hypothesis": "Maintain a durable reset-risk ledger; only a globally budgeted alarm may trigger destructive history reset, while lower-cost warnings can remain ARL-style and non-destructive.",
+      "confidence": "high for accounting principle; medium for exact reset implementation"
+    },
+    {
+      "id": "cf-g1-r42-clocked-exposure-staleness-monitor",
+      "mechanism": "Replace calendar-time false-alarm budgeting with a predictable exposure/cost clock C_n=sum a_j when evidence arrives irregularly or observations have unequal diagnostic cost. Strong clocked e-processes give P(T<=sigma)<=E[C_sigma]/b.",
+      "primary_sources": ["Ramdas 2026 Theorem 3.3"],
+      "quantitative_or_formal_evidence": "The optional-clock theorem is exact: strong C-clocked e-process thresholding is equivalent to optional-clock false-alarm control. Predictable a_j can count samples or weighted costs rather than elapsed time.",
+      "scope": "False-alarm accounting against predictable exposure. It does not itself choose the optimal diagnostic stream or prove downstream utility after an alarm.",
+      "failure_conditions": "If exposure weights are chosen using forbidden future information or omit material monitoring opportunities, the clock no longer represents the intended risk budget.",
+      "transfer_hypothesis": "For asynchronous research/evaluation pipelines, charge drift-monitor risk by actual audited evaluation exposure rather than wall-clock time.",
+      "confidence": "high for theorem; medium for transfer"
+    },
+    {
+      "id": "cf-g1-r43-private-data-dependent-prior-uniform-audit",
+      "mechanism": "When a useful PAC-Bayes prior must be learned from the same data, explicitly limit prior-data dependence with differential privacy/max-information so the subsequent bound can still hold uniformly over all posteriors Q.",
+      "primary_sources": ["Dziugaite & Roy 2018 Theorem 4.2"],
+      "quantitative_or_formal_evidence": "For bounded iid loss and an epsilon-DP data-dependent prior P(S), with probability at least 1-delta the PAC-Bayes KL-risk bound holds for every posterior Q simultaneously, paying KL(Q||P(S))/m plus the standard confidence term and explicit epsilon-dependent max-information penalties.",
+      "scope": "Static iid PAC-Bayes generalization, not sequential time-uniform off-policy certification and not a predictable-prior theorem.",
+      "failure_conditions": "Strong privacy can make the prior costly/noisy to learn; repeated adaptive releases compose privacy cost; no direct theorem here turns this into a continuously updated all-time off-policy certificate.",
+      "transfer_hypothesis": "If final audit quality materially benefits from a learned prior, use an explicit adaptation charge such as DP/max-information or a fresh split rather than silently reusing audit data to tune the prior.",
+      "confidence": "high for theorem; medium for sequential-audit transfer"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r39-nonpartitioned-unknown-baseline-e-detector",
+      "update": "Promoted from abstract-only to theorem-level evidence. The full paper verifies composite unknown-baseline ARL and global-PFA constructions, conditional delayed-process requirements, late-change first-order optimality under stated conditions, and explicit computational scaling in examples. The unresolved part is not baseline validity but repeated whole-detector reset semantics."
+    },
+    {
+      "candidate": "cf-g1-r35-e-detector-memory-regime-switch",
+      "update": "Refined into two distinct semantics. Strong e-detector/ARL monitoring gives an optional-horizon linear false-alarm bound but permits eventual false alarm; e-process/PFA monitoring reserves probability mass at infinity and is appropriate when any false destructive reset must be globally rare."
+    },
+    {
+      "candidate": "cf-g1-r36-predictable-prior-pointwise-history",
+      "update": "A different explicit route to data-dependent priors was verified: differential privacy/max-information can recover a bound uniform over all posteriors despite a prior learned from the same iid data. This does not close the stronger sequential predictable-prior plus time-uniform/off-policy frontier."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "A global-PFA e-detector can be reset after every alarm at the same alpha indefinitely with the original guarantee unchanged.",
+      "evidence": "Not supported. The verified theorem is for one globally weighted detector. Repeated full resets create a sequence of new false-alarm opportunities; infinite-sequence FWER requires explicit error-budget accounting.",
+      "reason": "Keep whole-detector reset risk budgeted across epochs."
+    },
+    {
+      "lead": "ARL>=A means the probability of ever making a false destructive reset is at most 1/A.",
+      "evidence": "False. Strong e-detector ARL permits eventual false alarm with probability one; its stronger finite/optional-horizon guarantee is P(T<=sigma)<=E[sigma]/A, not global PFA.",
+      "reason": "Do not conflate ARL with PFA when reset cost is irreversible."
+    },
+    {
+      "lead": "Differentially private data-dependent priors solve the current sequential off-policy predictable-prior problem end to end.",
+      "evidence": "No. The verified theorem is iid, static and bounded-loss. It supplies a useful explicit adaptivity charge but not time-uniform adaptive-logging certification.",
+      "reason": "Retain as a component or fallback, not a completed sequential theorem."
+    },
+    {
+      "lead": "A direct vector-valued off-policy confidence sequence under adaptive logging and adaptive candidate selection is established by the sources checked in this run.",
+      "evidence": "No direct theorem was found. Scalar off-policy confidence sequences and general vector martingale/confidence-set results remain separate lines.",
+      "reason": "Do not claim joint multivariate off-policy certification yet."
+    }
+  ],
+  "frontier": [
+    "Formalize repeated-reset semantics for the composite non-partitioned detector: prove or falsify conditional validity when the whole detector is reinitialized at an alarm-time stopping time, and quantify how alpha-spending versus a nonreset global detector changes detection delay.",
+    "Search for a sequential/time-uniform PAC-Bayes or e-process theorem that permits data-dependent priors with an explicit max-information/privacy/conditional-information charge while remaining simultaneous over all posterior choices under adaptive logging.",
+    "Find a direct vector-valued off-policy confidence sequence/e-process under adaptive logging and adaptive candidate selection; otherwise derive a conservative construction from scalar e-processes with explicit multiplicity accounting.",
+    "Quantify computationally safe pruning for non-partitioned all-start detectors: identify finite-sample-valid pruning or mixture-lower-bound schemes and measure delay versus O(N^2) exact evaluation.",
+    "Model the decision cost of false memory reset versus stale-memory retention and select ARL, PFA, or exposure-clock semantics based on the actual loss function rather than one universal detector metric.",
+    "Continue heavy-tail robustification of the diagnostic and off-policy layers separately before combining guarantees."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Upgraded the non-partitioned e-detector lead from abstract-level to theorem/proof-level verification.",
+      "Separated internal start-time aggregation from repeated whole-detector reset semantics instead of silently equating them.",
+      "Added a global reset-risk accounting candidate using online FWER logic.",
+      "Added exposure-clock monitoring and a data-dependent-prior route with explicit privacy/max-information cost.",
+      "Searched for direct vector-valued off-policy confidence sequences and retained the absence as an open frontier rather than fabricating a combined theorem."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "First, inspect finite-sample-valid pruning/mixture approximations for all-start e-detectors and quantify the delay-compute tradeoff against exact O(N^2) evaluation. In parallel, search for a time-uniform PAC-Bayes/e-process theorem that allows a data-dependent prior with an explicit privacy/max-information or conditional-information charge and is simultaneous over adaptive posterior choices under adaptive logging."
+}
