@@ -1,0 +1,205 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T17:13:26.925940+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T161000_JST_adaptive_eclosure_fwer.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "b50e3ab02cdcd3ccb952ad7fcbab6803b5e31515",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_observed_for_write_safety_only": "bd891b6f6679130f0274eb259724c98e31992362",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "own_feedback_found": false
+  },
+  "search_bias": "evaluation/verifiers; SeqE-Guard query-path boosting; paired-sign fresh audits; lifetime FWER; late-signal alpha-death",
+  "public_sources": [
+    {
+      "title": "Admissible online closed testing must employ e-values",
+      "authors": "Lasse Fischer; Aaditya Ramdas",
+      "version_date": "2025-12-16 (arXiv v4)",
+      "url": "https://arxiv.org/abs/2407.15733",
+      "used_scope": "SeqE-Guard multiplies sequential e-values and, for a chosen query path, Supplement S.5 permits predictable truncation at m_t and any boosted e-value whose truncated conditional null expectation is <=1. Scalar multiplication b_t>=1 is one example; general boosting maps are explicitly allowed. The guarantee is query-path specific."
+    },
+    {
+      "title": "Inverse Sampling for McNemar's Test",
+      "author": "Mark Von Tress",
+      "publication": "International Journal of Statistics and Probability 6(1), 2017",
+      "url": "https://www.ccsenet.org/journal/index.php/ijsp/article/view/65236",
+      "used_scope": "Sampling until a pre-specified number r of discordant pairs fixes the exact-binomial sample size for the discordant signs; the total number of paired observations follows a negative-binomial component. Used only to justify the fixed-discordant audit design and its random cost, not the new e-value boosting formulas."
+    },
+    {
+      "title": "Online multiple hypothesis testing",
+      "publication": "Statistical Science review / PMC",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7615519/",
+      "used_scope": "Background terminology: alpha-death describes loss of future testing power after a long stretch of nulls. Used as terminology only; the product-e-value collapse derivation here is worker-local."
+    }
+  ],
+  "new_derivations": {
+    "per_task_scalar_boost_impossibility_with_unknown_discordance": {
+      "setup": "A paired binary task emits e=2q_bet for candidate-only discordance, e=2(1-q_bet) for incumbent-only discordance, and e=1 for concordance. The directional null permits an arbitrary predictable discordance probability rho_t, including rho_t=0.",
+      "result": "For Fischer-Ramdas scalar boosting with cap m_t>1, null rho_t=0 gives e=1 almost surely, so E[min(b_t e,m_t)|past]=min(b_t,m_t). The required <=1 condition forces b_t=1. Therefore there is no nontrivial scalar query-path boost at the individual-task factor level unless the null excludes rho_t=0 or the design removes the concordance nuisance.",
+      "scope_guard": "A non-scalar map that fixes the concordant value at 1 can still be valid; this result rejects only unconditional scalar multiplication of the three-point per-task factor over a null class allowing zero discordance."
+    },
+    "fixed_discordant_candidate_evalue_boost": {
+      "setup": "Use inverse sampling until r discordant pairs are observed. Under the equality null, W=number of candidate-only discordances among those r has Binomial(r,1/2) law. For a predictable sign bet q_bet>1/2, define E_r(w)=(2q_bet)^w*(2(1-q_bet))^(r-w).",
+      "scalar_boost": "For current SeqE-Guard cap m, b(m) is the largest b>=1 satisfying sum_w Bin(r,w;1/2)*min(b E_r(w),m)<=1. This exactly matches Supplement S.5 for the fixed-discordant candidate-level e-value and removes the unknown discordance rate from the null calibration.",
+      "worked_example": {
+        "r": 20,
+        "q_bet": 0.75,
+        "m": 20.0,
+        "raw_truncated_null_mean": 0.7033378187588823,
+        "scalar_boost_b": 1.5309913291103852
+      },
+      "cost_tradeoff": {
+        "rule": "Total paired observations N required to obtain r discordances is negative-binomial with mean r/rho and variance r(1-rho)/rho^2.",
+        "examples_r20": [
+          {"rho": 0.2, "mean_total_pairs": 100.0, "sd": 20.0, "p95_total_pairs": 135.0, "p99_total_pairs": 153.0},
+          {"rho": 0.4, "mean_total_pairs": 50.0, "sd": 8.660254037844386, "p95_total_pairs": 65.0, "p99_total_pairs": 73.0},
+          {"rho": 0.6, "mean_total_pairs": 33.333333333333336, "sd": 4.714045207910317, "p95_total_pairs": 42.0, "p99_total_pairs": 46.0}
+        ]
+      }
+    },
+    "query_path_floor_boost": {
+      "mechanism": "Because S.5 allows general boosted maps, define g_c(E)=max(E,c) and choose the largest c in [0,1] such that E_null[min(g_c(E),m)]<=1. This spends only the expectation slack created by capping extreme high e-values and directs it to the lower tail that otherwise enters SeqE-Guard's off-query penalty U.",
+      "worked_example": {
+        "r": 20,
+        "q_bet": 0.75,
+        "m": 20.0,
+        "floor_c": 0.4511525134396725,
+        "null_log_penalty_raw": -3.026189999081713,
+        "null_log_penalty_scalar_boost": -2.656319901022117,
+        "null_log_penalty_floor_boost": -0.6772343230077555
+      },
+      "interpretation": "At the initial m=20 cap, floor boosting reduces the magnitude of expected log off-query penalty by about 77.6% versus raw, while scalar boosting reduces it by about 12.2%. It does not increase immediate first-candidate rejection probability because the upper tail is unchanged; its purpose is preserving future evidence capacity.",
+      "decay_with_rising_cap": [
+        {"m": 20.0, "floor_c": 0.4511525134396725, "null_log_penalty": -0.6772343230077555},
+        {"m": 50.0, "floor_c": 0.2694995787657885, "null_log_penalty": -1.062775875786889},
+        {"m": 100.0, "floor_c": 0.18340760628463187, "null_log_penalty": -1.3507548708333248},
+        {"m": 1000.0, "floor_c": 0.019974693959779945, "null_log_penalty": -2.4852516214603195},
+        {"m": 10000.0, "floor_c": 0.0, "null_log_penalty": -3.026189999081713}
+      ],
+      "scope_guard": "The transform is calibrated for the single strict-commit query path and the fixed-discordant null law. S.5 warns that query-path-adapted boosting need not improve other query paths."
+    },
+    "structural_product_late_signal_collapse": {
+      "result": "For a fixed strict-commit path, every nonqueried e-value below 1 multiplies the future penalty C_n. For iid/nondegenerate null candidate e-values Z with P(Z<1)>0 and finite E|log min(Z,1)|, log C_n/n -> E[log min(Z,1)]<0, so the future evidence threshold 1/(alpha C_n) grows exponentially. More generally, any capped null e-value that sometimes exceeds 1 must place some null mass below 1 unless it is degenerate, because its null expectation is <=1.",
+      "consequence": "Query-path boosting can reduce the negative log drift and improve early/clustered power, but cannot generically eliminate late-signal collapse while retaining nontrivial evidence variability. As m grows, cap slack disappears and both scalar and floor boosts revert toward the raw e-value.",
+      "scope_guard": "The asymptotic statement is proved here for fixed iid/null-law transforms; adaptive/dependent streams need explicit conditional-drift/ergodic assumptions. It is a power pathology, not a Type-I-validity failure."
+    }
+  },
+  "worker_local_stress_tests": {
+    "common_setup": "100,000 Monte Carlo runs unless stated otherwise. Candidate-level audit uses inverse sampling to r=20 discordant pairs; q_bet=.75; null sign q=.5; good sign q=.75; global alpha=.05. Product methods use a strict commit query path: add a candidate only if its current e-value makes the SeqE-Guard lower bound increment. Geometric base uses gamma_j=.15*.85^(j-1); Fallback-1 recycles the previous rejected level. These simulations are finite-design stress tests, not substitutes for the cited validity theorems.",
+    "deterministic_timing_100000": {
+      "all_null": {
+        "raw_product": {"P_any_false": 0.00846},
+        "scalar_boost_product": {"P_any_false": 0.02478},
+        "floor_boost_product": {"P_any_false": 0.00967},
+        "geometric_spending": {"P_any_false": 0.0013},
+        "fallback_geometric": {"P_any_false": 0.0013}
+      },
+      "five_good_1_to_5": {
+        "raw_product": {"P_any_true": 0.89541, "mean_true_commits": 1.96959},
+        "scalar_boost_product": {"P_any_true": 0.95121, "mean_true_commits": 2.80298},
+        "floor_boost_product": {"P_any_true": 0.90595, "mean_true_commits": 1.99185},
+        "geometric_spending": {"P_any_true": 0.38036, "mean_true_commits": 0.45637},
+        "fallback_geometric": {"P_any_true": 0.38036, "mean_true_commits": 0.51098}
+      },
+      "five_good_11_to_15": {
+        "raw_product": {"P_any_true_observed": 0.0},
+        "scalar_boost_product": {"P_any_true_observed": 0.0},
+        "floor_boost_product": {"P_any_true_observed": 0.0},
+        "geometric_spending": {"P_any_true": 0.09701},
+        "fallback_geometric": {"P_any_true": 0.09701}
+      },
+      "sparse_good_5_10_15_20": {
+        "raw_product": {"P_any_true": 0.00235},
+        "scalar_boost_product": {"P_any_true": 0.00403},
+        "floor_boost_product": {"P_any_true": 0.02056},
+        "geometric_spending": {"P_any_true": 0.12064},
+        "fallback_geometric": {"P_any_true": 0.12067}
+      },
+      "interpretation": "Scalar boosting is very strong for front-loaded improvements but spends more of the nominal false-commit budget. Floor boosting materially improves sparse/interspersed signals by preserving early off-query wealth, yet all product variants still collapse after a sufficiently long null prefix. Geometric fallback is much more robust to delayed/sparse improvements in this horizon."
+    },
+    "clustered_markov_100000": {
+      "proposal_process": "30 proposal opportunities, at most 20 launched audits; hot/cold Markov state with P(hot|hot)=.85 and P(hot|cold)=.15; P(good|hot)=.65, P(good|cold)=.10; development-only triage launches .80 of good and .25 of null candidates.",
+      "results": [
+        {"method": "raw_product", "P_any_false": 0.00703, "P_any_true": 0.52526, "mean_true_commits": 1.13232},
+        {"method": "scalar_boost_product", "P_any_false": 0.02052, "P_any_true": 0.60086, "mean_true_commits": 1.57255},
+        {"method": "floor_boost_product", "P_any_false": 0.00792, "P_any_true": 0.66669, "mean_true_commits": 1.5211},
+        {"method": "geometric_spending", "P_any_false": 0.00049, "P_any_true": 0.39962, "mean_true_commits": 0.50223},
+        {"method": "fallback_geometric", "P_any_false": 0.0006, "P_any_true": 0.39963, "mean_true_commits": 0.53433}
+      ],
+      "mean_launched_audits": 13.67616,
+      "mean_total_paired_observations_if_rho_0_4": 683.808,
+      "interpretation": "In this clustered regime, floor boosting had the best probability of at least one true commit among the tested methods because it used cap slack to preserve future product wealth without sacrificing the raw upper tail. This does not contradict the delayed-block failure: clustered improvements arrive before the structural penalty becomes overwhelming."
+    },
+    "null_penalty_diagnostics": {
+      "all_null_20_candidate_median_final_C": {
+        "raw": 6.4154308959160815e-27,
+        "scalar_boost": 1.0303813954313235e-26,
+        "floor_boost": 1.1581039986072014e-23
+      },
+      "median_scalar_boost_by_candidate_index": {"1": 1.5309913291, "2": 1.0490578698, "3": 1.0, "5": 1.0},
+      "median_floor_c_by_candidate_index": {"1": 0.4511525134, "2": 0.2792608472, "3": 0.1244376509, "4": 0.0114809511, "5": 0.0},
+      "interpretation": "The query-path cap slack is consumed quickly after null noncommits: scalar boosting is effectively gone by about the third typical null, and floor boosting by about the fifth in this tested design."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-inverse-discordant-seqe-boost-v1",
+      "mechanism": "Emit one candidate-level fixed-discordant paired-sign e-value, then apply exact query-path-specific SeqE-Guard boosting using its known Binomial(r,1/2) null law.",
+      "evidence": "Direct mapping of inverse McNemar sampling to Fischer-Ramdas S.5 plus exact finite-support calibration.",
+      "scope_guard": "Random total task cost can be large when discordance is rare; fixed-discordant sampling changes the operational budget distribution."
+    },
+    {
+      "candidate_id": "eval-g1-query-path-floor-boost-v1",
+      "mechanism": "Use S.5's general boosting allowance to spend truncation slack on a lower-tail floor rather than scalar multiplication, targeting the off-query U-product penalty.",
+      "evidence": "Exact null calibration plus worker-local deterministic and Markov stress tests; strong clustered improvement, modest sparse improvement, no cure for long-null prefixes.",
+      "status": "promising_but_not_late_signal_solution"
+    },
+    {
+      "candidate_id": "eval-g1-product-eclosure-delayed-signal-collapse-v2",
+      "update": "Strengthened from empirical pathology to a fixed-iid structural log-product argument: any nondegenerate null e-value stream with positive lower-tail mass drives the strict off-query product downward exponentially under standard law-of-large-numbers conditions."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'Fischer-Ramdas scalar boosting can be applied directly to each paired task while the discordance rate is arbitrary.' If the null permits rho=0, the concordant factor equals one almost surely and any scalar b>1 violates the capped conditional e-value condition.",
+    "Rejected: 'query-path boosting fixes the delayed-signal collapse of strict product closure.' Exact scale/floor boosts improve early and clustered regimes but their available cap slack vanishes as prior lower-tail penalties push m upward.",
+    "Rejected: 'larger uncapped boosted e-values are uniformly better everywhere.' S.5 boosting is constructed for a particular query path; the paper explicitly warns that other query paths may weaken and must use the truncated sequential e-values.",
+    "Narrowed: 'inverse sampling is a free way to remove discordance-rate nuisance.' It fixes the discordant-sign sample size but makes total paired-task cost negative-binomial; at r=20 the 95th percentile rises from 42 pairs at rho=.6 to 135 at rho=.2.",
+    "Narrowed: 'floor boosting solves alpha-death because it raises low e-values.' It substantially reduces initial negative log drift but the floor falls toward zero as the query threshold grows."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Formulate the finite-support query-path boost as an optimization over g_m(E_w) subject to sum_w p0(w)*min(g_m(E_w),m)<=1. Optimize a two-term utility combining immediate true-candidate commit probability and future log-penalty preservation, then solve the resulting dynamic program across m for r=10-50. Compare scalar, floor, hedged, likelihood-ratio/Neyman-Pearson and optimized maps under delayed, sparse and clustered candidate timing."
+    },
+    {
+      "priority": 2,
+      "action": "Derive a lifetime-FWER-valid fixed portfolio/hybrid that keeps boosted product closure for early/clustered signals but reserves a delayed-signal-robust fallback/spending channel. Do not choose the channel after seeing the same candidate evidence unless the combination itself has a proven closure/e-value guarantee."
+    },
+    {
+      "priority": 3,
+      "action": "Remove inverse-sampling's unbounded total-task cost: construct a censored fixed-total-task paired audit whose emitted candidate e-value has a null law allowing nontrivial query-path boosting uniformly over unknown discordance rho, or prove a lower bound showing why such uniform boosting is necessarily weak."
+    },
+    {
+      "priority": 4,
+      "action": "Retain the online e-Fallback proof frontier for adaptively generated candidate identities and fresh conditionally valid e-values; product boosting changes power but not the candidate-freeze/data-reuse validity interface."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Solve the finite-state optimal query-path transform g_m for r=20 paired signs at alpha=.05, using a Bellman objective that values both immediate commit and preserved future log-wealth; then test whether any valid transform materially improves the five-good-11-to-15 and sparse timing regimes without sacrificing lifetime FWER."
+}
