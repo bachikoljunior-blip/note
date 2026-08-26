@@ -1,26 +1,26 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260827T0404_JST.md`.
+Latest durable checkpoint: `RUN_20260827T0501_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0659_JST.md`, `RUN_20260826T0804_JST.md`, `RUN_20260826T0900_JST.md`, `RUN_20260826T1003_JST.md`, `RUN_20260826T1101_JST.md`, `RUN_20260826T1157_JST.md`, `RUN_20260826T1300_JST.md`, `RUN_20260826T1405_JST.md`, `RUN_20260826T1407_JST.md`, `RUN_20260826T1501_JST.md`, `RUN_20260826T1601_JST.md`, `RUN_20260826T1703_JST.md`, `RUN_20260826T1758_JST.md`, `RUN_20260826T1807_JST.md`, `RUN_20260826T1808_JST.md`, `RUN_20260826T2002_JST.md`, `RUN_20260826T2104_JST.md`, `RUN_20260826T2157_JST.md`, `RUN_20260826T2302_JST.md`, `RUN_20260827T0008_JST.md`, `RUN_20260827T0102_JST.md`, `RUN_20260827T0204_JST.md`, `RUN_20260827T0209_JST.md`, `RUN_20260827T0302_JST.md`, and `RUN_20260827T0404_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain ending at `RUN_20260827T0501_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
 Current highest-value frontier update:
-- **DeMix artifacts are strongly content-addressed but the public search generator is not fully deterministic.** `Lucius-lsr/DeMix@d0c945ca84d5632c6ed1bfe469337cf880757422` seeds NumPy to 42 in `sample.py` but uses Python `random.choice`/`random.sample` without `random.seed`; candidate mixtures therefore cannot be exactly regenerated from the stated NumPy seed alone. Evaluation discovery also uses unsorted `glob` selection, and the repo has no dependency lock/environment pinning.
-- **DeMix model identity is nevertheless unusually inspectable.** The Hugging Face reproduction release exposes LFS/Xet SHA-256 and sizes; e.g. one released Qwen3-1.7B reference-model shard is SHA-256 `3ec6c05c9f12fa1dd1ad4e637a351e7a146e04caa7eacb2921c80b308e82a4fb`, size `4,969,539,560` bytes. Current release surface is ~`6.1 TB`, with ~`552 GB` of reference models.
-- **OptiMer now has an official NICT code release with a much stronger environment contract.** `nict-astrec-att/optimer@582cf63d3dfef8fa6d7e35068afa412288147c5b` pins Python 3.11, torch/transformers/Optuna/lm-eval/vLLM/etc. and mergekit commit `d4b4b6c...`. Correct the older state that treated its software environment as largely unpinned.
-- **OptiMer exact paper replay is still unavailable.** The official script does not seed TPE/CMA/random Optuna samplers; the repo has no winning paper `optuna.db`, model/checkpoint/distribution-vector hashes, Table-1 weight artifact, or GitHub release. Treat public reruns as re-search/deterministic reconstruction only after explicit seeding.
-- **Conditional current-code defect:** OptiMer names CPT weight parameters from `Path(checkpoint).parent.name`. The README sibling-path example `/path/to/japanese_ckpt /path/to/math_ckpt` gives the same parent name `to`, which reuses one Optuna parameter name and couples CPT weights. This only applies when parent names collide; do not infer the internal paper run did so.
-- **Matched falsifier is now sharper:** same backbone/data/components, compare uniform real DataMix, trained-proxy ratio search, DeMix merged-proxy ratio search + real retraining, OptiMer post-hoc composition, and OptiMer-derived-ratio retraining; explicitly seed all randomness and sweep parameter displacement while measuring merge-vs-real-mixture fidelity, storage and restart cost.
+- **DeMix current public rank-consistency code is incomplete, not merely under-pinned.** `eval_merged/proxy_eval.py` currently returns synthetic `random.random()+index` benchmark values instead of parsing OpenCompass output. The README's rank-consistency reproduction path therefore needs missing evaluation extraction code/results plus a pinned OpenCompass contract.
+- **DeMix's concrete CSV parser is brittle.** `iterative_sample/train_predictor.py` hard-codes benchmark row numbers and score column 4, uses unversioned OpenCompass, and selects unsorted glob matches. Version/schema and filesystem-order drift can change interpreted scores.
+- **DeMix has a public mapping mismatch:** current `reference_models` contains 16 model directories `mix_0..mix_15`, while `sampled_mixture.json` contains 17 keys `mix_0..mix_16`, despite the README claiming 16 corresponding mixtures. Resolve before assuming id equality.
+- **Representative 30B component identity is now pinned:** `general_target/checkpoint-7500/model-00001-of-00002.safetensors` SHA-256 `cb4fccd9f51d3229117c6e27c94faba5683a5d41970860e3a62b5c5f06ae5b29`, 4.97 GB. Current public DeMix HF main observed is `82a2eff...`, but the reproduction guide does not designate an immutable paper snapshot.
+- **OptiMer weight availability is partly better than previously recorded.** arXiv v2 Table 4 publishes exact objective-specific winning weights. Example Japanese objective `[0,1]`: `it=.569, ja=.055, zh=.006, en=.129, math=.489, code=.033`, score `73.37`. Chinese and Math objective weights are also tabulated, plus negative-weight variants.
+- **OptiMer exact trial replay remains unavailable.** Official NICT GitHub main remains `582cf63d...`; no winning `optuna.db` or Gemma CPT/vector model bundle was found in the current NICT Hugging Face organization. Main Table-1 combination-specific weights were not recovered as exact machine-readable values in this run; distinguish them from the exact Table-4 objective weights.
 - Earlier OptiMer/DeMix/Data Mixing Agent/ELLA/SpaRTA/TSR/FST/TFGN/Share/SLoRA/FLEX/CLDD/replay/plasticity/world-model/drift branches remain live under their prior scope guards.
 
 Exact next action:
-1. Inspect DeMix `component_models` history and record representative component-model LFS SHA-256 plus `sampled_mixture.json` identity; determine whether the 30B consistency experiment is pinned to one HF revision.
-2. Inspect DeMix OpenCompass/evaluation version/config pinning and quantify which unsorted-glob cases can alter search scores.
-3. Extract OptiMer paper winning weights and compare them with the corrected public-search parameterization after unique checkpoint names + explicit sampler seeds; search for later NICT study/model releases.
-4. Write an executable small-scale matched protocol for the five mixture paths with identical component models, objective, seed family and displacement sweep.
-5. Quantify dense checkpoint/vector persistence versus compressed/sparse deltas and objective-switch amortization.
-6. Cross representative mixture controllers with the parameter-write axis only after holding data trajectories fixed.
+1. Resolve DeMix 17-mixture/16-model mapping via reference-model training metadata/history; identify any orphan/shifted entry.
+2. Inspect `proxy_eval.py` history and released evaluation outputs/configs for a real OpenCompass parser and paper-pinned evaluator version.
+3. Pin SHA-256 for all seven 30B `checkpoint-7500` component sources and one immutable HF dataset revision containing the complete artifact set.
+4. Recover exact OptiMer Table-1 combination weights from arXiv source/Figure-4 data if possible; otherwise explicitly classify them as figure-only and use Table-4 weights as the exact public positive control.
+5. Search later NICT/HF releases for CPT/vector artifacts and study DB.
+6. Materialize the five-path matched experiment manifest with identical model/data/evaluator/seed/displacement contracts.
 7. Continue earlier live branches under exact tested-scope rules.
 
 Frontier must remain nonempty.
