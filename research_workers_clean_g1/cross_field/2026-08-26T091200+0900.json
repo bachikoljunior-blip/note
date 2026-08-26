@@ -1,0 +1,101 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "679a03671244ad269b7e084e4e0fad701e61982b",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "9a8d1228e10bae24b5ac5b0229af20b2dc6c678b",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T090300+0900.json",
+  "started_local": "2026-08-26T09:03:01+09:00",
+  "checkpointed_local": "2026-08-26T09:12:00+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404"
+  },
+  "checked_sources": [
+    {
+      "source": "Haddouche & Sakhi 2026 v2, Appendix C Theorem C.1 and proof",
+      "url": "https://arxiv.org/html/2506.10664v2",
+      "result": "Primary-verified a stronger off-policy past-dependent-prior result than the main-text fixed-prior theorem, but for a different target. Under arbitrarily evolving context distributions, Q_k may depend on data through time k, and the time-uniform cumulative bound uses the product prior Q_0 tensor ... tensor Q_{K-1}, yielding the exact complexity sum_k KL(Q_k||Q_{k-1}). The proof explicitly relies on Q_{K-1} being F_{K-1}-measurable, conditional Fubini, a nonnegative martingale and Ville's inequality. The algorithm uses only the current batch plus the previous posterior/policy because older raw data may be stale under arbitrary drift."
+    },
+    {
+      "source": "Shin, Ramdas, Rinaldo, E-detectors: a nonparametric framework for sequential change detection, arXiv:2203.03532 / NEJSDS",
+      "url": "https://arxiv.org/abs/2203.03532",
+      "result": "Primary-verified a nonparametric sequential change-detection framework built from e-processes. It gives nonasymptotic average-run-length false-alarm control in broad composite settings and near-optimal detection-delay rates in sub-Gaussian/sub-exponential cases, including bounded-mean changes without iid assumptions. Predictable mixtures of valid baseline increments retain validity."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r34-local-posterior-prior-offpolicy-under-drift",
+      "mechanism": "When the data-generating context distribution may drift arbitrarily, stop treating all historical raw observations as equally current. Learn Q_k from the current batch while using Q_{k-1} as the reference distribution, and pay cumulative local change complexity sum KL(Q_k||Q_{k-1}) rather than distance to a single ancient prior.",
+      "primary_sources": ["Haddouche & Sakhi 2026 v2, Appendix C Theorem C.1"],
+      "quantitative_or_formal_evidence": "With probability at least 1-delta, for every horizon K the average sequential risk is bounded by average current-batch logarithmic-smoothing empirical risk plus [sum_{k=0}^K KL(Q_k||Q_{k-1}) + log(1/delta)]/[lambda (K+1)m]. The proof constructs P^K=Q_0 tensor ... tensor Q_{K-1}, uses F_{K-1}-measurability and Ville's inequality, so the previous posterior is a directly verified off-policy reference in this dynamic cumulative-risk setting.",
+      "scope": "Time-varying context distributions, current-batch conditional independence, bounded costs and the paper's LS/off-policy policy representation. The guarantee targets average sequential risk across changing environments, not the stationary single-policy global-history objective of Theorem 3.2.",
+      "failure_conditions": "Using only current data wastes useful old evidence when the regime is actually stable. Small local KL steps can accumulate into large long-run drift. The result does not itself detect when to switch between stable/global-history and drifting/local-history modes, and it does not certify one final stationary policy after arbitrary drift.",
+      "transfer_hypothesis": "Maintain two formally distinct evidence modes: stable mode reuses global history under the fixed-prior all-k/all-Q theorem; drift mode uses current evidence plus previous-posterior continuity under Theorem C.1. Never mix their guarantees. A separate sequential change detector decides when evidence is stale enough to enter drift mode.",
+      "confidence": "high for source theorem; medium for two-mode scheduler transfer"
+    },
+    {
+      "id": "cf-g1-r35-e-detector-memory-regime-switch",
+      "mechanism": "Run an anytime nonparametric e-detector on a compact stream of environment/performance diagnostics. While the no-change hypothesis remains credible, retain long-history evidence; after a statistically controlled change alarm, restart or shorten raw-data memory and switch to the local previous-posterior update regime."
+      ,"primary_sources": ["Shin, Ramdas & Rinaldo 2022/2023 e-detectors", "Haddouche & Sakhi 2026 Appendix C"],
+      "quantitative_or_formal_evidence": "E-detectors provide nonasymptotic false-alarm average-run-length control for composite nonparametric pre-change classes and near-optimal detection-delay rates in sub-Gaussian/sub-exponential settings. The off-policy Appendix C theorem separately certifies local current-batch learning with cumulative KL path cost under arbitrary context evolution.",
+      "scope": "The change detector and learner are separately certified components. The e-detector requires a well-defined monitored null/statistic; the off-policy learner requires its own propensity/support and cost assumptions.",
+      "failure_conditions": "No end-to-end theorem was found for the combined switch. Slow drift may not trigger quickly; noisy alarms can cause unnecessary forgetting; the monitored diagnostic may miss semantically important distribution change; detector reset semantics can interact with repeated/recurring regimes.",
+      "transfer_hypothesis": "Use a small, independent drift evidence channel to decide evidence half-life: stable => global accumulation; alarm => current-batch/local-posterior mode; after re-stabilization => begin a fresh global-history lineage. Preserve detector evidence, learning evidence and hard safety constraints as separate layers.",
+      "confidence": "high for component theorems; medium-low for composed optimizer architecture"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r31-predictable-past-prior",
+      "update": "The off-policy picture is now split more precisely. Main-text Theorem 3.2 keeps a data-independent fixed prior for stationary global-history reuse, but Appendix C Theorem C.1 directly uses previous posteriors Q_{k-1} as predictable reference distributions and proves a time-uniform cumulative-risk bound under arbitrary context drift. Thus 'predictable prior in off-policy learning' is verified in the local/dynamic objective, while the stationary all-history/all-Q predictable-prior extension remains open."
+    },
+    {
+      "candidate": "cf-g1-r29-dynamic-kl-change-budget",
+      "update": "Primary proof inspection confirms the cumulative KL path term is not merely a heuristic regularizer: it arises exactly as KL(Q^K||P^K)=sum KL(Q_k||Q_{k-1}) with P^K built from past posteriors, and the exponential mixture is a nonnegative martingale because each Q_{k-1} is F_{k-1}-measurable."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "One predictable-prior theorem can simultaneously give full-history stationary reuse, arbitrary-drift robustness, and one final-policy certificate.",
+      "evidence": "Not established. The verified theorems separate these objectives: main Theorem 3.2 reuses all data with fixed P under stationary contexts; Appendix C uses current batch plus Q_{k-1} and controls average sequential risk under arbitrary context evolution.",
+      "reason": "Keep stable and drift modes as separate lineages until a unified theorem is found."
+    },
+    {
+      "lead": "An e-detector alarm automatically validates discarding old off-policy evidence and switching learners.",
+      "evidence": "Not established. E-detectors certify false-alarm/delay properties for the monitored change hypothesis, not downstream policy-risk optimality after a switch.",
+      "reason": "Treat drift detection as a routing signal whose false-alarm/delay guarantee is separate from the learning certificates before and after the switch."
+    }
+  ],
+  "frontier": [
+    "Search for a unified stationary sequential off-policy PAC-Bayes theorem that allows an F_{k-1}-measurable learned prior while still reusing all historical batches and retaining simultaneous all-k/all-Q certification. Compare its proof obstacle with Appendix C's product-prior construction.",
+    "Specify a practical e-detector statistic for evidence staleness that is independent of the optimizer's candidate-selection score; test abrupt, gradual and recurring drift and quantify false-memory-reset versus stale-memory costs.",
+    "Formalize restart semantics after drift: what prior mass and historical evidence may be carried into a fresh stable lineage without double-using the alarm-triggering data?",
+    "Complete the frozen vector off-policy reduction and compare joint vector CS geometry with scalar alpha splitting on correlated objectives.",
+    "Extend atomic deterministic certificates to a countable description-length prior and define safe admission of configs not in the original support.",
+    "Continue heavy-tail support: robustify the detector and off-policy score layers separately before attempting any combined guarantee."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Inspected Appendix C's full proof after the first checkpoint and found a direct off-policy previous-posterior construction that materially refined the earlier frontier.",
+      "Separated stationary global-history and arbitrary-drift local-history guarantees instead of collapsing them into one claim.",
+      "Added nonparametric anytime change detection as a distinct routing component, while explicitly refusing to transfer its guarantee to downstream policy risk."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Compare the fixed-prior supermartingale proof of Theorem 3.2 with Appendix C's product-prior martingale line by line to determine whether a predictable prior can coexist with full-history reuse without double counting. Then design the smallest independently monitored e-detector statistic that can route stable/global-history versus drift/local-history evidence while keeping the switch itself outside both learning certificates."
+}
