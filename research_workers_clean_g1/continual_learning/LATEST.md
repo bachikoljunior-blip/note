@@ -1,30 +1,30 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260826T1101_JST.md`.
+Latest durable checkpoint: `RUN_20260826T1157_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0659_JST.md`, `RUN_20260826T0804_JST.md`, `RUN_20260826T0900_JST.md`, `RUN_20260826T1003_JST.md`, and `RUN_20260826T1101_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0659_JST.md`, `RUN_20260826T0804_JST.md`, `RUN_20260826T0900_JST.md`, `RUN_20260826T1003_JST.md`, `RUN_20260826T1101_JST.md`, and `RUN_20260826T1157_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
 Current highest-value frontier update:
-- CLDD remains the best event-level temporal benchmark found so far for learner-derived drift signals, but the public source reveals a protocol correction: the documentation says detector tuning uses five training error streams, while the current public workflow creates 10 training seeds and passes **all 10** streams into detector hyperparameter search, averaging `my_f1` across them over 30 trials.
-- The exact source split is reconstructible and disjoint: training/error-stream seeds `6311,6890,663,4242,8376,7961,6634,4969,7808,5866`; held-out evaluation seeds `2201,9325,1033,4179,1931,8117,7364,7737,6219,3439`.
-- CUSUM is already implemented in CLDD source but excluded from the published five-detector CLDD-B factorial, making it a low-friction **open-loop extension**, not a published CLDD-B baseline.
-- Exact source regeneration has an environment gap: `pyproject.toml` points `capymoa` to editable `../CapyMOA` without pinning a commit/version. Prefer event recomputation from published `trues/preds/max_early/max_delay`, or explicitly pin CapyMOA for new experiments.
-- CLDD's custom event matcher partitions alarms by true-boundary midpoints and counts duplicate in-window alarms as false positives. This provides an independently reproducible event confusion contract despite the unrelated `my_precision` bookkeeping bug.
-- Delay normalization needs care: evaluator acceptance width is dynamic (`mean_task_length * gradual + mb_train*10`), while plotting code uses fixed `{640,12000,24000}` divisors. For new comparisons use actual stored event-window metadata rather than silently copying the plotting constants.
-- Direct parquet byte inspection was blocked in this run only by tool transport: Zenodo exposes `CLDD_A.parquet` (13.5 MB, md5 `750b254eed809a38bd14dc80eb4dff81`) and `CLDD_B.parquet` (28.0 MB, md5 `445b8f87afd61d42c72a3af9edbde626`), but the available web path rejects large binary responses and the local runtime has no external network. Do not treat this as dataset unavailability.
+- CLDD remains the best event-level temporal benchmark found so far for learner-derived drift signals. The public source uses 10 training error streams for detector tuning despite documentation saying five; the exact disjoint 10/10 train/test seed split and event matcher are already frozen in prior checkpoints.
+- The previously broad “CapyMOA is unpinned” gap is now sharply narrowed: CLDD uses editable sibling `../CapyMOA`, and the author's public fork has a branch named **`blurry-ocl`** whose API matches CLDD's otherwise-unavailable imports. `blurry-ocl@02d9f11b3fdfc2c240b65bd4878191cf2fbc46f1` exports EWC/LWF/DER/SI/MAS/RWalk and contains `fuzzy_sigmoid_transitions`.
+- Official CapyMOA v0.14.0 is not an exact-generation substitute: the gradual-transition implementation was only merged upstream on 2026-07-09 and released 2026-08-08, whereas CLDD source used that API by June and Zenodo v1 was published 2026-07-07. The official v0.14 strategy surface also lacks several CLDD-used strategies that the `blurry-ocl` branch contains.
+- CLDD itself was previously named `blurry-ocl`; its Makefile still uses that name for the venv/log paths and references a local June-15 archive `2026-06-15T22-19-30Z_e0f51b8.7z`, strengthening the development-line linkage.
+- Exact CapyMOA generation SHA is still **not proven**. `blurry-ocl` parent `0793b0d...` from June 12 has `_rwalk.py` but does not export RWalk, while June-14 CLDD `e0f51b8...` imports RWalk from the package. The July-7 `02d9f11...` commit adds the export. This makes an uncommitted/different sibling working tree plausible and prevents falsely labeling any committed June SHA as exact provenance.
+- Treat `CLDD@7b0a474... + CapyMOA blurry-ocl@02d9f11...` only as the strongest currently public **reconstruction anchor** unless a generation-time CapyMOA SHA/tree/dirty-state receipt is found.
+- Direct parquet byte inspection remains transport-blocked only. Zenodo exposes `CLDD_A.parquet` (13.5 MB, md5 `750b254eed809a38bd14dc80eb4dff81`) and `CLDD_B.parquet` (28.0 MB, md5 `445b8f87afd61d42c72a3af9edbde626`).
 
 DriftLens/STL-10 provenance remains unresolved and lower priority:
 - final paper defines UC8 radius 2; public wrapper filenames use radius 2; public notebook executes radius 8; exact author radius-2 HDF5/checkpoint/RNG/output receipt remains unavailable in inspected public surfaces;
 - UC8 remains independent-window drift/no-drift classification, not event-level temporal detection.
 
 Exact next action:
-1. retry byte-level CLDD-A/B download via an accessible file transport; verify checksums, 360/750 rows, actual seed multiplicity, stream lengths, event arrays, and `max_early/max_delay` values;
-2. independently recompute event confusion from `trues/preds/max_early/max_delay` and compare against CapyMOA metrics where available;
-3. identify the CapyMOA revision used for Zenodo generation if discoverable, otherwise explicitly pin a version for extensions;
-4. run an open-loop held-out-seed comparison using the five published detectors plus source-available CUSUM and a preregistered quantile/persistence controller, tuning only on the 10 training seeds;
-5. report event precision/recall/F1, FAR, raw delay and normalized delay using stored window metadata;
-6. separately pair event quality with CLDD-B closed-loop continual-learning utility, then transfer the same controllers to one frozen label-free same-label representation-score trace without target retuning;
+1. search public CLDD/CapyMOA history, archive metadata and author artifacts for the generation-time CapyMOA SHA/tree/dirty-state, prioritizing CLDD `e0f51b8...`, the June-15 archive path and July-7 publication window;
+2. validate every CLDD-used CapyMOA API against `blurry-ocl@02d9f11...` and identify behavior-changing differences from the likely June working tree, especially RWalk, fuzzy transitions and drift-event evaluation;
+3. if exact provenance stays missing, freeze the two-repository public reconstruction anchor explicitly and never call it exact replay;
+4. retry byte-level CLDD-A/B download, verify checksums/rows/seeds/event arrays/timing windows, and recompute event confusion independently;
+5. run the held-out open-loop comparison with published ADWIN/DDM/PH/SEED/STEPD plus source-available CUSUM and a preregistered quantile/persistence controller, tuning only on the 10 training seeds;
+6. pair event quality with CLDD-B closed-loop learner utility, then transfer the same controllers to one fixed label-free same-label representation-score trace without target retuning;
 7. continue broader frontier: DriftLens/LargeMonitor label-free trace, ARROW matched control, adaptive replay, plasticity controls, curriculum selection.
 
 Frontier must remain nonempty.
