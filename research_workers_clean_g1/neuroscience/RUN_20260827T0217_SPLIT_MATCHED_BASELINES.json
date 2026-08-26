@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 10,
+  "config_revision": 5,
+  "control_source_main_sha": "9fe3e4931adc694d2d8ade4aad0cf44a8d759fd4",
+  "control_root_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+  "role_config_blob": "f8b9cec681279d8dbd14c5db87ee79bc743a27b0",
+  "run_started_at": "2026-08-27T02:02:56+09:00",
+  "checkpointed_at": "2026-08-27T02:17:54+09:00",
+  "chronology_valid": true,
+  "continues_from_latest": "RUN_20260827T0106_SPLIT_CAUSAL.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "downstream_state_read": false,
+    "o_state_read": false,
+    "aggregate_ledger_read": false,
+    "other_role_receipt_read": false,
+    "semantic_control_freeze": "main 9fe3e4931adc694d2d8ade4aad0cf44a8d759fd4, control 10, config 5"
+  },
+  "public_source_audit": {
+    "paper": "Godin C, Thivierge J-P (2026), Manifold-constrained plasticity enables stable learning in recurrent neural circuits, PLOS Computational Biology, DOI 10.1371/journal.pcbi.1014719, published 2026-08-25",
+    "observed_source_facts": [
+      "SPLiT combines online Oja subspace tracking with normalized LMS in manifold coordinates.",
+      "The estimated basis is re-orthonormalized every 1 ms.",
+      "Learning feedback shapes recurrent states during training; the paper explicitly distinguishes constrained and unconstrained feedback paths.",
+      "S11 compares frozen versus adaptive estimated decoder subspace and reports higher error when frozen; S12 tests rotational perturbations from 25 to 80 degrees.",
+      "The Discussion explicitly acknowledges that low-rank projections or pseudoinverse regularization could provide similar conditioning benefits; the claimed novelty is the biologically motivated online tracking mechanism.",
+      "The article declares S1 Code as Code.zip at DOI 10.1371/journal.pcbi.1014719.s002. The current tool transport could see the declaration but could not retrieve the binary archive, so no file-level exact reproduction was claimed."
+    ]
+  },
+  "fixed_manifold_equivalence": {
+    "status": "analytic_control_plus_numerical_validation",
+    "claim": "For a fixed orthonormal manifold x=A z, ambient full-space normalized LMS initialized with w=A v is algebraically equivalent to intrinsic normalized LMS on z: the ambient update remains in span(A) and A^T w follows exactly the same update. Therefore low-rank covariance by itself does not create an optimization disadvantage for per-sample normalized LMS; explicit subspace tracking can only add predictive value when the supported subspace moves, when feedback/regularization changes the dynamics, or when locality/parameter constraints matter.",
+    "numerical_validation": {
+      "ambient_dim": 64,
+      "latent_dim": 3,
+      "updates": 5000,
+      "seeds": 3,
+      "max_prediction_discrepancy": 1.3322676295501878e-15,
+      "max_weight_decomposition_discrepancy": 1.7718826957667225e-15
+    },
+    "scope": "This is a mathematical control for fixed orthonormal manifolds and normalized LMS, not a reproduction of the full SPLiT feedback system."
+  },
+  "rotating_low_rank_matched_control": {
+    "status": "source_derived_not_exact_replication",
+    "setup": {
+      "ambient_dim": 64,
+      "latent_dim": 3,
+      "steps": 6000,
+      "gradual_rotation_degrees": 80,
+      "heldout_paired_seeds": 20,
+      "development_tuning": "Oja step size, EW-PCA decay, and full-space RLS forgetting were selected on disjoint development seeds before held-out evaluation.",
+      "coordinate_budget": "oracle, Oja, EW-PCA and frozen trackers each used the same 3-dimensional decoder budget; full-space NLMS/RLS used 64 weights and are reported separately as conditioning baselines.",
+      "trajectory": "low-rank recurrent-like latent dynamics projected through a gradually rotating orthonormal ambient basis; no source-exact teacher-feedback coupling in this control"
+    },
+    "heldout_mean_mse": {
+      "oracle_intrinsic_nlms": {"drift": 0.00011072864147459682, "final": 0.00011078859031130343},
+      "oja_intrinsic_nlms": {"drift": 0.00011136959031854095, "final": 0.0001108478082252427, "final_subspace_angle_deg": 4.5519671514316835},
+      "aligned_ew_pca_intrinsic_nlms": {"drift": 0.00011082324499447583, "final": 0.00011082725586154026, "final_subspace_angle_deg": 4.55817959640343},
+      "frozen_initial_intrinsic_nlms": {"drift": 0.0008350333135517977, "final": 0.0042361855867965575, "final_subspace_angle_deg": 80.0},
+      "full_space_nlms": {"drift": 0.00027415844909139183, "final": 0.00031451041269955167},
+      "full_space_rls_tuned_lambda_0_995": {"drift": 0.000157645948720547, "final": 0.00012190118931464234}
+    },
+    "paired_bootstrap_differences": {
+      "oja_minus_pca_drift": {"mean": 5.46345324065111e-7, "bootstrap95": [3.3207302557597504e-7, 7.603486074010144e-7]},
+      "oja_minus_pca_final": {"mean": 2.055236370243277e-8, "bootstrap95": [-6.490852161474243e-8, 1.05778629924113e-7]},
+      "frozen_minus_oja_final": {"mean": 0.0041253377785713165, "bootstrap95": [0.003441290721778418, 0.005281429599210603]},
+      "full_nlms_minus_oracle_drift": {"mean": 0.00016342980761679498, "bootstrap95": [0.00015451635106428246, 0.00017369120496543082]},
+      "full_rls_minus_oracle_final": {"mean": 0.00001111259900333891, "bootstrap95": [0.000009761231946513103, 0.000012483156299416426]}
+    },
+    "interpretation": [
+      "Adaptive low-dimensional tracking is strongly supported in this reduced rotating-subspace regime: frozen coordinates fail as the manifold rotates.",
+      "Oja and generic aligned EW-PCA are essentially indistinguishable at the final endpoint after disjoint tuning; this supports adaptive subspace tracking but does not isolate Oja as the uniquely effective tracker.",
+      "Full-space normalized LMS remains stable despite low rank and materially outperforms the frozen low-dimensional decoder, consistent with the fixed-manifold equivalence argument. It is worse than adaptive 3-D tracking during continuous rotation because it accumulates stale directions rather than explicitly compressing to the instantaneous subspace.",
+      "A tuned full-space RLS baseline approaches the oracle endpoint, showing that full-space inversion methods are highly sensitive to forgetting/regularization choices; a single poorly tuned FORCE/RLS comparison cannot by itself identify the benefit of Oja tracking."
+    ]
+  },
+  "closed_loop_feedback_analogue": {
+    "status": "source_derived_not_exact_replication",
+    "setup": "32 ambient / 3 latent units, leaky recurrent latent dynamics, scalar output error fed back into the latent recurrent state, 12 s trajectories, 80-degree gradual subspace rotation, 20 held-out seeds. This preserves the qualitative feedback coupling but not the source code, default table or exact Eq.14 implementation.",
+    "heldout_mean_mse": {
+      "oracle": {"drift": 0.03563836249777015, "final": 0.03797809790473433},
+      "aligned_ew_pca": {"drift": 0.035502690702903586, "final": 0.03542612856267099, "final_subspace_angle_deg": 7.153871827495867},
+      "full_space_nlms": {"drift": 0.037274964462842945, "final": 0.03682742126358961},
+      "frozen": {"drift": 0.04024841071352309, "final": 0.05042491660382163},
+      "oja_dev_tuned": {"drift": 0.06545703106512725, "final": 0.05292383845865034, "final_subspace_angle_deg": 19.729926530316387}
+    },
+    "paired_bootstrap": {
+      "pca_minus_oracle_drift": {"mean": -0.00013567179486656858, "bootstrap95": [-0.0015590243389837777, 0.001276831209156737]},
+      "full_nlms_minus_oracle_drift": {"mean": 0.0016366019650727944, "bootstrap95": [-0.0008944606564184585, 0.004127897879125714]},
+      "oja_minus_pca_drift": {"mean": 0.029954340362223674, "bootstrap95": [0.00026507428880612053, 0.07320805639195094]},
+      "frozen_minus_pca_final": {"mean": 0.014998788041150657, "bootstrap95": [0.007794934383660345, 0.02180476124310853]}
+    },
+    "scope": [
+      "The Oja result is parameterization-specific and cannot be treated as evidence against the paper because the exact source learning-rate scaling, centering, feedback transform and default parameters were unavailable without Code.zip.",
+      "The important result is prioritization: generic adaptive subspace tracking and ambient normalized LMS both remained competitive under feedback, so exact-source comparisons to these controls are more diagnostic than another synthetic Oja-only run."
+    ]
+  },
+  "candidate_update": {
+    "id": "neuro-g1-split-manifold-tracking-2026",
+    "status": "quantitative_candidate_adaptive_subspace_tracking_supported_oja_specificity_weakened",
+    "new_interpretation": "The strongest transferable mechanism is adaptive low-dimensional subspace conditioning under representational drift. Oja provides a local Hebbian implementation, but current evidence does not isolate Oja from generic online PCA/subspace tracking. A fixed-manifold algebraic control shows that low rank alone does not disadvantage full-space normalized LMS, and reduced rotating-subspace tests show tuned full-space RLS/NLMS can remain competitive. Exact source-code tests are therefore required to separate online tracking, feedback shaping, low-dimensional conditioning and Oja locality.",
+    "scope": [
+      "Do not generalize the reduced controls to the published recurrent tasks or claim a failure of SPLiT.",
+      "The PLOS source explicitly acknowledges that low-rank projections/pseudoinverse regularization could yield similar conditioning; these controls refine that caveat rather than contradict the paper wholesale.",
+      "Biological locality and computational predictive performance are distinct dimensions: EW-PCA is a useful computational control but not a local synaptic rule."
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Recover PLOS S1 Code (DOI 10.1371/journal.pcbi.1014719.s002) through a file-capable public transport and reproduce S11/S12 or the constrained 2-Hz sine condition with the exact default parameter table and Eq.14 feedback. In that source-exact implementation add: (1) full-space normalized LMS, because it is algebraically equivalent to intrinsic NLMS on a fixed orthonormal manifold; (2) aligned EW-PCA or another generic online subspace tracker + the same NLMS with the same latent coordinate budget; (3) tuned full-space RLS/ridge/pseudoinverse controls; and (4) frozen estimated manifold. Use identical seeds and measure MSE, convergence time, principal angle, decoder-update norm, noise sensitivity, rotational-drift recovery and autonomous replay. If Code.zip remains inaccessible, obtain the article JATS/XML/default table through another public text transport before further synthetic experiments."
+}
