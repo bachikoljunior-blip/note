@@ -1,0 +1,106 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T03:07:34.879787+09:00",
+  "invocation_started_at": "2026-08-27T02:59:27+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T021156_JST_latency_async_validity_gate.json",
+  "control": {
+    "frozen_main_sha": "96455fef3c2959bd19936868b26ff73d1c3079c1",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": ["96455fef3c2959bd19936868b26ff73d1c3079c1","96455fef3c2959bd19936868b26ff73d1c3079c1"]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "url": "https://arxiv.org/abs/2603.25971",
+      "date": "2026-03-26",
+      "observed_claim": "Delayed-outcome order can itself depend on treatment/outcome timing; a fixed observation sequence can fail when arrival order becomes treatment-dependent, so the filtration must match what is actually revealed.",
+      "use": "supports treating completion order as a statistical object rather than only a systems detail"
+    },
+    {
+      "url": "https://academic.oup.com/jrsssb/article/86/5/1091/7623686",
+      "observed_claim": "Products of conditional e-variables remain test supermartingales when each next factor is valid conditional on the past; just-in-time adaptation is safe only when conditional validity is maintained.",
+      "use": "supports the predictable/conditional-validity requirement for asynchronous scheduling"
+    }
+  ],
+  "new_mechanism": {
+    "name": "precommitted in-order reveal with bounded speculative window",
+    "protocol": [
+      "Before the audit, fix the ordered task/pair stream, pair seeds/identities, and reveal priority without using outcomes or completion times.",
+      "Run up to b pair jobs concurrently. Completion may occur in any order, but completed results above the next reveal index stay quarantined and do not enter the statistic.",
+      "Reveal only the longest completed contiguous prefix of the precommitted stream. Update the paired-sign/tail-floor statistic only on that prefix.",
+      "Maintain launched-but-not-revealed count <= W. If the head of line blocks and W is full, stop launching until the prefix advances. W=b is conservative; larger W speculates farther ahead.",
+      "At a statistical boundary, stop launches, cancel/discard every higher-index in-flight or buffered result, and never reuse those hidden outcomes in the decision.",
+      "If a hard runtime deadline occurs before a statistical boundary, return unresolved/no-decision. Do not recode unfinished or late pairs as losses/wins."
+    ],
+    "validity_argument": "Let S_i be the precommitted launch/reveal-order paired outcome. If under the null the one-sided paired-sign condition is valid for S_i conditional on the previously revealed prefix and prelaunch covariates, then the statistical path under this scheduler is exactly the same prefix process as if S_1,S_2,... arrived instantly in order. Completion times may depend on the current sign and may determine calendar reveal times, but cannot reorder, censor, or select the statistical observations. Therefore the existing exact curtailed FWER remains unchanged for every W. Scheduler-driven future task choice is not covered: task identities must be precommitted or selected by a rule independent of hidden completion/outcome information. A hard calendar cutoff is safe only as no-decision truncation, not as sign recoding.",
+    "exact_run_fwer_under_tested_null": 0.04797259566965317,
+    "random_priority_result": "With exchangeable latency and no prelaunch latency covariates, an independently randomized precommitted priority permutation is distributionally identical to fixed launch/reveal order and has no expected wall-time advantage. Priority based on genuinely prelaunch latency predictors may help, but changes task order/composition and needs separate power/conditional-null validation.",
+    "rejected_generalization": "Rejected: completion-order async can be made safe merely by assigning independent random priorities after observing which tasks have completed. Selecting from the completed set still conditions on latency and can preserve the same sign-selection problem if latency is sign-dependent."
+  },
+  "tested_model": {
+    "policy": "5 candidate audits with (r=20,k=16), then 15 with (r=50,k=36); rho_discordance=0.20; exact curtailment; all-null cost stress",
+    "candidate_stages_serial": true,
+    "pair_concurrency_b": 16,
+    "side_latency": "correlated lognormal, median normalized to 1, candidate/incumbent log-time correlation 0.5",
+    "conversation_like_cv": 1.5,
+    "code_like_cv": 3.3,
+    "code_straggler_stress": "independent 1% x10 multiplier per side; synthetic stress only",
+    "sampling": "For each action/scheduler, sample exact conditional stop-depth distribution separately for commit/fail, then N=d+NegBin(d,rho) total pairs; conversation: 2500 fail and 1000 commit stage draws, code stress: 2200 fail and 900 commit stage draws; 100000 exact-probability full-run resamples.",
+    "q95_status": "Monte Carlo estimate under the stated synthetic model, not production latency calibration"
+  },
+  "results": {
+    "conversation_like_b16": [
+      {"scheduler":"synchronous_full_batch","wall_q95":1999.638,"effective_cancel_occupancy_q95":10392.917,"full_obligation_occupancy_q95":10392.917},
+      {"scheduler":"completion_order_async","valid_only_under_latency_sign_ignorability":true,"wall_q95":426.448,"wall_reduction_vs_sync_pct":78.67,"full_obligation_occupancy_q95":11113.989,"full_obligation_vs_sync_pct":6.94},
+      {"scheduler":"precommitted_reveal","W":16,"wall_q95":1589.956,"wall_reduction_vs_sync_pct":20.49,"wall_multiple_vs_completion_async":3.728,"full_obligation_occupancy_q95":10645.406,"full_obligation_vs_sync_pct":2.43},
+      {"scheduler":"precommitted_reveal","W":32,"wall_q95":1143.054,"wall_reduction_vs_sync_pct":42.84,"wall_multiple_vs_completion_async":2.68,"full_obligation_occupancy_q95":11448.615,"full_obligation_vs_sync_pct":10.16},
+      {"scheduler":"precommitted_reveal","W":64,"wall_q95":885.343,"wall_reduction_vs_sync_pct":55.72,"wall_multiple_vs_completion_async":2.076,"full_obligation_occupancy_q95":12969.854,"full_obligation_vs_sync_pct":24.8},
+      {"scheduler":"precommitted_reveal","W":"unbounded","wall_q95":747.236,"wall_reduction_vs_sync_pct":62.63,"wall_multiple_vs_completion_async":1.752,"full_obligation_occupancy_q95":18280.626,"full_obligation_vs_sync_pct":75.9}
+    ],
+    "code_like_plus_straggler_b16": [
+      {"scheduler":"synchronous_full_batch","wall_q95":8805.194,"effective_cancel_occupancy_q95":22658.872,"full_obligation_occupancy_q95":22658.872},
+      {"scheduler":"completion_order_async","valid_only_under_latency_sign_ignorability":true,"wall_q95":799.953,"wall_reduction_vs_sync_pct":90.91,"full_obligation_occupancy_q95":23972.292,"full_obligation_vs_sync_pct":5.8},
+      {"scheduler":"precommitted_reveal","W":16,"wall_q95":7373.238,"wall_reduction_vs_sync_pct":16.26,"wall_multiple_vs_completion_async":9.217,"full_obligation_occupancy_q95":23179.828,"full_obligation_vs_sync_pct":2.3},
+      {"scheduler":"precommitted_reveal","W":32,"wall_q95":5837.787,"wall_reduction_vs_sync_pct":33.7,"wall_multiple_vs_completion_async":7.298,"full_obligation_occupancy_q95":24521.468,"full_obligation_vs_sync_pct":8.22},
+      {"scheduler":"precommitted_reveal","W":64,"wall_q95":4899.036,"wall_reduction_vs_sync_pct":44.36,"wall_multiple_vs_completion_async":6.124,"full_obligation_occupancy_q95":27934.207,"full_obligation_vs_sync_pct":23.28},
+      {"scheduler":"precommitted_reveal","W":"unbounded","wall_q95":3932.908,"wall_reduction_vs_sync_pct":55.33,"wall_multiple_vs_completion_async":4.916,"effective_cancel_occupancy_q95":79891.267,"full_obligation_occupancy_q95":87735.964,"full_obligation_vs_sync_pct":287.2}
+    ]
+  },
+  "interpretation": [
+    "A validity-safe in-order async scheduler recovers a material fraction of the synchronous-batch latency without requiring latency/sign ignorability, but head-of-line blocking remains expensive under very heavy tails.",
+    "The speculative window W is a real decision variable. W=32 at b=16 cut q95 wall about 42.8% in the conversation stress for about +10.2% full-obligation occupancy, and 33.7% in the code+straggler stress for about +8.2% occupancy.",
+    "Unbounded speculation is not attractive under heavy tails: in the code+straggler stress it reduced wall q95 55.3% versus synchronous but increased q95 full-obligation occupancy about 287% because a slow head-of-line pair permits many future jobs to churn behind it.",
+    "The ideal completion-order scheduler is still much faster, especially under heavy tails, but the prior own-state stress showed it can inflate FWER when latency is sign-dependent. The fixed reveal scheduler trades some of that speed for a stronger measurement-validity boundary."
+  ],
+  "scope_guards": [
+    "No production speedup claim: all wall/occupancy numbers are synthetic stress-model outputs with normalized time.",
+    "The exact FWER preservation claim requires the precommitted-order conditional sign null; it does not cover task generation chosen from hidden completion metadata, sign-dependent timeout recoding, or side-specific execution failures that change the paired outcome law.",
+    "Random-priority equivalence holds only for exchangeable latency absent useful prelaunch predictors.",
+    "Current simulation fixes b=16 and the five-(20,16)+fifteen-(50,36) policy; the globally-certified action frontier has not yet been reoptimized jointly with W/b.",
+    "Queue interference, peak reserved-slot price, cancellation latency, and independent candidate/incumbent-side slot reuse are not yet modeled."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Add independent candidate/incumbent-side slot reuse and a hard deadline that returns unresolved, then compare pair-level versus side-level precommitted reveal scheduling under the same validity rule."},
+    {"priority":2,"action":"Jointly optimize b and bounded speculative window W over q95 wall plus full-obligation occupancy, then rerun across the globally-certified mixed-depth action frontier instead of the fixed 5+15 baseline."},
+    {"priority":3,"action":"Test prelaunch latency-predicted task ordering using only outcome-independent covariates. Measure head-of-line reduction and verify the paired-sign null conditional on those covariates; do not use completion-derived features."},
+    {"priority":4,"action":"Model noncompletion/timeouts/cancellation granularity explicitly. Any timeout policy that maps lateness into a label must be separately meta-evaluated because no-decision truncation validity does not transfer to outcome recoding."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct a side-level asynchronous scheduler with precommitted pair reveal order: free candidate and incumbent slots independently when each side finishes, keep pair outcomes quarantined until both sides for the next reveal index are complete, cap speculative pair window W, and quantify q95 wall/full-obligation occupancy plus deadline-induced unresolved rate under CV=1.5 and CV=3.3+straggler stresses."
+}
