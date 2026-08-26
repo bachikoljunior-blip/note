@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "audit_id": "primary-verification-20260826T1538JST-reasoning-c107-c109-cssc-trace-durability",
+  "created_at": "2026-08-26T15:38:40+09:00",
+  "bootstrap": {
+    "valid": true,
+    "frozen_note_main_sha": "b89d0a083fdeb1f7b41dea5666f1958c95553466",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 5
+  },
+  "candidate_source": {
+    "namespace": "reasoning",
+    "artifact": "research_workers_clean_g1/reasoning/2026-08-26T1259JST.md",
+    "blob": "2eed9bc988d9e5a113b2096f73acb6b2789995cb",
+    "candidate_ids": ["C107", "C108", "C109"]
+  },
+  "primary_source": {
+    "repository": "anetigone/cssc",
+    "commit": "f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8",
+    "files": {
+      "agent/search/structured/run_state.py": "078f7c7a8088a5204f9616a718a1a64785c2c383",
+      "agent/runtime/trace_store.py": "b2c3e0bbb6b471959c1ee8414fb4ca2da38668c4",
+      "agent/cli/app.py": "68779b6120002a1c45184e3a31dfcd864ffc7d75",
+      "agent/search/structured/controller/action_runtime.py": "31727a98a60653cb86dd6a8dcb73b68bf1214455",
+      "agent/search/structured/controller/action_runtime_selection.py": "57de5c8e8cc9b38aa6777f5b6c92b3a95b4d7954",
+      "tests/test_trace_store.py": "7aa6673190df397d5f0319cbe5f5535874068c58"
+    }
+  },
+  "assessments": {
+    "C107": {
+      "status": "verified",
+      "claim": "Ordered action-runtime scheduling metadata is retained in memory and persisted only after a ControllerResult exists; current JSONL tracing is not an append-durable per-decision event stream.",
+      "evidence": [
+        "_StructuredRunState.proposal_cache_events is an in-memory list and build_structured_result copies it into ControllerResult.metadata only at result construction.",
+        "JsonlTraceStore.append_result accepts a completed ControllerResult and atomically appends the whole derived run event bundle; it exposes run_summary plus final workspace/cost-ledger snapshots and attempts, not incremental decision writes.",
+        "CLI _finalize_run is the call site that invokes JsonlTraceStore.append_result after controller completion. Unexpected controller exceptions return through _fail before _finalize_run, so the trace_jsonl path does not receive the in-memory proposal_cache_events for that failed run.",
+        "tests/test_trace_store.py verifies whole-result append and atomic replacement behavior, not per-decision durability."
+      ],
+      "scope": "This establishes source-level crash-loss reachability for decision history stored only in the current result/trace path. It does not estimate real crash frequency and does not exclude separate external log sinks configured outside JsonlTraceStore."
+    },
+    "C108": {
+      "status": "verified_with_scope",
+      "claim": "Completed traces retain enough selection metadata for partial reconstruction but not a lossless causal ExecutionDecisionEvent or future OPE behavior policy record.",
+      "evidence": [
+        "choice_set records workspace_version, ranked choices with node_id/branch_id/action_kind/estimated_execution_cost/budget_admission, selected_node_id, and the unified budget snapshot.",
+        "action_selected records the selected node and routing/budget/cost metadata; action_cost_observed records exact execution-window ledger_event_ids.",
+        "build_structured_result preserves ordered proposal_cache_events in run-summary metadata, and trace_store removes only workspace and cost_ledger from that metadata while emitting those two as final snapshot events.",
+        "No current selection record contains a stable per-decision id/index, a full behavior distribution mu(a|s) with chosen propensity, or an immutable per-decision state snapshot/fingerprint. Some node provenance such as proposal_batch_id is emitted at cache-fill/generation scope rather than as a lossless selected-decision join, so reconstructing exact selected provenance can depend on inference across events."
+      ],
+      "scope": "For the present deterministic selector, the first budget-admitted ranked row can often reproduce the deterministic selection rule. That is not equivalent to logging a future randomized behavior policy or a causal decision record at action time."
+    },
+    "C109": {
+      "status": "verified_with_reconstruction_nuance",
+      "claim": "action_cost_observed.ledger_event_ids is a strong post-action join key but the pre-action ledger boundary event_start is not persisted explicitly.",
+      "evidence": [
+        "action runtime computes event_start = len(state.cost_ledger.events) immediately before execute_action_node, computes actual cost from events[event_start:execution_end], and persists only the resulting ledger_event_ids in action_cost_observed.",
+        "The final cost-ledger snapshot preserves the ordered event list and ids, so a non-empty execution slice can often be located retrospectively.",
+        "A zero-event local structural action provides no first event from which to recover the exact pre-action boundary, and the current trace does not serialize event_start, ledger_event_count_before, a previous-tail id, or a pre-action ledger fingerprint."
+      ],
+      "scope": "Missing event_start does not make all completed-trace execution slices unreconstructable; non-empty exact ledger_event_ids plus final order are often enough. The gap matters for zero-event actions, future non-cost mutations, and audit-grade causal boundary identity."
+    }
+  },
+  "recommended_minimum_record": [
+    "stable decision_id and decision_index",
+    "policy/experiment version and legal-mask/effect-class context",
+    "full behavior distribution or exact selected propensity when randomized",
+    "workspace/state fingerprint at decision time",
+    "proposal source/batch/model-tier join on the selected decision",
+    "ledger_event_count_before plus previous-tail event id or ledger fingerprint",
+    "existing exact ledger_event_ids outcome slice"
+  ],
+  "exact_next_verification": "Rotate away from reasoning instrumentation after C107-C110 and select an under-audited C12 namespace whose artifact has a source-qualified quantitative claim or authority-boundary claim with primary code/data available for independent verification.",
+  "worker_feedback_written": false,
+  "exploration_state_modified": false
+}
