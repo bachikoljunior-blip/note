@@ -1,0 +1,131 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "34ca96e27a6316d97e63878f88a228a5f55d6e5f",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "fd0572d5beb28d3f3234b5f75a23a40cd4b85815",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T145744+0900-r64.json",
+  "started_local": "2026-08-26T15:00:28+09:00",
+  "checkpointed_local": "2026-08-26T15:07:07+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false
+  },
+  "checked_sources": [
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection, arXiv:2607.28322v1",
+      "url": "https://arxiv.org/pdf/2607.28322",
+      "result": "The full-Gaussian detector uses point-null predictive likelihood-ratio martingales, attains first-order delay log(A)/D_KL(Q||P), and its exact all-start optimization is O(t) per objective/gradient/Hessian evaluation with O(t) memory. The proof separates a pure post-change local block from a long prefix that excludes candidate no-change laws outside a neighborhood of P."
+    },
+    {
+      "source": "Kotłowski & Grünwald 2011, ML vs. SNML in On-line Density Estimation, PMLR 19",
+      "url": "https://proceedings.mlr.press/v19/kotlowski11a/kotlowski11a.pdf",
+      "result": "For one-dimensional Gaussian unknown mean/variance, SNML has explicit Student-like predictive density after initialization and per-round regret increment 1/n+O(n^-2); unrestricted parameter space causes the initial worst-case-regret singularity, so the prior Cauchy burn-in remains necessary."
+    },
+    {
+      "source": "Hsu, Kakade & Zhang 2012, A tail inequality for quadratic forms of subgaussian random vectors",
+      "url": "https://arxiv.org/pdf/1110.2842",
+      "result": "Theorem 1 gives exponential tails for positive-semidefinite quadratic forms of a subgaussian vector even with a nonzero mean. This supplies a direct finite-T route for concentration of Gaussian raw/centered second moments under the P^T Q^m cross-prefix sequence."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r65a-uniform-mixed-prefix-lemma",
+      "claim": "The raw start-1 Cauchy+SNML prefix can be certified uniformly over every contamination endpoint m<=rho*T with exp(-Omega(T)) failure, closing the hand-wavy continuity step in r64c.",
+      "derivation": "Let P=N(a,u), Q=N(b,v), N=T+m, lambda=m/N, and let G_lambda=N(mu_lambda,s_lambda^2) match the first two moments of P^(T)Q^(m), with mu_lambda=(1-lambda)a+lambda b and s_lambda^2=(1-lambda)u+lambda v+lambda(1-lambda)(b-a)^2. For any neighborhood U of P choose compact U0 with P in int(U0) subset U. By continuity, choose rho0>0 so G_lambda lies in a smaller compact V subset int(U0) for every m<=rho0*T. The sample mean is exactly Gaussian around mu_lambda with variance O(1/T); the empirical quadratic statistic is a positive-semidefinite quadratic form of a Gaussian vector plus fixed mean, so Hsu-Kakade-Zhang gives constant-radius failure exp(-cT). Union over O(T) possible m keeps failure exp(-Omega(T)). Thus all Gaussian MLEs Ghat_{T,m} lie in U0 simultaneously with probability 1-exp(-Omega(T)). The SNML pathwise regret bound from r63 gives log q(x_1:N)>=log p_Ghat(x_1:N)-C_init-log N-C. For Gaussian MLEs, log p_Ghat-log p_R=N*D_KL(Ghat||R) exactly. Hence, with c_U=inf_{G in U0,R notin U}D_KL(G||R)>0, inf_{R notin U}log L^R_{1:N}>=N*c_U-C_init-log N-C simultaneously over m<=rho*T. The r63 exponential tail for C_init then yields inf_{R notin U}log L>=N*c_U/2 for all endpoints with total failure exp(-Omega(T)), for large T."
+    },
+    {
+      "id": "cf-g1-r65b-finite-threshold-lifetime-breakdown",
+      "claim": "The r64 history-independent schedule H=L*h, g=L/h with h=sqrt(log L) is first-order valid only asymptotically and is practically too short for moderate/weak information rates at realistic thresholds.",
+      "derivation": "Ignoring lower-order regret, the target local evidence length is d≈(1+epsilon)L/I. Thus H/d≈I*h/(1+epsilon). With epsilon=0.2 and I=0.5 (a unit-variance mean shift delta=1), coverage requires h>=2.4, i.e. log L>=5.76, L>=317.35 and A>=exp(317.35)≈10^137.82. Even at A=10^48, H/d≈0.905. For I=2 (delta=2), H already exceeds d at ordinary thresholds. Therefore the pointwise fixed-I asymptotic claim in r64 remains correct, but finite-A coverage is extremely information-rate sensitive."
+    },
+    {
+      "id": "cf-g1-r65c-regret-aware-finite-A-sizing",
+      "claim": "A practical history-independent bank should expose a minimum information scale I_floor instead of relying on h(A) to eventually dominate 1/I.",
+      "derivation": "For a configured I_floor>0, choose a local lifetime H_A>=kappa*(L+r_A)/I_floor, where r_A is a high-probability bound for Cauchy initialization plus SNML log-regret and kappa>1 is a finite-sample margin, while retaining spacing g_A≈L/h_A. Then every I>=I_floor has enough lifetime by construction and active local starts are H_A/g_A=O(h_A/I_floor) when r_A=o(L), still independent of elapsed history. No finite-A history-independent lifetime can uniformly cover arbitrarily small unknown I without either such an I_floor, a longer multiscale lifetime family, or a slower fallback channel."
+    },
+    {
+      "id": "cf-g1-r65d-sparse-pair-stress-test",
+      "claim": "Direct numerical stress tests confirm a sharp finite-A weak-change failure regime and show that the pair lower-surrogate can lose material evidence relative to the exact all-start detector.",
+      "details": {
+        "method": "Synthetic independent P=N(0,1), Q=N(delta,1). Cauchy predictive density for the first two observations of each start, exact Gaussian unknown-mean/variance SNML thereafter. Sparse score at the first post-change scheduled start's expiry is inf_{mu,var} max(L_prefix,L_local), solved numerically in (mu,log var). Exact benchmark is inf_{mu,var} sum_s L_s over all starts at the same time. Threshold is log A. These are finite-sample numerical sanity checks, not new statistical guarantees.",
+        "T1000_sparse_expiry_80_reps": [
+          {"A":1000,"H":10,"g":4,"delta":1.0,"I":0.5,"solver_ok":80,"cross_rate":0.0125,"median_log_score":-0.199,"logA":6.908},
+          {"A":1000,"H":10,"g":4,"delta":2.0,"I":2.0,"solver_ok":78,"cross_rate":0.551,"median_log_score":7.574,"logA":6.908},
+          {"A":1000,"H":10,"g":4,"delta":3.0,"I":4.5,"solver_ok":77,"cross_rate":1.0,"median_log_score":20.206,"logA":6.908},
+          {"A":1000000,"H":23,"g":8,"delta":1.0,"I":0.5,"solver_ok":79,"cross_rate":0.0,"median_log_score":2.688,"logA":13.816},
+          {"A":1000000,"H":23,"g":8,"delta":2.0,"I":2.0,"solver_ok":79,"cross_rate":0.886,"median_log_score":20.799,"logA":13.816},
+          {"A":1000000,"H":23,"g":8,"delta":3.0,"I":4.5,"solver_ok":79,"cross_rate":1.0,"median_log_score":40.834,"logA":13.816}
+        ],
+        "T300_full_vs_pair_expiry_12_reps": [
+          {"A":1000,"delta":1.0,"full_cross":0.0,"pair_cross":0.0,"median_full_log":3.032,"median_pair_log":-0.995,"median_log_gap":3.296},
+          {"A":1000,"delta":2.0,"full_cross":0.583,"pair_cross":0.25,"median_full_log":7.474,"median_pair_log":5.137,"median_log_gap":2.102},
+          {"A":1000,"delta":3.0,"full_cross":1.0,"pair_cross":1.0,"median_full_log":14.875,"median_pair_log":12.711,"median_log_gap":1.700},
+          {"A":1000000,"delta":1.0,"full_cross":0.0,"pair_cross":0.0,"median_full_log":3.782,"median_pair_log":-1.601,"median_log_gap":5.290},
+          {"A":1000000,"delta":2.0,"full_cross":0.75,"pair_cross":0.083,"median_full_log":15.185,"median_pair_log":9.208,"median_log_gap":5.158},
+          {"A":1000000,"delta":3.0,"full_cross":1.0,"pair_cross":1.0,"median_full_log":26.350,"median_pair_log":20.059,"median_log_gap":6.506}
+        ],
+        "lifetime_extension_probe": "At A=10^6, T=1000, delta=1, g=8, first-expiry pair crossing rose from 0% at H=23 to about 3.4% at H=40, 22.0% at H=60, and 59.6% at H=100 over roughly 60 successful numerical solves per H. Thus H>=L/I is not by itself a reliable finite-sample engineering rule once burn-in regret and minimax pair conservatism are included."
+      }
+    },
+    {
+      "id": "cf-g1-r65e-pair-balance-heuristic",
+      "claim": "A simple equal-variance information-geometry calculation explains why short prefixes and local blocks make the sparse pair certificate substantially more conservative than a local KL-only delay estimate.",
+      "derivation": "Ignoring predictor regret and O(n/T) cross-prefix contamination, for prefix length T from N(0,1), local length n from N(delta,1), and candidate mean mu, the two log-evidence drifts are approximately T*mu^2/2 and n*(delta-mu)^2/2. Minimizing their maximum gives mu*=delta*sqrt(n)/(sqrt(T)+sqrt(n)) and common drift I*T*n/(sqrt(T)+sqrt(n))^2, where I=delta^2/2. This approaches I*n only when T>>n. Subtracting separate universal-code regrets from the prefix and local channels makes the practical gap larger, matching the stress-test direction. This is a heuristic finite-sample design equation, not a theorem for the unknown-variance statistic."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r65-information-floor-sparse-detector",
+      "mechanism": "Use the r64 permanent-prefix + rolling-local pair architecture, but size lifetime from an explicit minimum information scale and a high-probability universal-code regret budget rather than only sqrt(log log A). Keep a slower fallback/multiscale channel for changes below I_floor.",
+      "quantitative_or_formal_evidence": "For fixed I_floor and r_A=o(log A), H≈(log A+r_A)/I_floor with g≈log A/h gives O(h/I_floor) active starts independent of elapsed history. r65 simulations show the uncalibrated r64 H misses delta=1 changes almost completely at A=10^3 and 10^6, while stronger shifts succeed.",
+      "scope": "One-dimensional Gaussian fixed-P,Q design study. A formal finite-sample delay theorem needs an explicit quantile for initialization/regret and pair-certificate concentration.",
+      "confidence": "medium-high on the failure diagnosis; medium on the proposed calibrated replacement pending theorem and broader simulation."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The r64 O(log log A)-state rolling bank is already practical across information scales at realistic thresholds.",
+      "evidence": "Rejected. Its lifetime-to-target ratio is I*h/(1+epsilon), so moderate I can require astronomically large A before the asymptotic regime begins; direct pair-certificate simulations confirm near-zero crossing for delta=1 at A=10^3 and 10^6."
+    },
+    {
+      "lead": "Lifetime H≈log(A)/I is enough for a robust finite-sample pair certificate.",
+      "evidence": "Not supported. Cauchy initialization/SNML regret and the prefix-local minimax balance create substantial finite-sample overhead; at A=10^6,T=1000,delta=1, H had to be increased far above log(A)/I before first-expiry crossing became common."
+    },
+    {
+      "lead": "Pathwise lower-surrogate validity implies small power loss versus the exact all-start detector.",
+      "evidence": "False as a general finite-sample inference. The 12-replicate expiry benchmark showed median full-minus-pair log-score gaps from about 1.7 to 6.5 nats, and A=10^6,delta=2 crossed at 75% for full versus 8.3% for the pair score at T=300."
+    }
+  ],
+  "frontier": [
+    "Turn r65a into a fully stated lemma with explicit U0/rho0/c_U constants and a two-sided concentration bound for the Gaussian MLE uniformly over all m<=rho*T.",
+    "Derive a finite-sample lower bound for the sparse pair certificate that includes separate prefix/local Cauchy+SNML regret terms and reduces to the equal-variance pair-balance heuristic in the common-variance case.",
+    "Design an I_floor-calibrated rolling bank plus a weak-change fallback/multiscale lifetime channel; prove false-alarm safety remains pathwise and quantify state/delay Pareto tradeoffs.",
+    "Run end-to-end stopping-time Monte Carlo, including pre-change false alarms and repeated local retries, against exact all-start and recycled-grid baselines rather than only first-expiry scores.",
+    "Stress variance-only and joint mean+variance changes, where D_KL(Q||P) can differ sharply from the mean-shift proxy and the current finite-A sizing rule may need a different observable lower-information certificate."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Closed the mixed-prefix continuity gap with an MLE/KL identity plus uniform Gaussian concentration.",
+      "Implemented the Cauchy+SNML pair certificate numerically and stress-tested the r64 threshold-scaled bank.",
+      "Compared the sparse pair lower-surrogate to the exact all-start composite score at matched expiry times.",
+      "Identified an astronomically slow finite-threshold onset for moderate information rates under the original h=sqrt(log log A) lifetime.",
+      "Derived an information-floor calibrated history-independent replacement candidate and a finite-prefix pair-balance heuristic."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Prove an explicit finite-sample pair-certificate lower bound with separate prefix/local universal-code regret terms, then use it to choose H(A,I_floor,delta) and run full stopping-time simulations with repeated retries and false-alarm accounting."
+}
