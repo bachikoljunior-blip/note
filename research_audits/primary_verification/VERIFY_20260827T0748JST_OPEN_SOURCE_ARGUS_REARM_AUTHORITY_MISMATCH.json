@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "audit_id": "primary-verification-20260827T0748JST-open-source-argus-rearm-authority-mismatch",
+  "created_at": "2026-08-27T07:48:06+09:00",
+  "status": "VERIFIED_WITH_SCOPE_AND_SHARPENED_FAILURE_PATH",
+  "role": "primary_source_verifier",
+  "frozen_control": {
+    "note_main_sha": "40e42e24aba0cf013db5856475f2bd23acaeda8a",
+    "root_control_revision": 11,
+    "downstream_control_revision": 11,
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_candidate": {
+    "namespace": "open_source",
+    "wave_id": "clean-g1-wave-c17-20260827T0555JST-0775cafa",
+    "path": "research_workers_clean_g1/open_source/RUN_20260827_0457_CREATION_STAMP_ROUTE_FINGERPRINT_AND_REARM_MATRIX.md",
+    "blob": "4289ca9c41ff8fc164840de150bfa4ec496bb58b",
+    "candidate": "clean-os-g1-005"
+  },
+  "primary_source": {
+    "repository": "lbx154/Argus",
+    "commit": "33da786bbc6787a2eeb63a5f492498eae87c78c7",
+    "files": [
+      "argus_skill/daemon/state.py",
+      "argus_skill/daemon/_life_worker_identity.py",
+      "argus_skill/webapi/daemon_lifecycle.py",
+      "argus_skill/webapi/daemon_upgrade.py"
+    ]
+  },
+  "verified_findings": [
+    {
+      "id": "canonical_process_stop_allowlist",
+      "finding": "The canonical daemon-side resume contract defines RESUMABLE_STOP_REASONS as only operator drain-stop and graceful SIGTERM/SIGINT. Source comments and _rearm_operator_drain_for_resume explicitly state that planner-declared completion and operator hold describe work semantics and must remain authoritative/disabled.",
+      "scope": "Source-level behavior at the pinned public commit."
+    },
+    {
+      "id": "web_start_broader_authority",
+      "finding": "start_project_daemon(..., resume_continuous=True) uses a broader predicate: any disabled nonempty continuous objective whose done_reason lowercased starts with 'operator ' is re-enabled. That predicate includes an operator hold even though daemon boot explicitly says operator hold must never be resumed.",
+      "scope": "Reachable by source semantics; no live production exploit was executed."
+    },
+    {
+      "id": "mutation_before_admission",
+      "finding": "The Web start path performs write_continuous_config(enabled=true, objective=current objective) before checking active daemon capacity. The function can therefore durably re-enable campaign state and only afterwards return admission_required without spawning the daemon.",
+      "scope": "Exact statement about code ordering. It does not establish that this failure has occurred in production."
+    },
+    {
+      "id": "non_cas_restore_despite_cas_primitive",
+      "finding": "write_continuous_config increments generation under a file lock but does not compare an expected prior state. A full compare_and_swap_continuous_config primitive exists in the same module and checks all continuous-state fields including generation. The rearm paths audited here use the non-CAS writer.",
+      "scope": "This is an authorization/freshness property, not a claim that file writes are non-atomic. The writer itself uses atomic replacement and locking."
+    },
+    {
+      "id": "immediate_upgrade_stale_snapshot_restore",
+      "finding": "upgrade_project_daemon reads the continuous state before stopping the daemon and, after a successful stop, restores enabled=true and the pre-stop objective through write_continuous_config when that snapshot had been enabled. It does not condition this restoration on the then-current continuous generation/objective/done_reason.",
+      "scope": "A concurrent semantic change between snapshot and restoration is therefore source-reachable as a stale-resurrection hazard; occurrence frequency is unknown."
+    },
+    {
+      "id": "scheduled_upgrade_stale_snapshot_restore",
+      "finding": "A scheduled daemon-upgrade request persists resume_continuous plus a copied objective. Completion validates installation source and daemon process identity, but when the daemon is stopped it restores the request-time objective through non-CAS write_continuous_config. The request is not bound to the current continuous generation, objective, done_reason, or exact disabled state.",
+      "scope": "Process identity fencing is present and remains a positive control; the gap is campaign-state authority/freshness rather than process-identity validation."
+    }
+  ],
+  "worker_claim_assessment": {
+    "supported": [
+      "Web start has broader rearm semantics than daemon boot.",
+      "Web start can mutate continuous state before admission succeeds.",
+      "Immediate and scheduled upgrade restore copied objective state without an exact continuous-state CAS.",
+      "A unified exact-state reconcile/rearm boundary is justified by the observed source-level authority split."
+    ],
+    "sharpened": [
+      "The highest-value concrete mismatch is operator hold: daemon boot explicitly treats it as non-resumable work semantics, while Web start's 'operator ' prefix can re-enable it.",
+      "The strongest ordering defect is that an admission-denied Web start can still leave the campaign re-enabled because rearm occurs before capacity admission."
+    ],
+    "not_verified_as_implemented": [
+      "creation_stamp / creation_identity",
+      "protected_route_fingerprint_v4",
+      "one reconcile_or_rearm API",
+      "exact-insert recovery primitive"
+    ]
+  },
+  "scope_guards": [
+    "No upstream repository was mutated.",
+    "No live exploit or crash/race was executed.",
+    "No production incidence rate is inferred.",
+    "The finding does not imply write_continuous_config lacks file locking or atomic replacement; it specifically lacks expected-state CAS semantics.",
+    "Process-identity checks in scheduled upgrade are real positive controls and are not being dismissed.",
+    "The proposed remediation remains an adaptation/design proposal until implemented and tested."
+  ],
+  "verification_conclusion": "At Argus public commit 33da786bbc6787a2eeb63a5f492498eae87c78c7, continuous-campaign rearm authority is inconsistent across entry points. Daemon boot admits only the two explicit process-stop reasons and explicitly preserves operator hold, while Web start re-enables any 'operator ' reason before daemon-capacity admission. Immediate and scheduled upgrades can also restore request/pre-stop objective snapshots with a non-CAS writer despite an exact CAS primitive being available. This supports an exact-state reconcile/rearm boundary, but proposed creation-stamp/route-fingerprint mechanics remain unimplemented and unmeasured."
+}
