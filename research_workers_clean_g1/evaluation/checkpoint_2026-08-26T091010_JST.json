@@ -1,0 +1,195 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T09:10:10+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T081015_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "c6163a0cceb838d9a062f7c4985e88581da91986",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": [
+      "own evaluation LATEST/checkpoint",
+      "public sources",
+      "sanitized DESIRED_STATE",
+      "evaluation role config"
+    ],
+    "head_resolution": "SHA-only refs/heads/main; no commit messages/diffs used semantically."
+  },
+  "search_bias": "evaluation/verifiers; transcript-complexity-corrected reusable validation; post-selection e-values; max-information; behavior-equivalent complexity; fresh-audit tradeoffs",
+  "public_sources": [
+    {
+      "title": "Generalization in Adaptive Data Analysis and Holdout Reuse",
+      "authors": "Cynthia Dwork; Vitaly Feldman; Moritz Hardt; Toniann Pitassi; Omer Reingold; Aaron Roth",
+      "date": "2015-06-08",
+      "url": "https://arxiv.org/abs/1506.02629",
+      "used_scope": "Description-length correction for adaptive data reuse: if an adaptive transcript has a finite range Y, a bad-event probability beta for each fixed transcript inflates by at most |Y| via a union bound. Also supplies approximate max-information as a unifying information measure."
+    },
+    {
+      "title": "Max-Information, Differential Privacy, and Post-Selection Hypothesis Testing",
+      "authors": "Ryan Rogers; Aaron Roth; Adam Smith; Om Thakkar",
+      "date": "2016-04-13",
+      "url": "https://arxiv.org/abs/1604.03924",
+      "used_scope": "For a data-dependent selector with beta-approximate max-information k bits, any bad-event probability under independent selection is inflated to at most 2^k times that probability plus beta. The paper gives post-selection p-value correction and warns that approximate-DP-derived product-distribution max-information does not compose safely in arbitrary order."
+    },
+    {
+      "title": "What Fits (Into Few Tokens) Doesn't Overfit: Compression and Generalization in ML Research Agents",
+      "authors": "Martin Andres Bertran; Aaron Roth; Zhiwei Steven Wu",
+      "date": "2026-06-09",
+      "url": "https://arxiv.org/abs/2606.11045",
+      "used_scope": "A concrete agentic one-bit ladder where the j-th improvement checkpoint has at most C(T_max-1,j-1) validation-dependent transcripts. With T_max=50, K_max=7, the final checkpoint has about 14 million transcripts. The guarantee depends on the validation channel being the only data-dependent channel."
+    },
+    {
+      "title": "Family-wise Error Rate Control with E-values",
+      "authors": "Will Hartog; Lihua Lei",
+      "date": "2025-01-15",
+      "url": "https://arxiv.org/abs/2501.09015",
+      "used_scope": "E-value closed testing can give strong FWER control and, with e-processes, always-valid sequential FWER control. Used as support that valid fixed-hypothesis e-processes can be combined into stronger multiplicity procedures after the adaptive-data validity problem has been corrected."
+    },
+    {
+      "title": "PAC-Bayes Beyond Parameter Space: Behavioral Equivalence, Z-Information, and Exact Complexity Decomposition",
+      "authors": "Vasant G. Honavar; Satish Kumar Keshri; Neil Ashtekar; Zehao Liu",
+      "date": "2026-08-11",
+      "url": "https://arxiv.org/abs/2608.11465",
+      "used_scope": "Predictive risk depends on predictive behavior rather than the internal realization; PAC-Bayes complexity decomposes into behavior-selection and within-behavior realization terms. Used only to motivate exact behavior-level quotienting of transcript complexity, not as a theorem about e-value selection."
+    }
+  ],
+  "new_derivations": {
+    "prefix_weighted_anytime_reuse_certificate": {
+      "setup": "Before observing validation data D, fix a countable index set U of all counterfactual test opportunities (for example full validation-feedback transcript plus attempt identifier), a prior mass pi_u with sum_u pi_u <= 1, and a decoder Phi that maps each u plus training data and validation-independent randomness to a fixed candidate h_u. For each u construct an e-process E_{u,t} valid for H_u when h_u is fixed. Candidate generation may adapt arbitrarily to D only through the declared index/transcript u.",
+      "rule": "For the actually selected opportunity U(D), commit only if its fixed-hypothesis e-process crosses 1/(alpha*pi_U). Equivalently, with prefix-code length L(U) and pi_U=2^{-L(U)}, require raw e-wealth >= 2^{L(U)}/alpha.",
+      "strong_error_statement": "For any set of true-null opportunities, P(any false commit ever) <= sum_{u true null} P(sup_t E_{u,t} >= 1/(alpha*pi_u)) <= alpha*sum pi_u <= alpha. No independence between opportunities is required. Repeated attempts must either share one cumulative valid process or be separately indexed and charged prior mass.",
+      "what_it_repairs": "This turns the previous reused-dev failure into an explicit complexity payment. The candidate-level conditional sign null need not remain true after adaptive selection; instead each counterfactual candidate must have a valid fixed-candidate replay/e-process, and selection is paid for by prior mass.",
+      "implementation_requirement": "After selection, evaluate the frozen candidate on a canonical validation replay/order whose fixed-candidate e-process is valid. The decoder must not read raw validation data except through the declared transcript. Every validation-dependent side channel that can influence the candidate or test opportunity must be encoded in u or hidden/padded.",
+      "scope_guard": "This is a worker-local derivation from Ville/Markov plus weighted union over a predeclared counterfactual universe. It is not claimed to be a named theorem from the cited papers. If U or Phi is itself chosen using validation data without paying for that choice, the guarantee fails."
+    },
+    "max_information_to_anytime_e_correction": {
+      "setup": "Let A(D) select one candidate/test opportunity and suppose beta-approximate max-information I_inf^beta(D;A(D)) <= k bits. For every fixed selected value a that is null, assume a fixed-candidate e-process with P(sup_t E_{a,t} >= c) <= 1/c.",
+      "derivation": "Under an independent coupling D tensor A(D), the false-commit event has probability <=1/c. The max-information event inequality then gives actual probability <= 2^k/c + beta. Therefore choose c = 2^k/(alpha-beta) for alpha>beta.",
+      "interpretation": "Literal B-bit description-length correction is the k approximately B worst-case special case. A tighter independently justified max-information bound can be materially cheaper than charging the full transcript range.",
+      "scope_guard": "The DP-to-max-information route in Rogers et al. for approximate DP requires product-distributed input and has an adaptive-composition order caveat. Do not insert an approximate-DP mechanism after earlier data-dependent conditioning and assume the same k bound automatically composes."
+    },
+    "behavior_quotient_prior": {
+      "mechanism": "If multiple transcript/implementation indices provably decode to exactly the same test-relevant predictive behavior, aggregate their predeclared masses into Pi_behavior=sum pi_u and test one behavior-level e-process at threshold 1/(alpha*Pi_behavior).",
+      "benefit": "Avoids paying repeatedly for syntactic paths or internal realizations that are prediction-equivalent; aligns the complexity object with behavior rather than implementation multiplicity.",
+      "scope_guard": "Equivalence must be fixed independently of validation and preserve the relevant outcome distribution, not merely agree on the reused validation sample. Approximate or empirical equivalence needs a separate error term/theorem."
+    },
+    "worked_attack_correction": {
+      "prior_attack": "Previous checkpoint's memorizer corrects exactly 8 selected dev failures and obtains default PACE wealth 1.5^8=25.62890625, enough to cross the naive alpha=.05 threshold 20 while population gain is zero in the nonatomic construction.",
+      "if_transcript_names_8_of_40": {
+        "counterfactual_count": 76904685,
+        "description_bits": 26.19656815343094,
+        "selection_corrected_raw_threshold": 1538093700,
+        "weighted_evidence_pi_times_raw_e": 3.332554609644393e-7,
+        "result": "The dev memorizer no longer certifies."
+      },
+      "ladder_reference_counts_T50": {
+        "j1": {"N":1,"bits":0.0,"raw_threshold_alpha_0_05":20},
+        "j2": {"N":49,"bits":5.614709844115208,"raw_threshold_alpha_0_05":980},
+        "j3": {"N":1176,"bits":10.199672344836364,"raw_threshold_alpha_0_05":23520},
+        "j4": {"N":18424,"bits":14.169298695792845,"raw_threshold_alpha_0_05":368480},
+        "j5": {"N":211876,"bits":17.69286065184986,"raw_threshold_alpha_0_05":4237520},
+        "j6": {"N":1906884,"bits":20.86278565329217,"raw_threshold_alpha_0_05":38137680},
+        "j7": {"N":13983816,"bits":23.737254771208313,"raw_threshold_alpha_0_05":279676320}
+      },
+      "scope_guard": "These ladder thresholds apply the worker-local weighted-e/Ville derivation to the paper's transcript counts; the paper itself reports generalization confidence intervals, not these e-process thresholds."
+    },
+    "power_cost_simulation": {
+      "simulation": "250000 Monte Carlo alternative trajectories; fixed sign bet q_bet=.75; true discordant sign win probability=.75; task discordance probability=.4; alpha=.05. Complexity B bits multiplies the raw e threshold by 2^B. Separate 500000-trajectory null sanity check used q=.5.",
+      "expected_log_growth_per_task_nats": 0.05232481437645479,
+      "expected_log_threshold_task_approximations": {
+        "B0":57.25261158120832,
+        "B5":123.4876464131569,
+        "B10":189.7226812451055,
+        "B20":322.19275090900265
+      },
+      "alternative_cross_by_horizon": {
+        "B0":{"50":0.538292,"100":0.855656,"200":0.98124,"400":0.999444},
+        "B5":{"50":0.041976,"100":0.414072,"200":0.876548,"400":0.995204},
+        "B10":{"50":0.000164,"100":0.072956,"200":0.618408,"400":0.975988},
+        "B20":{"50":0.0,"100":0.000032,"200":0.082072,"400":0.7899}
+      },
+      "null_single_fixed_candidate_cross_by_horizon": {
+        "B0":{"50":0.02183,"100":0.035266,"200":0.040384,"400":0.041128},
+        "B5":{"50":0.000058,"100":0.000534,"200":0.001116,"400":0.001288},
+        "B10":{"50":0.0,"100":0.000002,"200":0.00003,"400":0.000038}
+      },
+      "interpretation": "Even 5-10 bits of validation-dependent candidate selection can dominate the sample cost at 10-50 task horizons. Fresh confirmation is often far cheaper unless the reused-validation transcript is extremely compressed or a tighter prior/max-information bound is available.",
+      "scope_guard": "Simulation is worker-local and only checks this stylized Bernoulli/discordance model; empirical null crossing is not a proof."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-prefix-weighted-reused-validation-anytime-v1",
+      "mechanism": "Make every validation-dependent candidate/test opportunity a member of a predeclared counterfactual universe with prior mass pi; replay a valid fixed-candidate e-process and require E >= 1/(alpha*pi). This yields strong anytime false-commit control by weighted Ville plus union, despite arbitrary adaptive selection through the declared transcript.",
+      "evidence": "Worker-local derivation grounded in description-length adaptive-data analysis and standard e-process/FWER theory; stress-tested against the prior memorization counterexample and finite-horizon simulations.",
+      "scope_guard": "Requires a fixed decoder/universe and complete accounting of validation-dependent side channels. Can be prohibitively conservative when transcript complexity is more than a few bits."
+    },
+    {
+      "candidate_id": "eval-g1-maxinfo-corrected-selected-eprocess-v1",
+      "mechanism": "If the selector's approximate max-information is bounded by k bits with failure beta, raise the selected fixed-candidate anytime threshold from 1/alpha to 2^k/(alpha-beta).",
+      "evidence": "Direct worker-local conversion of Rogers et al.'s max-information bad-event inequality using Ville's fixed-candidate crossing probability as the independent-selection bad event.",
+      "scope_guard": "Needs a valid k,beta bound for the full validation-dependent selector. Approximate-DP-derived bounds have product-distribution and composition-order caveats."
+    },
+    {
+      "candidate_id": "eval-g1-behavior-quotient-complexity-v1",
+      "mechanism": "Aggregate prior mass over exactly behavior-equivalent transcript/implementation paths before charging adaptive-selection complexity.",
+      "evidence": "Worker-local weighted-union quotient plus 2026 PAC-Bayes behavior-space decomposition showing that predictive behavior is the risk-relevant object rather than realization multiplicity.",
+      "scope_guard": "Only exact, validation-independent equivalence is currently justified; approximate equivalence remains open."
+    }
+  ],
+  "measurement_validity_rules": {
+    "rule_1": "For reused-validation commit gates, distinguish fixed-candidate evidence validity from candidate-selection validity. A valid fixed-candidate e-process can be made selection-safe by charging the full counterfactual selection information.",
+    "rule_2": "A prefix/description code must count all validation-dependent observables that can alter the candidate or test opportunity: feedback bits, stop time, score bins, exception/latency shape, item identities, and any visible evidence trajectory unless mechanically hidden or padded.",
+    "rule_3": "Do not call pi_M*sup_t E_{M,t} itself an e-value. The rigorous guarantee used here is a weighted Ville crossing rule plus union over fixed counterfactual tests.",
+    "rule_4": "If repeated attempts restart evidence, encode the attempt identity and pay new prior mass; alternatively maintain one valid cumulative process for that fixed null.",
+    "rule_5": "When a literal transcript correction costs more than a fresh audit, prefer fresh audit unless a tighter predeclared prior, behavior quotient, or independently proved max-information bound materially lowers the penalty.",
+    "rule_6": "DP/privacy of an e-value and DP/stability of the validation-feedback selector solve different problems. Do not conflate private hypothesis testing with adaptive-data generalization."
+  },
+  "rejected_overgeneralizations": [
+    "Anytime-valid fixed-candidate e-values are automatically valid after arbitrary reused-dev candidate selection.",
+    "One-bit feedback means only one bit of total selection complexity regardless of the number and locations of feedback events.",
+    "A candidate reached by many syntactically different transcripts must necessarily pay each path separately even when exact behavior equivalence is proved in advance.",
+    "Approximate differential privacy can be inserted at any point of an already adaptively conditioned validation loop and automatically yields the same product-distribution max-information guarantee.",
+    "The worker-local weighted transcript correction is power-competitive with fresh audit at small task horizons; simulations show it can be dramatically more expensive."
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Derive a nonuniform prior/code for realistic self-evolution transcripts (prefix code over improvement locations, stop time, candidate family and bounded metadata) and optimize expected complexity under a validation-independent deployment prior. Compare against uniform transcript counting and fresh-audit blocks."
+    },
+    {
+      "priority": 2,
+      "action": "Investigate whether e-value closed testing/e-FWER machinery can recover power after prefix-weighted candidate-validity correction when multiple behavior-level candidates share a structured tree, while retaining strong anytime false-commit control under arbitrary dependence."
+    },
+    {
+      "priority": 3,
+      "action": "Search for direct approximate-max-information or privacy-loss accounting tailored to low-information agent feedback transcripts that yields k substantially below literal worst-case description length, with explicit composition order and side-channel accounting."
+    },
+    {
+      "priority": 4,
+      "action": "Extend behavior quotienting from exact predictive equivalence to approximate equivalence with an explicit slack term in the e-process/null, and determine whether near-duplicate candidate paths can be safely compressed."
+    },
+    {
+      "priority": 5,
+      "action": "Simulate full adaptive proposal loops rather than independent candidate abstractions: compare naive reused PACE, prefix-weighted replay, max-info-corrected replay, and fresh audit on false commits, power, total validation items, and information returned to the proposer."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct and optimize a realistic prefix prior over low-information self-evolution transcripts, including stop-time and metadata side channels, then quantify when its weighted-anytime certificate beats or loses to fresh audit under 10-200 independent tasks."
+}
