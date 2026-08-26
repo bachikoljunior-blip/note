@@ -1,0 +1,102 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "d015ba42a6f12e1996850825fb185d1b1dd03676",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "12b59fb6d4bd7d0fb7c755e4f40f4cefe1a3b9d4",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T142145+0900.json",
+  "started_local": "2026-08-26T14:21:46+09:00",
+  "checkpointed_local": "2026-08-26T14:28:30+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404"
+  },
+  "derived_results": [
+    {
+      "id": "cf-g1-derivation-r57a-k-grid-family",
+      "claim": "Moen's two-points-per-dyadic-bucket recycled grid admits a K-points-per-bucket generalization, for any power-of-two K>=2, with exact recycling, O(K log t) cardinality/update/storage, and sharp coverage constant c_K=(2K-1)/(2K+1).",
+      "construction": "Let K=2^k. Keep all integer lags 1,...,K-1. For each dyadic bucket [2^j,2^(j+1)-1], j>=k, let q_j=2^j/K and r_j(t)=(t-1) mod q_j. Retain g_{ell,j}^{(t)}=2^j+ell q_j+r_j(t), ell=0,...,K-1, whenever g<=t-1. This reduces exactly to Moen's formula at K=2.",
+      "recycling_proof": "If r_j(t+1)>0 then g_{ell,j}^{(t+1)}-1=g_{ell,j}^{(t)}. At a residue wrap, ell>=1 maps to g_{ell-1,j}^{(t)}; ell=0 maps to the last point of bucket j-1 because q_{j-1}=q_j/2 and its residue is q_j/2-1 immediately before the wrap. At j=k the wrap maps to the fully retained base lag K-1. Truncating to g<=t-1 preserves the inclusion because any new point g<=t maps to g-1<=t-1. Hence the reversed sufficient-statistic indices are recyclable exactly.",
+      "coverage_proof": "Within a bucket, consecutive ratio is at most (K+1)/K. Across adjacent buckets, write q=q_j and r=(t-1) mod q. If r<q/2, the ratio from the previous bucket's last point to the current bucket's first point is at most 2K/(2K-1). If r>=q/2, it is at most (2K+1)/(2K-1), attained at r=q/2. This dominates the within-bucket ratio. The first retained point in the top dyadic bucket is at least floor(t/2), so for every integer d<=t/2 the predecessor retained lag satisfies g>=c_K d with c_K=(2K-1)/(2K+1).",
+      "sharpness": "For q_j even, choose a time with residue r=q_j/2 and enough later observations that the cross-bucket gap lies below t/2. Taking d one below the upper endpoint makes the best retained ratio approach (2K-1)/(2K+1) as q_j grows. Thus the coverage constant is sharp for this grid family.",
+      "complexity": "There are at most K retained points per dyadic bucket plus O(K) dense base lags, so active summaries and pair evaluations are O(K log t). The recycling inclusion means no linear historical archive is needed.",
+      "scope": "New derivation generalizing the exact Moen grid formula; not a theorem in the source paper. A private exhaustive sanity check through t<50000 verified recycling and the predicted worst coverage for K=2,4,8,16, but the proof above, not the check, is the evidential basis."
+    },
+    {
+      "id": "cf-g1-derivation-r57b-compute-delay-curve",
+      "claim": "Combining the K-grid family with the prefix-anchor/retry pair certificate gives a derived late-change sub-Gaussian CADD curve: asymptotic leading upper factor r_K=(2K+1)/(2K-1) at O(K log t) update/storage.",
+      "derivation": "Use threshold B≈2A, cap H=B, one permanent prefix anchor, and all trailing lags from G_K^(t). Fix epsilon>0 and take D=ceil{r_K(1+epsilon) log(B)/I}. The grid supplies a post-change g>=c_K D, hence I g>=(1+epsilon)log B. The same fixed-number disjoint-block retry argument in cf-g1-derivation-r54f makes the cap-tail contribution negligible, while pathwise domination retains the local ARL guarantee. Therefore CADD<=r_K(1+epsilon)log(B)/I{1+o(1)}, and epsilon arbitrary gives limsup factor <=r_K.",
+      "examples": {"K=2":"5/3","K=4":"9/7","K=8":"17/15","K=16":"33/31"},
+      "scope": "Specific to the predecessor sub-Gaussian pair-certificate assumptions and late-change regime. This is a proof-derived compute/statistics frontier, not an empirical benchmark."
+    },
+    {
+      "id": "cf-g1-derivation-r57c-slowly-growing-grid",
+      "claim": "If the target-ARL-indexed grid density K_A is a power of two with K_A->infinity arbitrarily slowly, the same construction recovers the full source detector's leading sub-Gaussian delay constant 1 while keeping polylogarithmic rather than all-history state.",
+      "derivation": "For any fixed epsilon>0, c_{K_A}->1, so eventually c_{K_A}(1+epsilon)>1+epsilon/2. Analyze the same detector at D=(1+epsilon)log(B)/I; the retry proof then yields CADD<=(1+epsilon)log(B)/I{1+o(1)}. Since epsilon is arbitrary, limsup CADD/(log A/I)<=1. For example K_A can be the largest power of two no larger than log log A, giving O(log log A log t) active summaries/evaluations. This matches the leading upper information scale of the full Saha-Ramdas sub-Gaussian detector while avoiding its all-start O(t) active set.",
+      "scope": "Derived upper result for a detector family indexed by target ARL. Do not state universal pointwise information-theoretic optimality for every concrete P,Q: the source I is the sub-Gaussian class mean-gap information proxy/least-favorable scale. The result matches the source detector's leading I-scale upper constant."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r57-configurable-recycled-witness-grid",
+      "mechanism": "Choose the number K of recycled lag witnesses per dyadic scale to trade constant-factor computation for detection efficiency; pair those lags with one permanent long-context anchor and retry-amplified pathwise-lower e-evidence.",
+      "quantitative_or_formal_evidence": "Derived exact grid coverage c_K=(2K-1)/(2K+1), active cost O(K log t), and corresponding late-change CADD factor r_K=(2K+1)/(2K-1). K=2 gives 1.667, K=4 gives 1.286, K=8 gives 1.133, K=16 gives 1.065. Slowly growing K_A can recover leading factor 1 at O(log log A log t) for the illustrative K_A≈log log A choice.",
+      "primary_sources": ["Moen 2026 dynamic geometric grid", "Saha & Ramdas 2026 non-partitioned e-detector"],
+      "scope": "Novel synthesis/derivation, not peer-reviewed. Current proof is for the sub-Gaussian quadratic point-null family and late-change conditions.",
+      "failure_conditions": "K multiplies update/storage constants; if sufficient statistics are expensive per retained lag, large K can erase the gain. Unknown-variance/bounded-mean families need separate certified pair lower bounds. Slowly growing K uses the target ARL as a design input.",
+      "transfer_hypothesis": "Long-running research/optimizer monitors should not hard-code one history resolution. Expose a compute budget K that directly controls multiscale evidence resolution, with validity preserved pathwise and statistical delay approaching the full-history detector as K increases.",
+      "confidence": "high for grid/recycling/coverage derivation; medium-high for combined CADD curve under stated asymptotics"
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The two-point Moen grid can reach delay constant 1 by proof sharpening alone.",
+      "evidence": "No. Its sharp coverage is 3/5, forcing a 5/3 witness-length factor under this pair-certificate argument.",
+      "reason": "Approaching factor 1 requires increasing K or changing the grid family."
+    },
+    {
+      "lead": "K can grow without operational cost.",
+      "evidence": "No. Update/storage scale linearly in K even though they remain logarithmic in history length t.",
+      "reason": "K is an explicit compute-versus-delay control knob, not a free statistical improvement."
+    }
+  ],
+  "internal_sanity_checks": [
+    {
+      "type": "synthetic_not_external_evidence",
+      "result": "Exhaustive enumeration for t<50000 verified the recycling inclusion and predicted worst coverage ratios for K=2,4,8,16. Observed minima approached 0.6000, 0.7778, 0.8824, 0.9394 respectively, consistent with (2K-1)/(2K+1).",
+      "scope": "Private combinatorial sanity check only; proof is recorded explicitly above."
+    }
+  ],
+  "frontier": [
+    "Translate the K-grid theorem into a minimal implementation/reference pseudocode and prove exact cardinality constants, then quantify wall-clock crossover versus the all-start detector for realistic sufficient-statistic costs without treating private timing as external evidence.",
+    "Generalize the pairwise pathwise-lower score to Gaussian unknown variance; exploit the source's one-dimensional convex theta objective but require certified lower envelopes so numerical optimization cannot invalidate false-alarm domination.",
+    "For bounded outcomes, solve the exact binary-KL two-window minimax and compare its retained information rate with the Pinsker lower relaxation.",
+    "Check whether target-ARL-indexed K_A->infinity plus the source local-ARL information lower bound yields a clean minimax first-order optimality statement over the least-favorable sub-Gaussian mean class; keep pairwise versus minimax scope separate.",
+    "Search for prior dynamic-grid families with K>2 points per dyadic bucket or equivalent epsilon-net constructions that may subsume this derived grid.",
+    "Resume off-policy predictable-prior/vector-valued evidence frontier after the unknown-variance generalization attempt."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Proved the exact recycling map for a K-point generalization rather than leaving the denser-grid idea heuristic.",
+      "Derived the sharp coverage constant and its asymptotic tightness.",
+      "Composed the grid result with the retry-amplified pair detector to obtain an explicit computation-versus-CADD curve.",
+      "Derived a slowly growing K_A regime that recovers the source detector's leading I-scale constant with polylogarithmic state."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Attempt the Gaussian unknown-variance extension: derive a certified pathwise-lower two-window score from the source's universal-inference t-test e-process, identify the minimum recyclable sufficient statistics per K-grid lag, and prove whether one-dimensional interval lower optimization preserves O(K log t polylog(1/epsilon_num)) work and prefix-retry CADD amplification."
+}
