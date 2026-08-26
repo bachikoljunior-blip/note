@@ -1,0 +1,79 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T14:07:54+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T140457_JST_conditional_sideinfo_minimax.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "496385107d27c71b3d0fce9749bf966dd47272df",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "4875c5e0047984b90722d7b3250fe9330dce4151",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": ["own evaluation checkpoint chain through 14:04:57 JST", "public sources", "sanitized DESIRED_STATE", "evaluation role config"]
+  },
+  "search_bias": "evaluation/verifiers; finite-horizon robust paired-sign control; filtration boundary for side information; structured versus rectangular transfer ambiguity",
+  "public_sources": [
+    {"title":"Time-sensitive anytime-valid testing","authors":"Eugenio Clerico; Tobias Wegel; Iskander Azangulov; Patrick Rebeschini","date":"2026-05-07","url":"https://arxiv.org/abs/2605.06521","used_scope":"Hard-deadline anytime-valid testing is a sequential-control problem over time and evidence/wealth; asymptotic GRO can be strictly suboptimal when early rejection is the actual utility. The paper proves a Bellman reduction in its stated setting."},
+    {"title":"Sequential testing of conditionally constrained hypotheses","author":"Eugenio Clerico","date":"2026-06-04","url":"https://arxiv.org/abs/2606.06769","used_scope":"Predictable products of affine one-step e-variables form a complete class for the paper's finitely constrained conditional nulls, giving a lossless action parameterization for dynamic programming in that class."},
+    {"title":"Safe testing","authors":"Peter Grunwald; Rianne de Heide; Wouter Koolen","date":"2024-03-07","url":"https://doi.org/10.1093/jrsssb/qkae011","used_scope":"A next e-variable may depend on information available before the next outcome, but validity requires the conditional e-variable property at that filtration; this pins down why outcome-derived side information is not free."},
+    {"title":"Strong duality for the GROW criterion","authors":"Ashwin Ram; Martin Larsson; Johannes Ruf; Aaditya Ramdas","date":"2026-06-23","url":"https://arxiv.org/abs/2606.24768","used_scope":"Worst-case log-growth over composite alternatives is a coherent robust criterion, but it optimizes a different objective from hard-deadline rejection."}
+  ],
+  "new_derivations": {
+    "post_outcome_sideinfo_counterexample": {
+      "null": "Let every fresh discordant sign X_t be +1 or -1 with probability 1/2 under the null.",
+      "invalid_feature": "Define a purported current-task covariate Z_t=1{X_t=+1}, which is only known after the fresh outcome, and set b_t=1 when Z_t=1 and b_t=0 otherwise.",
+      "factor": "The affine factor e_t=1+b_t X_t then equals 2 on candidate wins and 1 on incumbent wins, so E[e_t]=1.5>1. The process is not an e-process despite using an algebraically valid-looking affine form.",
+      "measurement_rule": "For every feature used to choose the fresh bet, record an availability timestamp/causal provenance and require it to be measurable before the paired outcome/judge label it will weight. 'Task metadata' is not sufficient if the metadata itself was produced after seeing the outcome."
+    },
+    "rectangularization_penalty": {
+      "structured_ambiguity": "The three-map set from the previous checkpoint is {(q_low,q_high)=(.60,.80),(.70,.70),(.80,.60)}, which preserves the cross-stratum relation q_low+q_high=1.40.",
+      "rectangular_hull": "Replacing that set by independent marginal intervals [0.60,0.80]^2 adds the unattested corner (.60,.60). Under worst-case log-growth the rectangular solution is simply q_bet_low=q_bet_high=.60, with expected growth about .008054 nats/task.",
+      "comparison": "The structure-aware fixed-map minimax solution from the prior checkpoint achieved about .025236 nats/task worst-case, so rectangularization cut the guaranteed log-growth by about 68% in this stylized example.",
+      "scope_guard": "Rectangular ambiguity is useful for dynamic consistency, but if the true uncertainty has cross-context structure, blindly rectangularizing it can erase precisely the side information one hoped to exploit."
+    },
+    "hard_deadline_rectangular_bellman": {
+      "setup": "Use the stronger rectangular alternative q_t>=.60 on every discordant sign, average discordance rate .40, threshold 20 (alpha=.05), and horizon T=50. Optimize predictable affine bet b in [0,.999] by backward dynamic programming on a 600-point log-wealth grid with 161 candidate bet sizes. This is a numerical approximation, not a closed-form theorem.",
+      "policy_shape": "At start wealth=1 with 50 tasks remaining, the approximate optimal b was .493 (q_bet about .747). At wealth=1 with 30 remaining b≈.642; with 20 remaining b≈.999. Near the deadline, states too poor to reach threshold under remaining bounded gains optimally stop risking wealth (b≈0), while reachable states use bold bets. This reproduces the time-sensitive shift away from stationary GRO/Kelly behavior.",
+      "robust_value": "Under the design worst case q=.60,rho=.40, the Bellman value at wealth 1 was about .2015 reject-by-50. Direct simulation of the discretized policy gave about .1972 reject-by-50 versus about .0021 for stationary q_bet=.60 and about .113 for stationary q_bet=.75 in the same q=.60,rho=.40 setting.",
+      "null_sanity": "200,000 null trajectories with q=.50,rho=.40 gave crossing about .0459; with Markov-correlated task difficulty driving rho=.2/.6, crossing was about .0418. The conditional e-factor proof is the validity argument; these are implementation checks only.",
+      "structured_map_stress": "Applied unchanged to the three structured maps at T=50, the approximate robust Bellman policy rejected about .689 correct, .510 flat, and .338 inverted. In the prior checkpoint, stationary fixed q=.75 gave .535/.356/.211, equal-weight map mixture .504/.285/.151, and structure-aware GROW minimax .193/.176/.161. Thus the finite-horizon robust policy dominated those tested stationary policies on reject-by-50 in every map despite being designed against the harsher rectangular q>=.60 alternative.",
+      "scope_guard": "This comparison is against a small set of stationary/mixture baselines, not against the optimal finite-horizon policy for the nonrectangular fixed-map ambiguity set. Grid discretization and the assumed known discordance process can affect the numerical values."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {"candidate_id":"eval-g1-filtration-provenance-gate-v1","mechanism":"Before a task-side feature can choose an e-bet, require machine-checkable evidence that the feature existed before the fresh paired outcome/judge label it will weight. Reject post-outcome or descendant features from the predictable betting filtration.","evidence":"Direct fair-sign counterexample gives E[e]=1.5 when an outcome-derived feature controls the bet; Safe Testing supplies the conditional-e-variable requirement.","scope_guard":"A pre-outcome feature may still be unsafe if the conditional null fails after conditioning on it; timing provenance is necessary, not sufficient."},
+    {"candidate_id":"eval-g1-time-sensitive-robust-sign-control-v1","mechanism":"For bounded paired-sign evidence with a short audit budget, optimize the predictable affine bet as a function of remaining horizon and current e-wealth under a prespecified conservative alternative/ambiguity set instead of using stationary GRO/Kelly bets.","evidence":"Time-sensitive testing theory motivates the control objective; worker-local T=50 Bellman approximation raised worst-design q=.60 reject-by-horizon from ~.2% for stationary q=.60 and ~11.3% for stationary q=.75 to ~19.7%, while null crossing remained below .05 in simulation.","scope_guard":"Numerical policy is specific to alpha=.05, T=50, rho=.40, q>=.60 and the chosen wealth/action discretization. It is not a universal bet schedule."},
+    {"candidate_id":"eval-g1-structured-ambiguity-preservation-v1","mechanism":"Represent transfer uncertainty with its cross-task-family constraints instead of automatically taking a rectangular product of marginal intervals; separately test whether dynamic-consistency convenience is worth the added unattested alternatives.","evidence":"In the stylized three-map set, rectangularization added (.60,.60) and reduced GROW worst-case log growth from ~.02524 to ~.00805 nats/task.","scope_guard":"A rectangular set may be appropriate when environment shifts can independently alter each stratum; preserving correlation without evidence can itself be overconfident."}
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'any feature that describes the current task is predictable side information.' An outcome-derived feature can make a nominal affine sign factor have expectation 1.5 under a fair null.",
+    "Rejected: 'worst-case GRO is enough for a short audit budget.' A hard-deadline Bellman policy was dramatically more powerful in the tested T=50 setting while retaining anytime-valid null control.",
+    "Narrowed: 'rectangular ambiguity is conservatively safe and therefore preferable.' It is conservative for the included alternatives but can impose a large power penalty by adding cross-context combinations that the structured uncertainty model ruled out.",
+    "Narrowed: 'a stationary q=.75 sign bet is already near-optimal for q≈.6.' It was much better than stationary q=.6 at T=50 but still far below the time/wealth-aware Bellman policy in the tested design.",
+    "Rejected: 'side-information value should be judged only by average power.' The filtration/provenance condition is a validity gate that must be checked before any power comparison."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Solve or approximate the finite-horizon policy for the original nonrectangular three-map ambiguity set, where nature chooses one fixed transfer map rather than a worst map independently each round. Compare least-favorable-prior/Bayes dual formulations, minimax regret, and rectangular Bellman policies under the same reject/harm/unresolved utility."},
+    {"priority":2,"action":"Generalize the filtration-provenance gate to real agent evaluation traces: enumerate which task metadata, judge features, retrieval traces, latency/tool outcomes and retry indicators are known before versus after the paired label. Construct a causal/temporal schema that can be validated from receipts."},
+    {"priority":3,"action":"Move reused-development candidate evaluation from fixed-horizon e-values to actual anytime PACE paths, charging stopping time/running supremum/returned metadata in the selectable transcript and keeping candidate-generation selection validity separate from within-candidate optional stopping."},
+    {"priority":4,"action":"Add repeated candidates sharing the same fresh tasks and quantify run-level multiplicity under cross-candidate dependence; compare e-closed testing, alpha spending and dependence-robust e-value multiple testing on top of candidate-valid factors."},
+    {"priority":5,"action":"Stress the time-sensitive policy under misspecified discordance rates, missing transfer maps, task-family Markov shifts and asymmetric harmful-commit cost; distinguish robustness of null validity from robustness of utility/power."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Treat the structured transfer map as a fixed latent environment rather than rectangular per-step ambiguity, find a least-favorable prior or minimax-regret finite-horizon paired-sign policy, and compare it against the rectangular Bellman policy while preserving the newly explicit filtration-provenance gate."
+}
