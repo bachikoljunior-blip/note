@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-26T18:54:10+09:00",
+  "generation": "clean_g1",
+  "candidate": "open_source/PAUSE_BOUNDED_STEER_END_TO_END_ROUTE_AUTH_MISMATCH",
+  "source_qualified_candidate": {
+    "namespace": "open_source",
+    "source_artifact_path": "research_workers_clean_g1/open_source/RUN_20260826_1718_PAUSE_BOUNDED_STEER_END_TO_END_ROUTE_AUTH_MISMATCH.md",
+    "source_artifact_blob": "7e1c9fafed3c4e979294b27c82a5a9c94dcbfe89",
+    "source_local_candidate_id": "PAUSE_BOUNDED_STEER_END_TO_END_ROUTE_AUTH_MISMATCH",
+    "active_wave_id": "clean-g1-wave-c14-20260826T1756JST-ca8bd10f",
+    "active_wave_blob": "595c6f83ed2f8954acce1ce3cc4397d779c7f3f8",
+    "active_wave_source_set_digest": "ca8bd10f2705bbc962ba90a8a56c8bcfd5fd1f5b9220741da7f2a5647c0c8af4"
+  },
+  "status": "primary_code_verified_source_reachable_cross_store_route_authorization_mismatch_not_live_exploit_reproduced",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "c9deb0606cc4268211be73920791879f23e059b2",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5,
+    "bootstrap_head_first": "c9deb0606cc4268211be73920791879f23e059b2",
+    "bootstrap_head_second": "c9deb0606cc4268211be73920791879f23e059b2"
+  },
+  "public_source_pin": {
+    "repository": "lbx154/Argus",
+    "commit": "16bb128992ea9d0c11b5bbca7a4f1d549dea84dd"
+  },
+  "verification_question": "At the pinned public Argus source, can PAUSE plus a later bounded route-changing task plus direct standing STEER leave Manager protected route state on B while a CampaignControl authorization tied to preserved campaign A remains consumable because authorization identity lacks a protected route revision?",
+  "verified_mechanism": [
+    "PAUSE calls disable_continuous_config and the daemon-state implementation explicitly defines that operation as disabling the latest generation while preserving its objective. The Manager pause path also says objective/backlog are preserved and does not mutate CampaignControl.",
+    "The Manager front-door route-change gate returns true when continuous state is disabled or has no objective. Therefore after PAUSE, a fresh bounded operator handoff is authorized to revise the persisted route contract rather than being forced to inherit the paused campaign route.",
+    "The public Web enqueue path calls manager_bounded_handoff and, when autostart_daemon is true, starts the project daemon with resume_continuous=False. Thus a bounded task can be dispatched while the preserved continuous objective remains disabled.",
+    "Manager's direct STEER handler handles lifetime=standing by selecting a standing objective from a running item or the current preserved continuous objective/directive, then calling compare_and_swap_continuous_config(enabled=True, objective=standing_objective, open_ended=True). The inspected handler does not call manager_continuous_handoff, Manager.divide, commit_vertical_decision, or persist_vertical during this promotion.",
+    "LifeWorker is a resident outer loop. Its main loop repeatedly invokes the supervisor and only forces a bounded-daemon exit on project_done (or separate stop/idle conditions), not merely because one drain pass reported no work. The supervisor planning-context module explicitly documents hot-reloading continuous config at the top of every run iteration so cockpit changes take effect in a running daemon.",
+    "CampaignControl's authoritative identity is CampaignIdentity(campaign_id, objective_sha256, campaign_epoch). Authorization and RepairCapability carry that campaign identity, CampaignControl state_revision, blocker fingerprint/action/write/frozen-evidence/tree/nonce/validator fields, but no Manager protected vertical, route generation, pipeline revision, or current stage identity.",
+    "CampaignControl.public_authorization exposes authorization_id, allowed_actions, scope, validator_id, write paths, frozen-evidence paths and timestamps; it exposes no route/stage revision. Planner's _validated_task_authorization checks that the id is current and the action is allowed, but it does not compare the authorization against current Manager vertical/route/stage.",
+    "claim_repair_capability revalidates nonce, campaign identity, exact CampaignControl HEAD revision/current authorization, allowed action, expiry, frozen evidence, allowed-write baseline, frozen project tree, terminal validator-defect diagnosis and validator id. It still has no comparison to protected Manager route/vertical/current stage or a PIPELINE_STATE revision.",
+    "The Manager vertical decision path persists the selected route under its own pipeline/vertical state. The inspected CampaignControl authorization identity is a distinct control store keyed to campaign objective/epoch, so no shared revision fences those two authorities in the verified code path."
+  ],
+  "interpretation": "The source-level authority mismatch is supported: under the worker's stated sequence, a paused campaign A can preserve its continuous objective/control identity, a bounded task can be authorized to establish route B, and standing STEER can re-enable objective A without reconciling route B. Since authorization admission/claim is fenced to CampaignControl identity and frozen artifacts but not to the protected Manager route revision, an A-lineage authorization can remain structurally admissible while route B is current.",
+  "scope_limits": [
+    "No live exploit, unauthorized write, or capability consumption was executed in this audit.",
+    "The final privileged mission still requires an authorization-bearing Planner task (or an equivalent deterministic injected TaskSpec) and all existing evidence/validator checks to pass.",
+    "This audit verifies source reachability and the missing cross-store fence at the pinned commit. It does not establish that production users have encountered the sequence or that every PAUSE/bounded/STEER ordering reaches it.",
+    "A fresh-daemon standing resume path may run Manager reconciliation and therefore must not be conflated with the already-running-daemon STEER promotion examined here.",
+    "Frozen tree/evidence hashes remain meaningful artifact-integrity controls; the defect is that they are not a substitute for route/stage authorization identity."
+  ],
+  "minimal_regression_contract": "Construct A with a validator-defect wait, PAUSE, submit/commit bounded route B, issue the still-current A authorization, then direct standing STEER back to A and inject an otherwise-valid authorization-bearing validator_repair TaskSpec. Current pinned code should reach authorization/capability validation without a route-revision rejection; a fenced implementation should reject because authorization.route_generation(A) != current protected route_generation(B). Positive controls should preserve same-route PAUSE/resume and same-route intended validator repair.",
+  "downstream_use": "Treat this as a concrete authority-binding bug pattern for long-running agent control planes: immutable blocker/frozen-artifact authorization is insufficient when another protected state machine can change independently. A shared Manager-owned route/pipeline revision should be carried at wait activation, authorization issuance, task admission and capability claim, or old authorizations must be superseded when the route changes.",
+  "primary_sources": [
+    "https://github.com/lbx154/Argus/tree/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/webapi/manager_dispatch.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/daemon/state.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/manager/front_door.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/manager/_vertical_ops.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/webapi/mission_items.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/daemon/_life_worker_run.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/life/supervisor/_planning_context.py",
+    "https://github.com/lbx154/Argus/blob/16bb128992ea9d0c11b5bbca7a4f1d549dea84dd/argus_skill/manager/control_state.py"
+  ],
+  "scope_guard": "Do not describe this as a demonstrated live exploit or as proof that CampaignControl itself is weak. CampaignControl has substantial objective/epoch/HEAD/nonce/evidence/tree/validator fencing. The verified gap is specifically the absence of a shared protected Manager route/stage revision across an independently mutable route store and the authorization lineage.",
+  "material_update": "The C14 open-source worker's central claim is supported and narrowed to source-level reachability: the PAUSE/bounded/standing-STEER sequence can cross a Manager route mutation without introducing that route identity into CampaignControl authorization admission or capability claim. The correct fix target is cross-store route-generation fencing/reconciliation, not weakening existing artifact-integrity checks.",
+  "exact_next_action": "On the next verification, audit the other direct continuous re-arm/promotion paths at the same Argus commit (operator-decision resolution, daemon controls, CLI/API resume) only to determine whether they perform Manager route reconciliation or share the same gap. Then rotate to a different C14 namespace rather than repeatedly auditing Argus if those paths are mechanically covered."
+}
