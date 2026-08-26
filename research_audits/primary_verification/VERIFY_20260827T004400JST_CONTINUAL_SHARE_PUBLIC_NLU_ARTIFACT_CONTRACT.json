@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "audited_at": "2026-08-27T00:44:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "8cefe8832032e8e789a20b1bf6c66db5ac08df15",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_candidate": {
+    "sealed_worker_artifact": "research_workers_clean_g1/continual_learning/RUN_20260826T2104_JST.md",
+    "sealed_worker_blob": "d41f468c56f2aa858f46219ef0a4f3f9b73588fa",
+    "claim_family": "Share public strict-NLU artifact lifecycle versus paper-level retained task coefficients"
+  },
+  "primary_sources": [
+    {
+      "kind": "paper",
+      "id": "arXiv:2602.06043v1",
+      "title": "Shared LoRA Subspaces for almost Strict Continual Learning",
+      "verified_points": [
+        "Method explicitly retains one shared basis plus t task-specific coefficient sets after merging.",
+        "Eq. 3/4 and surrounding text recalculate coefficients for all prior tasks i<=t.",
+        "Computational-complexity section states storage O(k(d+m)+Tkp).",
+        "Continual GLUE table reports Share/Share-full active parameter footprint 0.012M and 0.29MB."
+      ]
+    },
+    {
+      "kind": "code",
+      "repo": "ankit-vaidya19/Share",
+      "commit": "ed4bc9c261f4389b1c2abd639e4f55ae81a1028b",
+      "paths": [
+        "NLU/scripts/run_share_continual.sh",
+        "NLU/run_glue.py",
+        "NLU/weight_update.py",
+        "peft/tuners/eigenflux/layer.py",
+        "peft/utils/save_and_load.py",
+        "peft/peft_model.py"
+      ]
+    }
+  ],
+  "mechanical_findings": [
+    {
+      "finding": "The pinned strict-NLU training loop carries exactly the immediately previous trained EigenFlux path forward as the next task's load_path; after training, prev_adapter_path is replaced by the current task's save_path.",
+      "scope": "NLU/scripts/run_share_continual.sh at the pinned commit."
+    },
+    {
+      "finding": "Each run_glue invocation constructs an EigenFlux adapter under the current task/evaluation adapter name and loads the supplied artifact into that same adapter name. PeftModel.load_adapter only creates a new adapter if that name is absent; because get_peft_model already created the named adapter, loading the predecessor artifact populates the current adapter rather than preserving a separate historical adapter entry.",
+      "scope": "Pinned NLU/run_glue.py plus peft/peft_model.py behavior."
+    },
+    {
+      "finding": "evaluate_previous_tasks passes the same current adapter_path to every prior GLUE task. The eval task name chooses dataset/head semantics and the in-process adapter namespace, but there is no search/selection over a bank of historical coefficient artifacts in this main path.",
+      "scope": "Pinned strict-NLU driver only; this does not rule out other repository modalities or unpublished experiment code."
+    },
+    {
+      "finding": "The EigenFlux saver emits components/loadings for the adapter state and strips the adapter-name suffix for serialization. In this strict-NLU invocation there is one carried adapter state, so the current saved continuation artifact is a current shared-state snapshot, not an embedded t-way historical coefficient bank.",
+      "scope": "Pinned peft save/load implementation as exercised by the strict-NLU driver."
+    },
+    {
+      "finding": "update_previous_weights is post-hoc and only updates the immediately previous task using previous+current reconstructions, saving a standalone <prev>_updated.safetensors. The main loop does not assign that updated file to prev_adapter_path, so it is not the continuation state for the next task; it is an archival/evaluation side output.",
+      "scope": "Pinned NLU/scripts/run_share_continual.sh and NLU/weight_update.py."
+    }
+  ],
+  "verdict": {
+    "status": "SUPPORTED_WITH_MATERIAL_PAPER_CODE_CONTRACT_DISTINCTION",
+    "summary": "The sealed worker correction is supported and can be strengthened: at this pinned commit the public strict-NLU driver is operationally a single evolving EigenFlux snapshot with task-known evaluation, not an inference router over retained historical coefficient sets. The paper, by contrast, explicitly defines and counts t lightweight coefficient sets and gives storage O(k(d+m)+Tkp). Therefore the paper's method-level storage/accounting contract and the public strict-NLU driver's carried state are not the same object.",
+    "important_scope_corrections": [
+      "Do not call the strict public NLU driver an oracle selector over historical Share coefficient sets; the main evaluation path does not expose such a bank.",
+      "Do not interpret the paper's 0.29MB active Share figure as the size of the entire retained public experiment output tree. The script separately saves one trained directory per task plus post-hoc updated prior-task files, so retained experiment/archive storage grows with task count even though the carried continuation state is one current artifact.",
+      "Do not infer that the Share method itself lacks t coefficient sets. The paper explicitly defines them; this audit identifies a paper-versus-public-NLU-driver contract distinction, not a falsification of the paper's abstract method.",
+      "Do not generalize this result to Diffusion, NLG, unpublished code, or another commit without separate inspection."
+    ]
+  },
+  "next_verification": "Quantify SLoRA's per-task archival state and reconstruction cost at pinned alina1031/SLoRA@0faf15fd6562ed3e146e8733205f59ef9742ba0f, and determine whether the public scripts support a lossless compacted merged checkpoint that removes the need to retain/replay all prior per-task denoised deltas."
+}
