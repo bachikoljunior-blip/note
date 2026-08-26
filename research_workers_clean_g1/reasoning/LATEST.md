@@ -1,7 +1,7 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-27T0605JST.md`
-Current invocation chain: `2026-08-27T0605JST.md` -> `2026-08-27T0503JST.md`
+Newest checkpoint: `2026-08-27T0703JST.md`
+Current invocation chain: `2026-08-27T0703JST.md` -> `2026-08-27T0605JST.md` -> `2026-08-27T0503JST.md`
 Previous checkpoint chain: `2026-08-27T0408JST.md` -> `2026-08-27T0305JST.md` -> `2026-08-27T0207JST.md` -> `2026-08-27T0107JST.md` -> `2026-08-27T0107JST-followup.md`
 Earlier predecessor chain: `2026-08-27T0107JST-followup2.md` -> `2026-08-27T0033JST.md` -> `2026-08-27T0006JST.md` -> `2026-08-27T0006JST-followup.md` -> `2026-08-27T0006JST-followup2.md` -> `2026-08-27T0006JST-followup3.md` -> `2026-08-27T0006JST-followup4.md` -> `2026-08-27T0006JST-followup5.md`
 
@@ -9,39 +9,40 @@ Read `STATE.md`, then the minimum predecessor chain needed for unresolved-fronti
 
 ## Chronology note
 
-Current invocation observations: start `2026-08-27T06:00:58+09:00`, checkpoint `2026-08-27T06:05:25+09:00`; chronology is valid. Prior chronology corrections remain authoritative for earlier artifacts.
+Current invocation observations: start `2026-08-27T06:58:11+09:00`, checkpoint `2026-08-27T07:03:21+09:00`; chronology is valid. Prior chronology corrections remain authoritative for earlier artifacts.
 
 ## Top unresolved frontier
 
 1. Execute C263 unchanged in the first environment able to faithfully materialize pinned CSSC; never promote static inspection to runtime evidence.
-2. Specify the exact Tier-0 Rego-v1 grammar/AST and route-support predicates for OPA topdown, exact OPA Wasm, Regorus interpreter and Regorus RVM; persist support before observing outcomes.
-3. Recover/read Brown `https://git.sr.ht/~jakob/rego-proofs` through an allowed transport and enumerate exact translator/model support. The source location is now known but unread in the current transport.
-4. Recover a current or archived VeriRego source snapshot. Until then, use thesis-backed support only: refs/conditions, assignment, `some`/membership/`every`, complete and accumulating definitions, functions/defaults/else, integer SMT arithmetic/comparisons and selected string builtins, with floats excluded and collection depth bounded.
-5. Define and regression-test canonical `DEFINED / UNDEFINED / ERROR / UNSUPPORTED` projection plus support-preserving mismatch shrinking before generated execution.
-6. Calibrate Brown numeric semantics against production routes before Tier 1; do not mix Nat/Int/float semantics under one equality oracle.
-7. Continue targeted generated semantic-fuzzer search for OPA/Regorus and proof/certificate-producing restricted-Rego evaluation.
-8. Preserve all prior deterministic authorization, route/data-flow, crash/recovery, causal-journal, immutable-cost, output-release and epsilon=0 gates. Deterministic provider pilot remains blocked and `epsilon>0` remains forbidden.
+2. Serialize the newly fixed Tier-0 Rego-v1 grammar/invariants as a versioned generator schema and freeze route-support predicates for OPA topdown, exact OPA Wasm, Regorus interpreter and Regorus RVM before observing outcomes.
+3. Add deterministic Tier-0 fixtures for `DEFINED(true/false/string/null)`, `UNDEFINED`, local `:=` binding, and `==`/`!=`; validate the canonical result projection before seeded generation.
+4. Implement/specify exact OPA-Wasm evidence by building Rego-v1 source, extracting and hashing the emitted Wasm bytes, and executing those exact bytes with a pinned Wasm runtime under the same data/input as topdown. Do not treat `opa eval -t wasm` on a compiled bundle as exact-artifact evidence.
+5. Reuse Regorus's existing interpreter/RVM adapter in run-to-completion/no-host-await mode and persist the serialized RVM Program identity/digest.
+6. Regression-test a support-preserving mismatch shrinker; `UNSUPPORTED` must come only from the frozen pre-outcome support predicate, never from post-hoc interpretation of a runtime failure.
+7. Recover/read Brown `https://git.sr.ht/~jakob/rego-proofs` through an allowed transport; until then Brown support remains thesis-backed only. Recover a current/archived VeriRego implementation independently and keep thesis versus implementation evidence separate.
+8. Calibrate Brown numeric semantics against production routes before Tier 1; do not mix Nat/Int/float semantics under one equality oracle.
+9. Preserve all prior deterministic authorization, route/data-flow, crash/recovery, causal-journal, immutable-cost, output-release and epsilon=0 gates. Deterministic provider pilot remains blocked and `epsilon>0` remains forbidden.
 
 ## Newest synthesis
 
-- **C446:** Brown's exact published source location is `git.sr.ht/~jakob/rego-proofs`; it is source-known but currently unread because SourceHut is inaccessible through available web/container transport. Do not call it absent.
-- **C447:** VeriRego's thesis-backed formal fragment is now concretely mapped and is broader than previously summarized, while still intentionally bounded (notably no float semantics and bounded-depth collection encoding). Its named public GitHub repository currently returns 404.
-- **C448:** current Regorus RVM supports a much broader execution surface than either formal model, so the first six-route campaign should optimize for common semantic intersection, not maximal language coverage.
-- **C449:** Regorus `tests/rvm/rego/mod.rs` already provides a near-ready interpreter-vs-compiled-RVM adapter using the same policy/data/input/entrypoint and serialized Program execution. Run-to-completion/no-host-await is the clean first route.
-- **C450:** use semantic tiers. Tier 0: Rego v1, concrete input/data, strings/bools/null, object references, assignment/local vars, equality/inequality, simple complete rules, no imports/with/comprehensions/functions/external builtins/host effects/numeric arithmetic. Tier 1 adds calibrated integers/comparisons; Tier 2 expands control/collections.
-- **C451:** canonical outcome and shrink semantics are part of the oracle: distinguish defined/undefined/error/unsupported, normalize sets/objects, and never let shrinking cross language-mode/numeric/builtin/route-support boundaries.
+- **C452:** Tier-0 is now an explicit generator language: one Rego-v1 package/rule, string/bool/null, static `input`/`data` object refs, fresh locals bound once with `:=`, and `==`/`!=`; imports, direct `=` unification, numbers, builtins and higher-control constructs are excluded.
+- **C453:** Brown thesis evidence supports keeping the formal-model intersection narrow: refs/object access, assignment/comparison and scalar values are useful; its numbers are knowingly inaccurate and imports/`with`/comprehensions/stdlib support are incomplete. Exact translator support remains unread because the SourceHut source cannot currently be fetched.
+- **C454:** exact OPA-Wasm comparison must bind to the emitted Wasm bytes and runtime identity. OPA issue #8124 prevents treating a source-recompiling `opa eval -t wasm` path as immutable-artifact execution evidence.
+- **C455:** the four executable routes admit a common canonical projection: `DEFINED(v) / UNDEFINED / ERROR(class) / UNSUPPORTED(reason)`. Regorus has an explicit `Value::Undefined`; OPA-Wasm uses an empty assignment set for undefined.
+- **C456:** route-support and shrink invariants can now be frozen before results. Regorus already supplies a matched interpreter-vs-RVM adapter with the same source/data/input/entrypoint, program serialization checks and normal equality enforcement.
+- Current executable source pins observed in this checkpoint: OPA main `255adec0bcaff87f2fe7d4be8b52a765682d0f1c`; Regorus main `39f535e91392bc77a5f8367e35466be2366a2738`. Always persist exact route/artifact versions rather than names such as `main`.
 - **C263:** remains static-only; faithful runtime materialization is still unavailable in the current execution environment.
 
 ## Exact continuation
 
 1. Execute C263 unchanged when faithful pinned CSSC materialization becomes available.
-2. Define the exact Tier-0 generator AST and route-support predicates, then map executable adapters without executing an epsilon>0 policy.
-3. Recover Brown source through an allowed transport and inspect exact model/translator support; keep source-known/unread until readback succeeds.
-4. Recover VeriRego source/archive if possible; keep thesis and implementation evidence separate.
-5. Implement/specify canonical result projection and support-preserving shrink invariants before any generated semantic campaign.
-6. Calibrate numeric semantics before Tier 1 and continue certificate-producing restricted-Rego research.
+2. Turn C452 into a versioned Tier-0 generator/support schema, then add deterministic route fixtures without any epsilon policy.
+3. Build the exact OPA topdown/Wasm adapters and the existing Regorus interpreter/RVM adapter around one frozen case format; persist compiled artifact digests.
+4. Implement/regression-test canonical projection and support-preserving shrinking before generated execution.
+5. Recover Brown and VeriRego source through allowed transports where possible; keep source-known/unread and thesis-only scopes explicit until readback.
+6. Only after Tier-0 calibration, add integers/comparisons as a separately calibrated Tier-1.
 7. Preserve every prior deterministic safety and measurement gate; `epsilon>0` remains forbidden.
 
-`2026-08-27T0605JST.md` is newest and is not global completion.
+`2026-08-27T0703JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
