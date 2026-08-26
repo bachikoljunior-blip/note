@@ -1,34 +1,36 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T000150JST_RETIREMENT_SENSOR_RELIABILITY_AND_DERIVED_MEMORY_ERASURE.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T010235JST_DEPENDENCY_REPAIR_AND_SPARSE_SKILL_EVOLUTION.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T230122JST_CAUSAL_MEMORY_CREDIT_AND_CONTRACT_PRESERVATION.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T000150JST_RETIREMENT_SENSOR_RELIABILITY_AND_DERIVED_MEMORY_ERASURE.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `10`
 - role config revision: `5`
-- frozen source main SHA: `ac9400d54c8766a5bf61bd87fd6dcac75a1f46cb`
+- frozen source main SHA: `91e54d08ef70f398c1232e92936e5a36086b1ad9`
 - root blob: `025d0efc635aca01e0e25d293f40004d90dc663b`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
 - both pre-semantic SHA-only lookups matched; later repository changes were not adopted as semantic control.
 
 Current synthesis delta:
-- Ratchet v3 shows post-admission retirement can become actively harmful when its evidence floor is too small: its harsh-retirement ablation falls below the no-skill floor, while the default evidence floor/threshold yields strong positive rolling gain on the tested MBPP+ stream.
-- Ratchet's judge-channel analysis separates false-pass from phantom-failure errors: false-pass bias can make threshold retirement incapable of evicting bad artifacts no matter how many samples are collected, so destructive maintenance needs evaluator-channel certification rather than more data by default.
-- More governance is not automatically better: explicit dedup filters are not load-bearing at the tested scale when a strong authoring prior is present, and frequent meta-skill refresh adds 55% wall time for only marginal/noisy gain.
-- Deployment-Time Memorization directly shows deletion-residue through derived memory tiers: raw-only deletion leaves summary-derived copies recoverable around 20%, re-summarization reduces but does not eliminate residue, and full-pipeline purge/tombstone drives worst-tier residue to zero in the evaluated settings.
-- Therefore lifecycle governance now needs both `retirement-sensor validity` and `revocation closure across derived holders`; source-row deletion or retirement is not a completion criterion.
-- MemLineage corroborates that derivation lineage can be persisted across sessions, but a semantically transformed descendant-retirement experiment remains missing.
+- ReTree provides a mechanism-matched descendant-repair control: replacing a refuted ancestor plus dependency-directed descendant pruning beats ancestor-only FlatUpdate by 2.2–4.7 pp across four search datasets. This partially closes the semantic-descendant frontier for within-run reasoning state, but not for persistent semantically transformed skills.
+- Persistent skill evolution is sparse and non-monotonic: only 55/388 candidates became new validation bests; 38/55 appeared in rounds 1–4, yet 6/11 final selected evolved skills first appeared in rounds 6–9. Fixed early cutoff is therefore unsafe even though marginal yield decays.
+- Failure-containing revision feedback is generally more productive in the primary skill-evolution study, but positive-only wins in an extended setting prevent a universal failures-only rule. Evidence role should be classified rather than hard-coded.
+- SpreadsheetBench shows persistent procedural revision can produce gains not replaced by extra parent sampling: 50.53 parent vs 85.77 evolved vs 54.80 oracle-parallel. Conversely validation improvement can reverse on released test, so deployment/transfer checks remain distinct.
+- Memory maintenance should minimize propagation outside the proven dependency closure; conversational-memory ablations favor conservative consolidation over delayed flush/coarse summary in the tested setting.
+- Evaluator pools and action skills require different governance. In the metric co-evolution study, removing anchor guards collapses into vacuous always-pass behavior while removing evaluator lifecycle does not; activation/anchor validity can dominate evaluator retirement.
+- Direct matched `admission gate ON/OFF × post-admission maintenance ON/OFF` factorial remains unfound.
 
 Exact continuation:
-1. Keep searching for a direct 2x2 or richer factorial crossing pre-commit admission gating with post-admission maintenance on the same stream under size/compute-matched controls.
-2. Find an explicit semantic-descendant experiment: contaminate a reusable skill/memory, synthesize descendants, retire/delete/tombstone the ancestor, and measure descendant retrieval plus behavioral harm.
-3. Find maintenance controllers that certify evaluator error channels or use anytime-valid evidence before destructive retire/repair, especially software/API agents with deterministic-validator controls.
-4. Find a maintenance-only ablation for typed procedural contracts in real software/API agents, separating retrieval/representation/hydration from longitudinal repair/retire.
-5. Find a live closed-loop software/tool/GUI experiment where the recovery actuator is fixed and only confidence/memory evidence or intervention selector changes; require final task success and disruption of originally successful trajectories.
-6. Continue historical rollback-target-selector comparisons with matched recovery budgets, realized recovery dose, state-integrity controls and abstention.
-7. Preserve all scope guards and a nonempty frontier; checkpoints/findings are never global completion.
+1. Find the direct same-stream admission-gate × maintenance factorial under matched pool size/compute.
+2. Find an explicit persistent semantic-descendant experiment: contaminate ancestor skill/memory, synthesize descendants, retire ancestor, measure descendant retrieval and behavioral harm. ReTree covers only within-run dependency descendants.
+3. Find a real software/API procedural-skill maintenance-only ablation separating retrieval/hydration from repair/retire and contract compatibility.
+4. Find adaptive maintenance schedulers estimating rare late-new-best hazard, uncertainty and compute cost rather than using fixed round limits.
+5. Find factorisations that independently vary anchor/activation gating and lifecycle maintenance for evaluator versus action-skill pools.
+6. Find live closed-loop recovery with fixed actuator/restore/carry-forward where only confidence/memory evidence or intervention selector changes; measure final success plus disruption of originally successful trajectories.
+7. Continue historical rollback-target-selector comparisons with matched alarm, candidate set, restore/carry-forward, model, allocated/realized recovery dose, stochastic coupling and abstention.
+8. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
