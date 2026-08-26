@@ -37,53 +37,45 @@ Latest checkpoints in order:
 34. `2026-08-26T1359JST-followup3.md`
 35. `2026-08-26T1359JST-followup4.md`
 36. `2026-08-26T1359JST-followup5.md`
+37. `2026-08-26T1359JST-followup6.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
-1. Freeze the causal decision journal before collection. Current whole-file JSONL replacement is fine for low-frequency final summaries but unsuitable per decision because it rewrites the whole trace.
-2. SQLite WAL/FULL is the current leading Stage-A journal candidate; segmented immutable JSON remains an independent audit/reference implementation.
-3. Journal causal ordering: commit decision before action; commit any shared-batch consumption binding before execution; commit outcome before the next randomized decision. Persistence failure is fail-closed for future randomization.
-4. Event identity uses existing UUID4 run/sample id plus decision index/type; exact replay is idempotent, conflicting duplicate is an error.
-5. One decision and at most one outcome per `(run_id,decision_index)`; zero-or-more batch-consumption joins; unmatched decision is censored, never negative reward.
-6. Lossless raw events retain full candidates/workspace/budget/provenance; learned datasets are derived later and versioned separately.
-7. Stage-A v0 is a small text-free shared per-candidate scorer over structured budget/workspace/branch/action/cost signals with explicit missing/status masks.
-8. Freeze `feature_manifest_sha256`, fixed categorical vocabularies and train-split-only normalization; raw journal remains re-featurizable.
-9. Safe epsilon policy uses exact deterministic production baseline, stable node ordering, exact probability vector and realized random draw. Unsupported states/actions fall back to baseline.
-10. OPE claims require measured overlap/support/ESS; target mass with zero support is outside identification unless policy is restricted/fallback is built into the estimand.
-11. Separate execution infrastructure status from proof outcome and verifier-grounded progress.
-12. Instrumentation overhead is itself measured and matched across causal arms; journal backend/version becomes part of the frozen substrate.
-13. Complete fault-injection and epsilon=0 instrumentation-equivalence tests before provider collection.
-14. Run a precision-driven deterministic provider cost-share pilot before training. If post-generation execution is a small share of total cost, move earlier to Stage-B generation/retrieval/model-tier control.
-15. Broad proof RL is already established; continue literature search only for the narrow fixed/factored compact heterogeneous-controller + exact propensity/OPE gap.
+1. Validate the causal journal before any policy/OPE collection. SQLite WAL/FULL is the leading prototype; whole-file per-decision replacement is rejected as too write-amplifying for the default.
+2. Journal ordering is causal: committed decision before action, batch provenance binding before executing a shared generated proposal, outcome before next randomized decision. Persistence failure is fail-closed for subsequent randomization.
+3. Raw journal is lossless and independent of learned features. Unmatched decisions are censored, not negative labels; monetary/resource CostLedger remains separate and immutable.
+4. Stage-A v0 feature semantics are now frozen in `STAGE_A_V0_FEATURE_MANIFEST.json`, blob `e14b0f51605f47f63a724db4a417e92f183aecbe`, semantic-body SHA-256 `c1f8cacb3b8eedc8ed665869a378e9e71a7a36653fd3efa717c36cc940a81838`.
+5. Expanded v0 representation has 154 channels/candidate before optional train-split-only standardization; raw proof/theorem/error/goal text and task/node IDs are excluded from v0 predictive inputs but retained as provenance where appropriate.
+6. Action space is the seven current structured proposal kinds plus OTHER; future additional meta-actions require an explicit new version.
+7. Safe epsilon collection still uses exact deterministic production baseline, stable node ordering, exact probability vector/realized draw and known propensities; unsupported states/actions fallback to baseline.
+8. OPE readiness requires measured support/overlap/ESS; no causal score for material zero-support target mass.
+9. Instrumentation itself must be identical across causal arms and measured for journal latency/bytes/fsync/wall-clock overhead.
+10. Complete fault injection and epsilon=0 behavioral-equivalence tests before provider collection.
+11. Provider-enabled pilot uses a prespecified precision stopping rule for proposal-generation/selected-execution/assembly/other cost shares. Do not assume Stage-A headroom before observing it.
+12. If selected execution cost share is small, move earlier to Stage-B generation/retrieval/model-tier control; if material, collect safe epsilon Stage-A data.
+13. Continue narrow fixed/factored compact heterogeneous-controller literature search only as secondary work; broad proof RL is already established.
 
 ## Current synthesis and newest updates
 
-- **C145:** local synthetic 1000-event benchmark confirmed whole-file per-decision copy+replace is high-overhead: ~7.52s median and ~1.097GB counted writes for a ~2.19MB logical stream.
-- **C146:** on the same local benchmark SQLite WAL/FULL was ~0.67s median for 1000 events; segmented JSON ~2.04s. SQLite is the leading prototype, not yet a production portability claim.
-- **C147:** journal latency must be compared to structural/Lean action latency; durable logging can itself bias the cost objective.
-- **C148:** keep causal journal separate from immutable monetary/resource CostLedger, joining later by stable ids.
-- **C149:** journal backend/pragmas/schema/canonicalization/export policy are part of the experimental substrate and must be frozen before randomized data collection.
-- **C150:** SQL schema should enforce one decision/at-most-one outcome per decision index while allowing multiple batch-consumption joins.
-- **C151:** idempotence requires canonical-payload comparison, not `INSERT OR IGNORE`.
-- **C152:** do not transactionally combine pre-action decision with post-action outcome; preserving committed decision without outcome is the censoring evidence.
-- **C153:** canonical JSONL is a derived export; online journal stays authoritative until export verification.
-- **C154:** epsilon=0.25 synthetic sampler frequencies matched expected mixture probabilities closely across pool sizes 2/3/5.
-- **C155:** stable randomized-pool ordering is required so a logged draw maps deterministically to the same node.
-- **C156:** feature semantics need their own manifest hash distinct from raw event schema.
-- **C157:** normalization/vocabularies are fitted/frozen on training split only; missingness semantics are preserved.
-- **C158:** raw causal evidence and learned-policy dataset are deliberately decoupled, enabling re-featurization and support/OPE reanalysis without recollection.
+- **C145–C149:** local synthetic storage benchmark strongly favors a dedicated journal over whole-file replacement; backend/version is part of the frozen experimental substrate.
+- **C150–C158:** concrete SQLite event schema/transaction/idempotence/export contract, replayable epsilon sampler and feature/dataset versioning are defined.
+- **C159:** frozen v0 expands to 154 candidate channels before fitted normalization.
+- **C160:** feature schema was frozen before provider outcomes/policy labels, reducing adaptive test-set feature selection risk.
+- **C161:** distinguish raw event compatibility from predictive feature/substrate compatibility before pooling traces.
+- **C162:** v0 action vocabulary deliberately matches the seven supported structured proposal kinds, not the broader workspace enum.
+- **C163:** raw v0 manifest is parent to later train-split-fitted preprocessing/model artifacts; objectives should share the same representation for clean comparison.
 
 ## Exact continuation
 
-1. Write the complete versioned `stage_a_v0` feature manifest: exact order, transformations, vocabularies, missing/status encodings and excluded provenance fields.
-2. Specify SQLite fault-injection tests for decision/batch/outcome commit failures, process-kill recovery and conflicting duplicate replay.
-3. Define the instrumentation-equivalence test matrix with exact equality assertions and wall-clock overhead reporting.
-4. Define event-reader/dataset-builder invariants and censored-decision/sequential-return handling.
-5. Define initial model/objective suite and split by theorem/task rather than decision to prevent trajectory leakage.
-6. Then run the precision-driven provider cost-share pilot with frozen journal/feature/substrate versions.
-7. Continue narrow source search only as secondary work; experimental identifiability is now higher value.
-8. Keep the frontier nonempty. `2026-08-26T1359JST-followup5.md` is newest and is not global completion.
+1. Define executable SQLite fault-injection/recovery tests and event-reader invariants.
+2. Define the full instrumentation-equivalence matrix and exact equality/tolerance assertions on existing CSSC fixtures.
+3. Define theorem/task-level data split, censored-decision treatment and sequential return labels for BC/weighted/value/bandit comparisons.
+4. Prespecify provider pilot precision target/stopping rule and bootstrap unit.
+5. Run deterministic provider-enabled cost-share pilot only after journal/equivalence validation.
+6. Decide Stage A versus Stage B based on observed cost/solve headroom, then collect randomized data only if justified.
+7. Continue narrow literature search as secondary work.
+8. Keep the frontier nonempty. `2026-08-26T1359JST-followup6.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
