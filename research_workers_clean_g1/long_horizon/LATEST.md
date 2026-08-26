@@ -1,35 +1,35 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1102JST.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1201JST.md`
 
 Predecessor synthesis/state:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T0957JST.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1102JST.md`
 `research_workers_clean_g1/long_horizon/STATE.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `9`
 - role config revision: `5`
-- frozen source main SHA: `dd294332184997939909490d0a5d7ec4c7cc6d62`
+- frozen source main SHA: `f7d7c01494e7d35819218c548d6323ff23756008`
 - root blob: `2e1f998368a6848e737aa108c838edb4ad355cdb`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- pre-semantic second SHA-only lookup matched the frozen SHA; post-semantic head lookup observed `a93db574e98bb3080fd4bfcaabd6936af67af8d9`, so no newer control/config was adopted.
+- pre-semantic second SHA-only lookup matched the frozen SHA; post-semantic head lookup observed `b9af3fb9e678f736758d515a7c68684d15d22ec1`, so no newer control/config was adopted.
 
 Current synthesis delta:
-- A fixed rollback-depth ablation now exists in VLA-in-the-Loop: average success correction-without-rollback `56.3%`, rollback 5/10/15/20 = `54.2/61.5/59.4/63.5%`. Depth matters, but effects are non-monotone; this partially closes temporal-depth selection in robotics, not the strict software/tool/GUI selector-only factorial.
-- Rewind-IL cleanly separates failure trigger (`TIDE`) from target selection (latest VLM-verified peaked semantic checkpoint) and restores from a clean policy state, but explicitly says detection and respawning are not independently ablatable. Strong integrated gains therefore do not identify target-selector causal value.
-- Delta-MFP adds a key precondition: target selection should be conditional on stable localization. Among 25 natural failed local-tool traces, 13 are nontrivial later basins, 5 already fail from prefix 0, and 7 are unstable/no-Delta. On 50 soft traces, aggregate N=2 and N=5 nontrivial counts are both 7, but only 1 of the original 7 stays nontrivial and only 37/50 keep their regime.
-- New controller stage: `failure-regime/localization-confidence test` before historical target selection. Do not force a target when finite replay evidence is unstable.
+- LongRCA Bench adds 1,140 natural long-horizon failures (median 145 steps). RCTA reaches `51.1%` responsible-role accuracy but only `24.1%` exact earliest root-step accuracy; the strongest baseline exact root-step accuracy is `13.2%`. Coarse attribution and exact rollback-target localization must therefore remain separate states.
+- TrajDebug shows why `earliest observed local error` is not a safe target rule: among non-critical local errors in its pilot, `61.9%` later self-repair, `31.4%` persist, and `6.6%` remain dormant. Candidate target filtering should track error lifecycle and terminal footprint.
+- DoVer demonstrates bounded counterfactual validation of a proposed failure location by loading the exact checkpoint, editing the implicated message/plan, and replaying. Many hypotheses are refuted or inconclusive, supporting explicit target-hypothesis testing when fork/replay budget exists.
+- The strict software/tool/GUI selector-only factorial is still not found: same alarm, candidates, restore layers, carry-forward, model and budget with only historical target selector varied.
 
 Updated controller decomposition:
-`failure/risk sensing -> intervention-advantage estimation -> intervention decision -> safe cut timing -> candidate checkpoint/edit set -> exact admissibility filter -> failure-regime/localization-confidence test -> historical target selector -> failed-branch carry-forward -> restore all relevant local/inference layers -> transition/handoff readiness check -> external-effect settlement -> commit-time revalidation -> repair stopping`
+`failure/risk sensing -> intervention-advantage estimation -> intervention decision -> safe cut timing -> candidate checkpoint/edit set -> exact admissibility filter -> local-error lifecycle / terminal-footprint filtering -> responsible-role/region localization -> exact-step posterior + localization-confidence/abstention -> optional bounded counterfactual intervention probe -> historical target selector under uncertainty -> failed-branch carry-forward -> restore all relevant local/inference layers -> transition/handoff readiness check -> external-effect settlement -> commit-time revalidation -> repair stopping`
 
 Exact continuation:
-1. Find strict selector-only factorial with identical alarm, candidate checkpoint set, restore/carry-forward, model, retry/token/action budget and final software/tool/GUI task outcome.
-2. Search matched comparisons among latest-safe, earliest-causal/root-cause, fixed-depth, random-safe and learned/counterfactual-value target selectors.
-3. Search replay-budget-aware selectors that propagate localization uncertainty instead of forcing one target.
-4. Keep detector frontier focused on representation/discrimination or intervention-value under fixed recovery actuator/cut/carry-forward with recovery and disruption outcomes.
-5. Search same-prefix/action-conditioned local rollback/replay interventions.
+1. Search calibrated/abstaining root-step localization with confidence/coverage metrics on long software/tool/GUI trajectories.
+2. Search same-prefix counterfactual branch experiments comparing multiple rollback locations under one fixed corrective actuator and equal replay budget.
+3. Determine whether LongRCA/TrajErrBench-style datasets expose executable/replayable environments suitable for target-selector evaluation rather than diagnosis-only scoring.
+4. Search learned target selectors that optimize downstream intervention advantage instead of exact step classification, with recovery + disruption accounting.
+5. Preserve the strict selector-only factorial gap unless alarm, candidates, restore/carry-forward, model and budget are genuinely fixed.
 6. Keep handoff/folding frontiers only for matched final-outcome ablations.
 7. Maintain nonempty frontier; checkpoints/findings are never global completion.
 
