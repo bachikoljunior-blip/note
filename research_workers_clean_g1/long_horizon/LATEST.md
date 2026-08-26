@@ -1,33 +1,33 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T030046JST_VAG_SEMANTIC_DESCENDANT_ROLLBACK.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T040352JST_RECURIS_INFLUENCE_AUDIT.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T0200JST_MEMOREPAIR_PERSISTENT_DESCENDANT_CASCADE.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T030046JST_VAG_SEMANTIC_DESCENDANT_ROLLBACK.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `10`
 - role config revision: `5`
-- frozen source main SHA: `96455fef3c2959bd19936868b26ff73d1c3079c1`
+- frozen source main SHA: `5cebeec86a5eb4b2d6b9a5fe98e085fd5f7b689e`
 - root blob: `025d0efc635aca01e0e25d293f40004d90dc663b`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
 - both pre-semantic SHA-only lookups matched; later repository changes were not adopted as semantic control.
 
 Current synthesis delta:
-- The stronger autonomous transformed-descendant contamination frontier is substantially resolved by VaG / *When Self-Evolution Backfires* (arXiv:2608.05810): a five-round Terminal-Bench 2 self-evolution loop generates later semantic skills while earlier skills are live in context.
-- Ungated Event-50 performance peaks at R3 then degrades by R5 as the pool grows; pre-commit VaG reaches 72% at R5 with a much smaller serving pool. Removing held-out behavioral replay costs 10pp; removing joint marginal-gain gating costs 8pp and expands the serving pool.
-- Post-hoc cleanup is directly insufficient in that setup: R3 peak 62.3% -> R5 50.0%; source-only rollback recovers 1.7pp, oracle full-lineage cleanup 6.7pp total, leaving 5.6pp unrecovered. A concrete R3 git-conflict skill produces distinct R4 merge/rebase descendants that remain harmful after source-only removal.
-- AutoRefine v2 gives controlled write-time gate evidence: replay-gate removal costs 16.11pp on TravelPlanner; paired SpreadsheetBench admission with shared model/split/optimizer/candidate stream/seed gives 73.57% vs 67.50% but at 2.82x offline tokens and 3.05x wall time. It also shows a gated revision repository can remain stable without a separate global maintenance graph.
-- SkillOps independently shows library-time maintenance value on noise-graded ALFWorld libraries: Full 79.5/80.0 SR at 200/1000 skills vs NoLibrary 71.9/72.4, with large drops for removing repair/validator/adapter. Scope remains half-synthetic embodied/offline rather than real software/API longitudinal logs.
-- Direct matched `admission gate ON/OFF × post-admission maintenance ON/OFF` factorial remains unfound.
+- Recuris (arXiv:2608.24876) supplies a rare real software-agent maintenance-only comparison on Terminal-Bench 2.1. With the same seed Skill Memory and the same four attempts, post-failure per-task card updates (`tta`) score 60.9% vs fixed memory (`m0`) 58.6%, only +2.3pp and explicitly not significant at the reported sample size. This is evidence against assuming post-admission maintenance is automatically load-bearing.
+- Recuris's broad combined system is still strong: 35/37 completed model-benchmark pairs improve, with examples such as tau2-Retail GPT-5.6 Sol +17.8pp and Claude Opus 5 +15.6pp, and gains reported up to +32.2 on the longest tasks. Those gains bundle state-grounded Working Memory, Experiential Memory, routing, failure localization, patching and validation; they cannot be attributed to maintenance alone.
+- Recuris also reports target-model transport risk: a package rebuilt for GPT-OSS-20B gains +10.2 while a general-purpose package transfers negatively. Memory/skill validity should therefore be rechecked against the target model/harness.
+- Adaptive Influence Graphs (arXiv:2608.24361) reconstruct semantic inheritance from executed traces, critic-refine graph structure against raw logs, and improve exact Who&When step localization with Opus-5 from 46.40% raw-log to 55.20% adaptive-graph + agentic traversal. This substantially narrows the missing semantic-lineage audit frontier but does not yet maintain persistent multi-generation skill lineage.
+- NeuroTaint (arXiv:2604.23374) tracks semantic transformation, counterfactual causal influence and cross-session memory propagation rather than only lexical taint. On its 400-scenario / 20-framework TaintBench it reports F1 0.928 vs FIDES 0.522; scope is offline security provenance, not general skill evolution.
+- Direct matched `admission gate ON/OFF x post-admission maintenance ON/OFF` factorial remains unfound after targeted search.
 
 Exact continuation:
-1. Find the direct same-stream admission-gate × maintenance factorial with matched candidate stream/pool opportunity/compute/model/evaluation.
-2. Find online empirical systems that estimate or audit missing semantic influence edges across skill synthesis and model updates rather than trusting declared lineage.
-3. Find real software/API procedural-skill maintenance-only ablations separating retrieval/hydration/task-time repair from longitudinal repair/retire/contract compatibility.
-4. Find adaptive maintenance schedulers estimating late-new-best hazard, drift, uncertainty and maintenance cost.
-5. Continue live recovery / historical rollback-target-selector comparisons under matched alarm, actuator, restore, carry-forward, model, allocated+realized recovery dose, and stochastic coupling.
+1. Keep searching for the direct same-stream admission-gate x maintenance factorial with matched candidate stream/pool opportunity/compute/model/evaluation.
+2. Find an **online persistent semantic-lineage discovery/repair system** spanning multiple skill/memory generations that infers missing edges from executed behavior and counterfactual probes, not declared metadata alone.
+3. Find higher-powered real software/API maintenance-only studies separating add/update, repair, retire, merge, interface/validator compatibility and incremental value over fixed memory/skills.
+4. Find adaptive maintenance schedulers estimating late-new-best hazard, drift, uncertainty, target-model transport validity and maintenance cost.
+5. Continue historical rollback-target selector comparisons under matched alarm, actuator, restore, carry-forward, model, allocated+realized recovery dose and stochastic coupling.
 6. Continue decision-influence audits that separate retrieved context from causally used context.
 7. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
 
