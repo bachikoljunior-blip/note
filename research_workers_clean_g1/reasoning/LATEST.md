@@ -1,40 +1,40 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-26T2301JST-followup4.md`
-Invocation chain: `2026-08-26T2301JST.md` -> `2026-08-26T2301JST-followup.md` -> `2026-08-26T2301JST-followup2.md` -> `2026-08-26T2301JST-followup3.md` -> `2026-08-26T2301JST-followup4.md`
-Previous invocation checkpoint: `2026-08-26T2200JST-followup.md`
+Newest checkpoint: `2026-08-27T0006JST.md`
+Previous checkpoint chain: `2026-08-26T2301JST.md` -> `2026-08-26T2301JST-followup.md` -> `2026-08-26T2301JST-followup2.md` -> `2026-08-26T2301JST-followup3.md` -> `2026-08-26T2301JST-followup4.md`
 
-Read `STATE.md` for the accumulated base, then the checkpoint chain above. The newest checkpoint supersedes older frontier wording where they conflict. Immutable checkpoint files remain the evidence trail; this pointer intentionally stays compact.
+Read `STATE.md`, then the checkpoint chain above, then `2026-08-27T0006JST.md`. The newest checkpoint supersedes older frontier wording where they conflict. Immutable checkpoint files remain the evidence trail; this pointer intentionally stays compact.
 
 ## Top unresolved frontier
 
 1. In the first environment able to faithfully materialize pinned CSSC source, executable-validate C263 unchanged: the one-batch/two-no-op-`REFINE_ARGUMENT` mutable provider-attribution overwrite; then rerun the identical fixture after immutable batch-consumption migration.
 2. Preserve the full causal journal across generation/selection/reducer/effect identity and replace mutable provider `metadata.action_id` with immutable physical events plus append-only `ProposalBatchConsumptionEventV0`.
-3. Split the authorization chain into `PolicyActivationCertificateV0` -> pre-dispatch `ToolDispatchAuthorizationWitnessV0` -> atomic witness-consumption/effect commit -> `EffectReceiptV0` -> optional `OutputReleaseAuthorizationWitnessV0`; never treat post-hoc receipts as retrospective authority.
-4. Policy activation must bind the evidence chain `trusted intent/source -> parser/constructor -> canonical policy AST -> schema/type validation -> symbolic verification -> activation`. Prefer a machine-formal typed AST/PST; arbitrary NL remains provisional until separately trusted intent/translation evidence exists.
-5. Dispatch authorization must bind both the exact raw effect input and the canonical semantic authorization request, plus principal/delegation, resource, route, exact active policy hash/epoch, deployed schema/tool-description/compiler/config tuple, nonce, consumption domain, freshness facts, checker/authorizer version, and effect commit identity.
-6. Treat learned models as untrusted policy/proof-search optimizers only. They may retrieve facts, rank safe alternatives, backtrack, or spend compute, but a deterministic proof/authorization checker alone may establish authority.
-7. Fix or eliminate cross-language request-context reconstruction. Current Cedar-for-Agents Rust lowering includes typed input context, while merged WASM/Python convenience surfaces expose principal/action/resource/entities and reconstruct context outside the core generator. Prefer one canonical full request/typed context with semantic roundtrip guarantees.
-8. Treat request/schema lowering version as grant-critical. Generator config changes can alter authorization semantics; historical JSON-Schema lowering issues demonstrate version-sensitive representations. Lossy/unsupported grant-relevant fields must fail closed or require an explicit conservative approval witness.
-9. Add all new deterministic regressions from C366 and C373–C384, including request-vs-dispatch equality, schema/config/lowering-version binding, lossy-lowering non-amplification, two-phase output authorization, nonce consumption-domain safety, and no retrospective authorization. Preserve every earlier route/dataflow/temporal/crash/cost/identity/epsilon=0 gate.
-10. Continue targeted search for proof-producing/verified controlled-language -> authorization-AST compilers and verified request-normalization boundaries. The deterministic provider pilot remains blocked; epsilon>0 remains forbidden until all pre-randomization contracts pass.
+3. Refine `PolicyActivationCertificateV1` around a separate source-faithfulness edge: authoritative source/clause digests -> verified/validated parse -> canonical source denotation -> target authorization AST -> clause-complete equivalence or conservative/non-amplification certificate -> formal-policy verification -> activation.
+4. Treat arbitrary NL compilation as a proposal, not positive authority. Positive authority requires machine-formal/controlled-formal semantics plus machine-checked lowering, or separately trusted confirmation. Uncovered grant-relevant clauses cannot default allow.
+5. Continue proof-producing/verified controlled-language or policy-DSL -> authorization-IR compiler search. Verified parser infrastructure exists, but parser correctness and semantic-lowering correctness are separate obligations.
+6. Preserve the per-effect authorization chain: `PolicyActivationCertificate -> ToolDispatchAuthorizationWitness -> atomic witness consumption/effect commit -> EffectReceipt -> optional OutputReleaseAuthorizationWitness`. No post-hoc receipt may retrospectively authorize dispatch.
+7. Dispatch authorization remains bound to raw effect input digest, canonical semantic request digest, principal/delegation/resource/route, active policy hash/epoch, exact schema/tool/compiler/config tuple, nonce/consumption domain/freshness, authorizer/checker version, and commit identity.
+8. Fix/eliminate cross-language request-context reconstruction; request/schema lowering versions and unsupported/lossy grant-relevant fields remain grant-critical.
+9. Add coverage regressions from C388–C390: `uncovered_grant_relevant_clause_cannot_default_allow`, `compiler_silence_requires_deny_or_trusted_confirmation`, `rule_coverage_witness_must_bind_source_clause_digests`, while preserving every earlier route/dataflow/temporal/crash/cost/identity/epsilon=0 gate.
+10. Deterministic provider pilot remains blocked; epsilon>0 remains forbidden until all deterministic pre-randomization contracts pass.
 
 ## Newest synthesis
 
-- **C361–C367:** Cedar substantially closes formal-policy -> symbolic-analysis verification but parser/PST/production correspondence remain separate trust edges. AutoCedar supports NL-proposed -> mechanically checked + trusted-intent-approved behavior atoms -> fixed formal target. C263 remains static/source evidence only.
-- **C368–C372:** Proof-carrying authorization suggests a clean role for learned reasoning: the model searches/builds authorization evidence, while a small deterministic checker controls execution. Policy activation and per-effect authorization are separate artifacts.
-- **C373–C376:** request encoding config, schema/tool-description/compiler version, raw effect identity, and canonical semantic request identity all matter. Public Cedar-for-Agents convenience bindings do not themselves carry the Rust-generated typed request context through FFI.
-- **C377–C380:** merged PR #73 explicitly reconstructs `context.input` in JS after `generateRequest`; historical schema-lowering issues show version-sensitive semantics; unsupported/coarse fields must not disappear from grant checks; output-dependent authorization requires a separate post-result release gate and cannot retroactively authorize dispatch.
-- **C381–C384:** the current EP Internet-Draft independently converges on exact action hash, exact policy hash, nonce/freshness, and one-time consumption, but correctly scopes consume-once to a shared atomic consumption domain. Signed decision/audit receipts are useful joins, not substitutes for the semantic authorization request or pre-dispatch authority.
+- **C385:** controlled English such as RECON/ACE can provide a formal source language, but no end-to-end machine-checked controlled-language -> authorization-AST lowering was established.
+- **C386:** verified parser technology can remove syntax/AST parsing from the trust gap; semantic lowering remains a separate proof obligation.
+- **C387:** proof-producing/translation-validating compilation suggests an untrusted policy compiler can emit an AuthAST plus machine-checkable equivalence or authority-non-amplification certificate.
+- **C388:** AgentGuardUtil shows useful deterministic enforcement over compiled rules, but explicitly silent behavior when no compiled rule covers a task exposes a fail-open coverage risk for authority semantics.
+- **C389:** an ACL Industry 2026 production NL-policy system uses validator-gated, human-confirmed publication rather than treating raw induced trees as autonomous executable authority.
+- **C390:** formal Datalog/reference-monitor enforcement guarantees still assume policy faithfulness; source-clause coverage/entailment must therefore be a separate activation-certificate edge.
 
 ## Exact continuation
 
 1. Execute C263 unchanged when faithful pinned CSSC materialization becomes available; never upgrade static inspection to runtime evidence.
-2. Draft the concrete schemas and join invariants for `PolicyActivationCertificateV0`, `ToolDispatchAuthorizationWitnessV0`, `EffectReceiptV0`, and `OutputReleaseAuthorizationWitnessV0`.
-3. Specify atomic/recoverable witness-consumption + effect-commit semantics and request-vs-dispatch mismatch tests, including independent-consumption-domain limits.
-4. Inspect Cedar-for-Agents schema/request generation and FFI canonicalization further, especially typed context, schema/config/tool digest binding and unsupported/lossy JSON-Schema constructs.
-5. Continue proof-producing controlled-language lowering search and preserve all prior cost, crash-recovery, identity, effect-safety, causal-journal, authority-non-amplification and provider-pilot gates.
+2. Specify `PolicyActivationCertificateV1` with `source_clause_digest_set`, `compiled_rule_digest_set`, `clause_to_rule_map`, `coverage_status`, `uncovered_clause_set`, semantic proof/refinement certificate, and trusted-confirmation fallback.
+3. Define the machine-checkable authority-non-amplification relation between controlled-formal source semantics and target AuthAST, including explicit denies/obligations.
+4. Continue targeted search for proof-producing controlled-language/policy-DSL lowering and translation-validation methods that prove semantic refinement rather than parser correctness alone.
+5. Preserve all prior cost, crash-recovery, causal-journal, route/dataflow/temporal, request/schema, output-release, consumption-domain, identity and epsilon=0 gates.
 
-`2026-08-26T2301JST-followup4.md` is newest and is not global completion.
+`2026-08-27T0006JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
