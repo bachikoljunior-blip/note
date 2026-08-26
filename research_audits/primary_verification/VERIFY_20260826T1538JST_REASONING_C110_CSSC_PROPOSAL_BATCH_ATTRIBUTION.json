@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "audit_id": "primary-verification-20260826T1538JST-reasoning-c110-cssc-proposal-batch-attribution",
+  "created_at": "2026-08-26T15:38:40+09:00",
+  "bootstrap": {
+    "valid": true,
+    "frozen_note_main_sha": "b89d0a083fdeb1f7b41dea5666f1958c95553466",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5
+  },
+  "candidate": {
+    "source_namespace": "reasoning",
+    "candidate_id": "C110",
+    "source_artifact": "research_workers_clean_g1/reasoning/2026-08-26T1259JST.md",
+    "source_blob": "2eed9bc988d9e5a113b2096f73acb6b2789995cb",
+    "claim": "Shared proposal-batch provider ledger action_id attribution is mutable/latest-consumer-wins when multiple proposals from the same generation batch are consumed sequentially."
+  },
+  "primary_source": {
+    "repository": "anetigone/cssc",
+    "commit": "f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8",
+    "files": {
+      "agent/search/structured/controller/action_runtime_ledger.py": "641b62307bc899d3b8e189ce791c4b3f7f0b7c68",
+      "agent/search/structured/controller/action_runtime_execution.py": "4d2a22a858b5ef73989929eeb19458bef2ec310f",
+      "agent/search/structured/controller/action_runtime.py": "31727a98a60653cb86dd6a8dcb73b68bf1214455",
+      "agent/search/structured/action_frontier.py": "5b6aab5b1f89bf96171a61ea5a134aa2443bae4c",
+      "agent/search/structured/proposal/core.py": "455e7f4c0dc848f82b4ed45e7b9abd5ec0974035",
+      "agent/proof_system/workspace/action.py": "218f2d0d25b08903691d1bdb9de0af3697661985",
+      "agent/search/structured/reducer/structural.py": "12e09811738080cab4416e51cfd6474a349df61d",
+      "agent/search/structured/reducer/core.py": "140a60beb337595f80af5c08bf25f761f67cd0a3",
+      "agent/search/structured/reducer/decompose.py": "9577e23cb692d967f266c6d5bfae4382619c4c82"
+    }
+  },
+  "assessment": {
+    "status": "verified_with_material_reachability_scope",
+    "verified": [
+      "record_proposal_request initializes provider-generation event metadata with action_id=null and proposal_batch_id=request_id.",
+      "One provider generation call can cache multiple valid proposals with the same proposal_batch_id.",
+      "Every execute_action_node call invokes attribute_proposal_batch before dispatch.",
+      "attribute_proposal_batch reconstructs the entire CostLedger and replaces action_id on every matching batch event; calling it again for the same batch overwrites the prior consumer attribution rather than appending a relation.",
+      "An isolated replay of the exact rewrite shape changed matching action_id values from node-1 to node-2 on the second attribution call while leaving unrelated events unchanged."
+    ],
+    "scope_correction": [
+      "The latest-consumer overwrite is not reached after every first consumption. ActionFrontierNode pins cached_at_workspace_version, and node_is_valid rejects old-version siblings after a state-changing action advances workspace.version.",
+      "However sequential same-batch consumption is source-reachable through a validated structural no-op. StructuredActionProposal.validate for REFINE_ARGUMENT checks action shape and alignment well-formedness but does not require payload refined step/alignment ids to hit the live branch. SearchAction.validate explicitly does not cross-check target_step_ids against live ArgumentGraph and permits an empty target_step_ids tuple. apply_argument then returns the original workspace when neither refined step ids nor refined alignment ids hit existing state. Because workspace.version is unchanged, another cached sibling from the same batch can remain valid and be consumed next, at which point attribute_proposal_batch overwrites the provider events to the later node_id.",
+      "Therefore C110 is a real provenance bug/hazard in a bounded reachable path, but the broad reading that any ordinary two siblings from a model batch are sequentially consumed is too strong. State-changing first actions invalidate their old-version siblings before a second consumption."
+    ],
+    "not_established": [
+      "Frequency of this overwrite in real provider-backed runs.",
+      "A full upstream end-to-end two-consumer test execution in this audit environment; repository checkout was unavailable, so the runtime reachability result is established from pinned source composition plus an isolated exact rewrite replay, not a full package run.",
+      "Exhaustive absence of an upstream regression test; bounded inspected tests did not establish this case and GitHub code-search indexing returned an incomplete result."
+    ]
+  },
+  "recommended_invariant": {
+    "provider_events": "Keep provider-generation ledger events immutable with action_id=null and stable proposal_batch_id.",
+    "consumption_relation": "Append a separate ProposalBatchConsumptionEvent keyed by proposal_batch_id, node_id, stable decision_id and workspace_version for every consumption.",
+    "cost_semantics": "Evaluate generation cost once at batch/run scope and keep selected execution-window cost separate; never duplicate provider generation spend across consumer actions.",
+    "regression_test": "Construct one provider batch with two distinct validated REFINE_ARGUMENT proposals whose payloads are live-state no-ops while action.target_step_ids is empty. Consume both without a workspace-version advance. Assert provider event metadata is immutable and exactly two append-only consumption joins are recorded. Add a second test showing a state-changing first action invalidates old-version siblings."
+  },
+  "exact_next_verification": "Inspect C12 reasoning C107-C109 instrumentation claims against trace_store/run_state serialization and, if still higher-value than other C12 gaps, verify whether crash-before-ControllerResult actually loses action-runtime decision history under the current JsonlTraceStore call sites. Otherwise rotate to a different under-audited C12 namespace with a source-qualified quantitative or authority-boundary claim.",
+  "worker_feedback_written": false,
+  "exploration_state_modified": false
+}
