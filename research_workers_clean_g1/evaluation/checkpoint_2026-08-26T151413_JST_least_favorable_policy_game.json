@@ -1,0 +1,106 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T15:14:13+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T151026_JST_fixed_latent_minimax.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "7033684715de6ef58d93960b241e0aa0d27decba",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "3c2ad0006b6034aea67cc8719c4da8b8a2eb631d",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false
+  },
+  "search_bias": "evaluation/verifiers; finite policy-game duality; least-favorable fixed latent map priors; numerical optimality-gap certificates for anytime-valid hard-deadline paired-sign tests",
+  "public_sources_reused_from_predecessor": [
+    "https://arxiv.org/abs/2605.06521",
+    "https://arxiv.org/abs/2603.00945",
+    "https://doi.org/10.1137/24M1631250",
+    "https://arxiv.org/abs/2602.07634"
+  ],
+  "new_derivations": {
+    "finite_policy_zero_sum_game": {
+      "construction": "Take a library of valid hard-deadline paired-sign policies indexed by prespecified Bellman design pairs (q_design_low,q_design_high). Build payoff matrix A[j,m]=Pr_m(policy j rejects by deadline) for fixed latent maps m in {correct,flat,inverted}. Solve max_w min_m sum_j w_j A[j,m] over a protocol-fixed ex-ante randomized mixture w. The finite-game dual is min_p max_j sum_m p_m A[j,m] over a prior p on latent maps. This gives a library-relative least-favorable prior and a saddle certificate without pretending the library is the full policy space.",
+      "validity": "Each component policy is a predictable affine e-process. Selecting one component by randomness fixed before any paired outcomes preserves the same alpha-level anytime-valid guarantee. Outcome-adaptive choice of the component would require separate correction and is not used here.",
+      "scope_guard": "The game value is exact only for the finite numerical policy library/payoff matrix. The map-specific inverted optimum remains a universal upper bound on the full maximin value within the underlying discretized Bellman model."
+    },
+    "T50_library_saddle": {
+      "library_result": "The finite-game solution is degenerate: weight 1 on design (.80,.60), value .4086945, matching the inverted-map Bellman upper bound at the same grid resolution.",
+      "dual_prior": {"correct":0.0,"flat":0.0,"inverted":1.0},
+      "interpretation": "This independently recovers the predecessor saddle argument: no randomization or latent-map learning is needed at T=50 for this discretized map set."
+    },
+    "T100_refined_policy_game": {
+      "library": "45 high-resolution design pairs with q_low in .785:.0025:.805 and q_high in .595:.0025:.605; Bellman wealth/action grids 800/181.",
+      "game_value": 0.691560719,
+      "mixture_map_powers": {"correct":0.691560719,"flat":0.691810160,"inverted":0.691560719},
+      "active_policy_1": {"design":[0.7925,0.6000],"weight":0.553244,"powers":{"correct":0.692837050,"flat":0.692467122,"inverted":0.691545998}},
+      "active_policy_2": {"design":[0.8000,0.6025],"weight":0.446756,"powers":{"correct":0.689980165,"flat":0.690996600,"inverted":0.691578948}},
+      "dual_least_favorable_prior_library_relative": {"correct":0.01140185,"flat":0.0,"inverted":0.98859815},
+      "inverted_map_upper_bound_same_grid": 0.691621286,
+      "remaining_upper_gap_pp": 0.006057,
+      "interpretation": "The least-favorable prior is nearly degenerate on inverted but puts about 1.14% mass on correct; flat is slack. The randomized policy equalizes correct and inverted power while flat stays above. Any richer history-dependent or belief-state policy can improve worst-case power by at most about 0.0061 percentage point relative to this library saddle, modulo the numerical-grid approximation."
+    },
+    "T200_refined_policy_game": {
+      "library": "45 design pairs with q_low .74:.01:.82 and q_high .595:.005:.615; Bellman wealth/action grids 650/141.",
+      "game_value": 0.931019069,
+      "mixture_map_powers": {"correct":0.931019069,"flat":0.931128740,"inverted":0.931019069},
+      "active_policy_1": {"design":[0.79,0.61],"weight":0.414990,"powers":{"correct":0.936277667,"flat":0.933755293,"inverted":0.930768365}},
+      "active_policy_2": {"design":[0.80,0.61],"weight":0.585010,"powers":{"correct":0.927288768,"flat":0.929265530,"inverted":0.931196912}},
+      "dual_least_favorable_prior_library_relative": {"correct":0.04550559,"flat":0.0,"inverted":0.95449441},
+      "inverted_map_upper_bound_same_grid": 0.931566880,
+      "remaining_upper_gap_pp": 0.054781,
+      "interpretation": "By T=200 the least-favorable prior in the searched game shifts more mass toward correct (~4.55%), reflecting that a policy over-specialized to the inverted transfer can make correct the binding state. Flat remains non-binding. The full-policy learning headroom is still bounded to roughly 0.055 percentage point by the inverted-map optimum."
+    },
+    "horizon_dependent_least_favorable_support": {
+      "observed_pattern": "T=20/T=50: degenerate inverted state is binding. T=100: finite-game dual uses about 1.14% correct and 98.86% inverted. T=200: about 4.55% correct and 95.45% inverted. Flat receives zero dual mass in the refined T=100/T=200 libraries.",
+      "measurement_implication": "A robust evaluator should not hard-code one least-favorable prior across budgets. The environment that limits finite-horizon resolution can change with the decision horizon even when the physical map set is unchanged."
+    },
+    "belief_learning_headroom_bound": {
+      "derivation": "For any unrestricted policy, worst-map power <= V*_inverted because inverted is one admissible latent map. Once a concrete policy or valid ex-ante policy mixture reaches v, every richer mechanism including posterior learning over the latent map can improve worst-case deadline power by at most V*_inverted-v.",
+      "T100_headroom_pp": 0.006057,
+      "T200_headroom_pp": 0.054781,
+      "interpretation": "In this stylized problem, preserving the cross-stratum coupling captures almost all of the value before implementing a complex latent-belief controller. This turns the remaining belief-state solver from an open-ended optimization task into a bounded marginal-value check."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-least-favorable-policy-game-v1",
+      "mechanism": "Before building a complex nonrectangular belief-state evaluator, construct a finite library of valid horizon-aware policies, solve its primal maximin/dual least-favorable-prior game, and compare the game value to a map-specific universal upper bound. Use the dual support to identify which transfer environments are actually binding at that horizon.",
+      "evidence": "Refined T=100/T=200 policy games equalized correct/inverted power with flat slack and left only ~0.006/~0.055 percentage-point gaps to the inverted-map upper bound. The library-relative least-favorable prior shifted from nearly pure inverted toward a small correct component as horizon grew.",
+      "scope_guard": "Randomized component selection must be fixed before outcomes. The finite-game saddle is library-relative; the upper-bound gap, not the LP alone, limits claims about the full policy space."
+    },
+    {
+      "candidate_id": "eval-g1-belief-controller-marginal-value-gate-v1",
+      "mechanism": "Quantify the maximum possible gain from a more complex latent-map belief controller before implementing it: upper bound by the individually hardest map optimum and subtract the best certified simple/library robust value. Skip or deprioritize belief-state complexity when the residual headroom is below the evaluation resolution/MDE.",
+      "evidence": "Headroom after the refined library saddle was only ~0.0061 pp at T=100 and ~0.0548 pp at T=200 in the current setup.",
+      "scope_guard": "Only valid when the chosen map-specific optimum is a genuine upper bound for the same policy class/objective and is computed accurately enough; discretization error can dominate tiny gaps."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'the least-favorable environment is horizon invariant.' In the finite policy-game dual, support moved from pure inverted at T=50 to a correct+inverted mixture by T=100/T=200.",
+    "Rejected: 'a full belief-state nonrectangular controller is automatically worth implementing once fixed-latent ambiguity is recognized.' The universal upper-bound gap shows at most ~0.006 pp T=100 and ~0.055 pp T=200 improvement remains in this setup before accounting for numerical error.",
+    "Narrowed: 'flat transfer uncertainty is an important worst-case scenario because it lies between correct and inverted pointwise.' It received zero least-favorable mass in the refined T=100/T=200 finite games and was slack at the saddle; intermediate parameter values need not be decision-theoretically binding.",
+    "Narrowed: 'randomized robust testing is just averaging reported power.' Ex-ante independent randomization is a legitimate decision rule, but outcome-adaptive policy selection is not free and deterministic wealth-mixtures have different crossing behavior from randomized rule mixtures."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Check whether a deterministic single-process approximation can match the refined randomized-library saddle without external randomization, for example by optimizing a history/wealth-dependent affine policy directly against the two binding correct/inverted maps. Preserve the same anytime-valid factor constraint."},
+    {"priority":2,"action":"Because belief-learning headroom is now numerically tiny in the current three-map setup, add a harmful/non-improving q<=.5 map and explicit asymmetric harmful-commit/unresolved costs before spending substantial compute on a full belief-state solver. Recompute least-favorable support under those deployment-relevant losses."},
+    {"priority":3,"action":"Stress misspecified map support and one-switch latent environments to identify when the fixed-latent advantage disappears and partially rectangular ambiguity is justified."},
+    {"priority":4,"action":"Generalize the pre-outcome filtration provenance gate to actual evaluator traces and then resume reused-development PACE path selection/multiplicity work."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Add a harmful/non-improving fixed latent map and an asymmetric harmful-commit versus unresolved loss, then solve the finite policy-game primal/dual again. Determine whether the least-favorable support and preferred robustness objective change enough to dominate the tiny remaining benefit of a full latent-belief controller."
+}
