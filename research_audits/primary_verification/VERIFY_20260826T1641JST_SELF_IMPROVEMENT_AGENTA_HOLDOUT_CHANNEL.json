@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-26T16:41:05+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "638ec7245ebc1c9546b21cb683d7a1ae6dfe0dd2",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 5,
+    "bootstrap_head_observed_at": "2026-08-26T16:41:05+09:00"
+  },
+  "source_candidate": {
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-26T1501_JST_holdout_channel_secrecy_and_gate_scope.md",
+    "source_artifact_blob": "ce1430694024ca97a1015d0e237e441b86ce8a0c",
+    "source_local_candidate_id": "SIG-AGENTA-SEALED-SAMPLES-BUT-OPEN-FEEDBACK-CHANNEL",
+    "canonical_candidate_key": "b8b88532ba5ccf52ce938d2666e655ab7ebbe711ca85f592898b471b20df5300"
+  },
+  "primary_source": {
+    "repository": "ethan-haas/self-improving-agent-harness",
+    "pinned_commit": "942d5d33da5ea63ea269995dc6f355dfded2d975",
+    "files": [
+      {"path":"README.md","blob":"52c73cbe2909417ea0582848cca61bb9ccc687c7"},
+      {"path":"host/Install-AgentA.ps1","blob":"f21b245dc1f21f223aaa6379bbcf6d4aa7a236a4"},
+      {"path":"host/lib/Invoke-HoldoutScoring.ps1","blob":"65c915b7842ed2c36171754cdc49e1da7e70e9a4"},
+      {"path":"host/lib/Approve-StagedDiff.ps1","blob":"7ec3cf9f581b6da5ae5ff2f80cc57763f221eb3c"},
+      {"path":"host/runner.ps1","observed_at_commit":true}
+    ]
+  },
+  "status": "primary_code_verified_with_material_feedback_channel_and_self_modifying_gate_scope_correction",
+  "findings": [
+    {
+      "claim": "The holdout examples/scorer are hidden from the agent identity.",
+      "result": "verified_static_acl_design",
+      "evidence": "Install-AgentA applies DENY-all FullControl to holdout/ for the agent account; Invoke-HoldoutScoring runs holdout/score.py under the SYSTEM host path on separate baseline and candidate worktrees.",
+      "scope": "Static installer/code evidence only; no deployed ACL probe was executed in this audit."
+    },
+    {
+      "claim": "Holdout sample secrecy also makes the adaptive holdout feedback channel secret/budgeted.",
+      "result": "contradicted_by_current_code",
+      "evidence": "Protected archive/ and host/ receive DENY-write rather than DENY-read. runner.ps1 places the exact tier6 holdout delta into rejection text when Delta<0.02 and logs exact deltas on promotion. Approve-StagedDiff writes exact holdout_delta into archive/.../scores.json and embeds holdout+$HoldoutDelta in commit/tag messages.",
+      "scope": "This establishes an implementation-level readable feedback surface in the repository/archives under the installer ACL model. It does not establish that an actual deployed proposer exploited that channel or quantify effective information leakage across real proposal histories."
+    },
+    {
+      "claim": "Every self-modifying scaffold candidate passes the advertised sealed behavioral holdout tier.",
+      "result": "contradicted_by_current_runner",
+      "evidence": "runner.ps1 explicitly skips tiers 5 and 6 when category=='scaffold-edit' (and also for external-repo), substitutes zero deltas, then continues to fresh-context critic/reward-hack checks and the scaffold-specific gate self-test.",
+      "scope": "Scaffold edits are not unverified: they still pass review, hash/integrity, metric/property/mutation checks, critic, reward-hack tripwire, and gate self-test. The correction is specifically that the hidden behavioral holdout is not applied to this self-modifying class."
+    },
+    {
+      "claim": "The README's blanket statement that every candidate must survive parse->unit->property->mutation->benchmark->sealed holdout->critic is exact for current code.",
+      "result": "overbroad_documentation_claim",
+      "evidence": "README states the blanket seven-tier rule, while runner.ps1 contains category-based tier5/6 bypasses for scaffold-edit and external-repo.",
+      "scope": "Documentation/code mismatch at pinned public commit; not evidence about private deployments or future revisions."
+    }
+  ],
+  "material_interpretation": "The worker's central decomposition is supported: sample secrecy is distinct from adaptive feedback-channel secrecy and role applicability. For AgentA specifically, current public code provides a real sample/code isolation boundary but exposes exact score/delta feedback through repository-visible surfaces and exempts scaffold-edit from the sealed behavioral holdout. This is static implementation evidence, not an observed adaptive overfitting exploit or a measured false-admission rate.",
+  "downstream_use": {
+    "eligible": true,
+    "correction": "Do not use AgentA as evidence for the stronger conjunction 'self-modifying scaffold + exogenous hidden behavioral promotion gate + bounded/reusable-holdout-safe feedback channel' without a later implementation that closes score leakage and applies the outcome holdout to scaffold-edit.",
+    "do_not_generalize": [
+      "Do not infer that all AgentA verification is bypassed for scaffold edits.",
+      "Do not infer a demonstrated real-world exploit from static readability of holdout feedback.",
+      "Do not infer anything about private deployments or commits after 942d5d33da5ea63ea269995dc6f355dfded2d975."
+    ]
+  }
+}
