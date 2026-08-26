@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-26T17:46:45+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "4ad0b2b0b4ac8144a2fad78d61f5909ca8de76bc",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 5
+  },
+  "source_candidate": {
+    "namespace": "reasoning",
+    "path": "research_workers_clean_g1/reasoning/2026-08-26T1501JST.md",
+    "blob": "9998cc6f9115250bc42d263c84040b872074a905",
+    "candidate_ids": ["C209", "C210", "C211", "C212", "C213", "C214"]
+  },
+  "sealed_wave": {
+    "wave_id": "clean-g1-wave-c13-20260826T1601JST-b8f2c04f",
+    "active_wave_blob": "7ab52334f6ee46e01eb9ba1104b48b72ff624efc",
+    "source_set_digest": "b8f2c04fd2136b2ecd9da756435bbc53086e3172f8724aa2b4df9ae56486d94d"
+  },
+  "primary_source": {
+    "repository": "anetigone/cssc",
+    "commit": "f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8",
+    "inspected_paths": [
+      "agent/search/cost_ledger.py",
+      "agent/search/structured/controller/action_runtime_ledger.py",
+      "agent/search/structured/controller/action_runtime_execution.py",
+      "agent/search/structured/controller/action_runtime.py",
+      "agent/search/structured/controller/action_runtime_selection.py",
+      "agent/search/structured/budget_snapshot.py",
+      "agent/search/structured/costing.py",
+      "agent/search/structured/run_state.py",
+      "agent/runtime/trace_store.py",
+      "agent/search/structured/action_frontier.py",
+      "agent/search/structured/controller/actions.py",
+      "agent/search/structured/reducer/structural.py",
+      "agent/search/structured/proposal/core.py",
+      "tests/test_cost_ledger.py",
+      "tests/test_structured_controller.py"
+    ]
+  },
+  "status": "primary_code_verified_with_reachable_latest_consumer_overwrite_and_design_vs_existing_behavior_scope_clarification",
+  "findings": [
+    {
+      "claim": "C209 mutable history semantics despite frozen event types",
+      "assessment": "verified",
+      "evidence": "CostLedgerEvent and CostLedger are frozen/append-oriented, but attribute_proposal_batch reconstructs every matching historical event with metadata.action_id=node_id and replaces the entire ledger. A later consumption of the same proposal_batch_id therefore overwrites the earlier action attribution without appending a new provider charge or a new attribution event."
+    },
+    {
+      "claim": "two-consumer overwrite is a generic property of every multi-proposal batch",
+      "assessment": "too_broad",
+      "evidence": "Cached nodes are pinned to workspace.version and refresh invalidates siblings after a normal state-changing action. Therefore many successful first consumers make same-batch siblings stale. The overwrite remains reachable through no-workspace-change paths: REFINE_ARGUMENT proposal validation checks alignment shape but does not require refined step IDs to exist, while apply_argument returns the unchanged workspace when no refined step/alignment ID hits. A proposal-valid no-op first consumer can therefore leave a sibling from the same batch valid for a second consumption."
+    },
+    {
+      "claim": "C210 canonical reconciliation and branch/obligation accounting semantically require provider metadata.action_id",
+      "assessment": "not_supported_in_targeted_scan",
+      "evidence": "CostLedger.reconcile uses event kind/request_id and measurements, structured costing uses AttemptRecord structured_branch_id plus model_usage.structured_branch_id, run_state serializes the ledger generically and builds cost summaries from separate state, and trace_store validates/serializes the ledger generically. tests/test_cost_ledger.py also reconciles shared-batch usage without action_id."
+    },
+    {
+      "claim": "no tracked compatibility dependency on metadata.action_id exists",
+      "assessment": "contradicted",
+      "evidence": "tests/test_structured_controller.py contains test_action_runtime_routes_real_generation_to_strong_tier, which explicitly asserts that a provider request metadata.action_id equals the selected action node id. This is a presentation/test compatibility obligation, not evidence canonical cost reconciliation needs the field."
+    },
+    {
+      "claim": "C211 immutable physical events plus append-only consumption edges describes current CSSC behavior",
+      "assessment": "not_implemented_design_proposal",
+      "evidence": "Current CSSC has no ProposalBatchConsumptionEvent and instead mutates historical metadata through ledger reconstruction. The proposed split is compatible with existing reconciliation in principle because canonical totals do not consult action_id, but that migration itself was not executed or tested in the pinned repository."
+    },
+    {
+      "claim": "C212 current decision trace is sufficient for durable pre-effect replay/OPE",
+      "assessment": "not_supported",
+      "evidence": "The in-memory choice_set records node/branch/action, estimated cost, BudgetAdmission and a separate full budget_snapshot; BudgetAdmission may include not_compared dimensions. There is no durable pre-effect ExecutionDecisionEvent, behavior propensity, policy/RNG version, or immutable pre-effect commit. proposal_cache_events are accumulated in _StructuredRunState and serialized only when a ControllerResult is built."
+    },
+    {
+      "claim": "C213-C214 semantic projection and crash tests are verified current behavior",
+      "assessment": "future_contract_only",
+      "evidence": "The pinned source contains neither the proposed journal nor SemanticRunProjectionV0. In particular, the proposed post-migration single-consumer invariant that physical provider events remain byte/field identical after consumption would fail current behavior because action_id is rewritten. Crash-after-decision-before-effect cannot be durably represented by the current result-only trace path."
+    },
+    {
+      "claim": "current action_cost_observed ledger slice exposes proposal-batch consumption attribution mutation",
+      "assessment": "contradicted",
+      "evidence": "event_start is captured immediately before execute_action_node; attribute_proposal_batch then rewrites provider events that were emitted before event_start and appends no attribution event. action_cost_observed.ledger_event_ids therefore cannot reveal that causal attribution mutation."
+    }
+  ],
+  "independent_replay": {
+    "kind": "isolated_exact_function_logic_replay",
+    "full_repository_test_suite_executed": false,
+    "result": "Replaying the exact replace-on-matching-batch transformation on a minimal provider request/usage/charge ledger changed metadata.action_id from null to node-A and then to node-B while preserving event ids and measured costs, confirming latest-consumer-wins history semantics independent of cost totals.",
+    "scope": "This is not a full CSSC runtime or patched migration test."
+  },
+  "scope_guards": [
+    "The caller/test dependency scan is targeted over the pinned authoritative runtime, cost, trace and directly relevant tests; connector code search did not provide a repository-complete grep, so absence elsewhere is not proven.",
+    "Two-consumer overwrite is reachable but not generic because state-changing actions invalidate version-pinned sibling proposals.",
+    "C211-C214 are architecture/test proposals. Treat their factual premises separately from claims that the migration or journal already exists.",
+    "No exploration worker state or feedback was read as downstream judgment input beyond the exact sealed source artifact, and no exploration state/feedback was mutated."
+  ],
+  "downstream_use": "C209 and the targeted C210 dependency result may be used as primary-code-verified evidence with the above reachability and scan-scope guards. C211-C214 should remain proposed migration/journaling/test contracts until implemented and executed at pinned seams."
+}
