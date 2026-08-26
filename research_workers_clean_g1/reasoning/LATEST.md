@@ -44,6 +44,7 @@ Latest checkpoints in order:
 41. `2026-08-26T1427JST-followup2.md`
 42. `2026-08-26T1427JST-followup3.md`
 43. `2026-08-26T1427JST-followup4.md`
+44. `2026-08-26T1427JST-followup5.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
@@ -52,33 +53,37 @@ Read `STATE.md` for the accumulated base, then source-qualified checkpoints abov
 1. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only decision/batch-consumption/outcome; commit/readback before effect boundaries; conservative censoring.
 2. Inject one narrow `DecisionJournal` into action-runtime only; use typed immutable decision/batch/outcome records and a null default so prover/generator/reducer/cost estimator remain fixed.
 3. Execute F0–F7 faults and epsilon=0 canonical semantic-projection equivalence. Split fault injection across journal/controller/fake executor at the real boundaries.
-4. Retire or bypass mutable `attribute_proposal_batch` from learning evidence. Public cost-summary code inspected so far attributes branch cost through attempts/model_usage, reducing compatibility pressure for the rewrite.
-5. Reader v0 accepts only valid matched or explicit censored sequences; gaps/orphans/conflicts/missing required batch links fail closed. A randomized run with unmatched decision is sealed/truncated, never resumed/reselected under the same run id.
-6. Logging-policy v0 remains D0-ranked pool <=5, epsilon=1/4, exact rationals, minimum support 1/20; unsupported legal actions remain recorded but cannot be OPE/deployment targets without new data.
-7. Stage-A representation remains 154 text-free channels; theorem/task is split unit; terminal success/local verified progress/multidimensional costs remain separate raw labels.
-8. Provider deterministic pilot retains prospective <=5 percentage-point 95% task-bootstrap CI half-width for major mean cost shares; use it to decide Stage A vs upstream Stage B after journal validation.
-9. Keep narrow public-source search secondary.
+4. Retire or bypass mutable `attribute_proposal_batch` from learning evidence; complete repository-wide compatibility scan for consumers of provider-ledger `metadata.action_id`.
+5. Reader v0 accepts only valid matched or explicit censored sequences; randomized run with unmatched decision is sealed/truncated and never resumed/reselected under the same run id.
+6. Logging-policy v0 remains D0-ranked supported pool <=5, epsilon=1/4, exact rational propensities, minimum support 1/20; unsupported legal actions are recorded but not OPE/deployment targets.
+7. Provider deterministic pilot is fully prespecified after journal validation: deterministic task hash order, cap 200 eligible tasks, 10,000 task bootstrap resamples, <=5pp 95% CI half-width target for major cost shares.
+8. Stage-A randomized collection proceeds only if sufficient precision and either lower CI execution-cost share >=10% in a primary dimension or lower CI task-level multi-action opportunity >=25%; otherwise move upstream to Stage B. Thresholds are protocol choices, not scientific constants.
+9. Stage-A representation remains 154 text-free channels; theorem/task split unit; terminal success/local progress/multidimensional cost remain separate evidence; primary evaluation stays success-under-budget/Pareto.
+10. Keep narrow public-source search secondary.
 
 ## Newest synthesis
 
 - **C171–C177:** current CSSC has a mid-run causal logging gap and mutable shared-batch attribution; exact fault/equivalence tests specified.
 - **C178–C184:** backend/schema/reader/support protocol/multiobjective evaluation specified.
-- **C185–C189:** local synthetic contract validation succeeded; writer ordering, no-resume censoring, exact propensities and three-view cost joins specified.
-- **C190–C195:** minimal integration is one DecisionJournal; exact semantic projection and RNG isolation specified; end-of-run JSONL remains separate from causal journal.
-- **C196:** typed record fields now explicitly separate exact policy probability, immutable provenance, verified progress/success and post-decision cost.
-- **C197:** F0/F1/F6 belong in journal test double; F2/F3/F4/F7 in action-runtime hooks; F5 in fake executor/checker.
-- **C198:** reader mutation/property corpus covers deletion, reordering, gaps, orphans, conflicting replay, invalid rational support and schema mismatch.
-- **C199:** global retirement of provider-ledger rewrites appears feasible from inspected cost-summary paths; repository-wide dependency scan remains incomplete.
-- **C200:** legal-but-outside-top5 candidates are retained explicitly as unsupported (`mu=0`) but never treated as overlap.
-- **C201:** implement one canonical semantic-projection helper and snapshot-version it so epsilon=0 equivalence cannot weaken silently.
+- **C185–C189:** local synthetic contract validation succeeded; writer ordering, censoring/no-resume, exact propensities and three-view cost joins specified.
+- **C190–C195:** minimal integration is one DecisionJournal; exact semantic projection/RNG isolation specified; end-of-run JSONL is not the causal journal.
+- **C196–C201:** typed records/fault-hook split/reader mutation corpus/likely batch-attribution migration/support semantics/semantic-projection helper specified.
+- **C202:** pilot uses deterministic hash-ordered task-level sampling and no outcome-dependent exclusions.
+- **C203:** cost scopes are pre-decision generation G, post-decision execution E, assembly A and explicit unallocated; ratio-of-totals E/T is primary cost-headroom statistic.
+- **C204:** final fixed pilot uses 10k task bootstraps and frozen <=5pp half-width target; insufficient precision remains a valid outcome.
+- **C205:** opportunity metrics include task/decision multi-action rate, pool-size histogram, excluded-by-cap count and zero-decision upstream failures.
+- **C206:** v0 Stage-A gate requires sufficient precision plus either >=10% lower-bound cost headroom or >=25% lower-bound multi-action task opportunity; otherwise Stage B.
+- **C207:** censored transitions are not zero reward/cost; real pre-censor run costs remain observed evidence.
+- **C208:** journal overhead is measured separately but included in later end-to-end deployed cost if journaling is required.
 
 ## Exact continuation
 
-1. Complete public caller/test scan for dependency on provider ledger `metadata.action_id`; decide global removal vs compatibility bridge.
-2. Define canonical cost/admission types inside DecisionChoice and the semantic projection.
-3. Turn reader mutations into property-based tests and pin validity/censoring oracle.
-4. Specify deterministic provider-pilot sampling/bootstrap/cost-share procedure and Stage-A headroom decision metrics.
-5. Validate journal + epsilon=0 equivalence before any randomization, then run provider pilot and decide Stage A vs Stage B.
-6. Keep frontier nonempty. `2026-08-26T1427JST-followup4.md` is newest and is not global completion.
+1. Complete public caller/test scan for provider ledger `metadata.action_id`; decide global retirement vs compatibility bridge.
+2. Define canonical cost/admission structures and semantic-projection implementation schema.
+3. Convert reader mutation list and F0–F7 into executable property/integration tests when an instrumentable code path is available.
+4. Validate journal + epsilon=0 equivalence; only then execute provider pilot under C202–C206.
+5. If Stage-A gate passes, collect small epsilon-v0 randomized evidence; if it fails, shift the learning boundary upstream to Stage B.
+6. Keep public-source search narrow/secondary.
+7. Keep frontier nonempty. `2026-08-26T1427JST-followup5.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
