@@ -1,0 +1,87 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T08:19:46+09:00",
+  "invocation_started_at": "2026-08-27T08:01:29+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T081509_JST_mismatch_monitor_stratified_gate.json",
+  "control": {"frozen_main_sha":"09fde64cf76bba5863690b8bc1153ef799f29b07","root_control_revision":11,"role_control_revision":9,"config_revision":6,"root_manifest_blob":"bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3","role_config_blob":"1cbb89f303e6a61a68f83b888bd6344ca1a49af4","semantic_freeze_observed":true},
+  "independence": {"read_O":false,"read_O_derived_state":false,"read_legacy_worker_state":false,"read_downstream_state":false,"read_other_worker_state":false,"read_shared_execution_ledger":false,"read_other_role_receipts":false,"own_feedback_used":false,"own_feedback_missing_404":true},
+  "public_sources": [
+    {"title":"Batch Invariance - vLLM","date":"2026-07-16","url":"https://docs.vllm.ai/en/stable/features/batch_invariance/","relevance":"Official current deterministic-serving contract: output can be made independent of batch size/order inside a supported domain, with explicit hardware/model limits and a performance tradeoff."},
+    {"title":"Reproducibility - vLLM","date":"2026-04-28","url":"https://docs.vllm.ai/en/latest/usage/reproducibility/","relevance":"Official warning that default serving is not reproducible and even reproducible mode is scoped to the same hardware and vLLM version."},
+    {"title":"Reproducibility - PyTorch 2.13","date":"2026-05-14","url":"https://docs.pytorch.org/docs/stable/notes/randomness.html","relevance":"Official warning that identical seeds do not guarantee reproducibility across releases/platforms and deterministic algorithms can be slower."},
+    {"title":"LLM-42: Enabling Determinism in LLM Inference with Verified Speculation","date":"2026-01-25","url":"https://arxiv.org/abs/2601.17768","relevance":"Primary evidence for deterministic-by-construction verify/rollback as an alternative to inferring equivalence from rare mismatches."},
+    {"title":"CoRun: Padding is Simple and Efficient for Deterministic LLM Inference","date":"2026-08-14","url":"https://arxiv.org/abs/2608.14376","relevance":"Recent primary evidence that deterministic inference can have large system-specific overhead, motivating direct measurement of the determinism tax."},
+    {"title":"Estimating means of bounded random variables by betting","date":"2023-02-16","url":"https://doi.org/10.1093/jrsssb/qkad009","relevance":"Primary anytime-valid bounded-mean/betting foundation for mismatch monitoring under explicit stochastic assumptions."},
+    {"title":"Anytime-Valid Inference Under Outcome Delay: A Design-Based Approach","date":"2026-03-26","url":"https://arxiv.org/abs/2603.25971","relevance":"Primary evidence that timing and outcomes can be coupled, supporting explicit filtration/conditional assumptions rather than completed-sample intuition."}
+  ],
+  "hierarchical_fallback_result": {
+    "negative_result": "An empirical parent-level mismatch upper bound is not, by itself, a valid conservative fallback for a sparse or unseen child stratum. A parent mixture can have a tiny marginal mismatch rate while one child has a much larger conditional mismatch rate and future evaluation concentrates on that child.",
+    "valid_parent_fallback_cases": [
+      "A deterministic-by-construction runtime contract whose guarantee explicitly covers every child in the parent domain.",
+      "A predeclared structural worst-case bound epsilon_parent such that P(mismatch | child,past)<=epsilon_parent is guaranteed for all children covered by that parent.",
+      "A statistically justified hierarchical model that itself supplies a simultaneous/conditional upper guarantee for each child; ordinary pooled estimation or empirical-Bayes shrinkage alone is not such a guarantee."
+    ],
+    "fail_closed_rule": "If no child-specific bound and no structurally valid parent bound exists, the child is uncertified for fastest stochastic hedging. Use canonical single-attempt inference or deterministic-by-construction execution instead of inheriting the pooled parent epsilon.",
+    "reason": "The previous 95/5 A/B counterexample gives aggregate epsilon=.005 with a child epsilon=.10. If evaluation concentrates in that child, a p0=.505 paired-sign factor can have conditional expectation >1 and false crossing far above nominal."
+  },
+  "degradation_monitor_design": {
+    "target": "Detect that a previously certified fingerprint/stratum's mismatch rate has risen above epsilon0=.005. This is an operational demotion alarm, distinct from evidence used to prove identity equivalence.",
+    "single_target_eprocess": "For Bernoulli mismatch M_t, likelihood-ratio factors against p0=.005 using p1=.10: mismatch factor=20; match factor=.9/.995. Threshold=100 gives a Ville alarm level <=.01 under the stated iid or per-step conditional p<=.005 null.",
+    "mixture_eprocess": "Predeclare equal mixture of p1 in {.02,.05,.10,.20}; each component is a valid e-process under the same p<=.005 conditional null, so the fixed mixture is valid and covers a wider range of degradation speeds.",
+    "state_transition": "Fingerprint begins in certified/hedging-eligible only from the separate admission rule. If its degradation e-process crosses the alarm threshold or a deterministic fingerprint/output mismatch is directly observed, immediately demote that fingerprint to canonical-attempt/unresolved mode. Do not wait for aggregate parent evidence to recover. Recertification uses new/disjoint admission evidence or deterministic-contract restoration."
+  },
+  "worker_local_degradation_stress": {
+    "status": "Synthetic Bernoulli Monte Carlo; not a measured mismatch rate for any serving system.",
+    "single_p1_0_10": {"trajectories_per_condition":100000,"max_groups":1000,"alpha_alarm":0.01,"results":[
+      {"true_p":0.005,"alarm_by_1000":0.00381,"median_alarm_group_among_alarms":15,"p90_alarm_group_among_alarms":46},
+      {"true_p":0.020,"alarm_by_1000":0.18781,"median_alarm_group_among_alarms":67,"p90_alarm_group_among_alarms":259},
+      {"true_p":0.050,"alarm_by_1000":0.99848,"median_alarm_group_among_alarms":64,"p90_alarm_group_among_alarms":245},
+      {"true_p":0.100,"alarm_by_1000":1.0,"median_alarm_group_among_alarms":22,"p90_alarm_group_among_alarms":59}
+    ]},
+    "mixture_p1_0_02_0_05_0_10_0_20": {"trajectories_per_condition":20000,"max_groups":2000,"alpha_alarm":0.01,"results":[
+      {"true_p":0.005,"alarm_by_2000":0.00425,"median_alarm_group_among_alarms":38,"p90_alarm_group_among_alarms":508.6},
+      {"true_p":0.010,"alarm_by_2000":0.2364,"median_alarm_group_among_alarms":843.5,"p90_alarm_group_among_alarms":1698},
+      {"true_p":0.020,"alarm_by_2000":0.99635,"median_alarm_group_among_alarms":402,"p90_alarm_group_among_alarms":938},
+      {"true_p":0.050,"alarm_by_2000":1.0,"median_alarm_group_among_alarms":68,"p90_alarm_group_among_alarms":175},
+      {"true_p":0.100,"alarm_by_2000":1.0,"median_alarm_group_among_alarms":24,"p90_alarm_group_among_alarms":62},
+      {"true_p":0.200,"alarm_by_2000":1.0,"median_alarm_group_among_alarms":9,"p90_alarm_group_among_alarms":24}
+    ]},
+    "interpretation": [
+      "The targeted p1=.10 detector is fast for severe degradation but weak for p=.02 over 1000 groups.",
+      "The fixed mixture gives broad coverage: in this stress it detected p=.02 by 2000 groups in ~99.6% of runs while retaining fast detection for p=.05-.20.",
+      "The null alarm rate is below the 1% Ville bound in these simulations. Monte Carlo is only a sanity check; validity comes from the e-process construction under the stated conditional null."
+    ]
+  },
+  "rare_stratum_burst_policy": {
+    "problem": "A rare high-risk fingerprint can be hidden indefinitely by a global pooled mismatch monitor because abundant low-risk traffic dilutes its evidence. The same rare stratum can later dominate an evaluation workload.",
+    "policy": [
+      "Maintain a separate admission/degradation state per deterministic fingerprint or predeclared validity stratum; no traffic-weighted pooling for a smaller epsilon bound.",
+      "A parent-level monitor may trigger a broad system alarm, but cannot keep a child hedging-eligible when the child is unknown, drifted, or individually alarmed.",
+      "If per-child traffic is too sparse to establish a statistical bound, use deterministic contract coverage as the parent fallback; otherwise fail closed for that child.",
+      "Allocate conformance probes deliberately toward low-volume/high-impact strata instead of sampling only in proportion to production traffic; this is an engineering allocation policy and any resulting statistical selection must be accounted for by the monitor design."
+    ],
+    "expected_tradeoff": "Stratification increases certification sample cost but prevents aggregate-good/child-bad masking. The correct comparison is certification cost versus the statistical validity loss of pooling, not pooled interval width alone."
+  },
+  "new_measurement_validity_rules": [
+    "A pooled empirical mismatch rate is descriptive observability, not a conditional identity certificate for every child stratum.",
+    "Conservative parent fallback must be conservative by construction: a domain-wide deterministic guarantee, a structural worst-case child bound, or a simultaneous conditional model. Unknown children otherwise fail closed.",
+    "Keep admission and degradation logically separate: admission asks whether fastest hedging may start; degradation monitoring asks whether an admitted fingerprint should be demoted. A non-alarm is not fresh proof of determinism.",
+    "Use fixed/predeclared mixture e-processes when degradation magnitude is unknown; do not choose the p1 component after seeing mismatch history without accounting for that selection.",
+    "Rare strata require their own state or deliberate probes. Global traffic-weighted monitoring can be operationally reassuring while statistically invalid for a workload concentrated in a rare stratum."
+  ],
+  "scope_guards": [
+    "The degradation simulations assume Bernoulli mismatch probabilities with no distribution shift inside each condition. The e-process remains valid only under the stated iid/conditional null; real serving dependence must be represented in the null or handled by deterministic contract/fail-closed logic.",
+    "Alarm-time medians are conditional on alarm and are not expected detection delays over all runs.",
+    "The mixture result is tied to p0=.005, the four fixed p1 values, threshold100 and the tested horizons. Different engineering targets require redesign.",
+    "A hierarchical statistical model may support valid borrowing if it supplies the required simultaneous/conditional guarantees; this checkpoint rejects naive pooling, not all hierarchical inference."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Build a joint admission/demotion state machine with explicit global risk accounting across many fingerprints: allocate calibration/alarm budgets, prevent repeated recertification from resetting lifetime error, and compare deterministic-contract coverage with statistical epsilon certification."},
+    {"priority":2,"action":"Optimize deliberate conformance allocation across rare/common strata under a fixed probe budget, minimizing the number of uncertified evaluation attempts while preserving per-stratum conditional guarantees."},
+    {"priority":3,"action":"Stress the mixture degradation monitor under bursty/non-iid mismatch and fingerprint changes. Derive a null in terms of predictable conditional mismatch bounds so correlated bursts are covered rather than assumed away."},
+    {"priority":4,"action":"Combine the stratum-specific epsilon bound with finite-horizon paired-sign betting under epsilon uncertainty and demotion mid-audit; require fail-closed unresolved behavior when a fingerprint alarms during an evaluation."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct a lifetime-valid multi-fingerprint admission/demotion state machine: calibration and degradation e-processes must not reset error budget after recertification, and a mid-audit mismatch alarm must deterministically quarantine remaining fastest-selected outcomes. Compare statistical certification cost against deterministic-contract coverage for rare strata."
+}
