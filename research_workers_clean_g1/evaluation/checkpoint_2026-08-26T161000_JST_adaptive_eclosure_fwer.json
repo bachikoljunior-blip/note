@@ -1,0 +1,149 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T16:10:00+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T153148_JST_online_fwer.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "18554a754d581b08b08ff0b2d28aa0e053f31972",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_observed_for_write_safety_only": "1f9d41c7d0bd86b94f828db8926ee568c044ed8c",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "own_feedback_found": false
+  },
+  "search_bias": "evaluation/verifiers; adaptive candidate streams; measurement validity; lifetime strong FWER; online e-closure versus fallback power",
+  "public_sources": [
+    {
+      "title": "Family-wise Error Rate Control with E-values",
+      "authors": "Will Hartog; Lihua Lei",
+      "version_date": "2026-05-19 (arXiv v4)",
+      "url": "https://arxiv.org/abs/2501.09015",
+      "used_scope": "The latest paper proves post-hoc, anytime and always-valid FWER properties for e-value closed testing in a fixed family, and explicitly distinguishes its fixed-family setting from online closed testing where hypotheses arrive sequentially. Its e-Fallback construction is presented for a fixed ordered sequence H1,...,Hn with pre-specified initial alpha budgets."
+    },
+    {
+      "title": "Admissible online closed testing must employ e-values",
+      "authors": "Lasse Fischer; Aaditya Ramdas",
+      "version_date": "2025-12-16 (arXiv v4)",
+      "url": "https://arxiv.org/abs/2407.15733",
+      "used_scope": "Hypotheses H_t may be constructed data-adaptively from past filtration F_{t-1}. Sequential e-values satisfy E[E_t|F_{t-1}]<=1 under true H_t. Products over intersection hypotheses form test supermartingales, and SeqE-Guard gives simultaneous true-discovery lower bounds for adaptive query paths. Fresh independent audit data is a direct route to conditional e-validity even when candidate and e-value design depend on past history."
+    },
+    {
+      "title": "The Online Closure Principle",
+      "authors": "Lasse Fischer; Aaditya Ramdas et al.",
+      "publication": "Annals of Statistics, 2024",
+      "url": "https://doi.org/10.1214/24-AOS2370",
+      "used_scope": "Online closure handles a potentially infinite hypothesis stream not fully known in advance and provides strong online FWER control; used as supporting structural context for adaptive candidate identities."
+    }
+  ],
+  "new_derivations": {
+    "adaptive_online_eclosure_commit_gate": {
+      "setup": [
+        "At launch j, candidate/hypothesis H_j must be F_{j-1}-measurable: fully frozen before any fresh audit outcome for j is revealed.",
+        "Run a fresh candidate-level anytime e-process and stop it at an F-adapted stopping time tau_j. Emit stopped e-value E_j with E[E_j|F_{j-1}]<=1 under null H_j.",
+        "Across the candidate stream, construct Fischer-Ramdas online-closure product intersection e-processes and SeqE-Guard.",
+        "For strict commit control, maintain a query set S_t containing committed candidates only. Include a candidate only when doing so raises SeqE-Guard's lower bound d_t by one, and maintain invariant d_t=|S_t|."
+      ],
+      "guarantee": "On the simultaneous SeqE-Guard event, d_t <= number of false nulls in S_t for every t. With d_t=|S_t|, every committed candidate is a false null (a genuine improvement on the tested endpoint). Therefore P(any committed true null ever)<=alpha. This is a lifetime strong-FWER gate despite adaptive candidate identities, adaptive launch times and adaptive within-audit stopping, provided conditional e-validity and candidate freeze hold.",
+      "scope_guard": "This does not repair a candidate test whose validation data were reused during candidate construction in a way that breaks E[E_j|F_{j-1}]<=1. Fresh audit or an explicitly valid conditional-data-reuse construction remains required."
+    },
+    "hartog_lei_scope_boundary": {
+      "finding": "Hartog-Lei v4 explicitly states that its setting has a fixed set of hypotheses and differs from online closed testing where hypotheses arrive sequentially. Its fixed-family e-Fallback recurrence should not be cited as direct proof for adaptively generated hypothesis identities without a separate online proof.",
+      "consequence": "Use Fischer-Ramdas online closure/SeqE-Guard as the currently justified adaptive-identity interface; keep Hartog-Lei e-Fallback as a fixed-family reference and possible future recurrence to re-prove online."
+    },
+    "delayed_signal_collapse_condition": {
+      "mechanism": "For strict singleton-style certification under product online e-closure, prior off-query noncommitted e-values below one can accumulate a multiplicative penalty C_{t-1}=prod_{j<t,uncommitted} min(E_j,1), making a later candidate need evidence roughly E_t >= 1/(alpha*C_{t-1}).",
+      "typical_behavior": "If null emitted e-values are nondegenerate and E[log min(E_j,1)]<0, or a suitable uniformly negative conditional-drift analogue holds, log C_t typically decreases linearly and the later evidence threshold grows exponentially.",
+      "scope_guard": "This is a simple explanatory condition for the tested/stylized process, not a theorem for arbitrary dependent adaptive e-value streams without additional drift assumptions."
+    }
+  },
+  "worker_local_stress_tests": {
+    "model": "Fresh paired binary audits. Each task is concordant with probability 0.6; among discordant pairs q_null=0.5 and q_good=0.75. Fixed sign e-factor for q_bet=0.75: candidate-only factor 1.5, incumbent-only factor 0.5, concordant factor 1. Global alpha=0.05. Results are worker-local Monte Carlo, not deployment guarantees.",
+    "clustered_markov_stream_30000_runs": {
+      "proposal_process": "30 proposal opportunities, max 20 audits; two-state hot/cold Markov quality regime with P(hot|hot)=0.85, P(hot|cold)=0.15, P(good|hot)=0.65, P(good|cold)=0.10; development triage launches 0.80 of good and 0.25 of null candidates; max 50 fresh paired tasks per audit.",
+      "results": [
+        {"method":"geometric_alpha_spending","P_any_false":0.001133,"P_any_true":0.53997,"mean_true_commits":0.76287,"mean_false_commits":0.001133,"mean_fresh_tasks":677.12},
+        {"method":"fallback_geometric","P_any_false":0.00160,"P_any_true":0.54003,"mean_true_commits":0.82307,"mean_false_commits":0.00160,"mean_fresh_tasks":676.29},
+        {"method":"adaptive_product_eclosure","P_any_false":0.02280,"P_any_true":0.57733,"mean_true_commits":1.4046,"mean_false_commits":0.02297,"mean_fresh_tasks":660.12,"median_final_offquery_penalty":0.000000559}
+      ],
+      "interpretation": "In this early/clustered-signal regime, product online e-closure used more of the global risk budget and produced more true commits with fewer fresh tasks while remaining below nominal alpha in simulation."
+    },
+    "deterministic_timing_50000_runs": {
+      "all_null": {"alpha_spending_FWER":0.00444,"fallback_FWER":0.00444,"product_eclosure_FWER":0.02634,"product_median_penalty_after20":7.32e-27},
+      "single_good_at15": {"fallback_P_any_true":0.01616,"product_eclosure_P_any_true_observed":0.0,"product_eclosure_FWER":0.02470,"product_median_penalty":1.23e-25},
+      "five_good_block_11_to_15": {"alpha_spending_P_any_true":0.13328,"fallback_P_any_true":0.13328,"fallback_mean_true":0.14536,"product_eclosure_P_any_true_observed":0.0,"product_mean_true_observed":0.0,"product_eclosure_FWER":0.02530,"product_median_penalty":1.38e-20},
+      "five_good_block_1_to_5": {"alpha_spending_P_any_true":0.54172,"fallback_P_any_true":0.54172,"fallback_mean_true":0.80900,"product_eclosure_P_any_true":0.93184,"product_mean_true":2.46358,"product_eclosure_FWER":0.01920,"fallback_mean_fresh_tasks":991.9,"product_mean_fresh_tasks":956.8,"product_median_penalty":1.33e-20},
+      "sparse_good_5_10_15_20": {"alpha_spending_P_any_true":0.16440,"fallback_P_any_true":0.16444,"product_eclosure_P_any_true":0.00354,"product_eclosure_FWER":0.02602,"product_median_penalty":7.09e-22},
+      "interpretation": "Product online e-closure is excellent for strong alternatives arriving early/clustered, but can catastrophically lose late-stream resolution because past noncommitted null e-values below one multiply an exponentially worsening certification penalty. Geometric fallback is substantially more robust to delayed or sparse improvements in the tested horizon."
+    },
+    "simple_hedging": {
+      "tested": "Replace base one-step factor by 1+h*(base-1) for h in {0.75,0.5}.",
+      "result": "h=0.75 reduced null crossing but did not remove delayed-signal collapse. h=0.5 largely destroyed 50-task alpha-spending/fallback power and still did not rescue late product-closure performance.",
+      "conclusion": "Naive hedge-to-one is not a sufficient fix."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-adaptive-online-eclosure-fwer-v1",
+      "mechanism": "Adaptive candidate identities H_t are F_{t-1}-measurable; emit conditionally valid stopped fresh e-values; use Fischer-Ramdas online product closure and SeqE-Guard; commit only when the lower bound increments so d_t remains equal to the number of committed candidates.",
+      "evidence": "Direct mapping to Fischer-Ramdas v4 plus the invariant argument above.",
+      "scope_guard": "Requires candidate freeze and conditional fresh-null e-validity for every launched audit."
+    },
+    {
+      "candidate_id": "eval-g1-hartog-lei-fixed-family-scope-v1",
+      "mechanism": "Treat Hartog-Lei e-Fallback as fixed-family/fixed-sequence evidence only until an adaptive-online proof is supplied.",
+      "evidence": "Latest v4 explicitly contrasts its fixed set with online closed testing."
+    },
+    {
+      "candidate_id": "eval-g1-product-eclosure-delayed-signal-collapse-v1",
+      "mechanism": "Off-query e-values below one accumulate multiplicatively and can make later singleton certification exponentially harder.",
+      "evidence": "Worker-local all-null/delayed/early signal stress plus negative truncated-log-drift explanation.",
+      "scope_guard": "Power pathology, not a Type-I-validity failure."
+    },
+    {
+      "candidate_id": "eval-g1-hybrid-online-fwer-gate-v1",
+      "status": "frontier_candidate_not_validated",
+      "mechanism": "Precommit a valid risk/evidence portfolio combining an early-signal-sensitive online-closure route with a delayed-signal-robust fallback/spending route, or boost/truncate sequential e-values inside SeqE-Guard, rather than selecting the stronger procedure after seeing the same audit evidence."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'Hartog-Lei e-Fallback already proves strong FWER for adaptively generated candidate identities.' The latest paper explicitly studies a fixed family and points to separate online-closure work for sequentially arriving hypotheses.",
+    "Rejected: 'adaptive candidate identities make strong lifetime FWER impossible.' Fischer-Ramdas permits H_t to be F_{t-1}-measurable; conditional e-values plus online closure/SeqE-Guard give a direct strong-FWER interface.",
+    "Rejected: 'a stronger exact online closure is operationally uniformly better than alpha spending/fallback.' The tested product closure can lose essentially all late-signal power after repeated null/noncommit evidence.",
+    "Narrowed: 'hedging each e-factor toward one fixes late-signal collapse.' Simple h=0.75/0.5 hedging did not solve the tested pathology.",
+    "Narrowed: 'the product penalty decay theorem holds for arbitrary adaptive dependence.' The negative-log-drift explanation needs explicit stochastic conditions."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Study Fischer-Ramdas sequential-e-value boosting/truncation specifically for fresh paired-sign audits. Derive whether bounded lower-tail damage can reduce off-query penalty collapse while preserving conditional e-validity and lifetime adaptive-identity FWER; stress-test delayed, sparse and clustered improvements."
+    },
+    {
+      "priority": 2,
+      "action": "Attempt a separate online conditional proof for the prefix-style Hartog-Lei e-Fallback recurrence with adaptively generated H_t and conditionally valid E_t. Do not adopt it unless the proof closes; compare its late-signal behavior with geometric p-fallback and product closure."
+    },
+    {
+      "priority": 3,
+      "action": "Derive a safe fixed-risk hybrid/portfolio between product online closure and fallback/spending. Avoid data-dependent cherry-picking between procedures unless the combination itself has a proven FWER/e-value guarantee."
+    },
+    {
+      "priority": 4,
+      "action": "Retain the prior lifetime/epoch and multiple-endpoint frontier: model-version or benchmark refresh must not silently reset alpha, and catastrophic-regression endpoints need separate protection from average-improvement endpoints."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Read and derive the sequential-e-value boosting/truncation construction in Fischer-Ramdas for the paired-sign fresh-audit process, then simulate boosted SeqE-Guard versus geometric fallback across delayed/clustered regimes while verifying conditional null e-validity and lifetime strong FWER."
+}
