@@ -1,0 +1,76 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T08:11:04+09:00",
+  "invocation_started_at": "2026-08-27T08:01:29+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T080801_JST_redundancy_attempt_identity.json",
+  "control": {
+    "frozen_main_sha": "09fde64cf76bba5863690b8bc1153ef799f29b07",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true
+  },
+  "independence": {"read_O":false,"read_O_derived_state":false,"read_legacy_worker_state":false,"read_downstream_state":false,"read_other_worker_state":false,"read_shared_execution_ledger":false,"read_other_role_receipts":false,"own_feedback_used":false,"own_feedback_missing_404":true},
+  "public_sources": [
+    {"title":"Batch Invariance - vLLM","date":"2026-07-16","url":"https://docs.vllm.ai/en/latest/features/batch_invariance/","relevance":"Official current documentation: batch invariance is beta, uses deterministic kernels/behavior independent of batch size/order, requires supported NVIDIA hardware, disables some nondeterministic optimizations, and may reduce performance."},
+    {"title":"Reproducibility - vLLM","date":"2025-11-23","url":"https://docs.vllm.ai/en/v0.15.0/usage/reproducibility/","relevance":"Official reproducibility boundary: not guaranteed by default; online mode needs batch invariance; even then reproducibility is scoped to same hardware and vLLM version."},
+    {"title":"Reproducibility - PyTorch 2.13","date":"2026-05-14","url":"https://docs.pytorch.org/docs/stable/notes/randomness.html","relevance":"Official warning that complete reproducibility is not guaranteed across releases/platforms even with identical seeds and that deterministic operations can be slower."},
+    {"title":"LLM-42: Enabling Determinism in LLM Inference with Verified Speculation","date":"2026-01-25","url":"https://arxiv.org/abs/2601.17768","relevance":"Primary systems evidence that LLM nondeterminism comes from batching/reduction order and that verify-rollback can provide selective determinism. Their SGLang deterministic baseline lost 24-36% throughput in tested offline workloads; selective LLM-42 substantially recovered throughput."},
+    {"title":"CoRun: Padding is Simple and Efficient for Deterministic LLM Inference","date":"2026-08-14","url":"https://arxiv.org/abs/2608.14376","relevance":"Very recent primary evidence that batch-invariant deterministic kernels can cost >2x latency and up to 74% throughput in tested systems, while a fixed-shape scheduling design recovered much of that overhead. Used to motivate measuring the exact determinism tax rather than assuming it is small."},
+    {"title":"Anytime-Valid Inference Under Outcome Delay: A Design-Based Approach","date":"2026-03-26","url":"https://arxiv.org/abs/2603.25971","relevance":"Primary statistical evidence that outcome timing can be informative and that the filtration is central; supports the requirement for a richer timing model if stochastic fastest-completion data are used inferentially."}
+  ],
+  "determinism_certification_gate": {
+    "purpose": "First-completion hedging is admitted as identity-preserving only if the execution stack can certify that every physical replica realizes the same frozen logical attempt. Otherwise the duplicate is a new stochastic sample and fastest selection is forbidden under the marginal paired-sign null.",
+    "static_fingerprint": ["model artifact/weight digest","tokenizer/template digest","serving engine and deterministic implementation/version","CUDA/driver/kernel backend","GPU architecture and supported deterministic domain","tensor/pipeline parallel topology","quantization/speculative-decoding configuration","sampling algorithm and complete sampling parameters","seed plus explicit per-request RNG/random-tape identity where available","batch-invariance/deterministic flags and any all-reduce restrictions"],
+    "preflight": "Before enabling a replica class, run a fixed prompt x seed matrix across the intended replica placements, batch sizes/orders, concurrency levels and scheduling perturbations. Compare token IDs and, when decision-relevant, logprobs/structured outputs. Zero mismatch is required inside the certified domain, but finite preflight is evidence, not a mathematical proof of global determinism.",
+    "runtime": "Each hedge carries logical_attempt_id and deterministic_fingerprint. A replica with a different fingerprint cannot satisfy the same-attempt contract. Prefer execution modes that verify determinism per request (e.g. fixed-shape/batch-invariant or verify-rollback semantics) rather than assuming a seed is sufficient.",
+    "fail_closed": "Any detected replica disagreement or fingerprint drift invalidates identity-preserving hedging for that logical attempt. Do not choose the fastest divergent output. Use a canonical replica fixed before timing, if the protocol explicitly allows it, or return unresolved/quarantine and require recertification.",
+    "scope": "This gate is a proposed evaluation protocol. Public framework/paper results establish feasible deterministic mechanisms and their limits, not that a particular deployment is certified."
+  },
+  "determinism_tax_break_even": {
+    "model": "Let d be the multiplicative latency slowdown caused by deterministic execution relative to the original non-deterministic single-attempt latency distribution. Multiply the prior checkpoint's synthetic hedge latency ratios by d. This is a sensitivity calculation, not a claim that real deterministic overhead is a pure scalar.",
+    "immediate_identity_replica3": {"synthetic_q95_ratio_before_tax":0.2654,"synthetic_q99_ratio_before_tax":0.1950,"mean_effective_compute_ratio_before_tax":0.9467,"q95_tail_break_even_d":3.768,"q99_tail_break_even_d":5.128,"mean_effective_compute_break_even_d":1.056},
+    "delayed_identity_hedge_p50": {"q95_ratio_before_tax":0.4867,"q99_ratio_before_tax":0.3507,"mean_effective_compute_ratio_before_tax":0.8680,"q95_break_even_d":2.055,"q99_break_even_d":2.851,"mean_effective_compute_break_even_d":1.152},
+    "delayed_identity_hedge_p75": {"q95_ratio_before_tax":0.5856,"q99_ratio_before_tax":0.3950,"mean_effective_compute_ratio_before_tax":0.8644,"q95_break_even_d":1.708,"q99_break_even_d":2.532,"mean_effective_compute_break_even_d":1.157},
+    "delayed_identity_hedge_p90": {"q95_ratio_before_tax":0.7932,"q99_ratio_before_tax":0.4790,"mean_effective_compute_ratio_before_tax":0.8918,"q95_break_even_d":1.261,"q99_break_even_d":2.088,"mean_effective_compute_break_even_d":1.121},
+    "delayed_identity_hedge_p95": {"q95_ratio_before_tax":0.9996,"q99_ratio_before_tax":0.5737,"mean_effective_compute_ratio_before_tax":0.9087,"q95_break_even_d":1.000,"q99_break_even_d":1.743,"mean_effective_compute_break_even_d":1.100},
+    "interpretation": "A deterministic mode can erase conservative hedge gains even when statistical validity is restored. In the synthetic heavy-tail model, aggressive three-way identity replication retains p95 benefit under a much larger determinism slowdown than a p90/p95 delayed hedge, but its full launched obligation is much higher. Real choice requires measured deterministic-mode p50/p95/p99 and actual cancellation/billing, not throughput alone."
+  },
+  "timing_no_free_lunch_for_stochastic_fastest": {
+    "setup": "Launch m iid stochastic attempts with sign S~Bernoulli(q) and arbitrary conditional latency distribution T|S. The scientific target remains the single-attempt marginal q. Only the fastest sign is retained; slower attempts may be canceled.",
+    "null_range": "Under H0 q<=1/2 and otherwise unrestricted T|S, the fastest plus probability can be as low as q^m (make plus always slower) or as high as 1-(1-q)^m (make plus always faster). At the boundary q=1/2 this range is [2^-m, 1-2^-m]; for m=3 it is [0.125,0.875].",
+    "alternative_overlap": "For q=0.60 and m=3 the corresponding attainable range is [0.216,0.936], which massively overlaps the exact-null range. Thus fastest-sign data alone cannot uniformly distinguish a modest q>1/2 alternative from the marginal null when sign-latency dependence is unrestricted.",
+    "conclusion": "There is no distribution-free free lunch from fastest stochastic replicas for the original marginal-q test. To use first-completion evidence with power, one must add a valid model/bound for sign-latency dependence, observe nonselected outcomes, randomize a design with known inclusion probabilities, or explicitly change the estimand to latency-aware utility.",
+    "robust_evalue_note": "One could build an e-factor against the worst-case null fastest-plus bound 1-2^-m, but that null is so permissive that moderate single-attempt improvements may have little or no uniform power. This is not a substitute for an identity-preserving replica contract.",
+    "scope": "The exact range statement concerns iid Bernoulli signs with arbitrary sign-conditional latency and fastest-sign-only observation. Richer side information or constrained latency models can tighten the null."
+  },
+  "estimand_separation": {
+    "single_attempt_quality": "If the target is eventual quality of one stochastic model attempt, independent hedges selected by completion order are selection-biased under unrestricted outcome-timing dependence.",
+    "ensemble_quality": "A completion-order-independent majority/aggregate can be valid but evaluates an ensemble policy with a different response distribution.",
+    "latency_aware_utility": "If deployment utility is explicitly defined as first valid response quality by time t, fastest completion can be part of the estimand rather than a nuisance. Such a metric must be reported separately from single-attempt quality and needs its own valid comparison design."
+  },
+  "new_measurement_validity_rules": [
+    "Do not treat determinism as a binary seed flag. Certify a bounded runtime/hardware/model/sampler domain and record the exact deterministic fingerprint with every logical attempt.",
+    "Benchmark the determinism tax before deciding that deterministic hedging is an optimization. The validity fix can cost enough latency/throughput to erase the tail benefit.",
+    "Under the marginal sign null with unrestricted sign-latency dependence, fastest stochastic replicas are not merely a slightly biased estimator; their observable plus rate can range from 2^-m to 1-2^-m at q=1/2. A timing model/conditional null is required for informative first-completion inference.",
+    "Keep three estimands separate: single stochastic attempt, predeclared ensemble/aggregate, and latency-aware first-response utility. Do not move evidence among them without an explicit mapping.",
+    "A deterministic replica mismatch is an inference event, not only an operations bug: fastest selection must fail closed because the same-attempt proof is gone."
+  ],
+  "scope_guards": [
+    "The determinism overhead figures from LLM-42 and CoRun are tied to their tested systems/models/hardware and cannot be translated directly into a universal latency multiplier d.",
+    "The break-even table is a sensitivity transform of the previous worker-local heavy-tail simulation; it is not a benchmark of vLLM, SGLang, LLM-42, CoRun, any API, or any provider.",
+    "The fastest-sign null range permits arbitrary T|S and therefore is deliberately worst-case. With independently validated structural constraints on latency/outcome dependence, sharper inference may be possible.",
+    "Finite conformance testing cannot prove determinism outside the tested fingerprint/domain; production admission needs both a runtime contract and ongoing mismatch monitoring."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Derive a fail-closed deterministic-hedging admission test that includes deterministic fingerprint drift and an upper confidence bound on observed replica mismatch rate from a disjoint conformance set. Decide what evidence is enough to enable fastest physical replica while avoiding a false claim of mathematical equivalence."},
+    {"priority":2,"action":"Derive timing-aware inference for genuinely stochastic replicas under an explicit, independently calibrated bound on P(+ | completion-time/covariates, past), and compare its power with the worst-case fastest-plus null bound and canonical single-attempt evaluation."},
+    {"priority":3,"action":"Model selective-determinism systems (verified speculation/fixed-shape scheduling) with measured p50/p95/p99 overhead rather than a scalar d, then re-optimize hedge delay and replica count under wall/full-obligation/effective-compute objectives."},
+    {"priority":4,"action":"Define and test a separate latency-aware utility estimand for deployment where first valid completion is the object of interest; keep it orthogonal to single-attempt quality certification."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Build a statistically honest determinism admission rule: use an independent conformance corpus to upper-bound replica mismatch probability within a frozen runtime fingerprint, combine that bound with the consequence of a rare mismatch for fastest-selection validity, and determine whether any nonzero mismatch rate can be tolerated without reverting to canonical-attempt or timing-aware inference."
+}
