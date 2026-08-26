@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-26T16:41:05+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "638ec7245ebc1c9546b21cb683d7a1ae6dfe0dd2",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 5,
+    "bootstrap_head_observed_at": "2026-08-26T16:41:05+09:00"
+  },
+  "source_candidate": {
+    "namespace": "continual_learning",
+    "source_artifact_path": "research_workers_clean_g1/continual_learning/RUN_20260826T1501_JST.md",
+    "source_artifact_blob": "0275d1333cbc746b49b190f7ec605ab1325d7cdb",
+    "source_claim": "Final public CLDD detector tuning is explicitly a 10-stream mean-F1 optimization; exact winning detector hyperparameters are outside public Git and not recoverable from the released parquet schema."
+  },
+  "primary_source": {
+    "repository": "tachyonicClock/cldd",
+    "final_public_commit": "7b0a474ae171388eb0a666c9b1e1431d2450b73d",
+    "files": [
+      {"path":"dodo.py","blob":"660c3714a9f31807d287068dab62dc2f15040526"},
+      {"path":"src/dd_hpsearch.py","blob":"61a3ffaa7015cabb5c782f98b19ca72f0b66a378"},
+      {"path":"config/hp/detector.yml","blob":"d87bd28eae2165e79b64213199bcf6c118a61371"},
+      {"path":"main.py","blob":"74c1e3c69416031b6265f04465021eff9831cb6e"},
+      {"path":"collect.py","blob":"e5ea6a411f3bc5e9fd65c34f682128aed06d63f6"},
+      {"path":".gitignore","blob":"d2a72e493bc8e763d8ade3168635070a7d69974d"}
+    ],
+    "historical_source_refs": [
+      {"commit":"a78a871c2e83d9f1f1e24aea1b749f790f579eb7","dodo_blob":"57e9a1cfa42aec6cf9b50adae39502cf2662ee6a","training_error_stream_count":5,"evaluation_seed_count":10},
+      {"commit":"f186455e3f39a8b3ac2e37b941cdbb8a7e8ecedb","dodo_blob":"419ff054f6ea9aa390073c6b4de9541fda11e049","training_error_stream_count":10,"evaluation_seed_count":10}
+    ]
+  },
+  "status": "primary_code_verified_with_versioned_five_to_ten_stream_transition_and_exact_hp_provenance_gap",
+  "findings": [
+    {
+      "claim": "The final public source tunes each detector on ten frozen training/error streams and evaluates on a separate ten-seed set.",
+      "result": "verified",
+      "evidence": "At 7b0a474, dodo.py sets N_TRIALS=10, derives ERROR_STREAM_SEEDS from random.Random(0) and EVALUATION_SEEDS from random.Random(1), each with ten draws. task_tune_hp_detector collects one oracle error-stream file for every ERROR_STREAM_SEEDS trial and passes the full list to detector tuning."
+    },
+    {
+      "claim": "Detector tuning uses a 30-trial Optuna search maximizing mean my_f1 over all supplied error streams.",
+      "result": "verified",
+      "evidence": "config/hp/detector.yml sets n_trials=30, metric=my_f1, maximize=true. DDHPSearch evaluates every trial on every supplied frozen stream, averages metrics across streams, stores n_streams, and returns the mean configured metric as the objective."
+    },
+    {
+      "claim": "The historical source used five training streams while retaining ten held-out evaluation streams, and a later source switched training/error streams to ten.",
+      "result": "verified_source_version_difference",
+      "evidence": "At a78a871c... ERROR_STREAM_SEEDS uses range(5) while EVALUATION_SEEDS uses N_TRIALS=10. At f186455e... both use N_TRIALS=10.",
+      "scope": "This verifies the source-code protocol change. It does not by itself identify which exact ignored tuned-parameter artifact generated every externally released numerical table/dataset."
+    },
+    {
+      "claim": "The exact winning detector hyperparameters and full best-trial record are produced by the public code but retained in public Git history.",
+      "result": "contradicted_for_public_git",
+      "evidence": "main.py trial_to_yml writes best_params.yml and best_trial.yml under the tuning log directory, while .gitignore excludes the entire logs directory. Repository code search at the pinned public head finds references to best_params.yml but no tracked result file containing the winning values.",
+      "scope": "An external archive, release attachment, execution receipt, or untracked log copy could still contain the values; this audit establishes absence from the inspected public Git tree, not universal nonexistence."
+    },
+    {
+      "claim": "The released CLDD parquet schema is sufficient to recover the winning detector hyperparameters or Optuna trial provenance.",
+      "result": "contradicted_by_collection_schema",
+      "evidence": "collect_dataset serializes boundary, strategy, detector, seed, error_stream, trues, preds, max_delay, and max_early. It does not serialize detector config/parameters, trial number, best objective value, source SHA, dependency version, or best-trial metadata.",
+      "scope": "The parquet remains useful for row/seed/event-array and detector-metric recomputation; it cannot alone bind those rows to the exact winning hyperparameter artifact."
+    }
+  ],
+  "material_interpretation": "The worker's revised CLDD provenance claim is supported. Current public code defines a 10-training-stream, 10-held-out-stream, 30-trial mean-my_f1 detector-tuning contract, while older source used five training streams. Exact winning detector parameters remain a separate provenance object that is generated under ignored logs and omitted from the parquet schema; therefore final numerical reproduction requires recovering a source-matched best_params/best_trial artifact or rerunning the search under a pinned environment.",
+  "downstream_use": {
+    "eligible": true,
+    "correction": "Version CLDD claims explicitly: five-stream historical source versus ten-stream final public source. Do not infer exact uploaded-dataset detector HP from the parquet alone.",
+    "do_not_generalize": [
+      "Do not call the public source irreproducible merely because winning HP files are not committed; the search algorithm is public and can be rerun under a pinned environment.",
+      "Do not claim the released parquet proves whether five-stream or ten-stream winning parameters generated a particular upload without an external binding artifact.",
+      "Do not merge training/error seeds and held-out evaluation seeds; they are generated from distinct RNG instances."
+    ]
+  }
+}
