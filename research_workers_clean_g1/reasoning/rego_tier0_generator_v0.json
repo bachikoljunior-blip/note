@@ -1,0 +1,74 @@
+{
+  "schema_id": "reasoning.rego_tier0_generator.v0",
+  "status": "frozen_pre_outcome_spec",
+  "rego_version": "v1",
+  "package": "fuzz",
+  "rule": "r",
+  "entrypoint": "data.fuzz.r",
+  "grammar": {
+    "Module": "package fuzz\\n Rule",
+    "Rule": ["r := Expr", "r := Expr if { Stmt+ }"],
+    "Stmt": ["Local := Expr", "Expr == Expr", "Expr != Expr"],
+    "Expr": ["String", "true", "false", "null", "Local", "Ref"],
+    "Ref": ["input.Path", "data.Path"]
+  },
+  "generator_invariants": {
+    "module_count": 1,
+    "package_exact": "fuzz",
+    "complete_rule_count": 1,
+    "rule_name_exact": "r",
+    "locals": "fresh lowercase safe identifiers; each bound exactly once by := and every use dominated by its binding",
+    "references": "static dot paths only; root must be input or data; at least one field segment",
+    "policy_scalar_domain": ["string", "boolean", "null"],
+    "input_data_domain": "finite JSON objects with string-safe keys and string/boolean/null leaves; no arrays or sets",
+    "operators_allowed": [":=", "==", "!="],
+    "operators_forbidden": ["="],
+    "constructs_forbidden": ["imports", "default", "else", "partial rules", "functions", "calls", "builtins", "with", "comprehensions", "not", "some", "every", "membership", "arithmetic", "numbers"]
+  },
+  "case_record": {
+    "required_fields": ["schema_id", "case_id", "seed", "policy_source", "input_json", "data_json", "entrypoint"],
+    "seed_rule": "persist the generator seed before route execution; deterministic fixtures use seed=null and fixture_id instead"
+  },
+  "pre_outcome_route_support": {
+    "common": [
+      "schema_id exactly reasoning.rego_tier0_generator.v0",
+      "Rego v1 explicitly selected",
+      "AST contains only the frozen grammar constructs",
+      "builtin set is empty",
+      "one complete rule at data.fuzz.r",
+      "bind-before-use and single-assignment local invariant holds",
+      "all refs are static dot paths rooted at input or data",
+      "all values remain in the frozen scalar/object domain"
+    ],
+    "opa_topdown": ["evaluate data.fuzz.r with Rego v1 under the frozen input/data", "persist OPA version or commit and raw result"],
+    "opa_wasm_exact": [
+      "compile the same frozen source to Wasm for entrypoint fuzz/r",
+      "extract and persist SHA-256 of the emitted policy.wasm bytes",
+      "load those exact bytes into a pinned OPA-Wasm-compatible runtime/SDK",
+      "set the same frozen data and evaluate the same frozen input",
+      "persist compiler identity, Wasm digest, runtime identity and raw result",
+      "no unsupported host builtin is reachable; Tier-0 has no builtins"
+    ],
+    "regorus_interpreter": ["Rego v1 mode", "same policy/data/input/entrypoint as all other routes", "persist Regorus version or commit and raw Value"],
+    "regorus_rvm": [
+      "compile the same policy with the same entrypoint",
+      "run in ExecutionMode::RunToCompletion",
+      "host-await builtin set is empty",
+      "round-trip serialize the Program before execution",
+      "persist Regorus version or commit plus serialized Program digest and raw Value"
+    ]
+  },
+  "canonical_outcome_projection": {
+    "DEFINED": "successful defined value; Tier-0 canonical values are exact string/boolean/null",
+    "UNDEFINED": "route-specific absence of a decision/value, e.g. zero OPA result assignments or Regorus Value::Undefined",
+    "ERROR": "parse/compile/evaluation/runtime failure mapped to a versioned error class while retaining raw diagnostics",
+    "UNSUPPORTED": "may be emitted only by the frozen pre-outcome support predicate; a runtime failure may never be relabeled unsupported after observing the result"
+  },
+  "comparison_rule": "Compare canonical outcomes only after all participating routes passed their frozen pre-outcome support predicates. Preserve every raw output and route/artifact identity.",
+  "shrinker_invariants": {
+    "must_preserve": ["Rego v1", "Tier-0 grammar membership", "empty builtin set", "route-support membership", "single-assignment bind-before-use", "scalar/object domain", "same canonical-outcome interpretation"],
+    "initial_allowed_operations": ["delete a trailing statement only when dependency closure remains valid", "replace a reference leaf with a frozen scalar", "remove unused input/data fields", "simplify the rule-head expression", "shorten a static path only when the shortened path remains supported"],
+    "invalid_minimization": "Any shrink that crosses out of the frozen support predicate is not a valid minimized witness."
+  },
+  "evidence_scope": "This file freezes the generator/oracle specification before generated outcomes. It is not evidence that any route pair agrees."
+}
