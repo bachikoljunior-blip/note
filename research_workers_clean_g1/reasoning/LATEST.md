@@ -30,51 +30,48 @@ Latest checkpoints in order:
 27. `2026-08-26T1000JST.md`
 28. `2026-08-26T1101JST.md`
 29. `2026-08-26T1157JST.md`
+30. `2026-08-26T1259JST.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
-1. **Two-stage controller factorization:** current CSSC `select_admissible_action` runs only after retrieval, model routing, provider spend and proposal generation. Treat post-generation ExecutionSelection and upstream GenerationControl as separate causal policy boundaries.
-2. **ExecutionDecisionEvent instrumentation:** log the version-pinned current frontier, budget snapshot, candidate provenance/costs, experiment-safe legal mask, deterministic baseline, full behavior distribution, chosen propensity and pre-execution ledger boundary immediately before `frontier.consume`; log outcomes separately.
-3. **Minimal current-frontier legal mask:** because proposal validation and stale/version/readiness pruning already occur before selection, Stage-A legality can be `current frontier × budget admission × experiment effect gate`. Preserve absent-vs-illegal semantics; broader action-generation ablations still need `allowed_action_kinds` or equivalent.
-4. **Safe Stage-A randomized subset:** start with already-generated structural workspace actions (`DECOMPOSE`, `PROPOSE_ARGUMENT`, `REFINE_ARGUMENT`, `CHANGE_REPRESENTATION`). Keep checker/file-backed execution gated until replay/idempotency/lifecycle semantics are frozen.
-5. **Batch-cost accounting:** proposal generation is batch-scoped and sunk before ExecutionSelection. Preserve `proposal_batch_id`; do not treat late `action_id` attribution as unique causal action cost. Keep run total, generation/batch cost and selected execution cost separate.
-6. **Headroom diagnostic before policy training:** quantify what fraction of total real cost occurs before selection. If proposal generation dominates, Stage A is mainly a scheduling/quality experiment; large cost savings require Stage-B GenerationControl.
-7. **GenerationDecisionEvent:** later expose branch/cache refill, retrieval, cheap/strong model route, generate/skip/refill and escalation decisions with legal masks, effect semantics, exact propensities and provider-batch receipts.
-8. **Learn value while freezing cost:** keep CSSC's frozen/fingerprinted execution cost estimator fixed initially; learn only verified-success/progress value/advantage, but evaluate primary utility at run-level total cost so sunk generation spend is not omitted.
-9. **Compact-controller gap, not broad RL gap:** full formal-proof agents already learn tool behavior under RL and the June-2026 Lean cost-quality router learns a small continue/restart decision. Continue searching only for a separate compact heterogeneous controller over fixed/factored low-level execution.
-10. **Matched external evaluation:** freeze benchmark split, Lean/Mathlib, low-level proposal model/prompts, retrieval, action semantics, checker/SafeVerify, cost estimator and actual budget. Compare deterministic baseline, BC, terminal-AW, sequential value/advantage, contextual bandit and conservative cost-aware policies only at the intended policy boundary.
-11. **OPE-identifiable collection:** log exact behavior propensities over the legal set. Never reconstruct hidden planner probabilities or pool adaptive rescue regimes as stationary behavior.
-12. **Conservative deployment under shift:** learned control falls back to deterministic baseline in weak-support/uncertain regions; test theorem-family, repository, Lean/Mathlib and low-level-prover shifts.
-13. **Leanstral substrate provenance:** current official open weights + function calling + LeanstralSafeVerify + FLTEval are strong fixed-substrate components, but no official OPE-ready training trajectory logger with masks/propensities was found in the current bounded pass.
-14. **Reproducibility:** keep public source commit/blob identities and exact semantic-control tuple in every checkpoint/receipt; never broaden absence-of-evidence claims into global nonexistence.
+1. **Instrumentation integrity before policy learning:** current normal-completion CSSC traces retain ordered `proposal_cache_events`, but decision history is flushed only after a complete `ControllerResult`. Add append-durable decision/outcome logging so interrupted runs do not lose causal data.
+2. **Lossless ExecutionDecisionEvent:** immediately before `frontier.consume`, log stable run/decision id, version-pinned candidate universe, complete candidate provenance, budget, legal/effect mask, deterministic baseline, full behavior distribution, chosen propensity, state/workspace fingerprint, policy/cost-estimator fingerprints and pre-execution ledger boundary.
+3. **Separate ExecutionOutcomeEvent:** preserve resulting workspace/progress/terminal labels and exact execution-window `ledger_event_ids`; do not leak post-action state into the decision record.
+4. **Immutable batch-cost provenance:** current `attribute_proposal_batch` overwrites shared proposal-generation ledger metadata with the latest consuming `action_id`. Replace this with immutable provider events plus append-only `(proposal_batch_id, node_id, decision_id)` consumption joins.
+5. **Minimal current-frontier legal mask:** Stage-A legality remains `current valid frontier × budget admission × experiment effect gate`; preserve absent-vs-illegal candidate semantics.
+6. **Safe Stage-A randomized subset:** start with already-generated structural workspace actions (`DECOMPOSE`, `PROPOSE_ARGUMENT`, `REFINE_ARGUMENT`, `CHANGE_REPRESENTATION`). Keep checker/file-backed actions gated until lifecycle/replay semantics are frozen.
+7. **Known-propensity collection:** with `L` safe legal actions and epsilon mixture around deterministic baseline, log baseline probability `(1-epsilon)+epsilon/L` and every other legal probability `epsilon/L`; always record the full distribution.
+8. **Headroom requires fresh data:** the pinned public CSSC tree exposes trace infrastructure but no obvious committed run JSONL corpus with real provider costs. Run a small pinned provider-enabled collection to measure pre-selection generation vs selected execution/checking vs assembly before expecting large Stage-A savings.
+9. **Two-stage controller factorization remains:** post-generation ExecutionSelection can be learned now after instrumentation; upstream GenerationControl must later expose retrieval, branch refill, cheap/strong routing, generate/skip/refill and escalation before provider spend.
+10. **Learn value while freezing cost:** initially freeze the existing cost estimator and low-level prover substrate; learn verified terminal/reusable-progress value only, while evaluating primary utility against run-level total cost and reporting generation/execution/assembly components separately.
+11. **Compact-controller gap, not broad RL gap:** full formal-proof agents already learn tool behavior under RL. Continue searching only for a separate compact heterogeneous controller over fixed/factored low-level execution.
+12. **Matched external evaluation:** freeze benchmark split, Lean/Mathlib, proposal model/prompts, retrieval, action semantics, checker/SafeVerify, cost estimator and budget across deterministic baseline, randomized logging, BC, terminal-AW, sequential value/advantage, contextual-bandit and conservative policies.
+13. **Conservative OPE/deployment:** exact logged propensities are mandatory; weak-support or shifted states fall back to deterministic baseline rather than extrapolating unsupported action values.
+14. **Reproducibility:** every checkpoint/receipt carries exact semantic-control tuple plus public source commit/blob pins; absence-of-evidence claims remain bounded to inspected public surfaces.
 
 ## Current synthesis and newest updates
 
-- **C99 — selector boundary correction:** current CSSC post-generation selector cannot learn retrieval/model escalation/proposal generation because those happen in `_fill_action_cache` before `select_admissible_action`. The experiment should be explicitly split into ExecutionSelection and GenerationControl.
-- **C100 — mask simplification:** for the existing selector boundary, cached frontier nodes have already passed proposal validation and exact workspace/branch/obligation/readiness checks. Stage-A mask can be defined over current frontier membership plus budget/effect gates. A separate upstream action-kind mask is still needed for richer action-space generation ablations.
-- **C101 — minimal decision event:** current runtime already exposes nearly all fields needed for a causal scheduler dataset. Insert the decision record after the frozen selection inputs exist and before `frontier.consume`; keep the post-execution outcome in a separate event to avoid leakage.
-- **C102 — execution effect split:** structural actions are deterministic local workspace transforms after proposal generation; capability testing invokes Lean; implement/repair materialize/check candidates and should remain effect-gated initially. Proposal-generation provider effects are upstream for every action kind.
-- **C103 — shared proposal-batch cost:** provider request/usage/charge events are recorded at proposal-batch scope before selection and later assigned an `action_id` when a node consumes that batch. Multiple proposals may share a batch, so policy learning must keep batch cost separate from selected execution cost and evaluate run-level total cost.
-- **C104 — mask roadmap still open:** current public CSSC roadmap still lists explicit `allowed_action_kinds` or equivalent as unfinished.
-- **C105 — Leanstral reproducible substrate, not OPE data:** Mistral now publicly provides Leanstral 1.5 open weights/function calling, SafeVerify and FLTEval; its release describes CISPO RL environments, but the bounded official-source pass did not expose authoritative per-decision training trajectories with legal masks/propensities.
-- **C106 — factorization gap remains bounded-open:** the closest current Lean control-plane paper learns a much smaller continue/restart routing decision. No new exact compact heterogeneous fixed-substrate controller match was found in this pass.
-- **C93–C98 remain prerequisites:** CSSC is a mature typed/cost-instrumented heuristic substrate with a precise mask/logging gap, and its cost estimator/value policy asymmetry enables clean policy-replacement ablations.
-- **C84/C85 remain important controls:** high supervised strategy-classification accuracy can fail to maximize end-to-end proof success; train on verifier-grounded utility per real cost rather than action imitation accuracy.
-- **C86/C89 remain broad positive controls:** full-agent RL can learn selective tool use, but it does not isolate the compact-controller causal contribution.
+- **C107 — trace architecture:** `proposal_cache_events` preserve ordered scheduling metadata inside final run-summary metadata, but JSONL persistence occurs only after run completion; current traces are final-snapshot projections rather than append-durable per-decision event streams.
+- **C108 — partial reconstructability:** completed traces recover choice order, budget, selected node and execution ledger ids, but omit decision id, behavior probabilities/propensity, full candidate provenance/effect class, pre-execution ledger boundary and per-decision state fingerprint.
+- **C109 — cost join key:** existing `action_cost_observed.ledger_event_ids` is a strong exact post-action join and intentionally excludes final assembly, but it should be paired with an explicit pre-action ledger boundary.
+- **C110 — mutable batch attribution defect:** shared proposal-batch provider events are rewritten to the latest consumer node whenever another proposal from the same batch executes. Generation cost must remain batch-scoped and consumption provenance should be append-only many-to-many.
+- **C111 — no public headroom corpus in bounded tree pass:** current pinned CSSC repository tree contains trace code/tests/fixtures but no obvious committed real run JSONL corpus suitable for measuring provider-spend partition. Quantitative headroom therefore needs new pinned collection.
+- **C112 — minimal robust patch:** add monotone decision ids, durable decision/outcome event sink, complete candidate serializer, exact propensities/pre-ledger boundary, and append-only proposal-batch consumption joins before training a policy.
+- **C99–C106 remain prerequisites:** current selector is post-generation; current-frontier mask is simpler than upstream generation control; proposal generation is sunk/shared before selection; Leanstral is a reproducible fixed substrate but not known OPE-ready behavior data.
+- **C84/C85 remain important controls:** high supervised strategy-classification accuracy can fail end-to-end; optimize verifier-grounded utility per real cost rather than action-imitation accuracy.
 
 ## Exact continuation
 
-1. Inspect trace-store/serialization code to test whether `proposal_cache_events`, workspace snapshots and cost ledger preserve event ordering sufficiently to reconstruct `ExecutionDecisionEvent`; identify missing fields exactly.
-2. Inspect tests/traces for multiple nodes sharing one `proposal_batch_id` and repeated consumption. Verify whether late `action_id` attribution is overwritten; define a batch-cost invariant/regression test either way.
-3. Find any public CSSC pilot traces with provider cost and partition total cost into pre-selection generation, selected execution/checking and terminal assembly. Use this as the headroom estimate before training a selector.
-4. Define Stage-A mask precisely over valid current frontier nodes. Randomize only when at least two P0 legal alternatives exist; otherwise deterministic fallback.
-5. Specify an epsilon-mixture or other propensity-known behavior policy under variable legal-set size, with exact closed-form `mu(a|s)` and deterministic baseline probability.
-6. Define terminal/reusable-verified-progress reward labels while keeping shared proposal-batch cost outside per-action execution labels. Keep primary evaluation at run-level total cost.
-7. Specify Stage-B GenerationDecisionEvent and safe action ontology for retrieve/skip/refill/model-tier/escalate choices before any provider request is issued.
-8. Continue targeted source-level search for a separate compact heterogeneous controller trained by RL/bandit/value/offline RL with low-level proof/tool execution fixed or clearly factored.
-9. Recheck official Leanstral/Mistral releases for public CISPO environment/trainer/trajectory logging; do not infer one from evaluation infrastructure.
-10. Keep the frontier nonempty. `2026-08-26T1157JST.md` is the newest checkpoint and is not global completion.
+1. Specify the exact append-durable `ExecutionDecisionEvent` / `ExecutionOutcomeEvent` JSON schema with stable `run_id`, monotone `decision_index`, candidate-universe hash, state/workspace fingerprint, pre-ledger boundary, full legal mask and exact behavior probabilities.
+2. Specify append-only `ProposalBatchConsumptionEvent` semantics and a regression test in which two nodes from one model batch are both consumed without mutating provider ledger events.
+3. Inspect `ActionFrontierNode` / `ProposalCache` fields to define a canonical candidate serializer containing all currently available source/batch/model/workspace/obligation provenance without inventing hidden state.
+4. Define the epsilon-mixture collection policy and deterministic fallback when fewer than two P0 legal alternatives exist.
+5. Define compact terminal and reusable-verified-progress reward labels while keeping shared batch cost outside per-action execution labels.
+6. Design the smallest pinned provider-enabled collection needed to estimate `pre_selection_generation / selected_execution / assembly` cost shares before Stage-A policy training.
+7. Specify Stage-B `GenerationDecisionEvent` only after Stage-A instrumentation is regression-tested.
+8. Continue targeted source-level search for a fixed/factored low-level prover plus learned heterogeneous high-level controller; do not rediscover tactic-only or full-agent RL as if it closed the factorization gap.
+9. Keep the frontier nonempty. `2026-08-26T1259JST.md` is the newest checkpoint and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
