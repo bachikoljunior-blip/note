@@ -1,0 +1,258 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T10:58:13+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T095838_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "938281b6d0d908283be3768072ffe908bb2ec363",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "16703709339d0f38e5dd2758f3d4d740bc7c56d2",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": [
+      "own evaluation LATEST/checkpoint",
+      "public sources",
+      "sanitized DESIRED_STATE",
+      "evaluation role config"
+    ],
+    "head_resolution": "SHA-only refs/heads/main; later head advance used only for transport/write collision safety."
+  },
+  "search_bias": "evaluation/verifiers; full adaptive proposal loops; reusable-validation selection correction; disjoint prior learning; fresh-audit/e-value hybridization",
+  "public_sources": [
+    {
+      "title": "PACE: Anytime-Valid Acceptance Tests for Self-Evolving Agents",
+      "authors": "Zayx Shawn",
+      "date": "2026-06-06",
+      "url": "https://arxiv.org/abs/2606.08106",
+      "used_scope": "Self-evolving agents repeatedly propose edits and compare candidates to incumbents on identical instances using a testing-by-betting e-process. The public abstract states a per-decision false-commit guarantee under optional stopping; used as the direct agent-acceptance baseline, not as a theorem for adaptive same-dev candidate generation across a whole loop."
+    },
+    {
+      "title": "What Fits (Into Few Tokens) Doesn't Overfit: Compression and Generalization in ML Research Agents",
+      "authors": "Martin Andres Bertran; Aaron Roth; Zhiwei Steven Wu",
+      "date": "2026-06-09",
+      "url": "https://arxiv.org/abs/2606.11045",
+      "used_scope": "Explorer proposes h_t adaptively from a one-bit running-best transcript; descriptions/decoders are fixed before validation and statements condition on randomness independent of validation. Its ladder bound counts possible improvement-location transcripts; used to justify treating the full counterfactual validation transcript as a selection object and to preserve an independence gate for learned priors."
+    },
+    {
+      "title": "On the role of data in PAC-Bayes bounds",
+      "authors": "Gintare Karolina Dziugaite; Kyle Hsu; Waseem Gharbieh; Gabriel Arpino; Daniel M. Roy",
+      "date": "2020-06-19",
+      "url": "https://arxiv.org/abs/2006.10929",
+      "used_scope": "Shows that a prior may be learned from a subset that is then excluded from the empirical-risk term. Used as supporting precedent for disjoint prior-building data; the exact weighted-e validity below is derived directly by conditioning and does not rely on PAC-Bayes."
+    },
+    {
+      "title": "Family-wise Error Rate Control with E-values",
+      "authors": "Will Hartog; Lihua Lei",
+      "date": "2025-01-15; revised 2026-05-17",
+      "url": "https://arxiv.org/abs/2501.09015",
+      "used_scope": "Develops FWER control with e-values and weighted averages of e-values, including sequential/anytime-valid properties. Used as external support that fixed weighted e-combinations are a legitimate design primitive; the selected-transcript/fresh-audit construction below is worker-local."
+    }
+  ],
+  "new_derivations": {
+    "disjoint_learned_transcript_prior_validity": {
+      "statement": "Let Z be prior-building data independent of the reused validation data D. Conditional on Z, let pi_Z(u)>=0 sum to <=1 over all counterfactual transcript/test opportunities u. For each fixed u, let E_{u,t}(D) be a valid e-process under its null. Then P(exists u,t: E_{u,t} >= 1/(alpha*pi_Z(u)) | Z) <= sum_u alpha*pi_Z(u) <= alpha by Ville plus union bound. Integrating over Z preserves the same bound.",
+      "consequence": "Mixture weights/codebooks may be fit arbitrarily on genuinely disjoint meta-data and then frozen. No extra penalty is needed merely because the learned prior is random before conditioning; leakage from the current reused validation channel invalidates this argument.",
+      "scope_guard": "Requires the counterfactual decoder/candidate mapping and learned prior to be fixed conditional on Z before seeing current D, and fixed-u e-process validity to hold."
+    },
+    "selected_transcript_global_evalue": {
+      "statement": "For realized transcript U(D), define S(D)=pi(U)*E_U(D), with pi fixed independently of D and each fixed candidate/transcript e-value satisfying E[E_u]<=1. Then E[S] = sum_u pi(u) E[E_u 1{U=u}] <= sum_u pi(u) E[E_u] <= 1.",
+      "consequence": "The usual transcript-weighted threshold E_U >= 1/(alpha*pi(U)) is equivalent to testing the single global selected e-value S>=1/alpha. This representation makes safe combination with a fresh audit possible."
+    },
+    "hard_switch_full_alpha_is_not_generally_valid": {
+      "statement": "A validation-dependent hard choice between two level-alpha procedures cannot in general give each branch the full alpha. Counterexample: let A be the reuse-test rejection event with P(A)=alpha; choose reuse iff A occurs, otherwise run an independent fresh level-alpha test B. Then false rejection is P(A)+P(A^c)P(B)=alpha+(1-alpha)alpha=2alpha-alpha^2, which is 0.0975 at alpha=.05.",
+      "safe_fallback": "A hard switch can use alpha_r+alpha_f<=alpha (or another proven branch-spending rule), but this may reduce power. Do not interpret 'fresh audit on high-complexity paths' plus 'reuse test on low-complexity paths' as automatically level-alpha when both use full alpha."
+    },
+    "fresh_reuse_convex_eprocess": {
+      "setup": "After adaptive development on D, form selected-transcript global e-value S. Freeze the selected candidate. On an independent fresh audit stream A_1,A_2,... construct a conditional e-process F_t for that fixed selected candidate, with F_0=1 and E[F_t | D,A_{<t}] <= F_{t-1} under the global null that every selectable candidate is null.",
+      "construction": "For fixed lambda in [0,1] independent of current D/audit, define H_0=lambda*S+(1-lambda) and H_t=lambda*S+(1-lambda)*F_t for t>=1.",
+      "validity": "E[H_0]<=1 because E[S]<=1. Conditional on D, H_t is a nonnegative supermartingale over the fresh audit because S is constant and F_t is a conditional e-process. Therefore the two-stage process starting before D is an e-process and P(sup_t H_t >= 1/alpha)<=alpha.",
+      "cost_property": "If H_0 already exceeds 1/alpha, commit without fresh audit; otherwise collect fresh audit sequentially and stop on crossing or budget exhaustion. This gives an audit-on-demand mechanism without a data-dependent full-alpha branch switch.",
+      "learned_lambda": "lambda may itself be selected using disjoint prior-building/meta-simulation data Z; conditional on Z it is fixed, so the same validity proof applies.",
+      "scope_guard": "Requires fresh audit independence/conditional validity for the selected candidate and a global null over selectable candidates. It does not by itself provide selective effect estimation after rejection."
+    }
+  },
+  "worker_local_full_loop_simulator": {
+    "purpose": "Stress-test selection correction and fresh-audit designs in a stylized validation-dependent proposal loop; not a claim about any deployed agent.",
+    "seed_family": "20260826",
+    "runs": "Typically 60k-80k Monte Carlo trajectories per reported N/condition; 50 repeats for prior-learning sample-size summaries.",
+    "proposal_loop": {
+      "T_max": 50,
+      "stop_regime_meta_weights": {
+        "fast": 0.45,
+        "medium": 0.35,
+        "slow": 0.15,
+        "out_of_family": 0.05
+      },
+      "stop_hazards": {
+        "fast": 0.18,
+        "medium": 0.08,
+        "slow": 0.03,
+        "out_of_family": 0.01
+      },
+      "feedback": "One bit after each proposal beyond the first: 1 iff that candidate's reused-dev fixed-horizon paired-sign e-value is a new record.",
+      "validation_dependent_generation_alternative": "At proposal t, genuine-good probability is min(0.02+0.10*r_history,0.45), where r_history is the number of previous record-improvement bits. Genuine-good candidates have discordant win probability q=.75; all other candidates q=.5.",
+      "null": "All selectable candidates have discordant win probability q=.5 regardless of history.",
+      "paired_sign_evalue": "Per independent task: concordant factor 1 with probability 1-rho, discordant candidate win factor 1.5, discordant incumbent win factor 0.5; rho=.4. Reused-dev selection uses final fixed-horizon e-values to isolate cross-candidate adaptivity; fresh-audit comparisons below use the actual running fresh e-process for optional stopping.",
+      "selected_candidate": "Highest reused-dev final e-value among proposals seen before stop. This is deliberately selection-biased under the null."
+    },
+    "disjoint_prior_learning": {
+      "model_components": "flat fallback plus fast/medium/slow transcript models from the previous checkpoint; final learned prior reserves at least 0.10 mass for flat by mixing 0.10*flat + 0.90*EM-fit.",
+      "heldout_mean_core_code_bits": {
+        "equal_mix4": 12.2224,
+        "large_sample_oracle_with_flat_floor": 12.1018,
+        "learned_M20_mean": 12.1584,
+        "learned_M20_sd": 0.0585,
+        "learned_M50_mean": 12.1241,
+        "learned_M50_sd": 0.0347,
+        "learned_M200_mean": 12.1083,
+        "learned_M200_sd": 0.0146,
+        "learned_M1000_mean": 12.1024,
+        "learned_M1000_sd": 0.0053
+      },
+      "oracle_weights_approx": {
+        "flat": 0.1573,
+        "fast": 0.000002,
+        "medium": 0.7087,
+        "slow": 0.134
+      },
+      "interpretation": "Under this particular simulated loop, disjoint meta-data recovers nearly all of the available code-length gain by about M=200, but the absolute gain over equal mix4 is only ~0.12 bit. Prior learning is validity-safe under the independence condition; whether it is worthwhile is an empirical utility question."
+    },
+    "null_false_commit_rates_fixed_dev_selection": {
+      "N20": {
+        "naive_reuse": 0.02369,
+        "learned_weighted_reuse": 0.0,
+        "fresh_anytime": 0.00293
+      },
+      "N50": {
+        "naive_reuse": 0.08924,
+        "learned_weighted_reuse": 0.00004,
+        "fresh_anytime": 0.02165
+      },
+      "N100": {
+        "naive_reuse": 0.0667,
+        "learned_weighted_reuse": 0.00018,
+        "fresh_anytime": 0.03515
+      },
+      "N200": {
+        "naive_reuse": 0.01945,
+        "learned_weighted_reuse": 0.00011,
+        "fresh_anytime": 0.04115
+      }
+    },
+    "alternative_true_commit_rates": {
+      "N20": {
+        "naive_reuse": 0.11774,
+        "learned_weighted_reuse": 0.0,
+        "fresh_anytime": 0.02615
+      },
+      "N50": {
+        "naive_reuse": 0.36203,
+        "learned_weighted_reuse": 0.00043,
+        "fresh_anytime": 0.23715
+      },
+      "N100": {
+        "naive_reuse": 0.44865,
+        "learned_weighted_reuse": 0.01154,
+        "fresh_anytime": 0.40725
+      },
+      "N200": {
+        "naive_reuse": 0.47956,
+        "learned_weighted_reuse": 0.15791,
+        "fresh_anytime": 0.4766
+      }
+    },
+    "fixed_convex_eprocess_audit_cost_result": {
+      "disjoint_tuning": "A grid over lambda was tuned only on separate simulated meta-runs, not the reported evaluation trajectories. With a utility that strongly penalized false/harmful commits, lambda=0 was selected for N<=100 and lambda=.2 for N=200.",
+      "N200_fresh_only": {
+        "true_commit": 0.4766,
+        "false_commit": 0.02065,
+        "mean_fresh_audit_tasks": 129.29,
+        "t0_commit": 0.0
+      },
+      "N200_lambda_0_2": {
+        "true_commit": 0.47828,
+        "false_commit": 0.01693,
+        "mean_fresh_audit_tasks": 123.96,
+        "t0_commit": 0.10657
+      },
+      "interpretation": "At N=200, a small independently tuned reuse contribution reduced mean fresh-audit work by ~5.3 tasks (~4.1%), slightly increased true commits, and lowered false commits in this simulation. At N<=100 the tuned lambda collapsed to zero: the transcript complexity penalty made reuse evidence too weak to help. This is a finite-simulation utility result, not a theorem that lambda=.2 is optimal elsewhere."
+    },
+    "measurement_warnings": [
+      "Naive same-dev acceptance can be anti-conservative after adaptive candidate selection even when every fixed candidate e-value is valid; the N50 null false-commit rate was ~8.9% in this stylized loop.",
+      "Selection-corrected reuse can become extremely conservative at short horizons because transcript complexity raises the threshold; this is a power cost, not a validity failure.",
+      "Fresh-audit and reuse evidence should not be joined by an uncorrected validation-dependent hard switch with full alpha in both branches.",
+      "The simulator uses fixed-horizon reused-dev candidate e-values and independent task outcomes conditional on candidate class; candidate correlations, task heterogeneity, and within-candidate dev optional stopping remain future stress tests."
+    ]
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-disjoint-prior-learning-v1",
+      "mechanism": "Fit transcript-mixture weights/codebook parameters on disjoint prior-building meta-data, freeze them, then use the learned prior in transcript-weighted e-certificates.",
+      "evidence": "Direct conditional weighted-Ville derivation plus worker-local heldout coding simulation; PAC-Bayes split-prior literature is supporting precedent.",
+      "scope_guard": "No current-validation leakage into prior fitting. If meta-data overlap or are adaptively chosen using current validation, another correction is required."
+    },
+    {
+      "candidate_id": "eval-g1-selected-global-evalue-v1",
+      "mechanism": "Represent adaptive selection correction as the single e-value S=pi(U)E_U, rather than only as a moving threshold.",
+      "evidence": "Direct expectation inequality over counterfactual transcript opportunities.",
+      "scope_guard": "Requires fixed-u e-value validity and pi independent of current validation."
+    },
+    {
+      "candidate_id": "eval-g1-hard-switch-alpha-leak-v1",
+      "mechanism": "Treat a data-dependent reuse-vs-fresh branch choice as a multiple-testing object. Full alpha in both branches can reach 2alpha-alpha^2 in a simple counterexample.",
+      "evidence": "Worker-local exact probability construction.",
+      "scope_guard": "Does not say every practical switch inflates error; it rejects the unconditional claim that such switching is automatically level-alpha."
+    },
+    {
+      "candidate_id": "eval-g1-convex-fresh-reuse-eprocess-v1",
+      "mechanism": "Combine selected transcript-weighted reuse e-value S with an independent fresh audit e-process F_t using fixed/disjoint-learned lambda: H_t=lambda S+(1-lambda)F_t; collect audit only until H crosses or the audit budget ends.",
+      "evidence": "Worker-local two-stage supermartingale derivation plus full-loop simulation showing a modest N=200 audit-cost gain at lambda=.2.",
+      "scope_guard": "Fresh audit must be conditionally valid/independent after candidate freeze; lambda cannot be tuned on the same current validation path without an additional argument."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'a hard complexity-based switch can use alpha=.05 for reuse and alpha=.05 for fresh because only one branch executes.' Selection of the branch can itself couple to rejection risk.",
+    "Rejected: 'learning a better transcript prior from any historical-looking data is free.' It is free only under a defensible independence/conditioning boundary or another theorem controlling leakage.",
+    "Narrowed: 'nonuniform prior learning will materially restore short-horizon power.' In the full-loop simulation the learned prior saved only ~0.12 bit on average versus equal mix4 and weighted reuse remained almost powerless below 100 tasks.",
+    "Narrowed: 'combining reuse and fresh evidence always saves audit.' Independently tuned lambda was zero at N<=100 in the reported simulator; useful blending appeared only at N=200 under the chosen meta-distribution."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Derive or locate a safe complexity-dependent e-merging/allocation rule that permits lambda or fresh-audit allocation to depend on the current transcript complexity without paying a crude alpha split; compare to fixed-lambda convex e-process and alpha-spent hard switching."
+    },
+    {
+      "priority": 2,
+      "action": "Stress the full adaptive loop across q in {0.60,0.65,0.70,0.75,0.80}, discordance in {0.2,0.4,0.6}, fresh-audit budgets 20-200, and learned-prior sample sizes 20-1000; report true commit, harmful/false commit, unresolved rate, and audit tasks."
+    },
+    {
+      "priority": 3,
+      "action": "Replace reused-dev final e-values with actual within-candidate anytime PACE paths while retaining cross-candidate transcript selection; verify that the selected-global-evalue construction remains valid when each E_u is a supremum/e-process certificate."
+    },
+    {
+      "priority": 4,
+      "action": "Introduce shared task difficulty and cross-candidate correlated outcomes on the reused dev set, plus task-cluster dependence, to test power/robustness of transcript correction without changing the exact fixed-u validity assumptions."
+    },
+    {
+      "priority": 5,
+      "action": "Compare disjoint learned mixture priors against validation-independent language-model/prefix priors and exact behavior-equivalence aggregation; measure bits saved per added prior-building sample and sensitivity to meta-distribution shift."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Search e-value/e-process merging literature for conditions under which current-data-dependent weights are safe, then derive a complexity-adaptive fresh/reuse combiner or prove a lower-bound/necessity of extra spending; in parallel run the q/rho/audit-budget grid for the fixed-lambda construction."
+}
