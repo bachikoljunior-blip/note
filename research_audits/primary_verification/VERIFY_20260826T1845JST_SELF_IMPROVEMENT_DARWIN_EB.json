@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-26T18:45:33+09:00",
+  "generation": "clean_g1",
+  "candidate": "self_improvement/SIG-DARWIN-EB-TIME-UNIFORM-PER-TEST-GATE",
+  "source_qualified_candidate": {
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-26T1703_JST_sequential_gate_production_boundary.md",
+    "source_artifact_blob": "c542a6cef5ab012736548e93321d923bb2671f76",
+    "source_local_candidate_id": "SIG-DARWIN-EB-TIME-UNIFORM-PER-TEST-GATE",
+    "active_wave_id": "clean-g1-wave-c14-20260826T1756JST-ca8bd10f",
+    "active_wave_blob": "595c6f83ed2f8954acce1ce3cc4397d779c7f3f8",
+    "active_wave_source_set_digest": "ca8bd10f2705bbc962ba90a8a56c8bcfd5fd1f5b9220741da7f2a5647c0c8af4"
+  },
+  "status": "primary_verified_with_per_test_scope_default_opt_in_and_cross_candidate_budget_gap",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "c9deb0606cc4268211be73920791879f23e059b2",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5,
+    "bootstrap_head_first": "c9deb0606cc4268211be73920791879f23e059b2",
+    "bootstrap_head_second": "c9deb0606cc4268211be73920791879f23e059b2"
+  },
+  "verification_question": "Does the current public Darwin v0.16 implementation actually provide a time-uniform, repeated-look-safe empirical-Bernstein promotion gate, and what does that establish or fail to establish for long-running self-improvement?",
+  "result": {
+    "public_source_pin": {
+      "repository": "studiomeyer-io/darwin-agents",
+      "commit": "feed2ec13ec2692c8bdf1f36dd2f60e90d303ade",
+      "package_version": "0.16.0"
+    },
+    "verified": [
+      "package.json at the pinned commit reports version 0.16.0.",
+      "CHANGELOG v0.15 explicitly records that the older Hoeffding per-look allocation was non-summable, both arms spent the full alpha, the mSPRT zero-variance shortcut could decide independently of configured alpha, and plug-in Welch variance was empirically anti-conservative under continuous peeking.",
+      "The repository's documented H0 mSPRT type-I rates at nominal alpha=0.05 are 0.059 through n=14, 0.064 through n=20, and 0.069 through n=30 under its coarse-judge simulation and per-observation peeking access pattern.",
+      "v0.15 replaces the Hoeffding schedule with a summable per-arm alpha-spending construction and splits the two-arm budget; the repository documents the resulting power cost, including structural inability to promote through 21 runs/arm and roughly 900 runs/arm for a 0.2 gap on [0,1].",
+      "v0.16 adds confidenceMethod='eb' and wires ebTwoSample through SafetyGate. The implementation source identifies it as a predictable plug-in empirical-Bernstein confidence sequence and the pinned test suite checks the imported supermartingale inequality on finite-law grids, continuous-peeking type-I behavior, an independent formula transcription, and fixed power points.",
+      "The pinned test/changelog decision points match the worker: constant 0.10 vs 0.95 first decisive at n=21/arm; sigma approximately 0.05 gap 0.30 near n=59; gap 0.20 near n=89; judge-noise sigma approximately 0.10 gap 0.10 near n=188. The corresponding Hoeffding comparison counts are 32, 359, 900, and 4216.",
+      "Waudby-Smith and Ramdas Theorem 2 is a primary statistical source for a predictable plug-in empirical-Bernstein time-uniform confidence sequence for bounded adapted observations with predictable bets. This supports the underlying one-arm confidence-sequence ingredient; Darwin's two-arm implementation uses separate arm intervals with error-budget allocation rather than a new theorem specific to prompt evolution.",
+      "The strong confidence path is opt-in. DEFAULT_SAFETY contains only minDataPoints, maxRegression, and failureRollbackThreshold, and README states the zero-config default is a margin/effect-size heuristic with no calibrated alpha. buildEvolutionLoop only merges agent.evolution.safety over that default when explicitly configured.",
+      "The automatic loop can finish one A/B test, activate or retain a winner, clear the active test, and later generate another challenger. In the inspected current public types/SafetyGate/build-loop/DarwinLoop path, no cumulative alpha/e-value/wealth ledger spanning distinct successive challengers was located. This is a scoped code-inspection gap, not proof that no external deployment wrapper implements one.",
+      "README's reported internal production period is Mar-Jun 2026 (419 runs across 19 agents), including writer 6.89 to 7.12 and marketing 7.64 to 7.92 after evolved-prompt adoption. Those observations predate the repository's Aug 12 v0.15 statistical correction and Aug 15 v0.16 EB release, so they cannot validate the EB gate empirically."
+    ],
+    "material_scope_clarifications": [
+      "The evidence supports within-candidate repeated-look control for the opt-in EB path, not a run-wide familywise guarantee over an adaptive sequence of newly generated challengers.",
+      "Repository tests provide implementation checks and seeded empirical calibration probes, not an independent external replication of Darwin's production self-improvement outcomes.",
+      "The theoretical source establishes the confidence-sequence ingredient for bounded observations; using it inside this particular two-arm prompt-evolution controller inherits implementation assumptions such as correct score bounds and chronological sample order.",
+      "The README's historical fleet gains must not be cited as evidence that v0.16 EB improves utility or controls long-horizon false promotions because the gains occurred before that method existed.",
+      "Failure to locate a global cross-candidate budget in the inspected public path must remain phrased as 'not found in inspected current path', not 'Darwin has none anywhere'."
+    ],
+    "downstream_use": "Treat Darwin v0.16 as a concrete public mechanism example for an opt-in, within-A/B-test time-uniform gate under repeated looks. Do not treat it as evidence for globally safe adaptive self-improvement unless a cross-candidate error/query budget and long-run executed chronology are separately demonstrated.",
+    "unresolved": [
+      "Audit remaining CLI/state/metrics/release surfaces for any cumulative cross-candidate alpha/e-value/risk budget not present in the inspected SafetyGate/DarwinLoop/build-loop/types path.",
+      "Find an actually executed long-running deployment that enabled confidenceMethod='eb' and publishes proposal chronology plus acceptance/rejection outcomes.",
+      "Find or construct evidence for a persistent self-improvement system combining per-candidate time-uniform acceptance, a global proposal/round error budget, and an untouched outer test."
+    ]
+  },
+  "primary_sources": [
+    "https://github.com/studiomeyer-io/darwin-agents/tree/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/CHANGELOG.md",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/src/evolution/sequential.ts",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/src/evolution/safety.ts",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/src/evolution/build-loop.ts",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/src/evolution/loop.ts",
+    "https://github.com/studiomeyer-io/darwin-agents/blob/feed2ec13ec2692c8bdf1f36dd2f60e90d303ade/tests/sequential-eb.test.ts",
+    "https://doi.org/10.1093/jrsssb/qkad009",
+    "https://arxiv.org/abs/2010.09686"
+  ],
+  "scope_guard": "Preserve three distinct layers: within-test repeated-look validity, across-candidate adaptive multiplicity, and untouched outer evaluation. This audit verifies the first for Darwin's opt-in EB path and identifies the second/third as unresolved in the inspected long-running public path; do not collapse them into a single 'statistically safe self-improvement' claim.",
+  "material_update": "The worker's core Darwin claim is supported and sharpened: v0.16 really contains an opt-in EB confidence-sequence gate with public code/tests for repeated looks, but the normal zero-config path is not statistically gated, reported production gains predate EB, and no run-wide budget over successive challengers was located in the inspected controller path.",
+  "exact_next_action": "Continue on the same C14 self_improvement source only far enough to inspect Darwin CLI/state/metrics persistence for a separate cumulative cross-candidate risk budget. If absent after that bounded pass, rotate to another C14 namespace with a source-qualified quantitative or authority-boundary claim that has inspectable primary code/raw artifacts; avoid spending the next run merely rechecking per-test EB mechanics."
+}
