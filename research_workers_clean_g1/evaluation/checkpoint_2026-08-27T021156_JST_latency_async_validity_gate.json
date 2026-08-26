@@ -1,0 +1,334 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T02:11:56+09:00",
+  "invocation_started_at": "2026-08-27T02:01:33+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T012135_JST_global_wall_round_certificate_v2.json",
+  "control": {
+    "frozen_main_sha": "fe9423b5c8e8af051eb6d0ed61cc527e22b844cf",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "head_changed_during_presemantic_bootstrap": true,
+    "presemantic_head_sequence": [
+      "6eccf3b18ec499e972ab97221c4bdd10055fd5e4",
+      "fe9423b5c8e8af051eb6d0ed61cc527e22b844cf"
+    ],
+    "frozen_after_second_sha_only_readback": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "url": "https://www.frontiersin.org/journals/computer-science/articles/10.3389/fcomp.2026.1873627/full",
+      "observed_claim": "Azure LLM traces: output-length coefficient of variation 3.30 for code and 1.50 for conversation; long-tailed inputs and bursty arrivals also reported.",
+      "use": "sets two synthetic rollout-latency tail-shape stress levels only; not treated as a latency calibration"
+    },
+    {
+      "url": "https://www.microsoft.com/en-us/research/publication/beyond-prediction-tail-aware-scheduling-for-llm-inference/",
+      "observed_claim": "LLM serving has extreme length variability; P90-P99 tail latency is decision-relevant and distribution-aware scheduling reduced P99 TTLT by up to 35-50% in the reported workloads.",
+      "use": "supports evaluating tail rather than mean and testing scheduler sensitivity"
+    },
+    {
+      "url": "https://www.usenix.org/conference/osdi24/presentation/agrawal",
+      "observed_claim": "Sarathi-Serve identifies batching/prefill-decode interference as a throughput-latency tradeoff and uses stall-free schedules to add requests without pausing ongoing decodes.",
+      "use": "supports treating synchronous batch barriers versus refill scheduling as a real systems design dimension"
+    },
+    {
+      "url": "https://research.google/pubs/the-tail-at-scale/",
+      "observed_claim": "Rare stragglers can dominate fan-out latency; hedged/tied requests and cancellation can reduce tail latency with modest extra work in the paper's Google examples.",
+      "use": "motivates explicit straggler and cancellation sensitivity; synthetic 1% x10 stress is not an empirical estimate from this source"
+    }
+  ],
+  "tested_latency_model": {
+    "purpose": "source-explicit stress surrogate, not calibrated deployment prediction",
+    "baseline_policy": "five (r=20,k=16) candidate audits followed by fifteen (r=50,k=36) audits; rho_discordance=0.20; candidate stages serial",
+    "rollout_time_marginal": "lognormal with median normalized to 1 and CV matching source-reported output-length CV",
+    "candidate_incumbent_log_time_correlation": 0.5,
+    "pair_completion": "max(T_candidate,T_incumbent)",
+    "scenarios": {
+      "conversation_like": {
+        "cv": 1.5,
+        "straggler_probability": 0.0
+      },
+      "code_like": {
+        "cv": 3.3,
+        "straggler_probability": 0.0
+      },
+      "code_like_plus_straggler_stress": {
+        "cv": 3.3,
+        "straggler_probability": 0.01,
+        "straggler_multiplier": 10.0,
+        "calibrated": false
+      }
+    },
+    "synchronous": "launch b pairs; wait for whole batch; final partial batch rounded up to b and paid in full",
+    "asynchronous_cancel": "keep b pair jobs in flight; refill a pair slot immediately when its pair completes; once the statistical stopping boundary is reached, stop launches and cancel in-flight pairs",
+    "async_validity_assumption": "conditional on prelaunch covariates and past, pair completion time/order is ignorable for the paired sign; equivalently null sign symmetry remains valid after conditioning on completion-time filtration",
+    "monte_carlo": {
+      "stage_samples_per_action": 20000,
+      "full_stream_resamples": 100000,
+      "latency_seeded": true
+    }
+  },
+  "latency_results": {
+    "units": "wall in normalized median-rollout-time units; occupancy is sum of candidate+incumbent runtime in the same normalized units",
+    "conversation_like": [
+      {
+        "pair_concurrency": 4,
+        "sync_wall_q95": 3983.717574,
+        "async_cancel_wall_q95": 1745.99007,
+        "wall_q95_reduction_pct": 56.172,
+        "sync_paid_rollout_occupancy_q95": 10077.987306,
+        "async_cancel_consumed_occupancy_q95": 9929.230202,
+        "cancel_occupancy_reduction_pct": 1.476,
+        "async_if_cancellation_ineffective_full_obligation_q95": 10183.211226,
+        "full_obligation_vs_sync_pct": 1.044
+      },
+      {
+        "pair_concurrency": 8,
+        "sync_wall_q95": 2854.449713,
+        "async_cancel_wall_q95": 863.087019,
+        "wall_q95_reduction_pct": 69.763,
+        "sync_paid_rollout_occupancy_q95": 10221.567691,
+        "async_cancel_consumed_occupancy_q95": 9893.096741,
+        "cancel_occupancy_reduction_pct": 3.214,
+        "async_if_cancellation_ineffective_full_obligation_q95": 10479.671548,
+        "full_obligation_vs_sync_pct": 2.525
+      },
+      {
+        "pair_concurrency": 16,
+        "sync_wall_q95": 2022.006913,
+        "async_cancel_wall_q95": 423.714796,
+        "wall_q95_reduction_pct": 79.045,
+        "sync_paid_rollout_occupancy_q95": 10525.195047,
+        "async_cancel_consumed_occupancy_q95": 9840.838825,
+        "cancel_occupancy_reduction_pct": 6.502,
+        "async_if_cancellation_ineffective_full_obligation_q95": 11058.844244,
+        "full_obligation_vs_sync_pct": 5.07
+      },
+      {
+        "pair_concurrency": 32,
+        "sync_wall_q95": 1437.31726,
+        "async_cancel_wall_q95": 206.818906,
+        "wall_q95_reduction_pct": 85.611,
+        "sync_paid_rollout_occupancy_q95": 11116.113359,
+        "async_cancel_consumed_occupancy_q95": 9827.787699,
+        "cancel_occupancy_reduction_pct": 11.59,
+        "async_if_cancellation_ineffective_full_obligation_q95": 12222.075302,
+        "full_obligation_vs_sync_pct": 9.949
+      }
+    ],
+    "code_like_plus_straggler_stress": [
+      {
+        "pair_concurrency": 4,
+        "sync_wall_q95": 12847.642459,
+        "async_cancel_wall_q95": 3857.336693,
+        "wall_q95_reduction_pct": 69.976,
+        "sync_paid_rollout_occupancy_q95": 21752.192508,
+        "async_cancel_consumed_occupancy_q95": 19632.86586,
+        "cancel_occupancy_reduction_pct": 9.743,
+        "async_if_cancellation_ineffective_full_obligation_q95": 21965.696958,
+        "full_obligation_vs_sync_pct": 0.982
+      },
+      {
+        "pair_concurrency": 8,
+        "sync_wall_q95": 10657.86769,
+        "async_cancel_wall_q95": 1778.245348,
+        "wall_q95_reduction_pct": 83.315,
+        "sync_paid_rollout_occupancy_q95": 22063.506745,
+        "async_cancel_consumed_occupancy_q95": 18438.085072,
+        "cancel_occupancy_reduction_pct": 16.432,
+        "async_if_cancellation_ineffective_full_obligation_q95": 22603.469867,
+        "full_obligation_vs_sync_pct": 2.447
+      },
+      {
+        "pair_concurrency": 16,
+        "sync_wall_q95": 8807.495818,
+        "async_cancel_wall_q95": 799.284471,
+        "wall_q95_reduction_pct": 90.925,
+        "sync_paid_rollout_occupancy_q95": 22723.962251,
+        "async_cancel_consumed_occupancy_q95": 17002.438195,
+        "cancel_occupancy_reduction_pct": 25.178,
+        "async_if_cancellation_ineffective_full_obligation_q95": 23859.995489,
+        "full_obligation_vs_sync_pct": 4.999
+      },
+      {
+        "pair_concurrency": 32,
+        "sync_wall_q95": 7341.1895,
+        "async_cancel_wall_q95": 348.70663,
+        "wall_q95_reduction_pct": 95.25,
+        "sync_paid_rollout_occupancy_q95": 23967.031916,
+        "async_cancel_consumed_occupancy_q95": 15370.038748,
+        "cancel_occupancy_reduction_pct": 35.87,
+        "async_if_cancellation_ineffective_full_obligation_q95": 26383.313862,
+        "full_obligation_vs_sync_pct": 10.082
+      }
+    ],
+    "summary": [
+      "Under latency/sign ignorability, asynchronous refill+cancellation reduced q95 wall time by 56.2-85.6% in the conversation-like stress and 70.0-95.3% in the code-like+straggler stress versus synchronous full-batch barriers.",
+      "With effective cancellation, q95 consumed rollout occupancy also fell by 1.5-11.6% and 9.7-35.9%, respectively.",
+      "If cancellation does not actually release paid work, async full-obligation q95 occupancy was about 1.0-10.1% above synchronous while retaining the wall-time gain.",
+      "These are stress-model results, not measured production speedups."
+    ]
+  },
+  "resource_price_tradeoff": {
+    "objective": "J = q95_wall + lambda * q95_full_obligation_rollout_occupancy for asynchronous refill when cancellation is ineffective",
+    "conversation_like_breakpoints": [
+      {
+        "lambda_lt": 0.18646,
+        "preferred_b": 32
+      },
+      {
+        "lambda_range": [
+          0.18646,
+          0.75862
+        ],
+        "preferred_b": 16
+      },
+      {
+        "lambda_range": [
+          0.75862,
+          2.97815
+        ],
+        "preferred_b": 8
+      },
+      {
+        "lambda_gt": 2.97815,
+        "preferred_b": 4
+      }
+    ],
+    "code_like_plus_straggler_breakpoints": [
+      {
+        "lambda_lt": 0.178566,
+        "preferred_b": 32
+      },
+      {
+        "lambda_range": [
+          0.178566,
+          0.779101
+        ],
+        "preferred_b": 16
+      },
+      {
+        "lambda_range": [
+          0.779101,
+          3.259924
+        ],
+        "preferred_b": 8
+      },
+      {
+        "lambda_gt": 3.259924,
+        "preferred_b": 4
+      }
+    ],
+    "scope": "lambda has units of wall-time penalty per rollout-occupancy unit; peak reserved concurrency price and queue interference are not included"
+  },
+  "completion_order_validity_stress": {
+    "construction": "all-null launch stream has marginal P(+|discordant)=P(-|discordant)=0.5 and rho=0.2, but exponential pair latency is multiplied by a sign-specific factor. Async consumes signs in completion order and stops/cancels at the exact-curtailment boundary.",
+    "exact_latency_independent_run_fwer": 0.04797259566965317,
+    "monte_carlo_per_action_per_cell": 250000,
+    "table": [
+      {
+        "plus_latency_multiplier": 0.9,
+        "minus_latency_multiplier": 1.1,
+        "b": 4,
+        "estimated_run_fwer": 0.0494053
+      },
+      {
+        "plus_latency_multiplier": 0.9,
+        "minus_latency_multiplier": 1.1,
+        "b": 8,
+        "estimated_run_fwer": 0.0529777
+      },
+      {
+        "plus_latency_multiplier": 0.9,
+        "minus_latency_multiplier": 1.1,
+        "b": 16,
+        "estimated_run_fwer": 0.0545315
+      },
+      {
+        "plus_latency_multiplier": 0.9,
+        "minus_latency_multiplier": 1.1,
+        "b": 32,
+        "estimated_run_fwer": 0.0674543
+      },
+      {
+        "plus_latency_multiplier": 0.8,
+        "minus_latency_multiplier": 1.2,
+        "b": 4,
+        "estimated_run_fwer": 0.0531947
+      },
+      {
+        "plus_latency_multiplier": 0.8,
+        "minus_latency_multiplier": 1.2,
+        "b": 8,
+        "estimated_run_fwer": 0.0575077
+      },
+      {
+        "plus_latency_multiplier": 0.8,
+        "minus_latency_multiplier": 1.2,
+        "b": 16,
+        "estimated_run_fwer": 0.0642373
+      },
+      {
+        "plus_latency_multiplier": 0.8,
+        "minus_latency_multiplier": 1.2,
+        "b": 32,
+        "estimated_run_fwer": 0.0925124
+      }
+    ],
+    "strong_b16_checks_from_500k_per_action": [
+      {
+        "plus_latency_multiplier": 0.5,
+        "minus_latency_multiplier": 1.5,
+        "estimated_run_fwer": 0.1092489
+      },
+      {
+        "plus_latency_multiplier": 0.5,
+        "minus_latency_multiplier": 2.0,
+        "estimated_run_fwer": 0.1436471
+      }
+    ],
+    "result": "Completion-order async is not automatically measurement-valid. Even though the launch-order marginal sign null is exactly symmetric, sign-dependent latency makes the observed completion-order sign stream selective; larger concurrency can amplify the distortion.",
+    "required_gate": "Before using completion-order refill/cancellation for a decision-critical paired sign test, establish conditional sign symmetry/latency ignorability or use a reveal/inclusion order fixed independently of completion latency."
+  },
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: statistical validity is automatically preserved when only the scheduler changes and the marginal launch-order sign null remains 50/50.",
+    "Rejected: cancellation is merely a systems optimization with no measurement consequence; if cancellation/inclusion depends on completion order and latency correlates with sign, FWER can exceed its certificate.",
+    "Narrowed: very large async wall gains are specific to the synthetic heavy-tail model and synchronous full-batch baseline, not a production performance claim.",
+    "Narrowed: effective cancellation occupancy dominance does not account for peak reserved GPU slots, queueing externalities, model-side batching interactions, or cancellation granularity."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Design a latency-safe scheduler that preassigns launch/reveal priority independently of outcomes and completion times, then quantify how much of the async wall gain survives head-of-line blocking; compare fixed launch-order reveal, random-priority reveal and bounded reorder-window variants."
+    },
+    {
+      "priority": 2,
+      "action": "Instrument or obtain actual paired candidate/incumbent rollout latency traces with task id, prelaunch covariates, completion times and paired outcome, then directly test conditional sign-latency dependence before deploying completion-order cancellation."
+    },
+    {
+      "priority": 3,
+      "action": "Add peak concurrency price, independent-side candidate/incumbent slot reuse, queue interference and cancellation latency to the wall/occupancy objective."
+    },
+    {
+      "priority": 4,
+      "action": "After the validity gate is resolved, rerun the full globally-certified action frontier rather than only the fixed five-(20,16)+fifteen-(50,36) baseline."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct a precommitted reveal-order asynchronous scheduler whose statistical inclusion order is independent of completion latency, derive its null-validity argument, and simulate q95 wall/occupancy under the same CV=1.5 and CV=3.3+straggler stress models to measure the price of validity relative to completion-order async."
+}
