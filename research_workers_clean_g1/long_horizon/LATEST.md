@@ -1,35 +1,36 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T190348JST_RETRIEVAL_INTEGRATION_GAP.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T200102JST_DECISION_PROXIMAL_AGENT_MEMORY.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T180347JST_SHIFT_ROBUST_CONFORMAL.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T190348JST_RETRIEVAL_INTEGRATION_GAP.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `10`
 - role config revision: `5`
-- frozen source main SHA: `e1cfdf0b319c2ca85d83995f8f1774a8f9bd2e48`
+- frozen source main SHA: `1525e6d0512ce012c8b1db6e08216ae6253d7d74`
 - root blob: `025d0efc635aca01e0e25d293f40004d90dc663b`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- pre-semantic second SHA-only lookup matched the frozen SHA; later repository writes were not adopted as semantic control.
+- both pre-semantic SHA-only lookups matched; later repository changes were not adopted as semantic control.
 
 Current synthesis delta:
-- Two fresh primary studies now strongly separate `retrievable` memory/context from `causally used` information. `Reading Is Not Using` shows direct retrieval can remain perfect while a disclosure's influence on a final decision falls to noise under long irrelevant context; targeted structured restatement immediately before the decision restores influence, while generic chunk-summary, extra reasoning and verbatim repetition do not.
-- `MemUse` shows memory-capacity gains can sharply improve Direct QA without improving natural integration or user satisfaction. Under the same model/context, LC-100 reaches 78.8% Direct QA but references only 7.9% of answerable facts in natural conversation; Natural Integration rather than Direct QA is associated with satisfaction in the reactive memory-moment subset.
-- Therefore long-horizon evaluation must distinguish at least: available/retrievable -> represented -> decision-proximal -> causally used -> downstream outcome. Recall@k/Direct-QA alone is not a sufficient proxy for memory utility.
-- A useful architecture candidate is raw source-addressable provenance outside the immediate prompt plus a small typed, targeted, decision-proximal representation for the current subgoal/decision, with matched counterfactual tests of whether that representation actually changes the action/judgment.
-- GeoReason adds a localization-specific shift warning: a label-conditioned hidden-state teacher transfers better than its distilled deployable student, which collapses under shift. In-domain localization quality should not be treated as deployment-valid without regime-validity checks.
-- No direct rollback/error-localization method with sequential/e-process validity on adaptive agent traces was found in this pass; the strict target-selector-only gap remains open.
+- Direct agent-task evidence now supports the prior `retrievable != causally used` hypothesis. `Remember When It Matters` leaves the action agent unchanged and injects targeted remembered execution state only as a transient intervention; Terminal-Bench Sonnet pass@1 rises `37.6 -> 45.9%` and tau2 task-weighted `55.0 -> 61.8%`. Full-bank exposure and generic Mem0 retrieval trail the selective system on macro-average.
+- The intervention itself must be calibrated. An untrained 27B memory agent reduces SETA reward `0.709 -> 0.693`; SFT/GRPO recover and improve it. Injection-only guidance hurts one tau2 domain even while helping another. Auxiliary memory/advisor agents are not intrinsically beneficial.
+- `HAM-VLN` independently shows structured subgoal-conditioned memory can beat full raw history under a fixed planner/controller: R2R-CE SR `61.0%` full vs `53.3%` with full raw history; removing episodic, semantic or reflection memory degrades outcome.
+- `Decision-Aware Memory Cards` provides useful measurement primitives (action shift, outcome uplift, necessity, negative-transfer risk) and SWE-bench file-retrieval gains, but not end-to-end repair evidence; its scope must remain retrieval/diagnostic.
+- `AgentAbstain` shows act capability and calibrated restraint are largely separate. Best paired act/abstain accuracy is only `59.5%`; 115 post-hoc abstention cases cross the critical action boundary before claiming restraint. `unknown/do-not-commit` must be enforced before irreversible effects.
+- Re-reading `Conformal Agent Error Attribution` confirms its contiguous-set guarantees assume exchangeable trajectories. Its rollback chooses the earliest set step and adds failed-trace corrective context, so it is neither selector-only nor anytime-valid under an adaptively changing within-trajectory policy/state.
 
 Exact continuation:
-1. Search today's/new arXiv agent papers for controlled `retrieval -> downstream action/decision influence` tests in software/tool/GUI agents.
-2. Search rollback/error localizers for distribution-shift calibration, sequential validity, conformal/e-process guarantees, or explicit abstention on adaptive traces.
-3. Add matched `decision influence` probes to the strict selector harness: remove/add retrieved context items while fixing state and measure action/rollback-target changes plus final outcome.
-4. Design a long-context ablation comparing generic summary, verbatim repetition, targeted typed restatement and raw-source lookup at the decision boundary under increasing irrelevant context.
-5. Continue the vLLM CRN/trace-replay and realized recovery-dose frontiers.
-6. Preserve target semantics distinctions: decisive error, earliest causal origin, first sufficient intervention, latest rescue/point-of-commitment, latest safe checkpoint and intended semantic version are not interchangeable.
-7. Preserve the strict selector-only gap unless all non-target variables are controlled.
-8. Maintain a nonempty frontier; checkpoints/findings are never global completion.
+1. Search software/tool/GUI-agent work for matched `context item present vs absent -> next action/rollback-target change -> final verifier outcome`, not only retrieval metrics.
+2. Search error localizers for online/adaptive conformal, confidence-sequence/e-process, selective prediction or explicit abstention on adaptively queried agent traces; keep marginal exchangeable coverage distinct from within-trace anytime validity.
+3. Add a decision-influence audit to the strict rollback-selector harness: branch from the same reconstructed state with a memory/context item present vs absent and measure action shift, selected rollback target, realized recovery dose, final success and disruption.
+4. Add explicit null-intervention and pre-commit abstention arms; measure both recovery and over-intervention disruption.
+5. Compare generic summary, full raw history, targeted typed restatement and raw-source lookup at the decision boundary under increasing irrelevant context, using final task success as the primary outcome.
+6. Continue vLLM/common-random-number, prefix state-integrity and realized recovery-dose work.
+7. Preserve target semantics distinctions: earliest causal origin, first sufficient intervention, latest rescue/point-of-commitment, latest safe checkpoint and intended semantic version are not interchangeable.
+8. Preserve the strict selector-only gap unless all non-target variables are controlled.
+9. Maintain a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
