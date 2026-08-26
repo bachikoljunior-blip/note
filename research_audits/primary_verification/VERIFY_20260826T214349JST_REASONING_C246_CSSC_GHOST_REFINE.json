@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "audit_time": "2026-08-26T21:43:49.370838+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "306b5136d10d6f3e72ea61b6b401b78508542fc5",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_candidate": {
+    "namespace": "reasoning",
+    "source_artifact_path": "research_workers_clean_g1/reasoning/2026-08-26T1701JST-followup4.md",
+    "source_artifact_blob": "fc02173f2d8631b075fc99b4b6eec268c0330529",
+    "candidate_id": "C246",
+    "primary_repository": "anetigone/cssc",
+    "primary_commit": "f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8"
+  },
+  "primary_code_evidence": [
+    {"path":"agent/search/structured/proposal/core.py","blob":"455e7f4c0dc848f82b4ed45e7b9abd5ec0974035"},
+    {"path":"agent/search/structured/controller/runtime.py","blob":"9644c53d026a028658121b7fa29953ecd0e80bba"},
+    {"path":"agent/search/structured/reducer/structural.py","blob":"12e09811738080cab4416e51cfd6474a349df61d"},
+    {"path":"agent/proof_system/workspace/action.py","blob":"218f2d0d25b08903691d1bdb9de0af3697661985"}
+  ],
+  "finding": {
+    "status": "primary_code_verified_source_reachability_with_executor_scope",
+    "summary": "C246's source-level characterization is supported at the pinned CSSC commit. A syntactically valid REFINE_ARGUMENT payload can name step/alignment IDs absent from the live branch, pass proposal validation after controller finalization, and then be returned as an exact no-op by the structural reducer when none of those IDs hits live state.",
+    "details": [
+      "StructuredActionProposal.validate() routes REFINE_ARGUMENT payload validation through _argument_payload_errors(). That function checks only each AlignmentSpec via _alignment_errors(); it does not compare payload step IDs/alignment IDs to live branch state, require payload step/alignment coverage, or compare payload IDs to SearchAction.target_step_ids.",
+      "SearchAction.validate() explicitly states that target_step_ids are not cross-checked against an actual ArgumentGraph; live cross-validation is delegated to the structured executor.",
+      "The controller's _finalize_kind() reconstructs a new SearchAction with kind, target_branch_id, allowed_mutations and rationale but does not pass target_step_ids, so the dataclass default () replaces any proposal pins. This verifies the target-step erasure premise at the exact pinned commit.",
+      "apply_argument() for REFINE_ARGUMENT computes whether any refined step ID hits existing branch.argument.steps or any refined alignment ID hits existing branch.alignment. If neither hits, it returns the exact input workspace without successor/version advance."
+    ],
+    "scope_guard": "This is a static primary-code reachability verification at commit f40a3d3a. It does not by itself demonstrate frequency in live model-generated runs, end-to-end exploit impact, or the proposed C247-C253 journal design. C247-C253 are design proposals/future contracts, not verified current implementation behavior."
+  },
+  "downstream_guidance": {
+    "eligible_correction": true,
+    "apply_only_to_source_artifact_blob": "fc02173f2d8631b075fc99b4b6eec268c0330529",
+    "C246_evidence_status": "primary_code_verified_source_reachability",
+    "C247_C253_evidence_status": "proposal_or_future_contract_not_current_primary_implementation",
+    "do_not_infer": [
+      "Do not count C247-C253 as implemented crash-safe journal features.",
+      "Do not infer that every REFINE proposal no-ops; only the no-live-hit path does.",
+      "Do not infer live incidence or downstream proof-quality effect from static reachability alone."
+    ]
+  }
+}
