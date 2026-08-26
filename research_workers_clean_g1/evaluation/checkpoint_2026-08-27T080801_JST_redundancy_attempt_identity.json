@@ -1,0 +1,114 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T08:08:01+09:00",
+  "invocation_started_at": "2026-08-27T08:01:29+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T070316_JST_sidelevel_async_invariance.json",
+  "control": {
+    "frozen_main_sha": "09fde64cf76bba5863690b8bc1153ef799f29b07",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": ["09fde64cf76bba5863690b8bc1153ef799f29b07","09fde64cf76bba5863690b8bc1153ef799f29b07"]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {"title":"Anytime-Valid Inference Under Outcome Delay: A Design-Based Approach","date":"2026-03-26","url":"https://arxiv.org/abs/2603.25971","relevance":"Primary-source support that outcome value and outcome timing can be coupled and that validity depends on the filtration; used as the timing-selection guard, not as proof of the worker-local redundancy derivations."},
+    {"title":"Reproducibility - vLLM","date":"2025-11-23","url":"https://docs.vllm.ai/en/v0.15.0/usage/reproducibility/","relevance":"Official documentation: reproducibility is not guaranteed by default; offline deterministic scheduling or online batch invariance is needed, and guarantees are limited to the same hardware and vLLM version."},
+    {"title":"Reproducibility - PyTorch 2.13","date":"2026-05-14","url":"https://docs.pytorch.org/docs/stable/notes/randomness.html","relevance":"Official documentation that identical seeds do not guarantee complete reproducibility across releases/platforms and that deterministic algorithms can have performance cost."},
+    {"title":"Request Hedging - gRPC","date":"2023-10-03","url":"https://grpc.io/docs/guides/request-hedging/","relevance":"Systems reference for bounded hedged requests, delayed duplicate launch and cancellation; statistical safety in stochastic evaluation is not supplied by this systems contract."},
+    {"title":"The Tail at Scale","date":"2013-02-01","url":"https://research.google/pubs/the-tail-at-scale/","relevance":"Primary systems reference showing first-response hedging can sharply reduce tail latency with modest extra request load when replicas are semantically interchangeable."}
+  ],
+  "attempt_identity_semantics": {
+    "logical_attempt": "A statistical attempt is frozen by task/prompt/environment, candidate/incumbent versions, comparison rule, and the complete stochastic identity needed to define one logical output (ideally an explicit random tape/RNG stream rather than only a seed). Physical replicas are identity-preserving only if the execution contract guarantees the same logical output under that frozen identity.",
+    "same_seed_is_not_sufficient": "A seed alone is not treated as proof of identity-preserving replication. Runtime scheduling, hardware, library/version and nondeterministic kernels may change outputs. If deterministic equivalence is not guaranteed, replicas are distinct stochastic attempts for inference.",
+    "safe_first_completion_case": "First-completion hedging is statistically selection-neutral when every physical replica is guaranteed to realize the same frozen logical outcome. Completion order then selects only a physical realization, not a statistical outcome.",
+    "unsafe_first_completion_case": "If replicas are independent or merely potentially different stochastic outputs, fastest/first/best selection can change the logical outcome distribution whenever latency is associated with outcome."
+  },
+  "q_preserving_aggregation_result": {
+    "statement": "For m iid Bernoulli(q) stochastic attempts and a permutation-invariant randomized aggregation with a_k = P(output=+ | K=k plus outcomes), requiring P(output=+)=q for every q in [0,1] forces a_k=k/m by uniqueness of the Bernstein-polynomial representation of q. This is distributionally equivalent to selecting one replica uniformly at random independently of values.",
+    "implication": "Within this symmetric count-based class, preserving the original single-attempt estimand for all q gives no statistical reason to launch duplicates: preselecting one uniform replica implements the same output law and has the same latency distribution as one attempt. Tail gains from stochastic duplicates therefore require changing the estimand/aggregation, adding a timing-aware inferential model, or establishing identity-preserving replication.",
+    "scope": "This is a worker-local derivation for iid Bernoulli attempts and permutation-invariant count-based aggregation required to preserve every q. It is not a universal impossibility theorem for arbitrary structured outcomes, non-iid replicas or conditional timing models."
+  },
+  "majority3_safe_aggregate": {
+    "definition": "Freeze three independent stochastic paired attempts; logical sign is their majority. Completion order may be used only to stop/cancel once the predetermined majority is mathematically determined; it may not change which attempts belong to the aggregate.",
+    "null_condition": "Under conditional global sign-flip symmetry (in particular iid fair signs), the majority sign remains fair even if completion times are sign-associated.",
+    "estimand_change": "For iid attempt-level candidate-win probability q, logical q_3 = 3q^2 - 2q^3. Thus majority-of-3 evaluates an ensemble/replicated policy, not the original single-attempt policy.",
+    "latency_result": "If attempt latency is iid and independent of sign with CDF F, majority decision is available by time t with probability F(t)^3 + 0.5*3F(t)^2(1-F(t)) = 1.5F(t)^2 - 0.5F(t)^3, which is strictly below F(t) for 0<F(t)<1. So per-logical-pair majority-of-3 is stochastically slower than one attempt; any whole-audit wall-time gain must come from stronger q_3 causing fewer logical pairs, not faster pair completion.",
+    "finite_audit_exact": {"threshold":20,"max_logical_pairs":50,"single_q_0_6_ever_commit":0.25194888058587456,"majority3_q_0_6_effective_q":0.648,"majority3_ever_commit_approx":0.4723638983460323}
+  },
+  "first_completion_counterexample": {
+    "exact_toy": "Three independent null-fair stochastic attempts have sign +/- with probability 1/2. Let every + finish at time 1 and every - at time 2. Fastest-of-3 is + unless all three are -, hence P(selected +)=7/8. With one-step factor 1.5 for + and 0.5 for -, E[factor]=1.375>1. The e-process null is destroyed even though each underlying attempt is individually fair.",
+    "consequence": "Fastest stochastic duplicate selection cannot inherit the single-attempt paired-sign null from marginal fairness alone."
+  },
+  "synthetic_redundancy_stress": {
+    "status": "Worker-local synthetic Monte Carlo only; not a deployed model/provider measurement.",
+    "model": {"trajectories_per_condition":120000,"max_logical_pairs":50,"threshold":20,"attempt_sign":"iid Bernoulli(q)","latency":"LogNormal(0,1) multiplied by exp(-0.35) for + and exp(+0.35) for -, plus independent 1% x10 stragglers","sequential_wall":"sum logical-pair completion times until threshold crossing or pair 50","instant_cancel_effective_compute":"sum work only until logical decision/cancel; full obligation counts all launched replica durations"},
+    "policies": {
+      "single":"one stochastic attempt",
+      "identity_replica3":"one frozen logical sign with three physical latency replicas; use first completion; valid only if replicas are guaranteed to realize identical logical output",
+      "majority3":"three independent stochastic signs, predetermined majority, stop only when majority is fixed",
+      "unsafe_fastest3":"three independent stochastic signs, select fastest completion"
+    },
+    "null_q_0_5": {
+      "single":{"logical_plus":0.500019,"false_commit":0.038375,"q95_wall":139.8929,"mean_effective_compute":93.2066,"mean_full_obligation":93.2066},
+      "identity_replica3":{"logical_plus":0.500081,"false_commit":0.037475,"q95_wall":36.8588,"mean_effective_compute":88.2505,"mean_full_obligation":279.6473},
+      "majority3":{"logical_plus":0.500180,"false_commit":0.038017,"q95_wall":182.2618,"mean_effective_compute":217.0916,"mean_full_obligation":279.8021},
+      "unsafe_fastest3":{"logical_plus":0.641040,"false_commit":0.437358,"q95_wall":33.0776,"mean_effective_compute":64.8552,"mean_full_obligation":222.2385}
+    },
+    "alternative_attempt_q_0_6": {
+      "single":{"logical_plus":0.599753,"commit":0.252925,"q95_wall":126.8132,"mean_effective_compute":77.2677,"mean_full_obligation":77.2677},
+      "identity_replica3":{"logical_plus":0.599913,"commit":0.251600,"q95_wall":34.2738,"mean_effective_compute":73.2583,"mean_full_obligation":232.4085},
+      "majority3":{"logical_plus":0.648116,"commit":0.474183,"q95_wall":155.6907,"mean_effective_compute":153.4662,"mean_full_obligation":202.4299},
+      "unsafe_fastest3":{"logical_plus":0.732507,"commit":0.866875,"q95_wall":28.1900,"mean_effective_compute":39.3568,"mean_full_obligation":135.1365}
+    },
+    "stronger_alternative_note": "At attempt-level q=0.70 in the same stress, majority3 achieved commit≈0.9739 and q95 audit wall≈94.94 versus single commit≈0.7387 and q95≈105.20. Thus a safe stochastic aggregate can reduce whole-audit tail for sufficiently strong alternatives, but by changing the estimand and spending substantially more replica work; it does not make each logical pair faster."
+  },
+  "identity_preserving_delayed_hedging": {
+    "definition": "Launch one physical replica of the same frozen logical attempt; if it has not completed by a fixed predeclared delay h, launch a second identity-preserving replica; return the first physical completion and cancel the loser. Because both replicas are guaranteed to encode the same logical outcome, even outcome-associated launch/completion timing cannot select a different sign.",
+    "synthetic_null_stress": "Same latency model as above, two identity-preserving replicas, 400k pairs per delay; baseline delay chosen from the unhedged latency quantiles.",
+    "results": [
+      {"delay_quantile":"p50","hedge_launch_rate":0.502,"q95_latency_ratio_vs_single":0.487,"q99_ratio":0.351,"mean_effective_compute_ratio":0.868,"mean_full_obligation_ratio":1.547},
+      {"delay_quantile":"p75","hedge_launch_rate":0.251,"q95_latency_ratio_vs_single":0.586,"q99_ratio":0.395,"mean_effective_compute_ratio":0.864,"mean_full_obligation_ratio":1.282},
+      {"delay_quantile":"p90","hedge_launch_rate":0.0995,"q95_latency_ratio_vs_single":0.793,"q99_ratio":0.479,"mean_effective_compute_ratio":0.892,"mean_full_obligation_ratio":1.120},
+      {"delay_quantile":"p95","hedge_launch_rate":0.0507,"q95_latency_ratio_vs_single":1.000,"q99_ratio":0.574,"mean_effective_compute_ratio":0.909,"mean_full_obligation_ratio":1.059}
+    ],
+    "economics_scope": "The effective-compute ratios below 1 arise from the deliberately heavy-tailed latency model plus instantaneous cancellation. They are not general. Varying lognormal sigma from 0.2 to 1.6 changed immediate replica3 mean-effective-compute/single from about 2.31x to 0.39x. Always report full launched obligation, effective canceled work and real billing separately."
+  },
+  "new_measurement_validity_rules": [
+    "Make logical attempt identity explicit. A seed is metadata, not proof that two LLM executions are the same stochastic attempt.",
+    "Allow first-completion hedging without a timing model only for identity-preserving replicas whose logical outputs are guaranteed equal. Verify the exact determinism contract (model/version/runtime/hardware/random tape/batch-invariance requirements); if that contract is unavailable, classify replicas as distinct stochastic attempts.",
+    "For independent stochastic replicas, completion order may determine when a predeclared aggregate is known, but must never determine which replica values define the aggregate.",
+    "A safe stochastic aggregate can change the estimand. Report single-attempt q separately from majority/ensemble q and do not describe ensemble power gain as a free evaluation-speedup.",
+    "If a purported identity-preserving replica group ever produces divergent logical outputs, fail the determinism gate and do not use fastest-output selection for statistical evidence; treat the run as unresolved/quarantined or fall back to a predeclared canonical attempt.",
+    "Log replica_group_id, logical_attempt_id/random-tape or seed, model/runtime/hardware/version fingerprint, aggregation rule fixed before outcomes, launch/finish/cancel times, output hashes and whether cancellation actually stopped compute."
+  ],
+  "scope_guards": [
+    "The Bernstein aggregation result is limited to iid Bernoulli attempts, permutation-invariant count-based aggregation and preservation of q for every q.",
+    "Majority3 validity uses sign-flip symmetry of the full frozen attempt vector; arbitrary correlated replicas without that symmetry are not covered.",
+    "Identity-preserving hedging is only as valid as the deterministic-equivalence contract. Public framework documentation explicitly warns that default/same-seed execution need not be reproducible across schedules, releases or platforms.",
+    "Synthetic latency and compute numbers are normalized stress tests, not measurements of any current LLM API, GPU stack, price or cancellation implementation.",
+    "The unsafe fastest3 result is an existence/stress demonstration, not a claim about a particular serving system."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Derive and test a determinism-certification protocol for identity-preserving LLM replicas: explicit random tape/seed, batch-invariant scheduling, same runtime/hardware fingerprint, output-hash agreement, and fail-closed handling of any mismatch. Quantify how much p95/p99 latency hedging retains after enforcing deterministic modes and their performance overhead."},
+    {"priority":2,"action":"For genuinely stochastic replicas where single-attempt estimand must be preserved, investigate richer timing-filtration inference (design-based/IPW or conditional e-process) that can use completion information without fastest-output selection bias; compare against simply freezing one canonical attempt."},
+    {"priority":3,"action":"Generalize majority-of-3 to m=3/5/7 and randomized symmetric aggregates. Optimize audit-level power versus wall, full/effective compute and estimand distortion; identify regimes where ensemble aggregation reduces total audit wall despite slower logical pairs."},
+    {"priority":4,"action":"Integrate identity-preserving delayed hedging with the previously certified fixed statistical reveal-order scheduler and hard fail-closed deadlines, including actual preemption/cancel overhead rather than ideal instant cancellation."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Test whether identity-preserving replication is operationally certifiable for stochastic LLM inference. Build a determinism gate from public vLLM/PyTorch reproducibility contracts, derive fail-closed behavior for mismatch, and quantify tail-latency/compute gains after adding deterministic-mode overhead; in parallel derive whether timing-aware IPW/e-process methods can safely recover first-completion information when replicas are genuinely stochastic."
+}
