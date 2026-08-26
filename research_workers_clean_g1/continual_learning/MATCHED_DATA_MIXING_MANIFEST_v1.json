@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "status": "design_ready_artifact_incomplete",
+  "created_at": "2026-08-27T06:03:03+09:00",
+  "clean_role": "continual_learning",
+  "semantic_control": {
+    "note_main_sha": "5d284a097cbc5ff6d630847b1218c8b1bce4c83f",
+    "desired_state_control_revision": 11,
+    "desired_state_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "research_question": "Under identical backbone, source components, evaluator, seed family, token budget and objective, when should data-mixture choice be optimized by real-data training, trained proxies, merged proxies, or post-hoc distribution-vector composition?",
+  "paths": [
+    {
+      "id": "uniform_datamix",
+      "type": "real_training",
+      "ratio_selection": "uniform",
+      "required_output": ["final_model_hash", "per_task_scores", "aggregate_score", "training_compute", "evaluation_compute"]
+    },
+    {
+      "id": "trained_proxy_search",
+      "type": "proxy_then_real_training",
+      "ratio_selection": "versioned trained-proxy predictor under identical source simplex",
+      "required_output": ["selected_ratio", "proxy_search_compute", "final_model_hash", "per_task_scores", "aggregate_score", "training_compute", "evaluation_compute"]
+    },
+    {
+      "id": "demix_merged_proxy_then_real_training",
+      "type": "merged_proxy_then_real_training",
+      "ratio_selection": "merge component models, evaluate merged proxies, train predictor, then retrain selected real-data mixture",
+      "required_output": ["selected_ratio", "component_hashes", "merged_proxy_hashes", "rank_consistency", "top_quartile_rank_consistency", "proxy_search_compute", "final_model_hash", "per_task_scores", "aggregate_score", "training_compute", "evaluation_compute"]
+    },
+    {
+      "id": "optimer_posthoc",
+      "type": "posthoc_model_composition",
+      "ratio_selection": "seeded Bayesian optimization over distribution-vector weights",
+      "required_output": ["selected_weights", "component_hashes", "merged_model_hash", "per_task_scores", "aggregate_score", "search_compute", "evaluation_compute"]
+    },
+    {
+      "id": "optimer_ratio_retrain",
+      "type": "posthoc_ratio_then_real_training",
+      "ratio_selection": "normalize selected OptiMer CPT weights to data proportions, then retrain with identical total tokens",
+      "required_output": ["selected_weights", "derived_data_ratio", "final_model_hash", "per_task_scores", "aggregate_score", "training_compute", "evaluation_compute"]
+    }
+  ],
+  "common_contract": {
+    "same_base_checkpoint": true,
+    "same_component_source_corpora": true,
+    "same_total_real_training_tokens_per_dataset_combination": true,
+    "same_evaluator_commit_and_config": true,
+    "same_prompting_and_decoding": true,
+    "same_seed_family": true,
+    "search_compute_reported_separately_from_base_component_training": true,
+    "artifact_storage_reported": true,
+    "all_result_discovery_sorted_and_schema_asserted": true,
+    "no_mutable_main_refs_in_final_run_manifest": true,
+    "displacement_sweep_required": true,
+    "displacement_metric": "norm(theta_candidate-theta_base)/norm(theta_base), plus layerwise distribution",
+    "scope_rule": "Do not infer merge-proxy fidelity beyond the measured displacement regime."
+  },
+  "demix_public_anchor": {
+    "paper": "arXiv:2602.00747 / ICML 2026",
+    "github_repo": "Lucius-lsr/DeMix",
+    "github_public_rank_eval_intro_commit": "4c26b734261417bbb3111a652fed64c1636b00c3",
+    "hf_dataset_reconstruction_revision": "82a2effc58eb79bec691280a4e4fc50be0968b1e",
+    "reference_model_contract": "public README and rank evaluator use 16 references indexed 0..15",
+    "mapping_anomaly": "sampled_mixture.json contains mix_0..mix_16; mix_16 has no released reference model in public 16-model contract",
+    "rank_eval_blocker": "eval_merged/proxy_eval.py has only one public file-history commit and get_benchmark_data is a synthetic random.random()+index placeholder; real OpenCompass extraction contract is not released there",
+    "opencompass_blocker": "iterative_sample/train_predictor.py uses unversioned OpenCompass, hard-coded row indices/score column, and unsorted glob selection",
+    "checkpoint_7500_first_shard_sha256": {
+      "general_target": "cb4fccd9f51d3229117c6e27c94faba5683a5d41970860e3a62b5c5f06ae5b29",
+      "code_high": "149f7fdbd02b48d7c4867f8c24ddda8b2a8098088d9c9288a2a8405a2dc257fe",
+      "code_medium": "8a5c70c2505216a93bef41317a8980a70b7a3d9385fad87dae1259eb37fd825b",
+      "code_very_high": "4c6efffc11bbb9ece3e4da63818958467824e8cba7882fe989fe4fd3e79a1b6d",
+      "math_high": "27747f7d54e5481d55fc2186f8b6705dbebb547c5bd8f88cff433b69463a9c10",
+      "math_medium": "8579ab850b0db01670ce0136e3dcd10105fb80e08830d57fc727652dc13220ff",
+      "math_very_high": "11bba6b5d46bd5bebdb838c463eaaa6cdaacc4769569404ec7c31365cacdcb51"
+    },
+    "hash_scope": "These hashes pin model-00001-of-00002 only; complete checkpoint identity still requires the second shard plus config/index/tokenizer hashes."
+  },
+  "optimer_public_anchor": {
+    "paper": "arXiv:2603.28858v2",
+    "model_regime": "Gemma 3 27B, 1B-token CPT per distribution in the main study",
+    "exact_public_positive_control": {
+      "source": "Table 4, non-negative Japanese-objective optimization",
+      "weights": {"it": 0.569, "ja": 0.055, "zh": 0.006, "en": 0.129, "math": 0.489, "code": 0.033},
+      "proxy_score": 73.37
+    },
+    "table1_weight_status": "Main dataset-combination optimal weights are shown graphically in Figure 4 but are not tabulated as exact machine-readable values in the public HTML inspected; do not transcribe approximate bar heights as exact ground truth.",
+    "study_replay_blocker": "Original winning Optuna study database/trial trajectory and Gemma CPT/vector bundle are not yet pinned from a public release.",
+    "scope_rule": "Published results validate approximately 1B-token-per-distribution CPT; larger displacement requires an explicit fidelity sweep."
+  },
+  "execution_readiness": {
+    "small_scale_protocol_ready": true,
+    "paper_scale_ready": false,
+    "blocking_items": [
+      "complete DeMix checkpoint hashes (second shards and configs/index files)",
+      "versioned deterministic OpenCompass extraction for DeMix rank-consistency path",
+      "exact paper-scale OptiMer base/IT/CPT vector artifacts or a declared reconstruction substitute",
+      "seeded search contracts for stochastic mixture generation and Bayesian optimization"
+    ]
+  },
+  "next_actions": [
+    "Pin second-shard and config/index hashes for all seven DeMix checkpoint-7500 components under immutable HF revision 82a2effc58eb79bec691280a4e4fc50be0968b1e.",
+    "Treat mix_16 as outside the released 16-reference-model rank-evaluation contract unless author metadata proves a corresponding model; investigate why it exists but do not pair it silently.",
+    "Implement a deterministic evaluator adapter only after pinning OpenCompass revision/config/schema; do not use the released proxy_eval placeholder as evidence.",
+    "Use OptiMer Table-4 exact weights as a public positive control, and classify Table-1 weight vectors as figure-only until exact source data are recovered.",
+    "Run a reduced matched experiment before paper-scale compute, sweeping parameter displacement to locate the merged-proxy fidelity boundary."
+  ]
+}
