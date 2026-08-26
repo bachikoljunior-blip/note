@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-26T23:45:38+09:00",
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "candidate": "open_source/ARGUS_FRONT_DOOR_BEFORE_WRITE_ROUTE_CONTINUOUS_SPLIT_BRAIN",
+  "source_qualified_candidate": {
+    "namespace": "open_source",
+    "source_artifact_path": "research_workers_clean_g1/open_source/RUN_20260826_2130_BEFOREWRITE_SCOPE_AND_YIELD_RECOVERY.md",
+    "source_artifact_blob": "221718df5b5c43fc5c5dc9e03c0b5056b5aebd59",
+    "source_local_candidate_id": "ARGUS_FRONT_DOOR_BEFORE_WRITE_ROUTE_CONTINUOUS_SPLIT_BRAIN"
+  },
+  "status": "primary_code_verified_source_reachable_front_door_split_brain_with_distinct_boot_fail_closed_guard",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "0ffc551b1f6e3d8840ee30e464df7148c7cef3db",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5,
+    "bootstrap_head_first": "0ffc551b1f6e3d8840ee30e464df7148c7cef3db",
+    "bootstrap_head_second": "0ffc551b1f6e3d8840ee30e464df7148c7cef3db",
+    "semantic_freeze_respected": true
+  },
+  "public_source_pin": {
+    "repository": "lbx154/Argus",
+    "commit": "8c5a0e356c470ad4cbdc904a7fbe4de14af366cf"
+  },
+  "verification_question": "At the exact worker-pinned Argus commit, can the active Manager continuous front-door durably commit a new Manager route in the CAS before_write callback and then fail replacing continuous.json, leaving the old continuous objective durable while the new route side effect remains; and is daemon boot materially safer than this active front-door path?",
+  "verified_mechanism": [
+    "manager_continuous_handoff reads the expected continuous state, prepares a Manager decision, defines _commit(), requests a pipeline-yield token, enters the Manager pipeline lock, and calls compare_and_swap_continuous_config(..., before_write=_commit). Its finally block clears the yield token for both success and failure.",
+    "The _commit callback calls PreparedManagerHandoff.commit(acquire_lock=False,...). PreparedManagerHandoff.commit directly calls manager.commit_vertical_decision, whose existing-vertical path persists the selected vertical/route contract and stage state under _restore_files_on_error local to that route commit. That local rollback guard ends when the callback returns successfully; it is not a transaction spanning the later continuous.json replace.",
+    "The continuous CAS implementation passes before_write as _write_continuous_config_unlocked(... before_replace=before_write). _atomic_write_bytes fsyncs the temporary file, invokes before_replace, marks callback_committed=True, and only then executes os.replace(tmp, continuous.json). If replace raises and the target remains the prior bytes, a committed callback is surfaced as _AtomicWriteAfterCallbackError -> ContinuousConfigCommitError rather than rolling back the callback.",
+    "The repository's own state-level regression test test_replace_failure_after_callback_surfaces_instead_of_false confirms exactly that generic primitive behavior: the precommit side-effect file remains committed while read_continuous_state remains equal to the old expected state after the continuous.json replace failure.",
+    "manager_continuous_handoff catches the resulting exception, calls prepared.failed (event emission), raises ManagerHandoffError, and then clears the pipeline-yield marker in finally. The inspected path contains no compensation call that restores the pre-callback Manager route after a post-callback replace failure.",
+    "The worker's boot-path scope refinement is also supported. _life_worker_boot uses the same compare_and_swap_continuous_config(... before_write=_commit_decision), but on a failed swap or exception it rereads continuous state. If generation is still the expected generation, it sets init_continuous=False, clears init_objective, and when the old state is enabled records that objective/generation in the local suppression structure before supervisor construction. Thus the just-starting daemon does not simply start executing the still-durable old objective under the newly committed route.",
+    "The pipeline-yield marker contains token, requesting PID, and requested_at. manager_pipeline_yield_requested removes invalid/dead/expired requests, bounding requester-crash wedging. This is a positive control but does not compensate the in-process active-front-door split: the front door itself clears the marker immediately in finally after the exception.",
+    "The worker's generation-fence refinement is correct: ContinuousConfigState.generation has compare=False for dataclass equality, but _same_continuous_state explicitly compares generation and compare_and_swap_continuous_config uses _same_continuous_state for admission."
+  ],
+  "production_callsite_scope": {
+    "repository_search_at_pinned_commit": "A repository-wide search for before_write= returned production uses in manager/front_door.py and daemon/_life_worker_boot.py plus tests; no third production before_write= consumer was returned by the indexed search.",
+    "interpretation": "This supports the worker's two-production-callsite scope at the inspected commit, but code-search completeness is treated as repository-index evidence rather than a formal whole-tree parser proof."
+  },
+  "test_coverage_observation": {
+    "positive": "tests/daemon/test_state_portable.py directly tests callback-committed + continuous-replace-failed semantics; tests/manager/test_pipeline_yield.py directly tests the successful manager_continuous_handoff yield lifecycle and dead-request cleanup.",
+    "gap": "The inspected manager pipeline-yield test file does not contain an end-to-end front-door fault injection that combines a real route-state commit with a post-precommit continuous.json replace failure and then asserts route/continuous coherence or compensation. This is an observed coverage gap in the inspected test surface, not proof that no equivalent test exists elsewhere."
+  },
+  "interpretation": "The sealed C15 worker's strongest claim is supported and sharpened. The active front-door has a real cross-file transaction gap: the Manager route commit is a durable precommit side effect, while the continuous objective is replaced afterward. A failure specifically after the callback and before a successful continuous.json replace can therefore leave route B with continuous A. The CAS correctly surfaces this as an error and preserves the old continuous file, but surfacing the error is not compensation. The daemon-boot path must not be generalized identically because it has a process-local suppression/fail-closed guard that prevents immediate execution of the old objective in that boot process.",
+  "scope_limits": [
+    "No destructive live fault was injected into an operator project; this is a pinned-source composition audit plus the repository's own generic post-callback replace-failure regression test.",
+    "The finding requires the narrow failure window after the Manager callback has successfully committed and before continuous.json has been successfully replaced. Failures before callback invocation do not create this split; failures after the target was already replaced have different semantics and are surfaced as ContinuousConfigWriteAfterReplaceError.",
+    "The audit does not claim every route decision changes the route or stage. If the selected route is unchanged, the durable side effect may be smaller; the coherence defect matters when the callback materially changes Manager-owned protected state.",
+    "Boot suppression is process-local runtime safety, not demonstrated durable repair of the cross-file mismatch. A later restart/reconciliation path still needs to establish one coherent route/continuous handoff identity.",
+    "Indexed code search supporting exactly two production before_write callsites is strong repository evidence but not a formal AST traversal of every source file."
+  ],
+  "minimal_regression_contract": "At a temporary project root, start with continuous objective A and route A. Prepare a replacement whose Manager commit changes protected route/stage to B. Fault only the continuous.json os.replace after before_write returns. Assert the current pinned behavior produces a Manager handoff failure, continuous.json still identifies A/generation g, the Manager route state identifies B, and the pipeline-yield marker is cleared. A coherent implementation should either (1) commit route+continuous under one durable transaction/fence, or (2) compensate route B back to the exact precommit tuple before releasing the yield, with crash-safe recovery identity. Keep a boot-path positive control showing its existing init_continuous=False/suppression behavior on the same failure class.",
+  "downstream_use": "Treat before_write as a durable side-effect boundary, not an atomic transaction across Manager route state and continuous.json. Prioritize active-front-door coherence/fencing before broadening boot-path claims. Preserve the existing generation CAS and boot suppression as positive controls rather than replacing them.",
+  "primary_sources": [
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/manager/front_door.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/manager/_vertical_ops.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/daemon/state.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/daemon/_life_worker_boot.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/manager/_session_ops.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/tests/daemon/test_state_portable.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/tests/manager/test_pipeline_yield.py"
+  ],
+  "scope_guard": "Do not describe this as observed production corruption or as proof that Argus continuous CAS is generally unsafe. The verified defect is specifically cross-file coherence when a durable Manager precommit side effect succeeds and the subsequent continuous.json replace fails. The continuous CAS itself correctly detects the failure, preserves the old file in this branch, and includes generation in its stale-write predicate.",
+  "material_update": "The C15 open-source worker's front-door split-brain claim is primary-code supported, while its boot-path distinction and generation-fence positive controls are also supported. The key correction is architectural: error surfacing and pipeline-yield cleanup do not compensate a route side effect that already committed before continuous.json replacement.",
+  "exact_next_action": "Inspect pinned tests and handoff-identity code for an existing end-to-end active-front-door post-precommit replace-failure regression or recovery identity. If absent, record the minimal regression contract as the actionable gap, then rotate to another sealed C15 namespace rather than repeatedly auditing Argus internals."
+}
