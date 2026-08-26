@@ -1,0 +1,167 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 10,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "020e33ccf3bc8fbc0175ed49012e4a10f61f8e7d",
+    "desired_state_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "c1c014c94d30b803e252595c8b2b329b8797fbf3",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T171146+0900-r67.json",
+  "invocation_started_at": "2026-08-26T18:00:47+09:00",
+  "checkpointed_at": "2026-08-26T18:22:43+09:00",
+  "chronology_valid": true,
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_present": false
+  },
+  "checked_sources": [
+    {
+      "source": "Kotłowski & Grünwald 2011, Maximum Likelihood vs. Sequential Normalized Maximum Likelihood in On-line Density Estimation",
+      "url": "https://proceedings.mlr.press/v19/kotlowski11a.html",
+      "result": "Primary source for one-dimensional Gaussian SNML with unknown mean and variance. It gives the Student-t-form predictive density and an exact per-round regret increment d_n = ((n+1)/2)log n - (n/2)log(n-1) - (1/2)log(2e) + log Gamma((n-1)/2) - log Gamma(n/2), with d_n = 1/n + O(n^-2) after initialization; cumulative regret is therefore logarithmic for the 2-parameter family."
+    },
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection",
+      "url": "https://arxiv.org/abs/2607.28322",
+      "result": "Primary reference for non-partitioned PFA/ARL e-detectors and the full-Gaussian example. It proves a full-Gaussian detector with instance-specific information rate D_KL(Q||P), gives globally summable PFA start weights with -log pi_s = log s + 2 log log(es) + O(1), and notes that its exact all-start implementation has O(t) state/work per objective evaluation and quadratic total cost through horizon N."
+    },
+    {
+      "source": "Wasserman, Ramdas & Balakrishnan 2020, Universal inference",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7382245/",
+      "result": "Supports the finite-sample composite-likelihood principle: a predictable/proper alternative density divided by a null MLE/profile likelihood yields an e-value/e-process by domination by the likelihood-ratio martingale; nuisance parameters may be profiled and sequential versions remain anytime-valid."
+    },
+    {
+      "source": "Hsu, Kakade & Zhang 2012, A tail inequality for quadratic forms of subgaussian random vectors",
+      "url": "https://arxiv.org/abs/1110.2842",
+      "result": "Candidate concentration tool for the next step: finite-sample Gaussian/chi-square control of sample mean and variance terms needed to turn the exact realized certificate below into a prospective lifetime bound."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r68a-conditional-snml-full-gaussian-pfa",
+      "claim": "A location/scale-equivariant finite-memory PFA detector for arbitrary Gaussian mean and/or variance changes can be built from conditional SNML candidate laws, without a fixed Gaussian prior or variance floor.",
+      "construction": "Fix a burn-in b>=2 and deterministic candidate split schedule s_k. For each candidate, condition the global pre-segment SNML predictor on X_1:b and score X_{b+1:s_k}; after the split, leave the first b post-split observations unscored (likelihood-ratio factor 1), then use a fresh Gaussian unknown-mean/unknown-variance SNML predictor conditioned on those b local observations. For every stationary null R=N(mu,sigma^2), each scored factor q_i(X_i|past)/p_R(X_i) has conditional mean one, so the full candidate likelihood-ratio process L^R_{k,t} is a nonnegative martingale conditional on the burn-ins. C_{k,t}=inf_R L^R_{k,t} is therefore a composite e-process because C_{k,t}<=L^R_{k,t} for every R. A fixed weighted sum over candidate/scale C processes is again a composite e-process. Threshold 1/alpha gives global PFA<=alpha."
+    },
+    {
+      "id": "cf-g1-r68b-exact-finite-sample-snml-certificate",
+      "claim": "For the conditional-SNML Gaussian candidate, the single-candidate crossing condition has an exact finite-sample identity whose threshold explicitly contains the PFA start-weight penalty.",
+      "statement": "Let lhat(z_1:m) be the maximized Gaussian log likelihood with both mean and variance free. Let r_b(m)=sum_{j=b+1}^m d_j, where d_j is the exact Kotłowski-Grünwald SNML regret increment above and r_b(m)=0 for m<=b. At split s with current post length n=t-s, define the scored-null sample as X_{b+1:s} union X_{s+b+1:t}. Then log C_{s,t} = [lhat(X_1:s)-lhat(X_1:b)-r_b(s)] + [lhat(X_{s+1:t})-lhat(X_{s+1:s+b})-r_b(n)] - lhat(scored-null sample), with the second bracket zero until n>b. This identity was numerically cross-checked against the product of the published SNML predictive densities to machine precision. A candidate carrying PFA mass pi_k is by itself sufficient for the global weighted detector to cross whenever log C_{s,t} >= log(1/(alpha*pi_k)). Thus log(1/pi_k) is not an asymptotic afterthought; it is an exact finite-threshold cost."
+    },
+    {
+      "id": "cf-g1-r68c-sum-of-infs-separable-safe-lower-detector",
+      "claim": "The finite-memory implementation can avoid the expensive shared-null optimization by summing candidate-wise composite e-processes, at a known power cost but with clean validity.",
+      "statement": "Use E_t = sum_j w_j [W_future,j(t) C_future,j(t) + sum_{k active} pi_k C_{j,k,t}], with sum_j w_j<=1 and sum_k pi_k<=1. Each C is already an e-process for the entire stationary Gaussian null class, so E is an e-process. This is generally <= inf_R sum_{j,k} w_j pi_k L^R_{j,k,t}; it is therefore computationally separable but may sacrifice evidence that a shared null optimizer could pool across candidates. The Monte Carlo below used this conservative sum-of-infs detector and must not be reported as the exact all-start Saha-Ramdas objective."
+    },
+    {
+      "id": "cf-g1-r68d-future-tail-collapse-and-memory",
+      "claim": "All not-yet-split candidates at a fixed burn-in scale have exactly the same pre-split conditional-SNML composite e-process, so their infinite remaining prior mass collapses to one tail state.",
+      "statement": "With split spacing g and hard lifetime H, one scale requires at most ceil(H/g) individualized split states plus one future-tail state. For the heavy-tail telescoping prior pi_k=log(2)[1/log(k+1)-1/log(k+2)], future mass after K starts is exactly log(2)/log(K+2). Expired mass is destroyed, never renormalized."
+    },
+    {
+      "id": "cf-g1-r68e-stopping-time-kill-is-safe",
+      "claim": "The r67 deterministic-expiry restriction can be relaxed: data-dependent candidate expiry is PFA-safe if it only kills capital and never reactivates or recycles it.",
+      "proof_sketch": "For any fixed null R and nonnegative candidate martingale L^R_t, let tau be any stopping time and define Ltilde^R_t=L^R_t 1{t<tau}. On {tau<=t-1} both sides are zero; on {tau>t-1}, E_R[L^R_t 1{tau>t}|F_{t-1}] <= E_R[L^R_t|F_{t-1}] = L^R_{t-1}. Hence Ltilde is a supermartingale. Taking the null infimum and then fixed-weight mixtures preserves composite e-validity. This permits evidence/capacity-based adaptive expiry, but not wealth reset to one or reassignment of killed mass."
+    },
+    {
+      "id": "cf-g1-r68f-asymptotic-information-for-full-mean-variance-change",
+      "claim": "The conditional-SNML full-prefix candidate has the correct full-Gaussian information limit; with a long pre-change prefix it approaches the Saha-Ramdas instance-optimal D_KL(Q||P) denominator.",
+      "statement": "For P=N(a,u), Q=N(b,v), prefix fraction lambda=T/(T+n), and a split at the true changepoint, the two-segment-vs-stationary Gaussian MLE leading term is (T+n) J_lambda(P,Q), where V*=lambda*u+(1-lambda)*v+lambda*(1-lambda)*(b-a)^2 and J_lambda=(1/2)log[V*/(u^lambda v^(1-lambda))]. The conditional-SNML regret contributes only logarithmic terms and the fixed burn-ins contribute lower-order terms. As T/n->infinity, (T+n)J_lambda/n -> D_KL(Q||P)=0.5[log(u/v)+(v+(b-a)^2)/u-1], matching the full-Gaussian information number in Saha-Ramdas Theorem 5.3."
+    },
+    {
+      "id": "cf-g1-r68g-burnin-scale-mixture",
+      "claim": "Conditioning length is a genuine power parameter, but it can be adapted without post-selection invalidity by a small fixed mixture over burn-in scales.",
+      "statement": "For every burn-in b_j>=2, the corresponding conditional-SNML candidate family is separately PFA-valid. Assign fixed scale masses w_j summing to at most one and mix their e-processes. The scale multiplicity is paid only by log(1/w_j), while the detector automatically uses whichever conditioning horizon gives stronger evidence. This is safer than selecting the best burn-in after inspecting the same data without a multiplicity charge."
+    },
+    {
+      "id": "cf-g1-r68h-engineering-monte-carlo",
+      "claim": "The parameter-free conditional-SNML detector detects both mean and variance changes with history-independent state, while weak variance shifts expose the lifetime/information-floor limit; a 3-scale burn-in mixture materially improves finite-sample power in the tested regime.",
+      "details": {
+        "common_setup": "Gaussian paths, alpha=0.05, 500 pre-change observations and 700 post-change observations, split starts from observation 20 every g=16, H=300 unless stated, telescoping log-heavy start prior, candidate-wise infimum then fixed-weight sum, exact conditional-SNML densities. Formal PFA comes from the e-process construction, not the finite Monte Carlo false-alarm counts.",
+        "single_scale_b2_200_common_random_paths": {
+          "no_change_N0_1": "1/200 alarmed within the 1200-observation horizon; max 19 active split states plus one tail",
+          "mean_change_N0_1_to_N1_1": "1 pre-change alarm; 199/199 remaining paths detected; median post-change delay 49; q90 77.2",
+          "variance_change_N0_1_to_N0_2.25": "1 pre-change alarm; 188/199 remaining paths detected; detected-only median delay 140.5; q90 239.5",
+          "joint_change_N0_1_to_N0.5_2.25": "1 pre-change alarm; 199/199 remaining paths detected; median delay 81; q90 150",
+          "variance_H500": "196/199 remaining paths detected; detected-only median delay 147.5; q90 255.5; max 32 active split states plus tail",
+          "weak_variance_N0_1_to_N0_1.44": "On 100 common paths, H=300 produced no post-change detections and H=500 produced one at delay 428; this is strong negative evidence that weak variance shifts need a lower information floor and/or longer-lived scale."
+        },
+        "three_scale_burn_mix_b4_b16_b64_100_common_random_paths": {
+          "state": "At H=300,g=16, at most 3*19=57 individualized split states plus three future-tail states.",
+          "no_change": "0/100 alarms in the finite 1200-observation smoke test",
+          "mean_change_N0_1_to_N1_1": "100/100 detected; median delay 41; q90 58.1",
+          "variance_change_N0_1_to_N0_2.25": "99/100 detected; median delay 99; q90 175",
+          "joint_change_N0_1_to_N0.5_2.25": "100/100 detected; median delay 62; q90 113.4"
+        },
+        "invariance_check": "For one common path, applying x -> 10+3x left the alarm time unchanged at observation 525, consistent with the conditional-SNML construction's location/scale equivariance."
+      }
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r68-conditional-snml-finite-memory-full-gaussian-pfa",
+      "mechanism": "Predefine sparse split candidates whose full-path alternative uses location/scale-equivariant Gaussian SNML before the split and a reset SNML code after a short local burn-in. Mix candidate-wise composite e-processes with a globally summable PFA prior, collapse all future unsplit mass to one tail state, and kill stale candidates without recycling capital.",
+      "formal_evidence": "Composite PFA validity follows from proper conditional SNML factors, candidate-wise null infimum domination, and fixed-weight e-process mixtures. Exact finite-sample crossing is computable as conditional Gaussian GLR minus published length-only SNML regrets, with the exact log(1/pi_k) start penalty.",
+      "empirical_evidence": "The tested g16/H300 single-scale detector used <=19 active split states plus tail and detected mean, variance and joint Gaussian changes; a fixed 3-burn-scale mixture used <=57 split states plus 3 tails and substantially improved the tested variance-change delays without invalid post-selection.",
+      "scope": "Gaussian stationary no-change class; PFA semantics, not finite-ARL semantics; conditional burn-ins deliberately leave a fixed number of observations unscored; Monte Carlo is engineering evidence only.",
+      "confidence": "high for PFA validity and exact certificate; medium for current scale/lifetime choices."
+    },
+    {
+      "id": "cf-g1-r68-safe-adaptive-expiry",
+      "mechanism": "Use a stopping-time kill rule to discard a candidate when its evidence/capacity makes it low-value, while retaining fixed prior mass accounting and never resetting or recycling killed wealth.",
+      "formal_evidence": "Killed nonnegative martingales are supermartingales under the stopping-time argument above.",
+      "scope": "Validity only. A good kill criterion still needs a power/delay analysis.",
+      "confidence": "high for safety theorem, low-to-medium for optimization benefit until a concrete rule is derived."
+    },
+    {
+      "id": "cf-g1-r68-fixed-burnin-mixture",
+      "mechanism": "Run a small geometric set of conditional-SNML burn-in horizons under fixed scale weights instead of tuning one horizon on the same evaluation stream.",
+      "formal_evidence": "Fixed mixtures of e-processes preserve PFA validity and pay a transparent log(1/w_j) multiplicity cost.",
+      "empirical_evidence": "In 100 common-random Gaussian paths, b={4,16,64} with equal scale weights improved the tested mean/variance/joint delays relative to the b=2 single-scale baseline while keeping state finite.",
+      "confidence": "high for validity, medium for the particular scale grid."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The Monte Carlo implementation is equivalent to the exact Saha-Ramdas infimum-after-sum full-Gaussian detector.",
+      "evidence": "Rejected. It deliberately uses sum of candidate-wise infima for separability. This is PFA-valid but can be strictly weaker than taking one shared null infimum after summing candidate martingales."
+    },
+    {
+      "lead": "H=300 or H=500 is enough for all practically relevant Gaussian variance changes.",
+      "evidence": "Rejected in the tested horizon. A 20% standard-deviation increase (1 -> 1.2) produced essentially no detections within 700 post-change samples. Lifetime must be tied to an explicit information floor or a longer-lived fallback scale."
+    },
+    {
+      "lead": "A single shortest legal SNML burn-in b=2 is automatically best because it starts scoring earliest.",
+      "evidence": "Rejected as an engineering default. Small-b initialization/conditional-regret effects were material in the tested finite sample. A fixed mixture over several burn horizons gave better tested delays while preserving validity."
+    },
+    {
+      "lead": "Data-dependent expiry requires deterministic precommitment to preserve PFA.",
+      "evidence": "Too conservative. Pure killing at an arbitrary stopping time is supermartingale-safe. What remains forbidden is reactivation or resetting/recycling expired prior mass."
+    }
+  ],
+  "frontier": [
+    "Turn r68b into a prospective high-probability lifetime bound: combine the exact conditional-SNML regret with Gaussian mean/chi-square concentration so that H_j can be selected from an information floor I_j, alpha, scale weight and start weight before seeing the post-change block.",
+    "Optimize a geometric multiscale bank over {information floor I_j, split spacing g_j, lifetime H_j, burn-in b_j, scale weight w_j}; derive a constant-factor delay approximation and an explicit active-state budget instead of tuning the grid by simulation.",
+    "Construct a concrete evidence/capacity stopping-time kill rule and prove a delay-loss bound relative to deterministic H, using the r68e safety theorem without recycling capital.",
+    "Benchmark the separable sum-of-infs detector against the exact Saha-Ramdas infimum-after-sum full-Gaussian detector under matched PFA and common-random mean/variance changes, so the price of separability is measured rather than guessed.",
+    "Test Saha-Ramdas regularized Gaussian predictors as a no-burn-in scale inside the same fixed mixture and quantify whether they dominate conditional SNML for weak variance changes without introducing harmful hyperparameter sensitivity.",
+    "Extend beyond the well-specified Gaussian family only with an explicitly valid robust/null class; do not interpret current Gaussian PFA guarantees as distribution-free under heavy tails."
+  ],
+  "exact_next_action": "Derive the prospective lifetime certificate from r68b using Gaussian/chi-square concentration, then solve the first two- or three-scale design for {I_j,b_j,g_j,H_j,w_j} under a fixed active-state budget. Use that derived grid to run matched common-random comparisons against the exact full-Gaussian infimum-after-sum detector, while keeping PFA and finite-ARL semantics separate.",
+  "run_notes": {
+    "semantic_freeze_obeyed": true,
+    "frontier_nonempty": true,
+    "global_completion_claimed": false,
+    "writes_limited_to_own_clean_state_and_own_receipt": true
+  }
+}
