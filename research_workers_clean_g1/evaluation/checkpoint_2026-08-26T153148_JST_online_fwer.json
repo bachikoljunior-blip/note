@@ -1,0 +1,119 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T15:31:48+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T152305_JST_confirmation_firewall.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "35d595e6d6b18bd0fb6953063957f74a7e57662f",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_observed_for_write_safety_only": "eaac83a96e77e05a561c4350a46d5fa3c36dab08",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "own_feedback_found": false
+  },
+  "search_bias": "evaluation/verifiers; adaptive streams of fresh confirmations; run-level strong FWER; alpha spending; online fallback/e-value closure",
+  "public_sources": [
+    {
+      "title": "Online control of the familywise error rate",
+      "authors": "Jinjin Tian; Aaditya Ramdas",
+      "date": "2019-10-10; arXiv page revised through 2026-03-22",
+      "url": "https://arxiv.org/abs/1910.04900",
+      "used_scope": "Alpha-Spending tests an unbounded online sequence at alpha_i=alpha*gamma_i with nonnegative gamma_i summing to one. The paper also proves Online Fallback strong FWER control for arbitrarily dependent p-values and reports that fallback gains are concentrated when non-nulls cluster, while ADDIS-style stronger gains require independence/local-dependence assumptions."
+    },
+    {
+      "title": "Family-wise Error Rate Control with E-values",
+      "authors": "Will Hartog; Lihua Lei",
+      "date": "2025-01-15; revised 2026-05-17",
+      "url": "https://arxiv.org/abs/2501.09015",
+      "used_scope": "E-value closed testing strongly controls post-hoc FWER in the static setting and has anytime/always-valid sequential properties. Weighted-average e-value local tests are strictly more powerful than weighted Bonferroni based on inverse e-values, and efficient e-Fallback algorithms are developed. Used as a promising next interface, not yet assumed valid for an adaptively generated unbounded candidate stream without deriving that interface."
+    }
+  ],
+  "new_derivations": {
+    "adaptive_fresh_audit_alpha_spending_theorem": {
+      "setup": "Index only launched fresh confirmation audits j=1,2,... . Before audit j sees any fresh outcome, let H_j contain all past development history, prior audit outcomes, the frozen candidate/hypothesis, and the predictable audit budget alpha_j. Candidate generation and audit triggering may be arbitrarily adaptive/correlated. For every realized H_j under which candidate j is null/non-improving, require the fresh anytime-valid audit to satisfy P(R_j=1 | H_j) <= alpha_j. Require the pathwise run-level spending rule sum_j alpha_j <= alpha_global almost surely.",
+      "bound": "P(any false commit) <= E[sum_{j:null} 1{R_j=1}] <= E[sum_{j:null} alpha_j] <= alpha_global.",
+      "consequence": "Arbitrary development-driven candidate generation, triage, correlated candidate quality, and audit launch timing do not by themselves consume extra type-I budget if each candidate is frozen before fresh confirmation, alpha_j is chosen before that audit's fresh outcomes, the fresh conditional null guarantee is valid, and the launched-audit budgets obey a pathwise global spending bound.",
+      "scope_guard": "This does not permit resetting alpha after an arbitrary number of audits, choosing alpha_j after seeing current-audit outcomes, reusing confirmation outcomes to mutate the same candidate before its decision, or treating marginal rather than conditional audit validity as sufficient under arbitrary adaptive generation."
+    },
+    "online_fallback_confirmation_candidate": {
+      "setup": "Convert each fresh anytime e-process to an anytime p-value p_j=min(1,1/sup_t E_{j,t}), or equivalently reject at the predictable level alpha_j. Start with base alpha mass alpha_global*gamma_j. Under Online Fallback-1, alpha_j=alpha_global*gamma_j + R_{j-1}*alpha_{j-1}; more general transfer weights can spread a rejected hypothesis' alpha forward.",
+      "reasoning": "Tian-Ramdas prove strong FWER control for Online Fallback under arbitrarily dependent p-values. In the confirmation-firewall setting, conditional fresh-null validity is stronger than the marginal superuniformity used by ordinary online testing. Recycling occurs only after rejection; before the first false rejection, recycled mass can only have passed through rejected non-nulls, so recycling can improve later power without creating an earlier false-rejection path that was not already charged to the original alpha mass.",
+      "scope_guard": "Do not transfer alpha after a non-rejection. Do not assume ADDIS/Sidak-style extra gains under arbitrary dependence; those stronger methods require independence/local-dependence or other explicit conditions. Candidate-freeze and fresh conditional validity remain mandatory."
+    },
+    "fixed_count_bonferroni_scope": {
+      "rule": "Equal alpha/K is valid for a run-level family only if K is a real hard cap on launched confirmations. If the system can launch audit K+1, the family cannot simply reset to a new alpha budget without an outer allocation across epochs; doing so raises lifetime FWER.",
+      "implication": "For open-ended self-improvement, infinite-horizon gamma spending or a valid online recycling rule is structurally safer than pretending a fixed K family exists."
+    },
+    "worker_local_common_random_stress": {
+      "setup": "100,000 common-random-number runs. Up to 30 proposal opportunities and at most 20 launched fresh audits. Candidate quality is correlated through a two-state Markov regime with P(hot|hot)=0.85, P(hot|cold)=0.15; P(good|hot)=0.65, P(good|cold)=0.10. Development-only triage launches an audit with probability 0.80 for good candidates and 0.25 for null candidates. Fresh audit: max 50 paired tasks, discordance probability 0.4, null discordant candidate-win probability 0.5, good probability 0.75, fixed sign bet q_bet=0.75. Compare alpha_global=0.05: fixed K=20 Bonferroni; geometric gamma_j=(1-0.85)*0.85^(j-1); polynomial gamma_j=6/(pi^2*j^2); and Fallback-1 recycling using each gamma base.",
+      "results": [
+        {"method":"fixed20","FWER_any_false":0.00081,"P_any_true_commit":0.44719,"mean_true_commits":0.60046,"mean_false_commits":0.00081,"mean_launched_audits":13.41848,"mean_fresh_tasks":666.51716,"base_alpha_sum_first20":0.05},
+        {"method":"geometric","FWER_any_false":0.00190,"P_any_true_commit":0.51301,"mean_true_commits":0.70524,"mean_false_commits":0.00190,"mean_launched_audits":13.41848,"mean_fresh_tasks":664.98064,"base_alpha_sum_first20":0.048062},
+        {"method":"fallback_geometric","FWER_any_false":0.00221,"P_any_true_commit":0.51306,"mean_true_commits":0.75785,"mean_false_commits":0.00221,"mean_launched_audits":13.41848,"mean_fresh_tasks":664.25850,"base_alpha_sum_first20":0.048062},
+        {"method":"polynomial_6_over_pi2_j2","FWER_any_false":0.00575,"P_any_true_commit":0.39460,"mean_true_commits":0.47399,"mean_false_commits":0.00576,"mean_launched_audits":13.41848,"mean_fresh_tasks":665.50772,"base_alpha_sum_first20":0.048518},
+        {"method":"fallback_polynomial","FWER_any_false":0.00745,"P_any_true_commit":0.39535,"mean_true_commits":0.56845,"mean_false_commits":0.00752,"mean_launched_audits":13.41848,"mean_fresh_tasks":663.71101,"base_alpha_sum_first20":0.048518}
+      ],
+      "all_null_sanity": "200,000 runs with all 20 audits launched and all candidates null gave empirical any-false rates 0.002975 fixed20, 0.004660 geometric, 0.004660 fallback-geometric, 0.012285 polynomial, and 0.012285 fallback-polynomial. The large gap below 0.05 is due to the deliberately short 50-task fresh audit and discrete fixed-bet e-process; it is not evidence that the theoretical alpha budget can be raised without a separate calibration argument.",
+      "interpretation": "In this finite-budget stress, schedule shape dominated early-resolution behavior: geometric spending substantially outperformed equal fixed-K and the very front-loaded 1/j^2 schedule on probability of at least one useful commit. Fallback-geometric barely changed first-useful-commit probability but increased mean true commits from 0.705 to 0.758 by recycling alpha after prior rejections, with essentially no fresh-task penalty. These are stylized simulation results, not deployment guarantees."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-adaptive-fresh-alpha-spending-v1",
+      "mechanism": "Run-level strong-FWER firewall for an adaptive stream: development may generate/triage candidates arbitrarily; freeze each candidate before fresh confirmation; choose alpha_j predictably from all past history; require conditional anytime-valid fresh audit; enforce a pathwise lifetime sum of launched-audit alpha_j no larger than alpha_global.",
+      "evidence": "Direct conditional union-bound derivation plus the online Alpha-Spending literature.",
+      "scope_guard": "Strongest under conditional fresh-null validity. A mere marginally valid test can fail under adaptive candidate selection/triggering."
+    },
+    {
+      "candidate_id": "eval-g1-online-fallback-confirmation-v1",
+      "mechanism": "Recycle confirmation alpha only after a prior candidate actually passes its fresh confirmation, using Online Fallback/e-Fallback style transfer rather than spending a fresh independent alpha budget every round.",
+      "evidence": "Tian-Ramdas prove Online Fallback strong FWER for arbitrary p-value dependence; worker-local paired-sign simulation found fallback-geometric raised mean true commits about 7.5% relative to the same geometric base (0.75785 versus 0.70524) in the tested correlated candidate stream.",
+      "scope_guard": "This finding is about run-level error accounting after candidate-level validity is already established. It does not repair adaptive reuse of development data inside a candidate test, and more aggressive ADDIS/Sidak variants need stronger dependence assumptions."
+    },
+    {
+      "candidate_id": "eval-g1-alpha-power-pareto-gate-v1",
+      "update": "Add lifetime multiplicity architecture as a fourth axis beside false-commit risk, deadline resolution, and fresh-audit cost. A policy that looks powerful per candidate can become unusable once its alpha schedule is embedded in an open-ended stream."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'fresh confirmation at alpha=.05 for every adaptively generated candidate remains a .05 run-level system.' Repetition creates multiplicity even when each individual fresh audit is conditionally valid.",
+    "Rejected: 'fixed-count Bonferroni is an open-ended policy.' It requires a genuine hard cap K or an outer alpha allocation across future families/epochs.",
+    "Rejected: 'recycling alpha after successful confirmations is automatically unsafe under correlated candidate quality.' Online Fallback gives strong FWER under arbitrary p-value dependence; conditional fresh-null validity is sufficient for a direct confirmation-stream interface, subject to freeze/freshness requirements.",
+    "Narrowed: 'online FWER methods uniformly beat alpha spending.' Tian-Ramdas report only small gains from Sidak/fallback in many regimes; larger ADDIS gains rely on independence/local dependence and conservative-null structure.",
+    "Narrowed: 'e-value closed testing can be dropped directly into an unbounded adaptive proposal loop.' Hartog-Lei establish strong static/post-hoc and sequential e-value closure properties, but the exact interface to adaptively generated hypothesis identities and audit launches still needs to be derived before use."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Derive the exact e-Fallback/closed-testing interface for fresh audit e-processes when candidate identities and launch times are themselves adaptive. Determine whether the Hartog-Lei sequential guarantees cover this filtration directly or require a fixed family; if not, construct an online conditional-e-value version and prove first-false-commit control."
+    },
+    {
+      "priority": 2,
+      "action": "Optimize the infinite-horizon base gamma schedule using only development-side predicted audit value/cost while preserving pathwise lifetime alpha. Compare fixed geometric, robust mixtures of geometric schedules, value-weighted predictable spending, and fallback recycling across correlated quality regimes and rare-good-candidate delays."
+    },
+    {
+      "priority": 3,
+      "action": "Add an explicit outer epoch budget for long-lived systems so restarts, model-version changes, or benchmark refreshes cannot silently reset run-level alpha. Compare lifetime alpha spending with bounded-window risk objectives."
+    },
+    {
+      "priority": 4,
+      "action": "Extend run-level confirmation to multiple endpoints, especially rare catastrophic regressions, so a stream-wise average-improvement FWER guarantee cannot authorize a candidate that violates a separately protected safety endpoint."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Resolve the e-Fallback interface: read the latest Hartog-Lei construction in enough detail to identify its filtration/family assumptions, then either map adaptively generated fresh-confirmation e-processes into those assumptions or derive a conditional online e-Fallback analogue. Stress-test it against geometric fallback under delayed/clustered true candidates while preserving lifetime strong FWER."
+}
