@@ -1,0 +1,195 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T07:03:16+09:00",
+  "invocation_started_at": "2026-08-27T06:57:19+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T060724_JST_deadline_censoring_tailrisk.json",
+  "control": {
+    "frozen_main_sha": "d1f204a175b4ce7dc45fba783dc03249d87f4c19",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": [
+      "d1f204a175b4ce7dc45fba783dc03249d87f4c19",
+      "d1f204a175b4ce7dc45fba783dc03249d87f4c19"
+    ]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "title": "Anytime-Valid Inference Under Outcome Delay: A Design-Based Approach",
+      "date": "2026-03-26",
+      "url": "https://arxiv.org/abs/2603.25971",
+      "relevance": "Primary-source support that outcome value and timing can be coupled and that the delayed-outcome filtration matters; used to motivate explicit separation of physical completion from statistical reveal."
+    },
+    {
+      "title": "Towards Multi-Model LLM Schedulers: Empirical Insights into Offloading and Preemption",
+      "date": "2026-05-19",
+      "url": "https://arxiv.org/abs/2605.19593",
+      "relevance": "Primary-source evidence that LLM preemption can have substantial, hardware/model-dependent overhead dominated by state reload; motivates reporting effective cancellation savings separately from full launched obligation and resume overhead."
+    },
+    {
+      "title": "Beyond Prediction: Tail-Aware Scheduling for LLM Inference",
+      "date": "2026-06-16",
+      "url": "https://arxiv.org/abs/2606.18431",
+      "relevance": "Primary-source evidence that cache-aware preemption and tail behavior materially affect serving latency; used only as systems context, not as proof of the evaluation-specific scheduler result."
+    }
+  ],
+  "pathwise_physical_scheduler_invariance": {
+    "statement": "Freeze an ordered paired-outcome sequence X_1,...,X_N before it becomes statistically eligible, including prompt/environment/model/seed/attempt identity. A physical scheduler may launch, delay, preempt, resume, or cancel computation and may use arbitrarily rich timing/resource history. Statistical reveal is restricted to the largest completed prefix K(t), with no skip or reorder. A hard deadline D returns unresolved unless the original timing-blind prefix test has already crossed. Then {false commit by D} is a pathwise subset of {the original no-deadline prefix test ever crosses on X_1,...,X_N}. Hence physical scheduling and informative latency cannot increase unconditional false-commit probability under these conditions.",
+    "finite_horizon_control": "For the current +1.5/-0.5 fair-sign e-process with threshold 20 and N=50, exact no-deadline null crossing probability is 0.03759043021723407, below the nominal Ville bound 0.05. Any fail-closed physical deadline preserving frozen outcome identity/order is bounded by this same crossing event.",
+    "safe_operations": [
+      "independent side-slot reuse that changes only completion times",
+      "timing-aware preemption followed by resume of the same frozen attempt/output identity",
+      "cancelling unrevealed future work after a valid commit",
+      "cancelling all remaining work at a fail-closed deadline and returning unresolved"
+    ],
+    "unsafe_or_uncovered_operations": [
+      "completion-order statistical inclusion or skipping/reordering pairs",
+      "preempt-and-restart that draws a fresh stochastic model output and substitutes it for the frozen attempt",
+      "hedging multiple stochastic attempts and choosing the first/fastest/best attempt as the pair outcome",
+      "accept-on-timeout or timing-dependent changes to the statistical bet/boundary without a richer conditional-null proof"
+    ]
+  },
+  "hedged_retry_counterexample": {
+    "construction": "Each attempt is null-fair: sign + or - with probability 1/2. Let + attempts finish at time 1 and - attempts at time 2. Launch two independent duplicate attempts and define the pair outcome as the first completion.",
+    "result": "Observed P(+)=3/4 because the first completion is + unless both attempts are -. The current one-step e-factor then has expectation 0.75*1.5 + 0.25*0.5 = 1.25 > 1, so e-validity is destroyed even though each underlying attempt was individually fair. Fixed reveal order alone does not protect against scheduler-induced replacement of the outcome identity.",
+    "implication": "Resume/cancel is statistically safe only if it preserves the same frozen attempt (or the retry policy itself is frozen before seeing timing/outcomes and the resulting composite outcome has a separately valid null)."
+  },
+  "synthetic_side_level_stress": {
+    "status": "Worker-local synthetic Monte Carlo and exact/pathwise reasoning only; not a deployed serving measurement.",
+    "model": {
+      "pairs": 50,
+      "pair_locked_slots": 16,
+      "shared_side_slots": 32,
+      "latency": "correlated lognormal side latencies with shared task difficulty, side noise, and independent 1% x10 side stragglers",
+      "sign_latency_dependence": "null/alternative + pairs are globally faster and - pairs slower by reciprocal exp(+-0.35) multiplier",
+      "statistical_test": "+ factor 1.5, - factor 0.5, threshold 20, fixed covariate-blind pair order",
+      "deadline": 22.7323209,
+      "deadline_origin": "independent 10k-run calibration: median no-deadline pair-locked wall time under null; normalized synthetic units",
+      "evaluation_trajectories_per_condition": 5000,
+      "policies": {
+        "pairlock": "16 paired slots; both side slots reserved until slower side finishes",
+        "sideW16": "32 shared side slots; only first 16 unrevealed pair indices may have work in flight",
+        "sideW32": "same with 32-pair lookahead",
+        "sideW50": "same with all 50 pair indices eligible; fixed statistical reveal still enforced"
+      }
+    },
+    "null_q_0_5": {
+      "pairlock": {
+        "false_commit": 0.0282,
+        "resolved_by_deadline": 0.498,
+        "false_commit_fraction_among_resolved": 0.056627,
+        "mean_full_side_compute": 222.406619,
+        "mean_effective_side_compute_with_instant_cancel": 206.038097,
+        "mean_paired_reservation_occupancy": 301.364659,
+        "q95_paired_reservation_occupancy": 467.90531
+      },
+      "sideW16": {
+        "false_commit": 0.0258,
+        "resolved_by_deadline": 0.1442,
+        "false_commit_fraction_among_resolved": 0.178918,
+        "mean_full_side_compute": 182.64179,
+        "mean_effective_side_compute_with_instant_cancel": 158.71334
+      },
+      "sideW32": {
+        "false_commit": 0.0274,
+        "resolved_by_deadline": 0.3656,
+        "false_commit_fraction_among_resolved": 0.074945,
+        "mean_full_side_compute": 212.532386,
+        "mean_effective_side_compute_with_instant_cancel": 193.761652
+      },
+      "sideW50": {
+        "false_commit": 0.0282,
+        "resolved_by_deadline": 0.5114,
+        "false_commit_fraction_among_resolved": 0.055143,
+        "mean_full_side_compute": 222.485962,
+        "mean_effective_side_compute_with_instant_cancel": 206.571485
+      }
+    },
+    "alternative_q_0_6": {
+      "pairlock": {
+        "commit_by_deadline": 0.1888,
+        "resolved_by_deadline": 0.5886,
+        "commit_fraction_among_resolved": 0.320761,
+        "mean_full_side_compute": 206.653257,
+        "mean_effective_side_compute_with_instant_cancel": 189.181355,
+        "mean_paired_reservation_occupancy": 280.054191
+      },
+      "sideW16": {
+        "commit_by_deadline": 0.1722,
+        "resolved_by_deadline": 0.2928,
+        "commit_fraction_among_resolved": 0.588115,
+        "mean_full_side_compute": 163.10832,
+        "mean_effective_side_compute_with_instant_cancel": 142.498369
+      },
+      "sideW32": {
+        "commit_by_deadline": 0.1874,
+        "resolved_by_deadline": 0.4858,
+        "commit_fraction_among_resolved": 0.385755,
+        "mean_full_side_compute": 193.269725,
+        "mean_effective_side_compute_with_instant_cancel": 175.152763
+      },
+      "sideW50": {
+        "commit_by_deadline": 0.1892,
+        "resolved_by_deadline": 0.5982,
+        "commit_fraction_among_resolved": 0.316282,
+        "mean_full_side_compute": 207.041879,
+        "mean_effective_side_compute_with_instant_cancel": 190.162514
+      }
+    },
+    "interpretation": [
+      "In this simulator, unrestricted side-level reuse (W50) recovered essentially the same compute and slightly higher deadline resolution than pair-locking, while eliminating the artificial requirement to reserve both side slots until the slower side completes. Under the paired-reservation accounting model, null mean occupancy falls from 301.36 paired-slot units to about 222.49 side-compute units (~26%); this is a reservation-model comparison, not a claim about provider billing.",
+      "The wall/resolution benefit of side-level reuse was modest; its main tested benefit was avoiding stranded side-slot reservation. Bounded lookahead W16/W32 reduced launched compute but sharply lowered deadline resolution and made the resolved subset more compositionally biased.",
+      "If cancellation really stops launched work at commit/deadline, effective side compute was ~7-8% below full launched obligation for W50/pairlock in these deadline conditions. If the serving stack charges or continues already-launched work, this saving does not materialize; preemption/reload overhead must be measured separately.",
+      "All unconditional false-commit estimates remain below the exact 3.759% no-deadline crossing probability within Monte Carlo error; resolved-only false-commit fractions can be much larger under aggressive lookahead restriction because censoring is informative."
+    ]
+  },
+  "new_measurement_validity_rules": [
+    "Separate statistical outcome identity/order from physical execution. Side-level reuse, preemption, and cancellation are validity-neutral only when they cannot replace or reorder the frozen paired outcomes seen by the test.",
+    "Treat preempt-and-resume and cancel-and-rerun as statistically different operations. Resume of the same deterministic/frozen attempt preserves the pathwise subset argument; rerunning a stochastic model can create a new selected outcome and needs its own null proof.",
+    "For deadline/cancellation studies report at least: unconditional false-commit probability, resolved fraction, resolved-only composition, full launched obligation, effective work under successful cancellation, and preemption/reload overhead. Do not infer compute savings from wall-time alone.",
+    "Do not tighten lookahead merely to save launched work without measuring unresolved rate and resolved-subset composition; in the tested stress W16 saved compute but reduced null resolved fraction from ~50% to ~14% and inflated false-commit share among resolved runs.",
+    "A physical scheduler may use timing/resource history, even when timing is outcome-associated, without increasing unconditional FWER if it only changes reveal times and the deadline is fail-closed. The critical prohibition is scheduler-induced selection/replacement/reordering of statistical outcomes, not timing awareness by itself."
+  ],
+  "scope_guards": [
+    "All latency/occupancy figures are normalized synthetic Monte Carlo; no deployed hardware, provider, model, billing scheme, or real cancellation semantics were measured.",
+    "The ~26% reservation reduction assumes pair-locking truly reserves two side slots until the slower side completes and side-level scheduling can independently reuse freed capacity; actual GPU schedulers may have memory/KV/cache constraints and preemption costs that change the tradeoff.",
+    "The pathwise theorem controls unconditional false-commit probability only for a pre-existing valid prefix test on frozen outcomes. It does not establish power, resolved-only calibration, or validity of timing-dependent outcome generation.",
+    "The duplicate-hedging counterexample is an existence proof, not a claim that any current serving stack uses this unsafe rule.",
+    "Monte Carlo estimates have sampling error; the exact 3.759043% finite-horizon null crossing calculation and the pathwise subset relation are not Monte Carlo claims."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Add explicit attempt-identity semantics to the scheduler model: deterministic resume, stochastic restart, and hedged duplicate. Derive valid retry constructions that allow redundancy without first-completion selection bias, e.g. freeze a retry/aggregation rule before observing timing and test the resulting composite paired outcome."
+    },
+    {
+      "priority": 2,
+      "action": "Measure preemption/reload overhead and side-level memory/KV occupancy using public traces or a reproducible local serving trace; compare full obligation, effective cancel savings, and wall time rather than assuming cancellation is free."
+    },
+    {
+      "priority": 3,
+      "action": "Optimize lookahead/window size under a joint objective over q95 wall, unresolved rate, full/effective occupancy, and resolved-subset composition while keeping statistical reveal fixed."
+    },
+    {
+      "priority": 4,
+      "action": "For cases that intentionally use timing to choose among stochastic attempts or alter statistical order, derive a richer conditional e-process or design-based estimator in the timing filtration rather than relying on the prefix-subset theorem."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct statistically valid redundancy for stochastic LLM evaluation: compare (a) frozen single attempt with preempt/resume, (b) predeclared duplicate aggregation that ignores completion order, and (c) unsafe first-completion hedging. Derive the paired-sign null for each, quantify power/cost under stragglers, and identify whether any completion-order-independent aggregation recovers tail-latency savings without selection bias."
+}
