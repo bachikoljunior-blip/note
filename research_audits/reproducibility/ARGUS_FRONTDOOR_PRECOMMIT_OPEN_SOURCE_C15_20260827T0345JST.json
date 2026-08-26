@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "bootstrap_valid": true,
+  "invocation_started_at": "2026-08-27T03:41:00+09:00",
+  "audited_at": "2026-08-27T03:45:00+09:00",
+  "chronology_valid": true,
+  "frozen_control": {
+    "note_main_sha": "3d1045893e68fb0f411d118c900f293df84faf86",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 18,
+    "downstream_control_blob": "55b2dacea589ce57f1d1ff04ef4f728c0c17f711",
+    "role_config_revision": 2,
+    "presemantic_head_check_1": "3d1045893e68fb0f411d118c900f293df84faf86",
+    "presemantic_head_check_2": "3d1045893e68fb0f411d118c900f293df84faf86",
+    "semantic_freeze_respected": true
+  },
+  "source_binding": {
+    "active_wave_id": "clean-g1-wave-c15-20260826T2156JST-a94bf8db",
+    "active_wave_manifest_blob": "506d27e808efad141b4f9df54734182504b83eb7",
+    "source_set_digest": "a94bf8db640fbba0c1db5690d4caf6fba4adfbff9a0a9714f44f8cdded4f69c0",
+    "namespace": "open_source",
+    "source_artifact": "research_workers_clean_g1/open_source/RUN_20260826_2130_BEFOREWRITE_SCOPE_AND_YIELD_RECOVERY.md",
+    "source_artifact_blob": "221718df5b5c43fc5c5dc9e03c0b5056b5aebd59",
+    "source_local_candidate_id": "clean-os-g1-005",
+    "candidate_identity_status": "Worker lineage names clean-os-g1-005, but the sealed C15 source artifact is prose rather than a schema-2 candidate manifest. Do not canonical-join this audit until a bootstrap-valid producer supplies the exact current-wave mapping.",
+    "audited_official_commit": "lbx154/Argus@8c5a0e356c470ad4cbdc904a7fbe4de14af366cf"
+  },
+  "candidate": "Argus continuous-handoff before_write split-brain boundary and boot-path fail-closed asymmetry",
+  "official_source_verification": {
+    "continuous_atomic_writer": {
+      "path": "argus_skill/daemon/state.py",
+      "observed_behavior": "_atomic_write_bytes writes and fsyncs a temp file, snapshots the old destination bytes, invokes before_replace, and only then calls os.replace. If os.replace fails after the callback committed and the destination did not change, the code raises _AtomicWriteAfterCallbackError, which becomes ContinuousConfigCommitError.",
+      "official_regression": "tests/daemon/test_state_portable.py::test_replace_failure_after_callback_surfaces_instead_of_false explicitly makes the callback persist precommit.txt, forces continuous.json replace to fail, expects ContinuousConfigCommitError, then asserts the callback side effect remains while read_continuous_state equals the prior state. This mechanically establishes the generic partial-precommit state transition."
+    },
+    "front_door_composition": {
+      "path": "argus_skill/manager/front_door.py",
+      "observed_behavior": "PreparedManagerHandoff.commit calls manager.commit_vertical_decision and records the goal contract. The continuous handoff supplies an internal _commit callback that calls prepared.commit, then passes that callback as before_write to the continuous-state CAS. The surrounding exception path marks the prepared handoff failed and rethrows as ManagerHandoffError; its finally block clears the pipeline-yield token.",
+      "durable_split_trace": [
+        "Start from route/goal A plus continuous state A at generation g.",
+        "CAS holds the continuous lock and invokes before_write=_commit.",
+        "_commit durably publishes the Manager route/goal B.",
+        "continuous.json os.replace fails before changing the destination.",
+        "state.py raises ContinuousConfigCommitError; continuous remains A/g.",
+        "front_door reports failure and clears the pipeline-yield token; no compensating route rollback was located in this exact path.",
+        "Reachable durable tuple is therefore route/goal B with continuous A/g until later reconciliation."
+      ]
+    },
+    "boot_path_asymmetry": {
+      "path": "argus_skill/daemon/_life_worker_boot.py",
+      "observed_behavior": "Daemon boot also commits the Manager decision in before_write, but its broad exception handler immediately re-reads continuous state. If generation is still the expected generation, it forces init_continuous=False, clears init_objective and activates suppression for the old enabled generation before constructing the supervisor.",
+      "scope_implication": "The same durable route/continuous mismatch can remain on disk, but the just-starting boot process has an explicit runtime fail-closed backstop. This backstop must not be generalized to the live front-door path."
+    },
+    "pipeline_yield_liveness": {
+      "path": "argus_skill/manager/_session_ops.py",
+      "observed_behavior": "The yield record is token/PID/timestamp bound. manager_pipeline_yield_requested clears invalid/dead-PID records and expires live-looking records after pipeline-lock timeout + 60 seconds. The live front-door finally block also clears its own token.",
+      "scope_implication": "Requester crash does not imply an unbounded permanent yield wedge. This is a positive control and does not repair the post-callback replace-failure split."
+    },
+    "test_surface": {
+      "state_level_fault_injection": "present and directly exercises callback-committed/replace-failed semantics",
+      "front_door_specific_fault_injection": "Not located by the exact repository searches performed in this audit for ContinuousConfigCommitError/front_door and the precommit failure phrase. This is a bounded search result, not a global claim that no such test exists anywhere."
+    }
+  },
+  "freshness_cross_check": {
+    "later_public_main_observed": "lbx154/Argus@67361617e1967830cd62bce990ff90012797645e",
+    "later_main_commit_time": "2026-08-26T17:33:46Z",
+    "ahead_of_audited_commit_by": 19,
+    "relevant_files_changed_between_commits": false,
+    "relevant_files_checked": [
+      "argus_skill/manager/front_door.py",
+      "argus_skill/daemon/state.py",
+      "argus_skill/daemon/_life_worker_boot.py",
+      "argus_skill/manager/_session_ops.py",
+      "tests/daemon/test_state_portable.py"
+    ],
+    "interpretation": "The compare result contained many later changes but none of these relevant files, so the audited structural behavior persists on the freshly observed public main. This current-head check does not change the sealed C15 source binding."
+  },
+  "reproducibility_assessment": {
+    "overall_grade": "B+",
+    "official_artifact_support_grade": "A",
+    "structural_failure_reproduction_grade": "A-",
+    "production_failure_incidence_grade": "C/not measured",
+    "proposed_handoff_fence_or_compensation_grade": "C/untested",
+    "independent_external_replication": "not located",
+    "judgment": "The worker's refined diagnosis is strongly reproducible at source/test level. Argus itself contains a deterministic fault-injection regression proving that a before_write side effect can remain committed when continuous replacement fails, and the live front-door composes a durable Manager route/goal commit into exactly that callback position. The boot path materially narrows runtime risk with a generation-checked suppression backstop, while the live front-door clears its yield and exposes no equivalent compensation in the audited path. The audit does not establish real-world failure frequency or prove the worker's proposed handoff-fence/idempotent-persist fix."
+  },
+  "tested_scope": {
+    "supported": [
+      "Reachability of callback-committed / continuous-replace-failed partial state under the exact state primitive.",
+      "Front-door composition places Manager route/goal commit in that before_write callback position.",
+      "The live front-door failure path clears its yield token and does not show route compensation in the exact inspected path.",
+      "Daemon boot has a distinct generation-checked runtime suppression guard after this class of failure.",
+      "Manager pipeline-yield records have PID/time liveness cleanup and are not an unbounded crash wedge by construction.",
+      "Relevant implementation files remain unchanged on the freshly observed public main 67361617e1967830cd62bce990ff90012797645e."
+    ],
+    "not_supported": [
+      "A measured rate of this failure in production Argus deployments.",
+      "A claim that boot will execute stale continuous A after this exact failure; the audited code explicitly suppresses that case when generation is unchanged.",
+      "A claim that every possible post-callback I/O failure yields exactly the same durable state; post-replace durability errors have separate semantics.",
+      "A claim that the proposed disabled handoff fence, route compensation, or idempotent mission persist is implemented or verified.",
+      "Any AGI-performance effect."
+    ]
+  },
+  "exact_blockers": [
+    "No protocol-matched external reproduction of the Argus front-door failure was located.",
+    "No front-door integration fault-injection test was located in the bounded search used here; the strongest executable evidence is the lower-level official state regression plus exact call-path composition.",
+    "A safe repair must define a single coherent commit/recovery boundary for route/goal, continuous generation and any mission persistence without blindly replaying non-idempotent side effects.",
+    "Crash semantics after route commit but before/after continuous replace still require a recovery test over a real Backlog/route store if the proposed handoff-fence design is implemented."
+  ],
+  "reopen_conditions": [
+    "Argus publishes a front-door fault-injection regression for post-callback continuous replace failure.",
+    "Argus implements a disabled handoff fence/transactional reconciliation or exact idempotent mission-persist contract and tests crash recovery.",
+    "An independent reproducer demonstrates or falsifies the split using the official front-door runtime.",
+    "The relevant front_door/state/boot/session_ops implementation materially changes."
+  ],
+  "primary_provenance": [
+    "https://github.com/lbx154/Argus/commit/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/manager/front_door.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/daemon/state.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/daemon/_life_worker_boot.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/argus_skill/manager/_session_ops.py",
+    "https://github.com/lbx154/Argus/blob/8c5a0e356c470ad4cbdc904a7fbe4de14af366cf/tests/daemon/test_state_portable.py",
+    "https://github.com/lbx154/Argus/commit/67361617e1967830cd62bce990ff90012797645e"
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next bootstrap-valid invocation, do not re-audit this unchanged Argus split unless a reopen condition is met. Resolve the then-exact sealed ACTIVE_WAVE and select a different source-qualified non-evaluation candidate, preferring a new open_source or cross_field item with executable official material and an unresolved replication boundary that can be reduced."
+}
