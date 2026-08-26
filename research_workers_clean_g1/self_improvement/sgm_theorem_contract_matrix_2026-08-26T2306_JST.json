@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "artifact_id": "SIG-SGM-CONTRACT-20260826-2306",
+  "created_at": "2026-08-26T23:06:38+09:00",
+  "worker": "self_improvement",
+  "generation": "clean_g1",
+  "frozen_control": {
+    "note_main_sha": "21c88a7daf463faf6f892c916aeb66945fa36003",
+    "control_revision": 10,
+    "config_revision": 6,
+    "config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "source_scope": {
+    "paper": "arXiv:2510.10232v1",
+    "public_repo": "gravitywavelet/sgm-anon@bcb533c3fb0a0b1c6576aa6c36841fe3e8067634",
+    "long_driver_origin_commit": "5c75f8775ecc94d2223222d1d2c5b77307851351",
+    "long_driver_blob": "955093ebb191c9dd5c8b7b7e45ed159e554c5ca2",
+    "run_long_blob": "9f47e92057f322de0001e13258ea58261944a2ea"
+  },
+  "matrix": [
+    {
+      "path": "manuscript_theorem2_evalue",
+      "protected_estimand": "per-candidate mean normalized paired improvement mu_t",
+      "transform": "X=Delta/R in [-1,1]",
+      "certificate": "e_{t,i}=1+lambda_{t,i}X_{t,i}; E_t=product_i e_{t,i}; W_t=W_{t-1}E_t; accept if W_t>=1/delta",
+      "cross_candidate_state": "single W carried across rounds/candidates; initialized once before outer loop; no reset specified after promotion",
+      "claim": "Pr(exists t: accept at t when mu_t<=0)<=delta",
+      "contract_status": "invalid_for_mixed_null_alternative_stream_as_written",
+      "reason": "E[e|past]<=1 follows only while the currently accumulated factor is under its null. A genuinely beneficial candidate can have E[e]>1, so its favorable wealth cannot be reused as candidate-specific null evidence for a later harmful candidate.",
+      "executable_counterexample": {
+        "delta": 0.1,
+        "lambda": 1.0,
+        "one_observation_per_candidate": true,
+        "X_sequence": [1.0, 1.0, 1.0, 1.0, -0.1],
+        "wealth_sequence": [2.0, 4.0, 8.0, 16.0, 14.4],
+        "threshold": 10.0,
+        "round_5_true_mean": -0.1,
+        "round_5_accepts": true,
+        "harmful_accept_probability": 1.0
+      }
+    },
+    {
+      "path": "PGM_Ex4/run_pgm_cifar.py",
+      "protected_estimand": "mean clipped normalized paired accuracy delta",
+      "transform": "clip((proposal-incumbent)/rmax_pp,-1,1)",
+      "support": "[-1,1]",
+      "certificate": "fixed-n empirical Bernstein with additive range term R=2.0",
+      "error_schedule": "harmonic by proposal index delta_t=delta/(t H_B)",
+      "screen_confirm_relation": "one-stage; same configured seed panel per candidate",
+      "contract_status": "bound_formula_matches_width_2_transformed_support_but_estimand_is_not_raw_accuracy_mean",
+      "known_failure_mode": "clipping can reverse the sign relative to raw expected accuracy; certificate must be stated for the transformed utility unless an order-preservation theorem is supplied"
+    },
+    {
+      "path": "PGM_Ex5/pgm_outer.py",
+      "protected_estimand": "mean clipped normalized paired accuracy delta",
+      "transform": "clip(delta_pp/rmax_pp,-1,1)",
+      "support": "[-1,1]",
+      "certificate": "empirical Bernstein helper with R=1.0 in additive term",
+      "paper_formula_required_range_width": 2.0,
+      "error_schedule": "harmonic by proposal index",
+      "screen_confirm_relation": "confirmation seed set is base screening seeds plus extras",
+      "contract_status": "source_formula_and_sample_contract_mismatch",
+      "known_failure_modes": [
+        "additive empirical-Bernstein range constant is half the literal width-2 support term in manuscript equation",
+        "screening observations are reused after data-dependent escalation despite manuscript statement of disjoint screening/confirmation seed pools",
+        "protected utility is clipped rather than raw accuracy delta"
+      ]
+    },
+    {
+      "path": "PGM_Ex6/outer_in100.py",
+      "protected_estimand": "mean clipped normalized paired accuracy delta",
+      "transform": "clip(delta_pp/rmax_pp,-1,1)",
+      "support": "[-1,1]",
+      "certificate": "active final confirmation uses Hoeffding radius sqrt((2/n) ln(1/delta_t)), consistent with support width 2",
+      "error_schedule": "harmonic by proposal index",
+      "screen_confirm_relation": "confirmation seed set contains screening seeds plus extras",
+      "contract_status": "final_bound_formula_matches_transformed_support_but_confirmatory_independence_and_raw_estimand_claim_do_not",
+      "known_failure_modes": [
+        "screen-selected observations are included in final confirmation, so the simple post-selection confirmatory interpretation is not justified by the stated disjoint-pool protocol",
+        "protected utility is clipped rather than raw accuracy delta"
+      ],
+      "nonclaim": "This artifact does not assert that the conservative full Ex6 procedure necessarily exceeds its nominal error rate; it records the theorem/precondition mismatch."
+    },
+    {
+      "path": "PGM_ImageNet100/outer_in100_long.py",
+      "protected_estimand": "mean tanh-transformed paired accuracy delta",
+      "transform": "tanh(delta_pp/rmax_pp)",
+      "support": "(-1,1)",
+      "certificate": "variance-only empirical-Bernstein-like LCB; manuscript additive range term is commented out",
+      "error_schedule": "CTHS by confirmation index delta_k=delta/(k H_B)",
+      "screen_rule": "mean raw delta >=0.3pp and SNR>0.2",
+      "screen_confirm_relation": "3 screen seeds reused inside 12-seed confirmation panel in run_long.sh",
+      "restart_state": "confirm_count and delta_used_total are process-local; training results are cached in SQLite but there is no atomic durable risk ledger bound to promotion",
+      "contract_status": "nominal_false_accept_control_fails_for_public_executable_gate",
+      "full_procedure_counterexample": {
+        "run_long_parameters": {"screen_seeds": 3, "confirm_seeds": 12, "budget": 40, "delta": 0.1, "rmax_pp": 2.0},
+        "transformed_outcomes": {"positive_y": 0.15, "negative_y": -0.999},
+        "raw_delta_pp": {"positive": 0.30228087187293357, "negative": -7.600402334500399},
+        "positive_probability": 0.8694516971279374,
+        "negative_probability": 0.1305483028720626,
+        "true_transformed_mean": 0.0,
+        "true_raw_mean_pp": -0.7294010088546554,
+        "first_confirmation_delta": 0.023372442228572158,
+        "event": "all 12 confirmation observations equal positive_y; this also implies all 3 reused screening seeds pass mean>=0.3pp with zero variance/SNR clipped to 5",
+        "event_probability": 0.18661455539871727,
+        "lcb_on_event": 0.15,
+        "decision_on_event": "ACCEPT",
+        "consequence": "A single harmful/null candidate is falsely accepted with probability at least 0.1866, exceeding both the first-confirmation nominal 0.02337 and the advertised global delta 0.1 under this executable gate."
+      }
+    }
+  ],
+  "paper_code_alignment": {
+    "paper_claim": "Section 3.2.3 says e-values are default in experiments and implementation with lambda=1.",
+    "public_code_search": "Search of current public repository for evalue/e-value/wealth plus inspected historical Python paths found no e-value wealth implementation; visible experiment paths use Hoeffding/empirical-Bernstein/harmonic/CTHS logic.",
+    "paper_revision_state": "arXiv exposes only v1 dated 2025-10-11; Appendix A supplies a Hoeffding proof but no separate proof or mixed-null qualification for Theorem 2.",
+    "scope": "Absence is limited to the public repository/history inspected; no claim about private or unreleased implementations."
+  },
+  "required_gate_contract": [
+    "candidate/incumbent hashes and exact null hypothesis identity",
+    "protected estimand including clipping/winsorization/nonlinear transformation",
+    "mathematically valid support/range bound",
+    "exact bound/e-process formula and constants",
+    "screening/confirmation sample identities and theorem-permitted reuse",
+    "candidate-local evidence state",
+    "valid cross-candidate cumulative error mechanism for adaptive hypotheses",
+    "null and mixed-null executable calibration tests",
+    "atomic restart/promotion/risk-state persistence",
+    "outer evaluation never used for proposal, acceptance, rollback, retirement, early stopping or checkpoint selection"
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Search author/review artifacts and source history for any corrected candidate-local e-value theorem or implementation; if none appears, treat the manuscript e-value path as unvalidated for mixed recursive edit streams. Continue locating long_sgm.db/realized chronology, build automated source-version checks for each matrix row, audit SEA/PACE-style candidate-local certificate persistence across restart, and search for a >10-proposal live self-improving agent combining candidate-local anytime-valid evidence, durable cross-candidate statistical spending, complete proposal chronology, and a genuinely untouched outer test."
+}
