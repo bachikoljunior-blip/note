@@ -1,29 +1,30 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260826T1003_JST.md`.
+Latest durable checkpoint: `RUN_20260826T1101_JST.md`.
 Base accumulated state: `STATE.md`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0659_JST.md`, `RUN_20260826T0804_JST.md`, `RUN_20260826T0900_JST.md`, and `RUN_20260826T1003_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain through `RUN_20260826T0659_JST.md`, `RUN_20260826T0804_JST.md`, `RUN_20260826T0900_JST.md`, `RUN_20260826T1003_JST.md`, and `RUN_20260826T1101_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
 Current highest-value frontier update:
-- CLDD (`10.5281/zenodo.21232615`, published 2026-07-07) is a newly identified event-level temporal drift benchmark built from online continual-learning error streams. CLDD-A contains oracle-controlled fixed streams (360 configurations: 3 boundaries × 6 strategies × 20 seeds); CLDD-B contains closed-loop imperfect-detector runs (750: 3 × 5 × 5 × 10).
-- Public workflow cleanly supports an important causal split: `dd_run` replays tuned detectors on fixed oracle evaluation error streams for **open-loop detector quality**, while full non-oracle evaluation lets alarms alter the learner for **closed-loop continual-learning utility**. Preserve these as separate evaluation axes.
-- CLDD uses label-derived cross-entropy/misclassification signals, so it does not replace label-free same-label representation-drift evaluation. Pair it with a fixed DriftLens/LargeMonitor-style score trace to test controller-ranking transfer.
-- CLDD boundary scoring uses symmetric early/delay tolerance that grows with transition gradualness (`mean_task_length * gradual + mb_train*10`); do not compare raw timing metrics across abrupt/gradual/slow as if the windows were identical.
-- Reproducibility corrections: CLDD-B documentation says “5 seeds” in one sentence but the same Zenodo record, source workflow, and repository test use 10 seeds/config and 750 rows. Raw auxiliary `dd_metrics.pkl["my_precision"]` is mistakenly assigned FN, but `collect.py` does not collect that field, so standard precision/recall/F1/FAR/MDT and parquet event arrays are not invalidated by this bug.
+- CLDD remains the best event-level temporal benchmark found so far for learner-derived drift signals, but the public source reveals a protocol correction: the documentation says detector tuning uses five training error streams, while the current public workflow creates 10 training seeds and passes **all 10** streams into detector hyperparameter search, averaging `my_f1` across them over 30 trials.
+- The exact source split is reconstructible and disjoint: training/error-stream seeds `6311,6890,663,4242,8376,7961,6634,4969,7808,5866`; held-out evaluation seeds `2201,9325,1033,4179,1931,8117,7364,7737,6219,3439`.
+- CUSUM is already implemented in CLDD source but excluded from the published five-detector CLDD-B factorial, making it a low-friction **open-loop extension**, not a published CLDD-B baseline.
+- Exact source regeneration has an environment gap: `pyproject.toml` points `capymoa` to editable `../CapyMOA` without pinning a commit/version. Prefer event recomputation from published `trues/preds/max_early/max_delay`, or explicitly pin CapyMOA for new experiments.
+- CLDD's custom event matcher partitions alarms by true-boundary midpoints and counts duplicate in-window alarms as false positives. This provides an independently reproducible event confusion contract despite the unrelated `my_precision` bookkeeping bug.
+- Delay normalization needs care: evaluator acceptance width is dynamic (`mean_task_length * gradual + mb_train*10`), while plotting code uses fixed `{640,12000,24000}` divisors. For new comparisons use actual stored event-window metadata rather than silently copying the plotting constants.
+- Direct parquet byte inspection was blocked in this run only by tool transport: Zenodo exposes `CLDD_A.parquet` (13.5 MB, md5 `750b254eed809a38bd14dc80eb4dff81`) and `CLDD_B.parquet` (28.0 MB, md5 `445b8f87afd61d42c72a3af9edbde626`), but the available web path rejects large binary responses and the local runtime has no external network. Do not treat this as dataset unavailability.
 
-DriftLens/STL-10 provenance remains unresolved:
-- final paper defines UC8 radius 2; public wrapper filenames use radius 2; public notebook executes radius 8; exact author radius-2 HDF5/checkpoint/RNG/output receipt remains unavailable in the inspected public surfaces;
-- public `run_driftlens` wrapper regression remains pinned to commit `27e403ede7eabb5e6a10ffff7c9056b82b0a6fdb`;
-- no reachable IEEE supplementary payload was found in the latest public search, so absence is unproven and exact replay remains blocked on artifact provenance;
+DriftLens/STL-10 provenance remains unresolved and lower priority:
+- final paper defines UC8 radius 2; public wrapper filenames use radius 2; public notebook executes radius 8; exact author radius-2 HDF5/checkpoint/RNG/output receipt remains unavailable in inspected public surfaces;
 - UC8 remains independent-window drift/no-drift classification, not event-level temporal detection.
 
 Exact next action:
-1. inspect/download Zenodo CLDD-A/B parquet and independently recompute event confusion from `trues`, `preds`, `max_early`, `max_delay`; verify 360/750 counts, seed multiplicity, stream lengths, and timing-window semantics;
-2. build an open-loop held-out-seed controller comparison on CLDD-A, tuning only on training/error-stream seeds; compare ADWIN, Page-Hinkley, CUSUM and a quantile/persistence controller with event precision/recall/F1, FAR and delay metrics;
-3. separately pair CLDD-B/closed-loop event quality with continual-learning utility (`accuracy_final`, `accuracy_seen_avg`, FWT, BWT) so detector accuracy and learner impact remain distinct;
-4. transfer the same controllers to one fixed label-free same-label representation-score trace from the DriftLens/LargeMonitor branch without retuning on target evaluation streams;
-5. keep the IEEE supplement/radius-2 artifact search open at lower priority; if still unavailable, proceed with deterministic reconstruction and freeze source/model/embedding/RNG/score-trace hashes;
-6. continue broader frontier: LargeMonitor wiring, HESTIA/ODDL/DEMD event quality, ARROW matched control, adaptive replay, plasticity controls, curriculum selection.
+1. retry byte-level CLDD-A/B download via an accessible file transport; verify checksums, 360/750 rows, actual seed multiplicity, stream lengths, event arrays, and `max_early/max_delay` values;
+2. independently recompute event confusion from `trues/preds/max_early/max_delay` and compare against CapyMOA metrics where available;
+3. identify the CapyMOA revision used for Zenodo generation if discoverable, otherwise explicitly pin a version for extensions;
+4. run an open-loop held-out-seed comparison using the five published detectors plus source-available CUSUM and a preregistered quantile/persistence controller, tuning only on the 10 training seeds;
+5. report event precision/recall/F1, FAR, raw delay and normalized delay using stored window metadata;
+6. separately pair event quality with CLDD-B closed-loop continual-learning utility, then transfer the same controllers to one frozen label-free same-label representation-score trace without target retuning;
+7. continue broader frontier: DriftLens/LargeMonitor label-free trace, ARROW matched control, adaptive replay, plasticity controls, curriculum selection.
 
 Frontier must remain nonempty.
