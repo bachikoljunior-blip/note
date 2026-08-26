@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "control_revision": 11,
+  "config_revision": 5,
+  "control_source_main_sha": "5d284a097cbc5ff6d630847b1218c8b1bce4c83f",
+  "control_root_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+  "role_config_blob": "f8b9cec681279d8dbd14c5db87ee79bc743a27b0",
+  "invocation_started_at": "2026-08-27T05:59:02+09:00",
+  "checkpointed_at": "2026-08-27T06:05:04+09:00",
+  "chronology_valid": true,
+  "continues_from_latest": "RUN_20260827T0507_SPLIT_ROTATION_CONFINEMENT_AUDIT.json",
+  "isolation": {
+    "legacy_state_read": false,
+    "other_worker_state_read": false,
+    "downstream_state_read": false,
+    "o_state_read": false,
+    "aggregate_ledger_read": false,
+    "other_role_receipt_read": false,
+    "own_feedback_read": false,
+    "semantic_control_freeze": "main 5d284a097cbc5ff6d630847b1218c8b1bce4c83f, control 11, config 5"
+  },
+  "public_source_update": {
+    "paper": {
+      "title": "Manifold-constrained plasticity enables stable learning in recurrent neural circuits",
+      "authors": "Camille Godin; Jean-Philippe Thivierge",
+      "journal": "PLOS Computational Biology",
+      "published": "2026-08-25",
+      "doi": "10.1371/journal.pcbi.1014719"
+    },
+    "new_source_clarifications": [
+      "The article explicitly labels the S8/S11 regime 'Online subspace tracking stabilizes learning under coordinate rotation' and describes S8A as a rotation of manifold coordinates.",
+      "The constrained-network prose says the low-dimensional condition uses an explicit projection 'as implemented here', while Eqs.1-4 shown in the article text describe a low-rank W=Q W_k Q^T construction and also claim outside-manifold components decay exponentially. The exact placement of any state projection is therefore code-dependent.",
+      "The tracked basis U is explicitly a k-dimensional empirical activity basis, re-orthonormalized every step, and Methods Eqs.35-37 define empirical subspace drift through singular values of U0^T Ut.",
+      "The article says Q is initialized as an N x k orthonormal basis and the constrained structural manifold is a fixed linear subspace in the base task; the rotational-drift equation previously audited is a k x k right rotation of Q coordinates."
+    ],
+    "official_code_transport": {
+      "artifact": "PLOS S1 Code / prior Figshare file 67830038",
+      "status_this_run": "Still not recoverable through available redirect-safe public transport; public article and DOI were readable, ZIP bytes were not. No code-level claim was fabricated."
+    }
+  },
+  "bounded_identifiability_audit": {
+    "status": "mathematical plus source-derived synthetic audit; not a reproduction of S8/S11/S12",
+    "subspace_invariance_result": {
+      "statement": "If Q is N x k orthonormal and R is k x k orthogonal, Q' = Q R has exactly the same k-dimensional ambient span. If empirical activity over a window has full rank k and is strictly confined to span(Q), then any k-dimensional SVD basis of that activity also spans Q; principal angles computed from singular values of U0^T Ut are therefore zero up to numerical error, regardless of rotations of coordinates inside Q.",
+      "implication": "A materially nonzero S11-style k-dimensional principal angle under a literal Q <- Q R coordinate rotation requires at least one additional ingredient: off-span activity, effective empirical rank below k / weakly identified covariance directions, a different code-level rotation, a different U rank, incomplete tracking, or a metric implementation that differs from the published principal-angle definition. Within-span basis rotation alone is insufficient."
+    },
+    "weak_eigenmode_noise_audit": {
+      "setup": {
+        "N": 100,
+        "k": 3,
+        "window_samples": 100,
+        "within_Q_coordinate_rotation_deg": 45,
+        "latent_covariance_eigenvalues": "[1, rho, rho]",
+        "iid_full_space_noise_sd": 0.02,
+        "paired_structural_span": "identical Q span before and after coordinate rotation",
+        "repetitions_per_condition": 500,
+        "metric": "mean of 3 principal angles between top-3 empirical SVD subspaces"
+      },
+      "results_mean_angle_deg": {
+        "rho_1.0": 1.6258293142,
+        "rho_0.1": 4.1411707979,
+        "rho_0.03": 7.3433844730,
+        "rho_0.01": 12.6387553836,
+        "rho_0.003": 23.2933611826,
+        "rho_0_rank1": 70.1631304691
+      },
+      "interpretation": "The full structural span never moved, yet the k-dimensional empirical principal-angle metric becomes large when secondary covariance modes approach the noise floor or vanish. Thus high mean angle can reflect subspace identifiability / rank degeneracy rather than ambient manifold rotation. This is a candidate explanation to test against the source code and S11 activity spectrum, not a claim that it explains the published figure."
+    },
+    "nonlinear_projection_sensitivity_audit": {
+      "setup": {
+        "N": 100,
+        "k": 3,
+        "tau": 0.3,
+        "g": 1.5,
+        "dt": 0.01,
+        "duration_seconds": 10,
+        "rich_input": "three incommensurate sinusoidal drives inside Q at 1.0, 1.7 and 2.3 Hz",
+        "repetitions": 100,
+        "comparison": "Eq.1-like elementwise tanh dynamics with W=QW_kQ^T, with versus without an explicit post-step projection r <- QQ^T r"
+      },
+      "results": {
+        "input_amplitude_1_no_explicit_projection": {
+          "mean_terminal_offspan_fraction": 0.0856035128,
+          "mean_max_offspan_fraction": 0.1339762295,
+          "mean_empirical_top3_vs_Q_angle_deg": 9.9590137002,
+          "angle_sd_deg": 12.0571569937
+        },
+        "input_amplitude_1_with_explicit_projection": {
+          "mean_terminal_offspan_fraction": 2.9959988426e-16,
+          "mean_max_offspan_fraction": 8.0281057391e-16,
+          "mean_empirical_top3_vs_Q_angle_deg": 5.5508685319e-07
+        }
+      },
+      "interpretation": "Low-rank W alone does not make the elementwise nonlinear update exactly subspace-invariant in this source-derived audit, whereas an explicit state projection does. The article prose specifically mentions an explicit projection 'as implemented here', so source-code inspection is now necessary to know which dynamical semantics generated S8/S11. This audit does not infer that the published implementation omitted projection."
+    }
+  },
+  "candidate_update": {
+    "id": "neuro-g1-split-manifold-tracking-2026",
+    "status": "promising_adaptive_subspace_tracking_but_s11_identifiability_and_projection_semantics_unresolved",
+    "new_interpretation": "The general mechanism 'track the empirical low-dimensional covariance structure and learn in those coordinates' remains plausible. The rotational-drift evidence is narrower than an ambient-manifold-rotation reading: published coordinate rotation alone preserves span(Q), and the published k-dimensional principal-angle metric can only become materially nonzero if empirical rank/identifiability, off-span dynamics, code semantics, or metric semantics add another source of change. This makes S11 a particularly high-value code-level reproducibility target.",
+    "scope": [
+      "No paper-wide refutation is claimed.",
+      "The synthetic audits are not source-exact reproductions and use deliberately transparent controls.",
+      "Prior timestep/update-scaling ambiguity remains unresolved and separate.",
+      "Prior reduced evidence that generic online PCA can match or outperform Oja remains bounded to those reduced controls."
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Recover official PLOS S1 Code file 67830038 through a file-capable redirect-safe public transport and inspect S8/S11/constrained scripts first. Resolve, in order: (1) whether rotational drift is literal Q <- Q@R or an ambient left rotation; (2) whether W is rebuilt after each Q change and how W_k transforms; (3) whether r, input, feedback and iid noise are explicitly projected into Q at every step; (4) the actual dimension/rank of tracked U in S11 and its initialization; (5) whether the principal-angle implementation truly uses singular values of U0^T Ut and what activity-window rank/eigenvalue spectrum occurs; (6) task-specific dt and whether eta_U/eta_D updates are dt-scaled. If the code uses right rotation plus published principal-angle metric, reproduce S11 while logging empirical covariance eigenvalues, off-Q energy and per-angle spectrum to distinguish rank degeneracy from nonlinear/noise leakage. Then add same-seed frozen-U, generic online-subspace plus identical coordinate-NLMS, full-space NLMS, tuned RLS/ridge/pseudoinverse controls. If ZIP transport is still blocked, continue only bounded source-equation audits that separate explicit-state-projection versus low-rank-W-only semantics; do not call them reproductions."
+}
