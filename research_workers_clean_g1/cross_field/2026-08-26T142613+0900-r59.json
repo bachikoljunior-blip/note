@@ -1,0 +1,99 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "d015ba42a6f12e1996850825fb185d1b1dd03676",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "659edfdab9bc2ed0774adeb789af80ed90b6f386",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T142440+0900-r58.json",
+  "started_local": "2026-08-26T14:24:41+09:00",
+  "checkpointed_local": "2026-08-26T14:26:13+09:00",
+  "chronology_note": "Repository commit order and continued_from remain authoritative over one predecessor's earlier estimated timestamp anomaly.",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404"
+  },
+  "checked_sources": [
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection, arXiv:2607.28322v1, Section 5.2",
+      "url": "https://arxiv.org/abs/2607.28322",
+      "result": "Primary-source HTML verification. The full-Gaussian point-null martingale has log form log C_s+n_s A(eta)-eta_1 S_s-eta_2 Q_s in Gaussian natural parameters eta_1=theta/r, eta_2=-1/(2r). The all-start objective is smooth convex in two dimensions, requires O(t) active starts, and Theorem 5.3 attains high-probability late-change delay log A/D_KL(Q||P) by using the pure post-change summand on a compact neighborhood of P and the prefix-crossing summand outside it."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-derivation-r59a-exponential-family-pair-dual",
+      "claim": "For the full-Gaussian detector, the two-start pathwise-lower minimax can be reduced from a two-dimensional convex optimization over candidate mean/variance to a one-dimensional concave maximization over a mixing weight lambda in [0,1].",
+      "derivation": "Let f_i(eta)=log L_i^eta for the short and prefix intervals. Because log is monotone, log inf_eta max{L_0^eta,L_1^eta}=inf_eta max{f_0(eta),f_1(eta)}. Write max{x,y}=sup_{lambda in [0,1]}{lambda x+(1-lambda)y}. The f_i are closed convex and coercive on the Gaussian natural-parameter domain for nondegenerate interval statistics, so convex minimax/strong duality yields inf_eta max_i f_i = sup_lambda inf_eta {lambda f_0(eta)+(1-lambda)f_1(eta)}. Even without invoking equality, weak duality makes every evaluated lambda a certified lower bound, which is enough for exact false-alarm safety."
+    },
+    {
+      "id": "cf-g1-derivation-r59b-closed-form-inner-gaussian-fit",
+      "claim": "The inner optimization in the pair dual has a closed-form Gaussian fit to fractional pooled sufficient statistics, so each lambda score costs O(1) once per-start summaries are maintained.",
+      "derivation": "From the source representation f_i(eta)=log C_i+n_i A(eta)-eta_1 S_i-eta_2 Q_i, define n_lambda=lambda n_0+(1-lambda)n_1, S_lambda=lambda S_0+(1-lambda)S_1, Q_lambda=lambda Q_0+(1-lambda)Q_1, and c_lambda=lambda log C_0+(1-lambda)log C_1. The weighted objective is c_lambda+n_lambda A(eta)-eta_1 S_lambda-eta_2 Q_lambda. Its minimizer is the Gaussian MLE for the pseudo-moments: m_lambda=S_lambda/n_lambda and v_lambda=Q_lambda/n_lambda-m_lambda^2. When v_lambda>0, the minimized value is h(lambda)=c_lambda+(n_lambda/2){1+log(2 pi v_lambda)}. Therefore the exact pair log-certificate is sup_{lambda in [0,1]}h(lambda); h is concave because it is an infimum of functions affine in lambda. Any finite set of lambda evaluations provides a pathwise-safe lower certificate max h(lambda_j), and adaptive scalar maximization can improve power without ever risking an upward approximation to the exact pair infimum.",
+      "edge_cases": "If a fractional pooled variance reaches zero for a tiny/degenerate interval, retain a conservative lower value or delay use of that pair until nondegenerate; Gaussian continuous data make exact degeneracy probability zero for ordinary block sizes."
+    },
+    {
+      "id": "cf-g1-derivation-r59c-full-gaussian-grid-delay",
+      "claim": "Combining the one-dimensional dual pair score with the configurable recycled K-grid gives pathwise-valid O(K log t) active-state full-Gaussian monitoring and high-probability late-change delay factor r_K=(2K+1)/(2K-1) on the instance-specific KL scale D_KL(Q||P).",
+      "derivation": "Keep the prefix start and K-grid trailing starts. For each pair use the exact dual supremum, or a certified lower approximation. Pathwise each pair minimax is below the full all-start detector. At t=T+D with D=r_K(1+epsilon)L/I_G, the grid provides a pure post block g>=c_K D. Theorem 5.3's proof applies verbatim to that short block on a compact neighborhood U of P, where uniform log growth is g(I_G-2eta), while the prefix block controls U^c at order T. Thus the pair score crosses with probability tending to one. Slowly growing K_A makes the high-probability factor approach one while active per-start state remains polylogarithmic in history.",
+      "scope": "New synthesis/derivation. It inherits the source's high-probability asymptotic regime and instance-specific Gaussian KL scale. Expected CADD still requires explicit finite-block tail amplification. Numerical implementations must only threshold lower-certified lambda maxima; a converged optimizer value without certification is not automatically safe."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r59-dual-full-gaussian-recycled-detector",
+      "mechanism": "Use two-start minimax duality to collapse full Gaussian composite-null pair evidence to scalar lambda optimization over fractionally pooled sufficient statistics, then apply the configurable recycled K-grid and permanent prefix anchor.",
+      "quantitative_or_formal_evidence": "Source full detector: O(t) active starts and two-dimensional convex objective evaluations; source delay denominator is exact D_KL(Q||P). Derived sparse version: O(K log t) active starts, O(1) score work per lambda evaluation, exact/pathwise false-alarm domination, and high-probability delay factor r_K=(2K+1)/(2K-1).",
+      "scope": "Derived, not peer-reviewed. Scalar lambda iteration count and finite-CADD tails are separate engineering/theory frontiers.",
+      "failure_conditions": "Degenerate pooled variance needs safe fallback; aggressive approximate lambda maximization is fine only because sampled lambda values are lower bounds, but claiming the exact pair value requires convergence/duality conditions; predictor summaries must remain correctly tied to each recycled start.",
+      "confidence": "high for weak-dual safe lower scoring and Gaussian inner closed form; medium-high for strong-dual exactness under nondegeneracy/coercivity; medium-high for high-probability delay adaptation"
+    }
+  ],
+  "generalization_hypothesis": {
+    "statement": "The pair-dual trick is not Gaussian-specific: for exponential-family point-null likelihood-ratio/e-process blocks with log form c_i+n_i A(eta)-eta dot T_i, two-start minimax evidence reduces to a scalar lambda outer problem whose inner minimization is the convex conjugate of A at fractionally pooled sufficient statistics.",
+    "status": "mathematically plausible derived generalization; not separately source-verified here",
+    "potential_value": "Turns a d-dimensional composite-null pair optimization into one-dimensional evidence mixing while preserving pathwise lower-certificate semantics."
+  },
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The two-dimensional natural-parameter Newton solve is unavoidable even after reducing to only two starts.",
+      "evidence": "No for Gaussian pairs. Weighted-minimax duality analytically eliminates the natural parameters at each lambda via pooled mean/variance.",
+      "reason": "Use scalar lambda search and treat every evaluated lambda as a certified lower bound."
+    },
+    {
+      "lead": "A lower-certified lambda approximation must have a numerical proof of closeness before it is safe to threshold.",
+      "evidence": "No. Any feasible lambda gives a dual lower bound and is false-alarm safe immediately; closeness matters only for statistical power/delay, not validity.",
+      "reason": "This cleanly separates numerical convergence from type-I safety."
+    }
+  ],
+  "frontier": [
+    "Differentiate h(lambda) and derive a bracketed scalar maximizer with explicit additive suboptimality bounds; quantify the lambda evaluations needed for an o(log A) power loss so the source leading delay constant is retained numerically.",
+    "Prove strong duality including small-block/coercivity boundary cases, or retain weak-dual scoring as the formally guaranteed implementation and state exactness only under verified nondegeneracy.",
+    "Derive finite-block exponential lower tails for Gaussian predictive log scores so disjoint-block retry amplification can upgrade cf-g1-r59 from high-probability delay to CADD.",
+    "Test the general exponential-family pair dual on Poisson/Bernoulli natural families and determine whether the scalar dual certificate subsumes the bounded-mean KL pair frontier.",
+    "Resume off-policy predictable-prior/vector evidence after the Gaussian finite-tail question is resolved or bounded."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Moved from studentized mean-null monitoring to the source's stronger instance-specific full-Gaussian detector.",
+      "Eliminated the two-dimensional candidate-null pair optimization by convex duality and pooled sufficient statistics.",
+      "Separated weak-dual lower certification, which is immediately safe, from exact strong-dual equality, which needs regularity.",
+      "Recovered the configurable-grid high-probability compute-delay curve on the full Gaussian KL scale."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Derive h'(lambda) and a certified scalar bracketing rule whose best sampled lambda is always a safe lower certificate and whose additive gap is o(log A), then use Gaussian concentration of pooled mean/variance/predictive scores to seek retry-amplified CADD on the full D_KL scale."
+}
