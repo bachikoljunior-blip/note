@@ -1,0 +1,111 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "844b6dc7c395bf56dded26d7b445a8468873f7d6",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "16f1d9c39c7ad98919fd55671ac8c610a9bd3222",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T144713+0900-r62.json",
+  "started_local": "2026-08-26T14:47:14+09:00",
+  "checkpointed_local": "2026-08-26T14:50:49+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false
+  },
+  "checked_sources": [
+    {
+      "source": "Kotłowski & Grünwald 2011, COLT/PMLR 19, Gaussian unknown mean and variance SNML example",
+      "url": "https://proceedings.mlr.press/v19/kotlowski11a/kotlowski11a.pdf",
+      "result": "The explicit Gaussian unknown-mean/unknown-variance SNML conditional is proper after initial conditioning and has data-independent regret increment 1/n+O(n^-2). The source explicitly warns that the unrestricted first iteration has infinite worst-case regret, motivating a separate proper burn-in density."
+    },
+    {
+      "source": "Saha & Ramdas 2026, arXiv:2607.28322v1, Sections 6.1 and Appendix C",
+      "url": "https://arxiv.org/pdf/2607.28322",
+      "result": "Adjusted running maxima convert block e-processes to nondecreasing e-processes while preserving log growth up to lower-order terms. The bounded-mean ARL detector proof supplies a deterministic pathwise O(A^2) stopping cap and uses it with exponentially small bad-event tails to establish CADD."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r63a-explicit-cauchy-initialization",
+      "claim": "Two independent standard-Cauchy predictive densities followed by Gaussian SNML from the third observation give a proper predictor on every history (using Cauchy fallback on the measure-zero zero-variance history) and an initialization regret with an explicit exponential tail under every fixed Gaussian law.",
+      "derivation": "Let q_1(x)=q_2(x)=1/[pi(1+x^2)]. For x_1 != x_2, the two-point Gaussian MLE has mean (x_1+x_2)/2, variance (x_1-x_2)^2/4, and joint maximum likelihood 2/[pi e (x_1-x_2)^2]. Therefore C_init:=log(sup_G p_G(x_1,x_2)/(q_1q_2)) = log(2pi/e)+log(1+x_1^2)+log(1+x_2^2)-2log|x_1-x_2|. Under X_i iid N(m,v), D=X_1-X_2 is N(0,2v), so P(-2log|D|>y) <= exp(-y/2)/sqrt(pi v). The two log(1+X_i^2) terms have super-exponentially small tails in y. A three-way union bound therefore gives P(C_init>c_Q+y) <= C_Q exp(-y/6) for all sufficiently large y, with constants depending only on the fixed Q. If x_1=x_2, define q_3 and subsequent predictions by a fixed proper fallback until positive empirical variance appears; this event has probability zero under a Gaussian law but makes the process pathwise well-defined."
+    },
+    {
+      "id": "cf-g1-r63b-pathwise-regret-inequality",
+      "claim": "The initialized predictor has a clean pathwise likelihood inequality adequate for exponential delay tails.",
+      "derivation": "Define total sequential regret R_n=-log q(x_1:n)+log sup_G p_G(x_1:n). Then R_2=C_init. From the primary SNML formula, for n>=3 the increments R_n-R_{n-1}=r_n are deterministic and r_n=1/n+O(n^-2). Hence there is a finite numerical C such that R_n <= C_init+log n+C for all sufficiently large n (absorbing finitely many small n into C). Thus log q(x_1:n) >= log sup_G p_G(x_1:n)-C_init-log n-C. This inequality is pathwise, not merely in expectation, and is the key quantitative replacement for predictor-consistency arguments."
+    },
+    {
+      "id": "cf-g1-r63c-local-exponential-block-success",
+      "claim": "For a fixed distinct Gaussian pair P,Q and a compact neighborhood U of P separated from Q, a pure-Q SNML block of length d=(1+epsilon)log(A)/I has failure probability polynomially small in A, uniformly over R in U.",
+      "derivation": "From r63b, inf_{R in U}log L_n^R >= log p_Q(x_1:n)-sup_{R in U}log p_R(x_1:n)-C_init-log n-C. The first two terms depend only on empirical mean and second moment; on a compact positive-variance U they converge uniformly to inf_{R in U}D_KL(Q||R), which can be chosen >=I-eta. Gaussian mean/chi-square concentration plus the exponential C_init tail imply P(inf_{R in U}log L_n^R < n(I-2eta)-O(log n)) <= C exp(-c n). With n proportional to log A this is <=C A^{-kappa}. The constants are instance/neighborhood dependent, which is sufficient for the fixed-P,Q late-change asymptotic."
+    },
+    {
+      "id": "cf-g1-r63d-exterior-exponential-prefix-success",
+      "claim": "Before the change, the same initialized SNML process rejects all Gaussian candidates outside a fixed neighborhood U of P with exponentially small failure probability in T.",
+      "derivation": "Let Ghat_T=N(mhat_T,vhat_T) be the Gaussian MLE. The pathwise regret inequality gives inf_{R notin U}log L_{1:T}^R >= T inf_{R notin U}D_KL(Ghat_T||R)-C_init-log T-C. Choose a smaller neighborhood U0 compactly contained in U. Continuity/coercivity of Gaussian KL gives c_U:=inf_{G in U0,R notin U}D_KL(G||R)>0. On Ghat_T in U0 the score is at least Tc_U-O(log T)-C_init. Gaussian concentration gives P(Ghat_T notin U0)<=C exp(-cT), and the initialization tail handles the remaining random term, so failure to reach any fixed O(log A) threshold by T is <=C exp(-c'T) once T/log A diverges. Applying the source growth-preserving running-max adjuster retains this exterior evidence after the change."
+    },
+    {
+      "id": "cf-g1-r63e-arl-cadd-proposition-skeleton",
+      "claim": "Under explicit late-change conditions, the r62 architecture now has a near-complete route to first-order ARL-CADD log(A)/D_KL(Q||P), rather than only high-probability delay.",
+      "derivation": "Use an all-start proof detector built from adjusted initialized-SNML point-null e-processes, so start 1 permanently retains exterior evidence and post-change starts supply local blocks. Set the main threshold effectively to 2A after mixing it at weight 1/2 with a bounded-transform backup ARL e-detector; the O(1) log 2 penalty does not affect first order. Let L=log A, I=D_KL(Q||P), T/L->infinity and T/A->0. On the exterior-good event E_T from r63d, divide post-change observations into disjoint blocks of d=(1+epsilon)(L+O(1))/I. By r63c, each fresh block succeeds uniformly on U with probability 1-p_A where p_A->0, and disjoint Q-blocks make retry count geometric for the proof. Thus E[(tau-T)+;E_T] <= d(1+o(1)). On E_T^c, the bounded-transform backup has a deterministic C_w A^2 pathwise stop cap, while P(E_T^c)<=C exp(-cT), so A^2 exp(-cT)=o(L) because T/L->infinity. Hence E[(tau-T)+] <= (1+epsilon)L/I+o(L). The e-detector finite-horizon false-alarm bound and T/A->0 give P(tau>T)->1, so conditioning on survival preserves the first-order bound. Letting epsilon down to zero gives the desired leading constant.",
+      "status": "derived proposition skeleton, not promoted to a completed theorem until the exact all-start adjusted detector composition and compact-uniform Gaussian concentration constants are written line-by-line"
+    },
+    {
+      "id": "cf-g1-r63f-computational-separation",
+      "claim": "The expectation proof and the sparse production implementation should be separated until a sparse retry covering lemma is proved.",
+      "details": "The all-start detector contains every disjoint retry boundary and is convenient for the geometric CADD proof. The recycled K-grid from r59-r61 provides O(K log t) active starts and near-first-order high-probability delay, but it does not automatically contain an independent disjoint retry sequence at the unknown information scale. Treat the all-start construction as a proof/benchmark channel and the sparse K-grid as the computational channel until a multiscale disjoint-block covering lemma connects them."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r63-cauchy-snml-tail-certified-detector",
+      "mechanism": "Cauchy burn-in for two samples, conditional Gaussian SNML thereafter, adjusted running maxima for persistent pre-change evidence, and all-start local retries for the proof detector.",
+      "quantitative_or_formal_evidence": "Initialization regret has an explicit exponential tail; post-initialization pathwise regret is log n+O(1); local and exterior Gaussian certificate failures are exponentially small. These are the missing quantitative ingredients for upgrading the source high-probability full-KL delay architecture toward CADD.",
+      "scope": "One-dimensional Gaussian mean+variance family, fixed distinct P,Q, late-change asymptotics. Exact constants and sparse implementation equivalence remain open.",
+      "confidence": "medium-high to high on the ingredients; medium-high on the completed proposition pending formal bookkeeping"
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "The unrestricted SNML first-step singularity prevents using universal prediction in an exact e-process.",
+      "evidence": "Rejected as a structural blocker. A fixed proper full-support burn-in keeps the numerator a proper predictable density; its finite random regret can be isolated and has an exponential tail under each fixed Gaussian law.",
+      "reason": "Keep the burn-in explicit rather than pretending the unrestricted first step has finite minimax regret."
+    },
+    {
+      "lead": "The sparse recycled K-grid already inherits the geometric-retry CADD proof unchanged.",
+      "evidence": "Not established. Sparse starts may miss the desired independent retry boundaries or induce overlapping blocks.",
+      "reason": "Need a multiscale disjoint-block covering or a dependence-tolerant retry argument."
+    }
+  ],
+  "frontier": [
+    "Write a formal lemma proving the compact-uniform local and exterior exponential concentration bounds from Gaussian sufficient statistics, including explicit dependence on the chosen U and the Cauchy initialization tail.",
+    "Specify the exact adjusted all-start composite e-detector and the 1/2 main + 1/2 bounded-backup composition, verifying e-detector inequalities at arbitrary stopping times rather than only fixed times.",
+    "Prove a deterministic multiscale restart family with O(log t) active blocks that contains, for every unknown d, an infinite sequence of disjoint blocks of length between d and c d; combine this with r63c to transfer CADD to a sparse implementation with an explicit constant factor.",
+    "Explore whether staggered dyadic block families can drive the sparse CADD factor to one with O(log t log log A) or polylogarithmic state, rather than the fixed r_K factor.",
+    "Implement the Cauchy-initialized SNML numerator and centered interval-safe pair kernel for end-to-end simulation."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Closed the unrestricted SNML initialization issue with an explicit proper Cauchy burn-in and derived its tail.",
+      "Converted asymptotic SNML regret into a pathwise log-likelihood inequality.",
+      "Derived exponential local and exterior certificate failure rates from Gaussian sufficient-statistic concentration.",
+      "Assembled a first-order ARL-CADD proposition skeleton using adjusted prefix memory, geometric retries and a deterministic polynomial backup cap.",
+      "Separated proof-channel all-start retries from sparse production-channel claims to avoid overgeneralization."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Formalize the all-start composite e-detector and compact-uniform concentration lemmas; then construct a sparse multiscale family with provably disjoint near-optimal retry blocks so the CADD result can inherit the computational savings."
+}
