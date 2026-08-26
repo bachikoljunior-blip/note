@@ -43,44 +43,42 @@ Latest checkpoints in order:
 40. `2026-08-26T1427JST-followup.md`
 41. `2026-08-26T1427JST-followup2.md`
 42. `2026-08-26T1427JST-followup3.md`
+43. `2026-08-26T1427JST-followup4.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
 1. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only decision/batch-consumption/outcome; commit/readback before effect boundaries; conservative censoring.
-2. Inject the journal only into the action-cost-aware runtime through a narrow `DecisionJournal` interface with a null default; keep prover/generator/reducer/cost estimator untouched for the first causal comparison.
-3. Execute F0–F7 failures and epsilon=0 `semantic_projection(ControllerResult)` equivalence. Disable/non-bind elapsed-time budget for the semantic equality arm and measure journal timing overhead separately.
-4. Remove or bypass mutable shared-provider-batch attribution from learning evidence. Provider cost events stay immutable; batch consumption is an append-only join.
-5. Logging-policy v0 is frozen before outcomes: D0-ranked supported pool <=5, epsilon=1/4, exact rational propensities, min support 1/20, D0 fallback outside support.
-6. Recovery v0 never resumes/reselects within a run that ends with an unmatched decision; seal truncated/censored and start any later attempt under a new run id.
-7. Stage-A representation remains frozen at 154 text-free candidate channels; theorem/task is the split unit; terminal success/local progress/multidimensional costs remain separate labels.
-8. Provider deterministic pilot retains prospective 95% task-bootstrap CI half-width <=5 percentage points for major mean cost shares, then decides Stage A vs upstream Stage B.
+2. Inject one narrow `DecisionJournal` into action-runtime only; use typed immutable decision/batch/outcome records and a null default so prover/generator/reducer/cost estimator remain fixed.
+3. Execute F0–F7 faults and epsilon=0 canonical semantic-projection equivalence. Split fault injection across journal/controller/fake executor at the real boundaries.
+4. Retire or bypass mutable `attribute_proposal_batch` from learning evidence. Public cost-summary code inspected so far attributes branch cost through attempts/model_usage, reducing compatibility pressure for the rewrite.
+5. Reader v0 accepts only valid matched or explicit censored sequences; gaps/orphans/conflicts/missing required batch links fail closed. A randomized run with unmatched decision is sealed/truncated, never resumed/reselected under the same run id.
+6. Logging-policy v0 remains D0-ranked pool <=5, epsilon=1/4, exact rationals, minimum support 1/20; unsupported legal actions remain recorded but cannot be OPE/deployment targets without new data.
+7. Stage-A representation remains 154 text-free channels; theorem/task is split unit; terminal success/local verified progress/multidimensional costs remain separate raw labels.
+8. Provider deterministic pilot retains prospective <=5 percentage-point 95% task-bootstrap CI half-width for major mean cost shares; use it to decide Stage A vs upstream Stage B after journal validation.
 9. Keep narrow public-source search secondary.
 
 ## Newest synthesis
 
-- **C171–C177:** current CSSC has a mid-run causal logging gap and mutable shared-batch attribution; exact failure/equivalence tests are now specified.
-- **C178–C184:** journal backend/schema/reader and safe-epsilon support protocol are prespecified; raw evaluation remains multiobjective/Pareto.
-- **C185:** simplified local SQLite prototype validated rollback, censoring, batch+decision transaction, outcome rollback, append-only trigger, exact duplicate idempotency/conflict and rational propensity properties.
-- **C186:** v0 does not resume a randomized run across an unmatched decision.
-- **C187:** reader finite-state machine is READY -> PENDING[/BOUND] -> READY; illegal sequences fail closed.
-- **C188:** exact epsilon=1/4 propensity formula/property tests are frozen for L=1..5.
-- **C189:** distinguish full run cost, post-decision execution cost and many-to-many proposal provenance; never duplicate a shared batch charge across sibling actions.
-- **C190:** minimal integration surface is one injected `DecisionJournal` plus null implementation inside action runtime.
-- **C191:** immutable provider events are the learning authority; current `attribute_proposal_batch` rewrite must not be part of OPE evidence.
-- **C192:** exact semantic-equivalence projection is field-scoped; unique ids/temp paths/timing/journal artifacts are normalized or measured separately.
-- **C193:** epsilon=0 must not consume logging-policy RNG; randomized policy later uses a dedicated recorded RNG.
-- **C194:** unit correctness can use deterministic fake generators/providers; a live model is unnecessary for journal validity.
-- **C195:** existing atomic end-of-run JSONL trace remains useful but cannot replace a pre-effect causal journal.
+- **C171–C177:** current CSSC has a mid-run causal logging gap and mutable shared-batch attribution; exact fault/equivalence tests specified.
+- **C178–C184:** backend/schema/reader/support protocol/multiobjective evaluation specified.
+- **C185–C189:** local synthetic contract validation succeeded; writer ordering, no-resume censoring, exact propensities and three-view cost joins specified.
+- **C190–C195:** minimal integration is one DecisionJournal; exact semantic projection and RNG isolation specified; end-of-run JSONL remains separate from causal journal.
+- **C196:** typed record fields now explicitly separate exact policy probability, immutable provenance, verified progress/success and post-decision cost.
+- **C197:** F0/F1/F6 belong in journal test double; F2/F3/F4/F7 in action-runtime hooks; F5 in fake executor/checker.
+- **C198:** reader mutation/property corpus covers deletion, reordering, gaps, orphans, conflicting replay, invalid rational support and schema mismatch.
+- **C199:** global retirement of provider-ledger rewrites appears feasible from inspected cost-summary paths; repository-wide dependency scan remains incomplete.
+- **C200:** legal-but-outside-top5 candidates are retained explicitly as unsupported (`mu=0`) but never treated as overlap.
+- **C201:** implement one canonical semantic-projection helper and snapshot-version it so epsilon=0 equivalence cannot weaken silently.
 
 ## Exact continuation
 
-1. Specify typed record fields/canonical source types for decision/batch/outcome/ack and a deterministic `FaultingDecisionJournal` test double.
-2. Specify reader property/fuzz cases and exact semantic-projection normalization helpers.
-3. Decide migration path for current provider-batch attribution while keeping learning evidence immutable.
-4. Validate journal + epsilon=0 equivalence before randomization.
-5. Run deterministic provider cost-share pilot and decide Stage A vs Stage B.
-6. Keep frontier nonempty. `2026-08-26T1427JST-followup3.md` is newest and is not global completion.
+1. Complete public caller/test scan for dependency on provider ledger `metadata.action_id`; decide global removal vs compatibility bridge.
+2. Define canonical cost/admission types inside DecisionChoice and the semantic projection.
+3. Turn reader mutations into property-based tests and pin validity/censoring oracle.
+4. Specify deterministic provider-pilot sampling/bootstrap/cost-share procedure and Stage-A headroom decision metrics.
+5. Validate journal + epsilon=0 equivalence before any randomization, then run provider pilot and decide Stage A vs Stage B.
+6. Keep frontier nonempty. `2026-08-26T1427JST-followup4.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
