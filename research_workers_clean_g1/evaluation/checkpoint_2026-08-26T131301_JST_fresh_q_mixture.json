@@ -1,0 +1,137 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T13:13:01+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T130908_JST_side_information_betting.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "edd7bbae25f519cabad7791f97f3306690618b83",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "0d4486ed5c59f5f83ac2597458a0f3ebcaa4111d",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": ["own evaluation checkpoint chain", "public sources", "sanitized DESIRED_STATE", "evaluation role config"],
+    "head_resolution": "SHA-only refs/heads/main; later head observations used only for transport/write safety."
+  },
+  "search_bias": "evaluation/verifiers; fresh-audit mixture e-processes; unknown alternative strength; predictable pre-audit priors; robustness to transfer misspecification",
+  "public_sources": [
+    {
+      "title": "E-backtesting",
+      "authors": "Qiuqi Wang; Ruodu Wang; Johanna Ziegel",
+      "date": "2025-09-23 online; Management Science volume June 2026",
+      "url": "https://doi.org/10.1287/mnsc.2023.01659",
+      "used_scope": "Predictable betting preserves e-process validity while power depends on the alternative model; the paper explicitly discusses mixtures/mixture martingales over alternative scenarios when the conditional alternative distribution is unknown."
+    },
+    {
+      "title": "Safe testing",
+      "authors": "Peter Grunwald; Rianne de Heide; Wouter Koolen",
+      "date": "2024-03-07",
+      "url": "https://doi.org/10.1093/jrsssb/qkae011",
+      "used_scope": "Provides the conditional-e-variable/product basis for choosing fresh-stage testing strategy from information available before the next genuinely fresh observation."
+    },
+    {
+      "title": "Strong duality for the GROW criterion",
+      "authors": "Ashwin Ram; Martin Larsson; Johannes Ruf; Aaditya Ramdas",
+      "date": "2026-06-23",
+      "url": "https://arxiv.org/abs/2606.24768",
+      "used_scope": "Recent general optimality theory for betting/e-variables against composite alternatives. Used only as motivation that alternative uncertainty should be treated as an explicit decision problem; the worker-local finite-mixture construction below has a direct conditional-expectation proof."
+    }
+  ],
+  "new_derivations": {
+    "preaudit_weighted_alternative_mixture": {
+      "setup": "After development data D select/freeze a candidate. Let q_j in {0.50,0.60,0.65,0.70,0.75,0.80}. For each q_j build the paired-sign fresh e-process E_{j,t} with discordant factors 2q_j and 2(1-q_j); q=.50 is the constant-one component.",
+      "weights": "Choose nonnegative weights w_j(D) summing to one using only frozen pre-audit information. A simple worker-local choice uses decomposed predictor p_hat(D): weight 1-p_hat on q=.50 and distribute p_hat across q=.60-.80 according to a validation-independent prior.",
+      "mixture": "M_t=sum_j w_j(D) E_{j,t}. Conditional on D, every component is an e-process under the selected-candidate sign null and the weights are fixed before fresh outcomes, so M_t is an e-process. The mixture can be viewed as implicit posterior updating: component wealth reweights the next predictive sign bet after each fresh result.",
+      "scope_guard": "Weights may depend on frozen development information but not on the fresh outcome they are about to weight. Alternative prior misspecification changes growth/power, not null validity."
+    },
+    "aggressive_robust_process_blend": {
+      "construction": "Let E^75_t be the aggressive fixed-q=.75 fresh e-process and M_t the pre-audit alternative mixture. For protocol-fixed a, H_t=a E^75_t+(1-a)M_t is an e-process conditional on D.",
+      "purpose": "This is not post-hoc evidence weighting. It is a predeclared mixture of two fresh conditional e-processes, used to trade short-horizon aggressiveness against alternative-strength robustness and false/harmful commits.",
+      "scope_guard": "Choosing a after looking at the current fresh evidence is not covered. Tune a from disjoint meta-data or predeclare a finite family with a separate safe aggregation rule."
+    }
+  },
+  "worker_local_simulation": {
+    "base_selection": "Independent 40k selected-candidate trajectories from the prior full adaptive proposal-loop; decomposed pre-audit predictor trained on a separate 120k meta-run. Fresh grid q_good=.60-.80, rho=.2/.4/.6, budgets 20/50/100/200.",
+    "preaudit_q_mixture": {
+      "good_strength_prior": "Uniform over q in {.60,.65,.70,.75,.80}; q=.50 weight is 1-p_hat_decomp and the good-strength mixture gets total weight p_hat_decomp.",
+      "aggregate_B200": {"true_commit":0.315998,"harmful_or_false_commit":0.001628,"mean_audit_tasks":160.734},
+      "aggregate_B100": {"true_commit":0.227332,"harmful_or_false_commit":0.001095,"mean_audit_tasks":88.716},
+      "comparison": "The point decomp bet from the immediately prior checkpoint had B200 true/false 0.310170/0.001637, so alternative-strength mixing recovered about 0.58 percentage points of true commits at essentially the same very low false-commit level."
+    },
+    "fixed_plus_mixture_blend_grid": {
+      "definition": "a is the fixed weight on E^75; 1-a is the weight on the pre-audit q-mixture.",
+      "aggregate_B200": {
+        "a_0_25": {"true_commit":0.319388,"harmful_or_false_commit":0.006732,"mean_audit_tasks":158.668},
+        "a_0_50": {"true_commit":0.319815,"harmful_or_false_commit":0.011772,"mean_audit_tasks":157.183},
+        "a_0_75": {"true_commit":0.320397,"harmful_or_false_commit":0.016785,"mean_audit_tasks":155.622},
+        "a_0_90": {"true_commit":0.320158,"harmful_or_false_commit":0.019465,"mean_audit_tasks":154.955},
+        "fixed_only_reference": {"true_commit":0.320185,"harmful_or_false_commit":0.021647,"mean_audit_tasks":154.263}
+      },
+      "interpretation": "At B200, a=.25 retained essentially all aggregate true resolution of fixed .75 while cutting harmful/false commits by about 69%; larger a recovered audit speed but moved back toward fixed-bet false-commit behavior. This is a finite-grid Pareto observation, not a universal optimal weight."
+    },
+    "null_sanity_60k": {
+      "max_B200_crossing_over_rho": {
+        "preaudit_q_mixture":0.008283,
+        "blend_a_0_25":0.017133,
+        "blend_a_0_50":0.025500,
+        "blend_a_0_75":0.033500,
+        "blend_a_0_90":0.038217,
+        "fixed_q_0_75":0.041333
+      },
+      "interpretation": "All below alpha=.05; conditional mixture proof is the validity argument and Monte Carlo only checks implementation."
+    },
+    "severe_transfer_misspecification": {
+      "scenario": "For genuinely-good selected candidates set fresh q approximately 0.51+0.28*(1-p_hat_decomp), deliberately making the pre-audit predictor most aggressive where fresh transfer is weakest; rho=.4.",
+      "B200": {
+        "fixed": {"true_commit":0.078800,"harmful_or_false_commit":0.022975,"mean_audit_tasks":186.349},
+        "preaudit_q_mixture": {"true_commit":0.070550,"harmful_or_false_commit":0.002075,"mean_audit_tasks":192.493},
+        "blend_a_0_25": {"true_commit":0.074025,"harmful_or_false_commit":0.008050,"mean_audit_tasks":190.368},
+        "blend_a_0_50": {"true_commit":0.075875,"harmful_or_false_commit":0.013575,"mean_audit_tasks":188.881},
+        "blend_a_0_75": {"true_commit":0.077525,"harmful_or_false_commit":0.018500,"mean_audit_tasks":187.505}
+      },
+      "interpretation": "The robust mixture did not erase severe transfer shift: it traded substantial false-commit reduction for lower resolution. A predeclared aggressive-process blend approached fixed-bet power as its fixed weight increased. Misspecification remains a power/utility problem even though null validity is preserved."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-preaudit-alternative-mixture-v1",
+      "mechanism": "Use frozen pre-audit features to allocate a prior over several fresh effect strengths, including a q=.5 no-effect component, then let fresh component wealth update the mixture predictably.",
+      "evidence": "Direct conditional mixture-e-process proof; E-backtesting mixture guidance; worker-local grid recovered power over a point predictor at nearly unchanged low false-commit rate.",
+      "scope_guard": "Current q grid/prior are illustrative; alternative support and weights require validation-independent tuning."
+    },
+    {
+      "candidate_id": "eval-g1-fixed-aggressive-robust-mixture-v1",
+      "mechanism": "Predeclare a fixed convex mixture between an aggressive fixed-q fresh e-process and a pre-audit robust alternative-mixture e-process. Use the weight as an explicit finite-horizon risk/power knob rather than post-hoc choosing the stronger process.",
+      "evidence": "At B200, fixed weight .25 on q=.75 retained aggregate true resolution within about 0.08 percentage points of fixed-only while reducing harmful/false commits from .02165 to .00673 in the worker-local grid.",
+      "scope_guard": "No claim that .25 is optimal outside this simulator or horizon."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'a single pre-audit point estimate of fresh effect is sufficient once its null validity is safe.' A mixture over plausible effect strengths recovered finite-horizon true resolution at essentially the same low false-commit level in the tested grid.",
+    "Narrowed: 'mixture betting solves alternative misspecification.' Severe inverted transfer still reduced power materially; mixture betting hedges model uncertainty but cannot create signal that does not transfer.",
+    "Rejected: 'after seeing which fresh e-process is larger, choose it.' The safe construction uses protocol-fixed weights or a separately proven predictable/portfolio rule; post-hoc max/weighting is not free."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Replace fixed pre-audit alternative weights with a hierarchical model that puts validation-independent uncertainty over transfer calibration itself, and compare Bayes-mixture, minimax/regret mixture and fixed aggressive blend under q drift and feature-effect inversion."},
+    {"priority":2,"action":"Add shared-task difficulty and cross-candidate/task dependence. Construct fresh one-step factors from conditional sign statements given task covariates; verify that side-information predictors do not accidentally consume fresh-task labels before the bet is fixed."},
+    {"priority":3,"action":"Move reused-development candidate evaluation from fixed-horizon e-values to actual anytime PACE paths. Explicitly include stopping time/supremum in the selectable transcript and test adjuster/selection corrections."},
+    {"priority":4,"action":"Extend from one accepted candidate to repeated modification streams; compare run-level alpha spending, e-closed testing and recent e-process multiple-testing adjusters while keeping candidate-generation data adaptivity separate."},
+    {"priority":5,"action":"Measure finite-horizon utility with asymmetric cost for harmful commits, unresolved decisions and fresh audit tasks; select mixture/blend weights only on disjoint meta-runs and report the full Pareto surface rather than one scalar optimum."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Introduce validation-independent uncertainty over the preaudit-feature-to-fresh-effect transfer map, then stress Bayes-mixture/minimax-regret fresh betting under shared-task heterogeneity before replacing reused fixed-horizon selection with actual PACE stopping/supremum transcripts."
+}
