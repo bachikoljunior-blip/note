@@ -1,129 +1,43 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Latest checkpoints in order:
-1. `2026-08-25T1902JST.md`
-2. `2026-08-25T1902JST-followup.md`
-3. `2026-08-25T1957JST.md`
-4. `2026-08-25T2057JST.md`
-5. `2026-08-25T2157JST.md`
-6. `2026-08-25T2258JST.md`
-7. `2026-08-26T0002JST.md`
-8. `2026-08-26T0002JST-followup.md`
-9. `2026-08-26T0102JST.md`
-10. `2026-08-26T0102JST-followup.md`
-11. `2026-08-26T0200JST.md`
-12. `2026-08-26T0302JST.md`
-13. `2026-08-26T0302JST-followup.md`
-14. `2026-08-26T0302JST-followup2.md`
-15. `2026-08-26T0302JST-followup3.md`
-16. `2026-08-26T0302JST-followup4.md`
-17. `2026-08-26T0400JST.md`
-18. `2026-08-26T0458JST.md`
-19. `2026-08-26T0458JST-followup.md`
-20. `2026-08-26T0458JST-followup2.md`
-21. `2026-08-26T0558JST.md`
-22. `2026-08-26T0657JST.md`
-23. `2026-08-26T0657JST-followup.md`
-24. `2026-08-26T0657JST-followup2.md`
-25. `2026-08-26T0802JST.md`
-26. `2026-08-26T0903JST.md`
-27. `2026-08-26T1000JST.md`
-28. `2026-08-26T1101JST.md`
-29. `2026-08-26T1157JST.md`
-30. `2026-08-26T1259JST.md`
-31. `2026-08-26T1359JST.md`
-32. `2026-08-26T1359JST-followup.md`
-33. `2026-08-26T1359JST-followup2.md`
-34. `2026-08-26T1359JST-followup3.md`
-35. `2026-08-26T1359JST-followup4.md`
-36. `2026-08-26T1359JST-followup5.md`
-37. `2026-08-26T1359JST-followup6.md`
-38. `2026-08-26T1359JST-followup7.md`
-39. `2026-08-26T1427JST.md`
-40. `2026-08-26T1427JST-followup.md`
-41. `2026-08-26T1427JST-followup2.md`
-42. `2026-08-26T1427JST-followup3.md`
-43. `2026-08-26T1427JST-followup4.md`
-44. `2026-08-26T1427JST-followup5.md`
-45. `2026-08-26T1501JST.md`
-46. `2026-08-26T1600JST.md`
-47. `2026-08-26T1701JST.md`
-48. `2026-08-26T1701JST-followup.md`
-49. `2026-08-26T1701JST-followup2.md`
-50. `2026-08-26T1701JST-followup3.md`
-51. `2026-08-26T1701JST-followup4.md`
-52. `2026-08-26T1802JST.md`
-53. `2026-08-26T1802JST-followup.md`
-54. `2026-08-26T1802JST-followup2.md`
-55. `2026-08-26T1802JST-followup3.md`
-56. `2026-08-26T1802JST-followup4.md`
-57. `2026-08-26T1802JST-followup5.md`
-58. `2026-08-26T1802JST-followup6.md`
-59. `2026-08-26T1802JST-followup7.md`
-60. `2026-08-26T1802JST-followup8.md`
-61. `2026-08-26T1802JST-followup9.md`
-62. `2026-08-26T1802JST-followup10.md`
-63. `2026-08-26T1802JST-followup11.md`
-64. `2026-08-26T1832JST.md`
-65. `2026-08-26T1902JST.md`
+Newest checkpoint: `2026-08-26T2003JST.md`
+Previous checkpoint: `2026-08-26T1902JST.md`
 
-Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
+Read `STATE.md` for the accumulated base, then source-qualified checkpoints as needed. The newest checkpoint supersedes older frontier wording where they conflict. Immutable historical checkpoint files remain the evidence trail; this pointer intentionally stays compact.
 
 ## Top unresolved frontier
 
-1. In the first environment able to materialize pinned CSSC source, executable-validate the statically proven one-batch/two-ghost-`REFINE_ARGUMENT` path at the real action runtime; then rerun the identical fixture after immutable batch-consumption migration.
-2. Extend the causal journal across the entire run identity and generation/selection chain: durable `RunInstanceV0`; configured retrieval/summarization/tool effects; provider-generation Attempt/physical Receipt/finalized ProposalBatch; BehaviorSelection/Decision/BatchConsumption/pre-workspace snapshot; reducer execution; Outcome/post-workspace snapshot.
-3. Replace mutable provider-batch `metadata.action_id` with immutable physical provider events plus append-only `ProposalBatchConsumptionEventV0`; recovery must reconstruct unconsumed finalized proposal envelopes and consumption history without another provider call.
-4. Add `WorkspaceSnapshotV0` and `RecoveryClassV0`: reducer-only structural actions replay from exact durable pre-state under the original decision/propensity and RNG stream, with no re-selection or provider regeneration.
-5. Before checker/tool-bearing actions enter randomized support, add durable EffectAttempt/EffectReceipt and physical checker-attempt accounting. Current Lean server/subprocess paths expose no durable per-check receipt; server retry/fallback can undercount physical wall cost.
-6. Freeze or fully instrument optional upstream effects. `ChatContextSummarizer` can make an unmetered model call, generic retrieval has unspecified effect/cost semantics, and chat proposal generation can run real scratch Lean checks through tool loops that bypass `BudgetManager.reserve_check()`.
-7. Rebuild crash-recovery budget availability from durable run/effect attempts and receipts. Current check/model counters and current sample/proposal IDs are process-local; committed in-doubt dispatches remain conservatively reserved after restart.
-8. Add versioned `EffectContractV0` for every effectful substrate edge: hard mechanical `P_effect`, tri-valued `Q_effect=TRUE/FALSE/UNKNOWN`, explicit provider idempotency/query capability and provenance. Never infer `FALSE` from an ambiguous response.
-9. Add `effect_route_id` / effect-equivalence classes and an **effect-route closure** invariant. Every substrate route/action kind capable of realizing the same logical effect must cross the same authoritative admission/receipt boundary; syntactic tool/action coverage is insufficient.
-10. Extend crash tests with timeout-after-dispatch (`Q=TRUE`), delayed visibility (`Q=UNKNOWN`), and confirmed absence (`Q=FALSE`). Assert no redispatch from `UNKNOWN`; without a real provider idempotency/query contract, keep in-doubt attempts reserved/censored.
-11. Add a coverage regression modeled on independent code-agent permission failures: make the nominal execution route unavailable, force a semantically equivalent fallback route, and assert the effect is still intercepted by the same hard contract.
-12. Model controller state as workspace + durable proposal envelopes + consumed set/history + budget/effect state. Workspace `NO_MUTATION` is not a global no-op because selected proposal consumption changes future scheduler state.
-13. Insert `BehaviorSelectionV0` only after one frozen `select_admissible_action()` result and before frontier consumption. D0 is the first effectively feasible ranked node, not necessarily raw rank 0. Preserve `remaining_budget_policy` semantics exactly.
-14. Randomize only when D0 itself selects a verified pure-reducer action and at least one additional safe, effectively budget-feasible alternative exists. If D0 is effectful/unsupported, execute D0 with propensity 1; never silently substitute a structural alternative.
-15. Preserve legacy runtime node IDs for epsilon=0 equivalence even though they hash full telemetry-bearing proposal metadata and can affect tie-breaks. Add telemetry-independent `semantic_proposal_sha256`, execution-envelope hash, and full observation-envelope ref; use semantic identity for exploration dedupe and learning, exact legacy node/envelope identity for replay.
-16. Treat `_finalize_kind()` target-step loss and semantic-node/tie-break identity as separate later substrate versions. Do not silently fix either inside initial logging instrumentation.
-17. Make provider cost completeness cross-dimensional: ambiguous transport retries without provider receipts make total token use and total API charge incomplete; known final-response charge is only a component/lower bound, not a complete total.
-18. Split cost accounting at least into proposal-generation provider cost, generation tool/retrieval/summarizer cost, selected-action execution/checker cost, and assembly/verification cost. A zero-check structural action may still be preceded by substantial generation scratch-check compute.
-19. Freeze all schemas before randomized outcomes and execute C229-C341 plus F0–F7 and expanded generation/checker/tool/recovery/RNG tests. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
-20. Logging-policy v0 at eligible states: support <=5; epsilon=1/4; `mu(D0)=3/4+(1/4)/L`, alternatives `(1/4)/L`; at ineligible states `mu(D0)=1`. Persist exact numerator/denominator, support hashes, baseline D0 ID and behavior-selected ID.
-21. Deterministic provider pilot remains frozen after journal validation: hash-ordered cap 200 eligible tasks, 10k task bootstrap, <=5pp 95% CI half-width, preserving all cost compartments and physical retry completeness. Initial matched arms should disable generation tools/summarizer/remote retrieval unless fully instrumented. Add secondary diagnostics for actual randomizable-decision coverage without post-hoc changing the primary gate.
-22. Keep hard legal/effect masks deterministic. Learned contracts/value models may rank/prune exploratory alternatives, route bounded lookahead, or escalate to human review **inside** the mechanically verified safe set; they must never grant capability. If learned models influence support, report FNR/unsafe exposure and FPR/over-block under both ordinary and deliberately ambiguous/OOD states.
-23. Add deterministic journal coverage verification before any learned failure monitor: every selected effect has an Attempt identity, every committed transition has a verified postcondition/Receipt or exact reducer transition, every required effect is terminal or explicitly censored, and route closure is complete.
-24. Continue narrow public-source falsification for formal-proof systems that let learned components directly change irreversible/external execution authority and publish unsafe-exposure/FNR evidence. None was established in the newest pass.
+1. In the first environment able to materialize pinned CSSC source, executable-validate C263 unchanged: the one-batch/two-ghost-`REFINE_ARGUMENT` mutable provider-attribution overwrite; then rerun the identical fixture after immutable batch-consumption migration.
+2. Extend the causal journal across run/generation/selection/reducer/effect identity: durable `RunInstanceV0`, generation Attempt/physical Receipt/ProposalBatch, Decision/BatchConsumption, pre/post `WorkspaceSnapshotV0`, Outcome, consumed-set recovery, effect Attempt/Receipt and exact budget reconstruction.
+3. Replace mutable provider-batch `metadata.action_id` with immutable physical provider events plus append-only `ProposalBatchConsumptionEventV0`.
+4. Preserve initial randomized support as verified pure-reducer only. Checker/tool/external-effect actions remain excluded until physical retry/receipt accounting, crash recovery, budget reconstruction and deterministic effect contracts pass.
+5. Extend the hard effect contract from per-call authorization to four independent dimensions: execution truth (`P_effect` + tri-valued `Q_effect`), semantic route closure, information-flow closure, and temporal/policy closure.
+6. Add hard/mechanical facts for source, sink, destination, route, workspace path, credential use, consumed proposal and policy version wherever the substrate can derive them. Learned semantic extraction may enrich/rank inside the safe set but must not erase mechanically established grant-critical labels/edges.
+7. Add append-only `DataFlowEdgeV0`, explicit declassification evidence, history/automaton state and policy activation provenance before effectful randomization. Preserve confidentiality/integrity labels across model-mediated transformations and durable memory unless a trusted declassifier narrows them.
+8. Add flow-composition regressions: sensitive read → benign intermediate write → commit/public/network sink must be blocked without valid declassification even though each local tool call is allowed.
+9. Add semantic route fallback regressions: disable a nominal route, force a semantically equivalent alternate path, and assert the same effect contract still gates it. Action names alone are not sufficient effect semantics.
+10. Treat learned/autoformalized policy changes as a separate authority-changing effect class with immutable provenance, exact versioning, shadow/semantic validation, rollback target and explicit activation event. Kernel/SMT soundness is relative to the formalized policy artifact.
+11. Preserve all earlier epsilon=0 equivalence, exact D0/propensity, semantic-vs-legacy identity, cost-compartment, provider retry and F0–F7 gates from `2026-08-26T1902JST.md` unless explicitly superseded by the newest checkpoint.
+12. Run the frozen deterministic provider pilot only after all pre-randomization contracts pass; epsilon>0 remains forbidden beforehand.
+13. Continue narrow public-source falsification for formal/verified authorization systems with learned semantic stages. FAVA is now a direct measured precedent: LLM Permission-IR extraction + deterministic graph lowering/SMT authorization reaches 90.5% DCR / 98.9% attack interception but still has false negatives from missed labels/obligations. Next search should isolate systems that make learned extraction monotonic/fail-closed by construction or formally verify semantic lowering itself.
 
 ## Newest synthesis
 
-- **C229–C266:** target-step loss, mutable provider attribution, missing causal trace identity and reducer transition semantics were isolated. Four structural actions are reducer-only and recoverable from durable exact state. Two same-batch ghost-refine no-workspace-mutation actions are statically reachable sequentially and overwrite current provider attribution; exact regression/migration oracles are frozen.
-- **C267–C282:** deterministic candidate materialization is not exactly-once checker execution. Checker events are post-return only, Lean server retries/fallback can undercount physical cost, LSP proof checks have no durable check request/receipt, and budget reservations are process-local. Keep checker-bearing randomized actions fail-closed/out of initial support.
-- **C283–C301:** action Decision journaling alone is insufficient because provider generation, optional retrieval/summarization and proposal-cache creation occur before selection and are currently volatile. Add durable RunInstance, generation Attempt/physical Receipt/finalized proposal batches, content-addressed workspace state and consumed-set recovery. Safe behavior must preserve D0 support and exact rational propensity; workspace no-mutation still changes controller state through proposal consumption.
-- **C302–C307:** the clean selector insertion seam is after one frozen budget-constrained baseline selection and before frontier consumption. D0 is first effectively feasible node. Preserve raw/effective budget admission, trace both D0 and behavior action, and keep the selector a narrow wrapper over the fixed substrate.
-- **C308–C313:** current OpenAI-compatible retries have no provider idempotency contract. Ambiguous transient failures can duplicate remote execution/billing; physical attempt telemetry is post-hoc. Cost completeness must fail closed across tokens and dollars when an earlier retry is ambiguous.
-- **C314–C320:** legacy node IDs hash full proposal metadata, including provider UUID/telemetry, and are used as tie-breaks. Preserve them for baseline equivalence but add separate semantic/execution/observation identities; prevent raw transport IDs from leaking into learned features. Semantic tie-break is a separate future substrate change.
-- **C321–C328:** generation itself can run real Lean scratch checks through model tool loops. These checks bypass coarse controller check reservation and can exceed static model-route priors. Add explicit generation-tool-check Attempt/Receipt/cost scope, or disable tools in initial matched arms; in-memory duplicate suppression is not crash replay safety.
-- **C329–C336:** public execution-reliability evidence sharpens one unified effect contract. Separate effect truth from response truth; use read-only tri-valued postconditions; do not redispatch from `UNKNOWN`; treat provider idempotency as an external capability, not a local hash. Hoare-style pre/post contracts can unify legal gating and commit verification. Learned contracts are useful inside the safe set but are not exact enough to become the hard mask; contract integrity and runtime effect verification are load-bearing. Deterministic causal-journal invariants should precede learned failure monitors.
-- **C337–C341:** the learned-gate falsification target is now materially answered. A deployed model-based permission classifier directly authorizes effectful coding-agent actions yet retains nonzero unsafe allows (Anthropic: 17% FNR on real overeager actions; 5.7% synthetic exfiltration). Independent ambiguity stress testing reports 81.0% end-to-end FNR and exposes a separate route-coverage failure: 36.8% of state-changing actions bypass the classifier through in-project edits. This supports an effect-equivalence/route-closure invariant rather than tool-name gating. In Lean, failure-triggered learned intervention preserves the stock solver's successes while adding bounded rescue, reinforcing a deterministic baseline + learned advisory/fallback architecture. Runtime structural guardrails also outperform prompt-only defenses in broader agent benchmarks.
+- **C337–C341:** deployed learned permission gates retain nonzero unsafe allows and can be bypassed by alternate execution routes; preserve deterministic hard capability boundaries and learned advisory behavior inside the verified safe set.
+- **C342–C343:** l3m supplies a concrete formally constrained coding-agent counterexample to per-call reasoning. Kernel-verified reachability did not imply trajectory confidentiality: individually allowed read/write/commit steps composed into an API-key leak. A tame `lake env` route also had broader execution semantics than its surface label, motivating semantic rather than syntactic effect-route closure.
+- **C344–C345:** Fides and ICSE-NIER 2026 provide the direct abstraction needed to close that gap: deterministic information-flow labels plus temporal tool-sequence specifications. Capability, data-flow and sequence safety are separate dimensions.
+- **C346–C347:** FAVA is the closest measured authorization precedent found so far. Its LLM-extracted Permission IR feeds a deterministic graph/SMT gateway; aggregate DCR is 90.5%, attack interception 98.9%, but extraction misses still create false negatives. Labels, global dependency edges/SMT reasoning and runtime reauthorization are all load-bearing in its ablations. Deterministic proof of the generated graph does not compensate for omitted graph facts.
+- **C348:** the Lean-Agent Protocol independently exposes the policy-specification boundary: learned autoformalization can produce a well-typed but semantically wrong policy mapping, and its public demo explicitly lacks the proposed concept-symbol drift constraints and shadow-verification phase.
+- **C349:** revise the eventual effect contract to include semantic route identity, provenance-preserving source/sink labels, explicit declassification, temporal history state and policy-artifact version/provenance. These are design hypotheses for a later versioned contract, not claims about current CSSC implementation.
 
 ## Exact continuation
 
-1. Run C263 unchanged in an executable-capable environment; characterize current overwrite before migration, then verify two immutable consumption edges after migration.
-2. Implement/freeze `RunInstanceV0`, stable policy RNG/event identity, generation Attempt/physical Receipt/`ProposalBatchFinalizedV0`, including explicit retriever/summarizer/tool configuration and physical tool-check receipts where enabled.
-3. Implement `WorkspaceSnapshotV0` canonical round-trip/hash tests; bind pre snapshot atomically to Decision/Consumption and post snapshot to Outcome.
-4. Implement reducer transition dimensions and `RecoveryClassV0`; include durable proposal envelopes + consumed set in recovery and `SemanticRunProjectionV0`.
-5. Add canonical `EffectContractV0` (`P_effect`, tri-valued `Q_effect`, idempotency/query capability, provenance, `effect_route_id`) and map effect Attempt/Receipt recovery onto it. Preserve `UNKNOWN` instead of coercing it to failure.
-6. Add deterministic effect-route closure tests, including semantically equivalent fallback routes; do not allow any alternate tool/action path to bypass the authoritative effect contract.
-7. Implement effect Attempt/Receipt, physical checker retry/fallback aggregation, generation-tool-check accounting and durable budget reconstruction; keep checker-bearing selected-action randomization disabled until tested.
-8. Add `BehaviorSelectionV0` around existing budget selection; test rank-0 budget denial, `remaining_budget_policy=false`, effectful-D0 deterministic fallback, pure-D0 epsilon support, exact rational propensities and unsupported-target fallback.
-9. Add semantic/execution/observation proposal identities while leaving legacy node IDs unchanged; test that telemetry-only UUID differences change legacy IDs but not semantic IDs.
-10. Add target-step preservation and semantic-node tie-break only as separate substrate versions, with explicit behavior-change regressions.
-11. Add deterministic journal coverage verifier and non-atomic effect tests; learned contracts/monitors remain advisory inside the mechanically safe set.
-12. Run all F0–F7 and expanded provider retry, generation tool, checker, route-coverage and crash tests; verify epsilon=0 semantic equivalence with no extra hidden/provider/checker/tool calls and independent logging RNG.
-13. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
-14. When learned support ranking is later enabled, report FNR/unsafe-exposure and FPR/over-block under both in-distribution and deliberately ambiguous/OOD states, not only pass@budget/task success.
-15. Continue narrow public-source falsification for formal-proof systems where learned components directly grant irreversible/external effect authority. `2026-08-26T1902JST.md` is newest and is not global completion.
+1. C263 executable validation remains the first implementation action when an executable CSSC environment is available; this run did not replace it with static inference.
+2. Map `EffectContractV1` fields onto the existing Attempt/Receipt + causal-journal schema without silently mutating V0 semantics.
+3. Add flow-composition, semantic-fallback-route, temporal-obligation, fail-closed-missing-evidence and policy-formalization-drift regressions before any new effectful randomized support.
+4. In public-source work, inspect whether FAVA/Fides/verified-agent systems provide a machine-checked or monotonic guarantee that learned semantic extraction cannot remove mandatory labels/edges, and whether any system publishes unsafe-exposure/calibration for authority-changing policy updates.
+5. Keep all cost, crash-recovery, identity and provider-pilot gates from the prior checkpoint unless explicitly superseded.
 
-Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
+`2026-08-26T2003JST.md` is newest and is not global completion.
+
+Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
