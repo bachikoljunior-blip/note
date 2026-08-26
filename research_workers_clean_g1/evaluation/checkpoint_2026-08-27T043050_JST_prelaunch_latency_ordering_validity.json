@@ -1,0 +1,102 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T04:30:50.058046+09:00",
+  "invocation_started_at": "2026-08-27T04:26:01+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T041848_JST_asymmetric_side_pooling.json",
+  "control": {
+    "frozen_main_sha": "767d5eefcb1db33fc6a44fbe8ce9804db548c599",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": ["767d5eefcb1db33fc6a44fbe8ce9804db548c599","767d5eefcb1db33fc6a44fbe8ce9804db548c599"]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "title": "Scheduling LLM Inference with Uncertainty-Aware Output Length Predictions",
+      "date": "2026-04-01",
+      "url": "https://arxiv.org/abs/2604.00499",
+      "relevance": "Shows stochastic/heavy-tailed output lengths, point-prediction mismatch, and tail-aware prelaunch scoring. Reports average output-length skewness 3.10, CV 1.09, P90/P50 4.62, P99/P50 10.77 across its sampled prompts, and TIE scheduling gains in its tested serving settings."
+    },
+    {
+      "title": "Beyond Prediction: Tail-Aware Scheduling for LLM Inference",
+      "date": "2026-06-16",
+      "url": "https://arxiv.org/abs/2606.18431",
+      "relevance": "Reports that prediction-driven size scheduling can be fragile under distribution shift/bursty arrivals/memory pressure and that tail-aware prediction-free scheduling improved P99 TTLT by 35-50% versus SRPT with perfect decode-length knowledge in tested workloads."
+    },
+    {
+      "title": "Sequential testing of conditionally constrained hypotheses",
+      "date": "2026-06-04",
+      "url": "https://arxiv.org/abs/2606.06769",
+      "relevance": "Supports treating side information through explicit conditional null constraints; predictable affine one-step e-variables form a complete class for the conditional-hypothesis setting studied there."
+    }
+  ],
+  "synthetic_stress": {
+    "status": "Worker-local synthetic stress only; no deployment latency or real candidate-performance claim.",
+    "task_set_size": 128,
+    "candidate_median_latency_scale": 2.0,
+    "pair_latency": "max(candidate_side, incumbent_side)",
+    "base_latency": "correlated lognormal, log sigma 1.2, shared latent-task correlation component 0.45, plus independent 1% x10 side stragglers",
+    "scheduler": "prelaunch fixed pair order; 32 FCFS pair slots; contiguous-prefix statistical reveal; immediate cancellation assumed for effective-occupancy metric",
+    "test": "paired sign e-process with + factor 1.5, - factor 0.5, commit threshold 20, maximum 50 revealed pairs",
+    "predictor": "prelaunch score X=D+noise where D is latent latency difficulty; lower score scheduled earlier; predictor does not observe paired outcome",
+    "predictor_noise_to_log_latency_corr": {"3.0":0.2211,"1.5":0.3911,"0.75":0.5686,"0.35":0.6695}
+  },
+  "latency_results_under_conditional_sign_independence": {
+    "alternative": "paired sign probability q=0.75 independent of latency predictor/covariates",
+    "random_order": {"commit_rate":0.9182,"unresolved_by_50":0.0818,"wall_q95":88.8612,"effective_occupancy_q95":764.0743,"full_obligation_occupancy_q95":887.3870},
+    "predicted_short_first": {
+      "noise_3.0": {"commit_rate":0.9153,"wall_q95":61.8721,"wall_reduction_vs_random_pct":30.37,"effective_occupancy_reduction_pct":7.22},
+      "noise_1.5": {"commit_rate":0.9134,"wall_q95":42.7603,"wall_reduction_vs_random_pct":51.88,"effective_occupancy_reduction_pct":14.04},
+      "noise_0.75": {"commit_rate":0.9145,"wall_q95":28.4610,"wall_reduction_vs_random_pct":67.97,"effective_occupancy_reduction_pct":23.01},
+      "noise_0.35": {"commit_rate":0.9171,"wall_q95":21.5480,"wall_reduction_vs_random_pct":75.75,"effective_occupancy_reduction_pct":29.54}
+    },
+    "interpretation": "When sign validity is conditional on the prelaunch ordering information, predicted-short-first can sharply reduce fixed-prefix head-of-line latency without materially changing the statistical unresolved rate in this synthetic setting."
+  },
+  "conditional_validity_counterexample": {
+    "construction": "D is symmetric. Marginal null remains P(+)=0.5, but P(+|D)=logistic(-beta*D), so fast/low-D tasks favor candidate and slow/high-D tasks favor incumbent. Predictor X=D+noise is observed prelaunch and never reads the paired outcome. Sorting by X changes the prefix sign law even though the unconditional sign null remains exactly fair.",
+    "random_order_false_commit": {"beta_0":0.0373,"beta_0.25":0.0381,"beta_0.5":0.0376,"beta_1.0":0.0376},
+    "predicted_short_first_false_commit": {
+      "beta_0.25": {"noise_3.0":0.0663,"noise_1.5":0.0995,"noise_0.75":0.1446,"noise_0.35":0.1756},
+      "beta_0.5": {"noise_3.0":0.1051,"noise_1.5":0.2045,"noise_0.75":0.3485,"noise_0.35":0.4512},
+      "beta_1.0": {"noise_3.0":0.2040,"noise_1.5":0.4700,"noise_0.75":0.7797,"noise_0.35":0.9035}
+    },
+    "key_result": "Prelaunch provenance alone is not a statistical safety condition. A predictor can be outcome-unobserving yet performance-informative. If the e-process null is only marginally valid and not valid conditional on the predictor/covariates used for ordering, predicted-short-first can massively inflate false commits.",
+    "alternative_reweighting_check": "With marginal q=0.75 but q varying with D, random-order commit stayed about 0.915-0.918 while predictor-sorted prefixes reached about 0.967-0.998 across tested dependence/predictor-quality cells. Apparent power gain can therefore be task reweighting rather than only latency reduction."
+  },
+  "measurement_validity_rules": [
+    "Replace the previous rule 'prelaunch-only predictor is enough' with a stronger gate: any covariate used to choose statistical inclusion/reveal order must be covered by the conditional null, e.g. P(+|past,X)<=P(-|past,X), or the inference must explicitly condition/stratify on X.",
+    "If only marginal paired fairness is defensible, keep statistical inclusion/reveal order covariate-blind. Latency predictors may still control physical resource allocation, replication, or launch priority only insofar as those controls cannot select/reorder which signs enter the test.",
+    "Measure speed and statistical validity separately. A lower q95 wall time is not an evaluation improvement if it changes the sampled task mixture or invalidates conditional sign symmetry.",
+    "Point latency prediction is itself a fragile abstraction under heavy-tailed stochastic decoding. Compare tail-risk/distribution-aware scores and prediction-free soft-priority controls rather than treating an oracle-length sort as a deployable target."
+  ],
+  "scope_guards": [
+    "All q95/occupancy/FWER values above are synthetic Monte Carlo under the stated model, not real serving measurements.",
+    "The false-commit counterexample establishes existence of a failure mode; it does not claim real evaluation latency is currently correlated with candidate advantage.",
+    "The conditional constraint required for validity depends on the actual target null and filtration; prelaunch timestamp/provenance is necessary for predictability but not sufficient for conditional exchangeability.",
+    "The oracle shortest-latency schedule was explored only as an upper-bound sanity check and is not a valid deployment assumption under stochastic LLM output lengths or resource coupling.",
+    "No conclusion here extends to outcome-dependent work stealing, race-to-first semantic replication, or resource-coupled GPU schedulers without separate validity and systems analysis."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Build a two-layer safe scheduler: keep a covariate-blind precommitted statistical reveal order, but use the latency predictor only for physical launch/resource/hedging decisions inside a bounded window. Quantify q95 wall and occupancy recovery relative to predictor-sorted statistical order."},
+    {"priority":2,"action":"In parallel derive a covariate-conditional paired-sign e-process/stratified test that permits predictor-sorted statistical order when conditional sign symmetry given predictor and frozen task covariates is explicitly modeled and falsifiable."},
+    {"priority":3,"action":"Replace point prediction with uncertainty-aware/tail-risk prelaunch scores, inspired by distributional output-length prediction, and stress under calibration error/distribution shift; compare to prediction-free soft priority."},
+    {"priority":4,"action":"Add an empirical sign-latency diagnostic protocol: frozen pre-outcome task covariates, both side completion times, pair outcome, predictor score, and candidate/incumbent identity; test whether conditional sign symmetry degrades across latency-score strata before allowing predictor-driven statistical order."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Simulate the two-layer scheduler with a covariate-blind random statistical order and predictor-driven physical scheduling inside windows W in {16,32,64}; preserve the fixed reveal order exactly, compare q95 wall/effective occupancy/full-obligation occupancy against pure fixed-order launch and predictor-sorted statistical order, and verify false-commit control under the same marginal-null sign-latency counterexample."
+}
