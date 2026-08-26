@@ -64,6 +64,7 @@ Latest checkpoints in order:
 61. `2026-08-26T1802JST-followup9.md`
 62. `2026-08-26T1802JST-followup10.md`
 63. `2026-08-26T1802JST-followup11.md`
+64. `2026-08-26T1832JST.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
@@ -76,16 +77,20 @@ Read `STATE.md` for the accumulated base, then source-qualified checkpoints abov
 5. Before checker/tool-bearing actions enter randomized support, add durable EffectAttempt/EffectReceipt and physical checker-attempt accounting. Current Lean server/subprocess paths expose no durable per-check receipt; server retry/fallback can undercount physical wall cost.
 6. Freeze or fully instrument optional upstream effects. `ChatContextSummarizer` can make an unmetered model call, generic retrieval has unspecified effect/cost semantics, and chat proposal generation can run real scratch Lean checks through tool loops that bypass `BudgetManager.reserve_check()`.
 7. Rebuild crash-recovery budget availability from durable run/effect attempts and receipts. Current check/model counters and current sample/proposal IDs are process-local; committed in-doubt dispatches remain conservatively reserved after restart.
-8. Model controller state as workspace + durable proposal envelopes + consumed set/history + budget/effect state. Workspace `NO_MUTATION` is not a global no-op because selected proposal consumption changes future scheduler state.
-9. Insert `BehaviorSelectionV0` only after one frozen `select_admissible_action()` result and before frontier consumption. D0 is the first effectively feasible ranked node, not necessarily raw rank 0. Preserve `remaining_budget_policy` semantics exactly.
-10. Randomize only when D0 itself selects a verified pure-reducer action and at least one additional safe, effectively budget-feasible alternative exists. If D0 is effectful/unsupported, execute D0 with propensity 1; never silently substitute a structural alternative.
-11. Preserve legacy runtime node IDs for epsilon=0 equivalence even though they hash full telemetry-bearing proposal metadata and can affect tie-breaks. Add telemetry-independent `semantic_proposal_sha256`, execution-envelope hash, and full observation-envelope ref; use semantic identity for exploration dedupe and learning, exact legacy node/envelope identity for replay.
-12. Treat `_finalize_kind()` target-step loss and semantic-node/tie-break identity as separate later substrate versions. Do not silently fix either inside initial logging instrumentation.
-13. Make provider cost completeness cross-dimensional: ambiguous transport retries without provider receipts make total token use and total API charge incomplete; known final-response charge is only a component/lower bound, not a complete total.
-14. Split cost accounting at least into proposal-generation provider cost, generation tool/retrieval/summarizer cost, selected-action execution/checker cost, and assembly/verification cost. A zero-check structural action may still be preceded by substantial generation scratch-check compute.
-15. Freeze all schemas before randomized outcomes and execute C229-C328 plus F0–F7 and expanded generation/checker/tool/recovery/RNG tests. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
-16. Logging-policy v0 at eligible states: support <=5; epsilon=1/4; `mu(D0)=3/4+(1/4)/L`, alternatives `(1/4)/L`; at ineligible states `mu(D0)=1`. Persist exact numerator/denominator, support hashes, baseline D0 ID and behavior-selected ID.
-17. Deterministic provider pilot remains frozen after journal validation: hash-ordered cap 200 eligible tasks, 10k task bootstrap, <=5pp 95% CI half-width, preserving all cost compartments and physical retry completeness. Initial matched arms should disable generation tools/summarizer/remote retrieval unless fully instrumented. Add secondary diagnostics for actual randomizable-decision coverage without post-hoc changing the primary gate.
+8. Add a versioned `EffectContractV0` for every effectful substrate edge: hard mechanical `P_effect`, tri-valued `Q_effect=TRUE/FALSE/UNKNOWN`, explicit provider idempotency/query capability and provenance. Never infer `FALSE` from an ambiguous response.
+9. Extend crash tests with timeout-after-dispatch (`Q=TRUE`), delayed visibility (`Q=UNKNOWN`), and confirmed absence (`Q=FALSE`). Assert no redispatch from `UNKNOWN`; without a real provider idempotency/query contract, keep in-doubt attempts reserved/censored.
+10. Model controller state as workspace + durable proposal envelopes + consumed set/history + budget/effect state. Workspace `NO_MUTATION` is not a global no-op because selected proposal consumption changes future scheduler state.
+11. Insert `BehaviorSelectionV0` only after one frozen `select_admissible_action()` result and before frontier consumption. D0 is the first effectively feasible ranked node, not necessarily raw rank 0. Preserve `remaining_budget_policy` semantics exactly.
+12. Randomize only when D0 itself selects a verified pure-reducer action and at least one additional safe, effectively budget-feasible alternative exists. If D0 is effectful/unsupported, execute D0 with propensity 1; never silently substitute a structural alternative.
+13. Preserve legacy runtime node IDs for epsilon=0 equivalence even though they hash full telemetry-bearing proposal metadata and can affect tie-breaks. Add telemetry-independent `semantic_proposal_sha256`, execution-envelope hash, and full observation-envelope ref; use semantic identity for exploration dedupe and learning, exact legacy node/envelope identity for replay.
+14. Treat `_finalize_kind()` target-step loss and semantic-node/tie-break identity as separate later substrate versions. Do not silently fix either inside initial logging instrumentation.
+15. Make provider cost completeness cross-dimensional: ambiguous transport retries without provider receipts make total token use and total API charge incomplete; known final-response charge is only a component/lower bound, not a complete total.
+16. Split cost accounting at least into proposal-generation provider cost, generation tool/retrieval/summarizer cost, selected-action execution/checker cost, and assembly/verification cost. A zero-check structural action may still be preceded by substantial generation scratch-check compute.
+17. Freeze all schemas before randomized outcomes and execute C229-C336 plus F0–F7 and expanded generation/checker/tool/recovery/RNG tests. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
+18. Logging-policy v0 at eligible states: support <=5; epsilon=1/4; `mu(D0)=3/4+(1/4)/L`, alternatives `(1/4)/L`; at ineligible states `mu(D0)=1`. Persist exact numerator/denominator, support hashes, baseline D0 ID and behavior-selected ID.
+19. Deterministic provider pilot remains frozen after journal validation: hash-ordered cap 200 eligible tasks, 10k task bootstrap, <=5pp 95% CI half-width, preserving all cost compartments and physical retry completeness. Initial matched arms should disable generation tools/summarizer/remote retrieval unless fully instrumented. Add secondary diagnostics for actual randomizable-decision coverage without post-hoc changing the primary gate.
+20. Keep hard legal/effect masks deterministic. Learned contracts or value models may only rank/prune exploratory alternatives inside the verified-safe set; they must never grant capability. Add provenance/runtime-parity checks before any learned effect contract can influence support construction.
+21. Add deterministic journal coverage verification before any learned failure monitor: every selected effect has an Attempt identity, every committed transition has a verified postcondition/Receipt or exact reducer transition, and every required effect is terminal or explicitly censored.
 
 ## Newest synthesis
 
@@ -96,6 +101,7 @@ Read `STATE.md` for the accumulated base, then source-qualified checkpoints abov
 - **C308–C313:** current OpenAI-compatible retries have no provider idempotency contract. Ambiguous transient failures can duplicate remote execution/billing; physical attempt telemetry is post-hoc. Cost completeness must fail closed across tokens and dollars when an earlier retry is ambiguous.
 - **C314–C320:** legacy node IDs hash full proposal metadata, including provider UUID/telemetry, and are used as tie-breaks. Preserve them for baseline equivalence but add separate semantic/execution/observation identities; prevent raw transport IDs from leaking into learned features. Semantic tie-break is a separate future substrate change.
 - **C321–C328:** generation itself can run real Lean scratch checks through model tool loops. These checks bypass coarse controller check reservation and can exceed static model-route priors. Add explicit generation-tool-check Attempt/Receipt/cost scope, or disable tools in initial matched arms; in-memory duplicate suppression is not crash replay safety.
+- **C329–C336:** public execution-reliability evidence sharpens one unified effect contract. Separate effect truth from response truth; use read-only tri-valued postconditions; do not redispatch from `UNKNOWN`; treat provider idempotency as an external capability, not a local hash. Hoare-style pre/post contracts can unify legal gating and commit verification. Learned contracts are useful inside the safe set but are not exact enough to become the hard mask; contract integrity and runtime effect verification are load-bearing. Deterministic causal-journal invariants should precede learned failure monitors.
 
 ## Exact continuation
 
@@ -103,12 +109,14 @@ Read `STATE.md` for the accumulated base, then source-qualified checkpoints abov
 2. Implement/freeze `RunInstanceV0`, stable policy RNG/event identity, generation Attempt/physical Receipt/`ProposalBatchFinalizedV0`, including explicit retriever/summarizer/tool configuration and physical tool-check receipts where enabled.
 3. Implement `WorkspaceSnapshotV0` canonical round-trip/hash tests; bind pre snapshot atomically to Decision/Consumption and post snapshot to Outcome.
 4. Implement reducer transition dimensions and `RecoveryClassV0`; include durable proposal envelopes + consumed set in recovery and `SemanticRunProjectionV0`.
-5. Implement effect Attempt/Receipt, physical checker retry/fallback aggregation, generation-tool-check accounting and durable budget reconstruction; keep checker-bearing selected-action randomization disabled until tested.
-6. Add `BehaviorSelectionV0` around existing budget selection; test rank-0 budget denial, `remaining_budget_policy=false`, effectful-D0 deterministic fallback, pure-D0 epsilon support, exact rational propensities and unsupported-target fallback.
-7. Add semantic/execution/observation proposal identities while leaving legacy node IDs unchanged; test that telemetry-only UUID differences change legacy IDs but not semantic IDs.
-8. Add target-step preservation and semantic-node tie-break only as separate substrate versions, with explicit behavior-change regressions.
-9. Run all F0–F7 and expanded provider retry, generation tool, checker and crash tests; verify epsilon=0 semantic equivalence with no extra hidden/provider/checker/tool calls and independent logging RNG.
-10. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
-11. Continue narrow public-source falsification/simplification searches and keep frontier nonempty. `2026-08-26T1802JST-followup11.md` is newest and is not global completion.
+5. Add canonical `EffectContractV0` (`P_effect`, tri-valued `Q_effect`, idempotency/query capability, provenance) and map effect Attempt/Receipt recovery onto it. Preserve `UNKNOWN` instead of coercing it to failure.
+6. Implement effect Attempt/Receipt, physical checker retry/fallback aggregation, generation-tool-check accounting and durable budget reconstruction; keep checker-bearing selected-action randomization disabled until tested.
+7. Add `BehaviorSelectionV0` around existing budget selection; test rank-0 budget denial, `remaining_budget_policy=false`, effectful-D0 deterministic fallback, pure-D0 epsilon support, exact rational propensities and unsupported-target fallback.
+8. Add semantic/execution/observation proposal identities while leaving legacy node IDs unchanged; test that telemetry-only UUID differences change legacy IDs but not semantic IDs.
+9. Add target-step preservation and semantic-node tie-break only as separate substrate versions, with explicit behavior-change regressions.
+10. Add deterministic journal coverage verifier and non-atomic effect tests; learned contracts/monitors remain advisory inside the mechanically safe set.
+11. Run all F0–F7 and expanded provider retry, generation tool, checker and crash tests; verify epsilon=0 semantic equivalence with no extra hidden/provider/checker/tool calls and independent logging RNG.
+12. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
+13. Continue narrow public-source falsification/simplification searches, especially formal-proof/code-agent systems that let learned masks authorize effects and report unsafe-exposure/false-negative rates. `2026-08-26T1832JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
