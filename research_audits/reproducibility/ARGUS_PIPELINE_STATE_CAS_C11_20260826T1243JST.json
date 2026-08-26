@@ -1,0 +1,112 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "bootstrap_valid": true,
+  "audited_at": "2026-08-26T12:43:34+09:00",
+  "frozen_control": {
+    "note_main_sha": "1e66f28d844ccbf436bb0411f7621ff451f20daa",
+    "root_control_revision": 9,
+    "root_control_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 2,
+    "semantic_freeze_respected": true
+  },
+  "source_binding": {
+    "active_wave_id": "clean-g1-wave-c11-20260826T0958JST-2f7dbe30",
+    "active_wave_manifest_blob": "8bddc7dc6cbfe3ad04897845cc4cb4fe2118cb84",
+    "namespace": "open_source",
+    "source_artifact": "research_workers_clean_g1/open_source/RUN_20260826_0858_PIPELINE_STATE_AUTHORITY_CAS.md",
+    "source_artifact_blob": "4431c2e2019cbf4729243c1fa14133ac957d7d4f",
+    "source_local_candidate_id": "clean-os-g1-005",
+    "audited_target_commit": "lbx154/Argus@962cb06554daaede17b786c495e13ee3b6530e6e"
+  },
+  "official_source_verification": {
+    "pipeline_state_primitive": {
+      "path": "argus_skill/core/pipeline_state.py",
+      "blob": "c93ccae20e43dde62f3e2a3731965c21bd85a89e",
+      "observed_behavior": "write_pipeline_state serializes a caller-supplied whole dict to a unique sibling temp and commits with os.replace; it has no expected prior digest/revision, state_revision field, CAS rejection, common pipeline-state lock, file fsync or parent-directory fsync.",
+      "torn_write_scope": "The temp+replace pattern prevents readers from observing a half-written destination under an ordinary successful replace, but does not prevent a stale whole-object read-modify-write from replacing a newer complete object."
+    },
+    "whole_object_writers": {
+      "persist_vertical": "skills/vertical_select.py reads the entire state, changes vertical/domain/workflow/target/stage-seed keys, then calls write_pipeline_state with the full payload.",
+      "math_objective": "verticals/math/objective_mode.py explicitly documents that set_objective and persist_vertical can race and lose one side's edit; the source intentionally leaves this race alone under its normal-operation assumption.",
+      "stage_machine": "skills/stage_machine.py reads the whole state, mutates current_stage/stages/history and writes the full object. Its advance_stage docstring explicitly says caller identity is not authenticated and advanced_by is free text, while deterministic completion validation protects evidence for forward transitions."
+    },
+    "normal_daemon_serialization": {
+      "manager_pipeline_lock": "manager/_session_ops.py implements a cross-process advisory exclusive lock with portalocker on .manager_pipeline.lock and a bounded default timeout of 1800 seconds.",
+      "daemon_use": "daemon/_life_worker_run.py acquires manager.pipeline_lock() around supervisor drain execution.",
+      "scope_implication": "The source does not establish a routine normal-daemon stage race. The concrete exposed surface is whole-object mutation outside a shared pipeline-state CAS boundary, especially setup/admin/direct-library writers or any path not co-held under manager_pipeline_lock."
+    },
+    "separate_stronger_control_store": {
+      "path": "argus_skill/manager/control_state.py",
+      "observed_behavior": "CampaignControlStore has immutable revision snapshots, state_revision, portalocker serialization, authorization/capability objects, file flush+fsync, and commits HEAD.json after the revision snapshot.",
+      "not_equivalent": "This state_revision belongs to the campaign control store and is not consumed as an expected prior revision by PIPELINE_STATE writes, so it is not currently a pipeline-state CAS token."
+    },
+    "tests": {
+      "pipeline_state_core_test": "tests/core/test_pipeline_state.py validates legacy-path migration/precedence and basic reads/writes but does not itself exercise concurrent stale writers, CAS rejection or crash-durability.",
+      "no_test_claim_scope": "This audit does not assert that no concurrency test exists anywhere in the repository; it records only the exact inspected test surface plus source behavior."
+    }
+  },
+  "freshness_cross_check": {
+    "preview_main": "lbx154/Argus@71571444f2f8e6f9dd2ae39530c44b56bbbeccec",
+    "official_microsoft_main": "microsoft/ArgusAgent@455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+    "pipeline_state_blob_on_both_current_heads": "c93ccae20e43dde62f3e2a3731965c21bd85a89e",
+    "interpretation": "The audited low-level pipeline_state primitive is unchanged on both freshly observed public heads. This is current-code confirmation of the primitive only; the sealed C11 candidate remains bound to the original source artifact and commit."
+  },
+  "external_precedent": {
+    "repository": "azizu06/snaplist",
+    "commit": "bf1e631ec8b01b53938f81b3e66764d6b151f792",
+    "artifact": "supabase/tests/mobile_guided_correction.test.sql",
+    "support": "The public pgTAP test contract explicitly exercises same-revision concurrency exclusion, attempt-generation fencing, service-role-only completion, stale-revision rejection, late-failure rollback, and exact retry/idempotency behavior in a PostgreSQL transaction.",
+    "scope_guard": "This is implementation/test evidence for an exact-once transactional invariant in a different PostgreSQL application. It is not an Argus replication and does not prove that a file-backed one-object CAS+consume implementation will have the same crash semantics."
+  },
+  "reproducibility_assessment": {
+    "overall_grade": "B",
+    "current_state_diagnosis_grade": "A",
+    "external_invariant_precedent_grade": "A-",
+    "proposed_argus_adaptation_grade": "C",
+    "official_artifact_support": "very strong for the diagnosed low-level state/authority gap; absent for the proposed unified mutate_pipeline_state CAS+one-shot-capability implementation because that adaptation is not implemented/tested in the audited Argus source",
+    "independent_replication": "No independent Argus implementation/rerun of clean-os-g1-005 identified in this pass.",
+    "failed_independent_replication": "not identified",
+    "judgment": "The worker's source-level diagnosis is reproducible: the exact whole-object writer lacks a revision/CAS boundary, independent writers exist, the math writer explicitly acknowledges a lost-update race, stage caller identity is not authenticated at the primitive, and the normal daemon has a separate outer cross-process pipeline lock that narrows the demonstrated risk. The proposed central mutate_pipeline_state boundary is a plausible untested adaptation, not an already demonstrated Argus fix."
+  },
+  "tested_scope": {
+    "supported": [
+      "Source-observed absence of PIPELINE_STATE CAS/revision/inner lock/fsync at the audited commit.",
+      "Source-observed whole-object read-modify-write behavior in vertical, math objective and stage writers.",
+      "Source-observed normal-daemon serialization by manager_pipeline_lock.",
+      "Source-observed stronger but separate CampaignControlStore revision/capability design.",
+      "Source-level current-head persistence of the same pipeline_state primitive on preview and official Microsoft repositories.",
+      "External PostgreSQL test precedent for transactional stale-state/fencing/idempotent-retry invariants."
+    ],
+    "not_supported": [
+      "A claim that normal Argus daemon stage mutation is currently racing in production.",
+      "A claim that an unauthorized writer has been demonstrated to corrupt Argus state.",
+      "A claim that the proposed file-backed capability/CAS design is crash-safe or deadlock-free.",
+      "A claim that Snaplist's database transaction proves Argus file semantics.",
+      "Any AGI-performance effect."
+    ]
+  },
+  "exact_blockers": [
+    "No implementation of the proposed unified mutate_pipeline_state CAS/capability boundary was found in the audited source.",
+    "No matched concurrent-writer test was executed by this audit; source inspection establishes possibility/absence of CAS, not empirical failure incidence.",
+    "write_pipeline_state does not expose a durable commit-point contract under power loss; exact file+directory fsync semantics are untested.",
+    "Potential lock nesting/reentrancy of a future inner pipeline-state lock must be designed against the existing nonblocking-retry portalocker pipeline boundary to avoid self-deadlock.",
+    "Migration completeness matters: a single remaining legacy whole-object writer can still overwrite newer namespace/revision metadata if it is allowed to run concurrently."
+  ],
+  "primary_provenance": [
+    "https://github.com/lbx154/Argus/commit/962cb06554daaede17b786c495e13ee3b6530e6e",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/core/pipeline_state.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/skills/vertical_select.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/verticals/math/objective_mode.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/skills/stage_machine.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/manager/_session_ops.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/argus_skill/manager/control_state.py",
+    "https://github.com/lbx154/Argus/blob/962cb06554daaede17b786c495e13ee3b6530e6e/tests/core/test_pipeline_state.py",
+    "https://github.com/microsoft/ArgusAgent/blob/455da6cb2fe10e9fbaeab5126f2f3b363237cf57/argus_skill/core/pipeline_state.py",
+    "https://github.com/azizu06/snaplist/blob/bf1e631ec8b01b53938f81b3e66764d6b151f792/supabase/tests/mobile_guided_correction.test.sql"
+  ],
+  "exact_next_action": "Search the sealed C11 source set for the next candidate whose claimed mechanism has an executable official implementation and materially uncertain replication status; prioritize one where an independent rerun or a concrete failed-reproduction artifact could change evidence strength rather than only confirming source inspectability."
+}
