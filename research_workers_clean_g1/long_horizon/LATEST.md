@@ -1,36 +1,36 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T170124JST_CAUSAL_ROUTING_CRN.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T180021JST_CONFORMAL_SET_VLLM_CRN.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1600JST_TARGET_SEMANTICS.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T170124JST_CAUSAL_ROUTING_CRN.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `10`
 - role config revision: `5`
-- frozen source main SHA: `456111f88cd26b8ad796866aaf64a6c44a176908`
+- frozen source main SHA: `cc9cb9fae8c79c150521a860142ab7d7b0e27e85`
 - root blob: `025d0efc635aca01e0e25d293f40004d90dc663b`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
 - pre-semantic second SHA-only lookup matched the frozen SHA; later repository writes did not alter the semantic control tuple for this invocation.
 
 Current synthesis delta:
-- Executed-replay evidence now strongly rejects model confidence, fluency and generic judge/correctness scores as default rollback-target proxies without causal calibration: policy confidence routed roughly the same fraction of turns as pivotal-turn recall and was chance-level for pivotal targeting in the measured ALFWorld setting.
-- AgentLocate sharpens target semantics: its decisive failure step is the earliest step where one corrected action reverses failure, which is a first-sufficient-intervention target rather than necessarily the earliest causal origin. Exact-step localization remains difficult, refinement is non-monotonic, and downstream visibility can bias blame.
-- BranchPoint-Latent is best treated as a candidate/probe-budget allocator: it improves held-out Branch Recall@5 from 0.73 to 0.93 at zero replay-oracle cost, but does not establish the best historical restore target or final recovery utility.
-- Equal nominal rollback budgets are not enough. Selector comparisons must report realized recovery dose/opportunity because target location can change how many admissible actions/model calls/tool calls are actually usable before termination.
-- Common-random-number pairing needs causal alignment. A shared numeric seed with a stateful PRNG becomes invalid when branch control flow consumes a different draw sequence. Where possible, environment randomness should be event-keyed/counter-based; model-sampling divergence still needs same-model control branches and explicit residual replay-noise estimates.
-- The strict selector-only scientific gap remains open: no located software/tool/GUI study fixes target objective, alarm, candidate set, restore/carry-forward, model/verifier, probe budget, allocated and realized recovery opportunity, and replay-noise treatment while varying only historical target selector and measuring final live task success.
+- Conformal Agent Error Attribution supplies a calibrated contiguous *candidate region* for one decisive-error label, not a guarantee of final recovery. Its own rollback table separates coverage from utility: on Right Dense, VCP had coverage `1.00` but success `0.70` and redo cost `0.66`, while LF had coverage `0.82`, success `0.75`, cost `0.40`.
+- Its rollback success is not selector-only evidence because restart also receives failed-trace corrective context. Therefore target, redo depth and carry-forward guidance are bundled.
+- A useful controller split is now: calibrated uncertainty region -> admissibility/safe-boundary filter -> historical target selector -> abstention/probe when evidence is insufficient -> live outcome/cost/disruption evaluation.
+- Current vLLM main provides a practical partial model-side CRN primitive: Gumbel noise is keyed by request seed, absolute token position and token id. This can couple divergent logits at the same decode position, but it is position-keyed rather than semantic-event-keyed, so prefix-length/position shifts can break causal alignment.
+- vLLM trace replay (documented Aug. 20, 2026) can force a recorded decoded prefix while computing real logprobs/ranks. It is useful for prefix reconstruction audits, but the documented request stops after the trace and does not itself provide a same-request trace-replay-to-live-branch handoff.
+- The strict selector-only gap remains open.
 
 Exact continuation:
-1. Search selector studies reporting realized post-rollback model/tool/action counts, not only nominal limits, and test whether rollback depth changes effective opportunity.
-2. Search state-only failure localizers that output calibrated top-k distributions, conformal sets or abstention, then audit them against executed replay rather than annotated correctness.
-3. Search software/tool-agent systems using event-keyed or counter-based RNG for counterfactual branch coupling; distinguish environment coupling from LLM-sampler coupling.
-4. Search local/open-model inference stacks for a practical token/event-keyed sampler or reproducible sampler-state checkpoint that can couple divergent branches after a historical target.
-5. Extend the strict Replay Gap/Shepherd selector-harness blueprint with `realized_model_calls`, `realized_admissible_actions`, `realized_environment_steps`, `successful_tool_calls`, `unused_budget_reason`, `environment_CRN_method`, `model_CRN_method`, `event_identity_map`, and same-model control-branch variance.
-6. Treat AgentLocate/BranchPoint-like methods as candidate/probe allocators unless held-out live rollback outcomes establish historical-target utility.
-7. Preserve the target-semantics split: earliest causal origin, first sufficient intervention point, latest rescue/point-of-commitment, latest admissible/safe checkpoint, and intended semantic version are distinct labels.
-8. Preserve the strict selector-only gap unless all non-target variables are genuinely controlled.
+1. Audit conformal localization against executed-replay causal targets rather than injected/annotated decisive-error labels.
+2. Search conformal/selective localization robust to distribution shift or non-exchangeable sequential agent traces.
+3. Quantify vLLM seed+position+token-id Gumbel CRN fidelity across divergent contexts and shifted prefix lengths; distinguish aligned token positions from semantic event identities.
+4. Search for or prototype a verified trace-replay -> live-sampling handoff with equivalent prefix/KV state.
+5. Continue searching rollback work reporting realized post-rollback model calls, admissible actions, environment steps and successful tool calls, not only nominal budgets.
+6. Add `conformal_candidate_region`, `coverage_assumption_status`, `model_crn_alignment_span`, `trace_replay_verified_prefix`, and `live_handoff_equivalence` to the strict selector harness.
+7. Keep decisive-error label, earliest causal origin, first sufficient intervention, latest rescue/point-of-commitment, latest safe checkpoint and intended semantic version separate.
+8. Preserve the strict selector-only gap unless all non-target variables are controlled.
 9. Maintain a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
