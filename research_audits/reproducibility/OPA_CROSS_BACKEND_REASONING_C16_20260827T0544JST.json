@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "audit_observed_at": "2026-08-27T05:44:12+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "97f0c3acb1273bd6ccd2f17c82f8d461b51543f0",
+    "root_control_revision": 11,
+    "root_control_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "downstream_control_revision": 18,
+    "downstream_control_blob": "55b2dacea589ce57f1d1ff04ef4f728c0c17f711",
+    "role_config_revision": 2,
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c16-20260827T0401JST-c4e9d3da",
+    "active_wave_blob": "31ca3a1d166f3fb6c418eff05941f1b5ae1f90de",
+    "source_set_digest": "c4e9d3da4a2b81e5e91fbe1a25c788c77e944947957b012c0ef2948162efd9ff",
+    "status_at_freeze": "sealed_awaiting_comparators"
+  },
+  "source_candidate": {
+    "namespace": "reasoning",
+    "source_artifact_path": "research_workers_clean_g1/reasoning/2026-08-27T0305JST.md",
+    "source_artifact_blob": "68bcc36284b5d28dd3ff508708db8c45f20ca7b2",
+    "source_local_candidate_ids": ["C429", "C430", "C431", "C432", "C433"],
+    "canonical_candidate_keys_computed_from_source_tuple": {
+      "C429": "a0f98bcc953dbb2d4a9765fe6c6755f743cfb34fc3f8b72380a13e460dcddbc1",
+      "C430": "6b9cbd05d84b7e1883a4ecfcf960b6fe21b835373e807fb2cd7e91278840413d",
+      "C431": "c47698ea8c75577cc2b940a6bea6a71e80ab873f22ad0d2cf925258d7e0a9283",
+      "C432": "dca580bfc5fe210652b6faf49e79d40e3228e5546f9eeeedc44f712f42515ace",
+      "C433": "926c72b91216a50100eee908a491412f40a58b8870a5748960236aaad491180a"
+    },
+    "pair_membership_status": "not validated against a final C16 schema-2 novelty/relevance pair in this audit; do not use the computed keys as evidence of final-pair membership until exact producer manifest readback matches"
+  },
+  "subject": "OPA Rego/topdown/Wasm cross-backend conformance, target-specific non-equivalence, exact deployed-artifact testing, and Swift-OPA IR triangulation",
+  "grade": {
+    "overall": "B+",
+    "C429_shared_corpus_conformance": "A- official artifact support",
+    "C430_non_equivalence_projection": "A official artifact support",
+    "C431_exact_deployed_artifact_distinction": "A- official issue plus executable path evidence",
+    "C432_swift_opa_independent_ir_execution": "B+ independent execution implementation, but not independent Rego-to-IR compilation",
+    "C433_randomized_direct_differential_harness": "C / proposed and not located as an existing production-grade artifact"
+  },
+  "observations": [
+    {
+      "id": "C429",
+      "status": "supported_with_scope_refinement",
+      "evidence": "At OPA commit 263253cc269079bf47897688c01e5eead0f9487d, v1/topdown/exported_test.go loads both v0 and v1 official case corpora and evaluates them with the Go topdown engine. internal/wasm/sdk/test/e2e/external_test.go loads the same testdata root, compiles each case to Wasm bytes, executes those bytes through the OPA Wasm SDK, and asserts the shared expected result/error contract.",
+      "scope_refinement": "This is broad paired conformance to a common expected corpus, not a generated direct equality oracle where topdown output is dynamically compared with the exact same newly generated Wasm artifact. Therefore it strongly reduces the baseline conformance gap but does not subsume C433."
+    },
+    {
+      "id": "C430",
+      "status": "strongly_supported",
+      "evidence": "The Wasm E2E assertion explicitly maps strict-builtin-error cases to empty/undefined results because the Wasm compiler does not support strict errors. exceptions.yaml separately excludes named >64-bit integer cases because the tested Wasm route cannot represent them. OPA issue 3711 also documents a concrete topdown-versus-Wasm semantic mismatch on integer-key lookup.",
+      "scope_refinement": "A universal raw-equality oracle is invalid. Any differential generator must encode a versioned semantic projection covering strict-error policy, numeric representability and other declared target-specific behavior. These are known semantic boundaries, not evidence that ordinary supported-subset cases are inconsistent."
+    },
+    {
+      "id": "C431",
+      "status": "strongly_supported",
+      "evidence": "OPA issue 8124 provides an MRE showing that `opa eval -t wasm` / `rego.Target(\"wasm\")` on an already Wasm-enabled bundle attempts a compilation-target path rather than simply executing the embedded Wasm. The official Wasm E2E test instead compiles to `cr.Bytes` and executes those exact bytes through the Wasm SDK.",
+      "scope_refinement": "Source-target differential and deployed-artifact differential are distinct experiments. The former can validate compiler-plus-runtime on freshly compiled source; the latter must pin the emitted Wasm digest and execute that exact artifact through the intended SDK/runtime."
+    },
+    {
+      "id": "C432",
+      "status": "supported_as_partial_independent_oracle",
+      "evidence": "Swift-OPA commit 3a815e16be77273782f8f8734d9a8284bfacf388 states that its compliance cases are generated from OPA upstream v1 cases. Its serialized cases carry an IR `plan`, and its engine evaluates that plan against expected plan results. The known-issues config explicitly scopes unsupported sprintf, non-JSON input_term, integer behavior and indirect-call cases.",
+      "scope_refinement": "Swift-OPA is meaningfully independent for IR execution, but the IR plans themselves are produced by OPA's compliance tooling. It therefore cannot independently validate Rego-to-IR lowering and must not be promoted to an end-to-end independent compiler oracle."
+    },
+    {
+      "id": "C433",
+      "status": "not_yet_executed_as_proposed",
+      "evidence": "Targeted repository searches for `fuzz wasm topdown`, `Target(\"wasm\") fuzz`, and `differential wasm` did not locate a generated cross-backend differential campaign. The inspected OPA AST fuzz target mutates/compiles modules only; it does not evaluate the same generated case through topdown and an exact Wasm artifact.",
+      "scope_refinement": "This is a scoped search result, not a universal nonexistence claim. The proposed harness remains technically plausible and now has a concrete supported-fragment contract from C429-C432, but no production-grade randomized replay/shrinking artifact was established in this audit."
+    }
+  ],
+  "reproduction_classification": {
+    "published_or_worker_claim": "OPA already has broad shared-corpus cross-backend conformance, but a robust randomized direct differential harness must respect target-specific semantics and distinguish source recompilation from exact deployed-artifact execution; Swift-OPA can triangulate IR execution on a scoped subset.",
+    "official_artifact_support": "strong",
+    "independent_replication": "partial: Swift-OPA independently executes OPA-derived IR plans against expected results; this does not independently reproduce Rego-to-IR compilation",
+    "failed_or_negative_replication": "none established for the supported subset; known target-specific exceptions are explicit and should be projected rather than treated as generic failures",
+    "missing_reproduction_contract": "seeded AST-aware generator, exact supported-fragment declaration, deterministic semantic canonicalization, exact Wasm artifact digest/runtime identity, mismatch persistence and shrinking, and ideally a separately implemented source or compiler oracle"
+  },
+  "scope_guards": [
+    "Do not infer that OPA lacks broad Wasm conformance tests; it has shared-corpus E2E coverage.",
+    "Do not treat strict-error or >64-bit mismatches as generic compiler bugs without the declared target semantics.",
+    "Do not claim `opa eval -t wasm` validates the exact Wasm artifact intended for deployment when it follows a compilation target path.",
+    "Do not treat Swift-OPA as an independent proof of Rego-to-IR lowering because its compliance plans are OPA-derived.",
+    "Do not claim a randomized cross-backend harness does not exist anywhere; only the targeted repository searches and inspected paths failed to establish one."
+  ],
+  "reopen_conditions": [
+    "A public generated topdown-vs-exact-Wasm differential/fuzzing harness with seed persistence and shrinking is located or added.",
+    "OPA changes strict-error/Wasm numeric semantics, the exact-artifact execution route, or the shared corpus architecture materially.",
+    "An independent Rego-to-IR or Rego-to-Wasm compiler/evaluator with a clearly scoped supported subset becomes available.",
+    "A machine-checked semantic-preservation theorem or translation-validation certificate is published for a useful OPA production subset."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next bootstrap-valid invocation, select a different source-qualified non-evaluation C16 candidate with reducible reproduction uncertainty. Do not re-audit C429-C433 unless a reopen condition is met; a highest-value future OPA action would be an executable seeded supported-fragment differential harness that compares topdown with the exact emitted Wasm bytes and records/shrinks any mismatch under the semantic projection."
+}
