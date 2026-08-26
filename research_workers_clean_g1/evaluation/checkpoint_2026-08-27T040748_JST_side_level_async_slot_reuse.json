@@ -1,0 +1,141 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T04:07:48.056053+09:00",
+  "invocation_started_at": "2026-08-27T03:58:08+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T030734_JST_precommitted_reveal_async_window.json",
+  "control": {
+    "frozen_main_sha": "84c32cab0b53da7ad1c864c86e786687b128d993",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": [
+      "84c32cab0b53da7ad1c864c86e786687b128d993",
+      "84c32cab0b53da7ad1c864c86e786687b128d993"
+    ]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "url": "https://arxiv.org/abs/2607.08930",
+      "date": "2026-07-09",
+      "observed_claim": "BlockServe identifies heterogeneous completion/convergence as a batching straggler source and immediately evicts completed requests at block boundaries while refilling capacity.",
+      "use": "systems-side support for freeing completed work units rather than holding them behind slower batch partners; does not establish statistical validity of paired evaluation"
+    },
+    {
+      "url": "https://www.usenix.org/conference/osdi22/presentation/yu",
+      "date": "2022-07",
+      "observed_claim": "Orca motivates iteration-level scheduling because fixed batches prevent early-finished requests from returning and delay newly arrived work until the whole batch finishes.",
+      "use": "systems precedent for finer-grained slot reuse; not evidence for the evaluation-specific fixed-reveal argument"
+    }
+  ],
+  "new_mechanism": {
+    "name": "side-level independent slot reuse with precommitted pair reveal",
+    "protocol": [
+      "Precommit pair/task order, pair seeds/identities, and statistical reveal order before observing outcomes or completion times.",
+      "Give candidate and incumbent sides independent execution slots. In the tested model there are 16 candidate-side and 16 incumbent-side slots, matching the 32 side executions available under 16 tied pair slots.",
+      "When one side finishes, immediately reuse only that side's freed slot for the next eligible precommitted side task, subject to speculative pair window W.",
+      "Quarantine every pair until both sides are complete, then reveal only the longest completed contiguous prefix in the precommitted pair order.",
+      "At a statistical boundary, stop launches and cancel/discard all higher-index hidden work. A hard calendar deadline returns unresolved/no-decision; it never recodes lateness/noncompletion as a win or loss."
+    ],
+    "validity_argument": "The statistical sequence is unchanged from the fixed precommitted pair order. Side completion times affect only calendar execution and which hidden future sides have been launched, not which paired signs enter the test or their order. Therefore the prior exact curtailed paired-sign FWER remains unchanged under the same conditional sign null, even if side latency is sign-dependent. With a hard deadline that returns unresolved, a false commit before the deadline is a subset of an eventual false commit, so the deadline cannot increase FWER. This does not cover completion-derived task selection, timeout-to-label recoding, or hidden-result reuse.",
+    "exact_run_fwer_under_tested_null": 0.04797259566965317
+  },
+  "tested_model": {
+    "policy": "5 candidate audits with (r=20,k=16), then 15 with (r=50,k=36); rho_discordance=0.20; exact curtailment; all-null cost stress",
+    "candidate_stages_serial": true,
+    "baseline_scheduler": "pair-tied precommitted reveal with 16 pair slots and W=128",
+    "side_scheduler": "dedicated 16 candidate-side + 16 incumbent-side slots, precommitted pair reveal, W=128",
+    "same_total_side_capacity": true,
+    "side_latency": "correlated lognormal, median normalized to 1, candidate/incumbent log-time correlation 0.5",
+    "conversation_like_cv": 1.5,
+    "code_like_cv": 3.3,
+    "code_straggler_stress": "independent 1% x10 multiplier per side; synthetic stress only",
+    "stage_sampling": "For each latency model, action and terminal outcome, 8000 fail and 3000 commit stage draws were generated with exact conditional stop-depth probabilities and N=d+NegBin(d,rho). Pair-tied and side-level schedulers used the same per-draw N and side latencies (common random numbers).",
+    "full_run_resampling": "600000 exact-probability full-run resamples used identical candidate commit paths and identical stage-library indices for pair-tied versus side-level schedulers.",
+    "q95_status": "Monte Carlo estimate under a normalized synthetic latency model, not production latency calibration"
+  },
+  "results": {
+    "conversation_like_W128": {
+      "pair_tied": {
+        "wall_q95": 759.6934493450581,
+        "full_obligation_occupancy_q95": 15156.448394054516
+      },
+      "side_level": {
+        "wall_q95": 697.9773529592682,
+        "full_obligation_occupancy_q95": 16009.23794661293
+      },
+      "side_vs_pair_wall_change_pct": -8.123815788986487,
+      "side_vs_pair_occupancy_change_pct": 5.626579066458204,
+      "deadline_definition": "D = pair-tied W128 wall_q95 = 759.693449 normalized time units",
+      "unresolved_at_D": {
+        "pair_tied": 0.05,
+        "side_level": 0.010051666666666667
+      }
+    },
+    "code_like_plus_straggler_W128": {
+      "pair_tied": {
+        "wall_q95": 4234.453034974613,
+        "full_obligation_occupancy_q95": 34235.80074188849
+      },
+      "side_level": {
+        "wall_q95": 4143.1433477368355,
+        "full_obligation_occupancy_q95": 34775.98585206465
+      },
+      "side_vs_pair_wall_change_pct": -2.156351398482914,
+      "side_vs_pair_occupancy_change_pct": 1.577836938147703,
+      "deadline_definition": "D = pair-tied W128 wall_q95 = 4234.453034 normalized time units",
+      "unresolved_at_D": {
+        "pair_tied": 0.05,
+        "side_level": 0.04292
+      }
+    }
+  },
+  "interpretation": [
+    "Independent side-slot reuse is measurement-valid under fixed reveal order and no-decision deadlines, but its systems gain depends strongly on the latency regime.",
+    "In the conversation-like stress, W=128 side reuse reduced q95 wall by about 8.1% for about +5.6% q95 full-obligation occupancy. At the old pair-tied q95 deadline, unresolved probability fell from 5% to about 1.0%.",
+    "In the heavier code+straggler stress, the same mechanism reduced q95 wall only about 2.2% for about +1.6% occupancy, and unresolved at the pair-tied q95 deadline fell only from 5% to about 4.3%.",
+    "The small heavy-tail gain indicates that side-slot idleness is not the dominant remaining bottleneck there: fixed in-order reveal still waits for a slow head pair. Finer execution reuse cannot remove that statistical head-of-line barrier by itself.",
+    "The result therefore supports side-level reuse as a low-risk systems optimization, not as a substitute for a separate straggler/latency strategy."
+  ],
+  "scope_guards": [
+    "No production latency/speedup claim; time is normalized and the latency distributions are synthetic stress models.",
+    "The FWER preservation claim requires the precommitted-order conditional paired-sign null and hidden-result quarantine. It does not cover completion-derived task generation, side-specific semantic failures, or timeout recoding.",
+    "Dedicated 16+16 side pools were tested. A shared 32-slot pool, asymmetric candidate/incumbent capacity, and heterogeneous model latencies are not yet certified.",
+    "W=128 and the fixed 5+(15) action policy were tested in the high-precision common-random comparison. Joint optimization over b, W and the globally-certified mixed-depth policy frontier remains open.",
+    "Full-obligation occupancy charges the complete runtime of every launched side even if later cancelled; actual billed occupancy depends on cancellation granularity."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Jointly optimize side concurrency b and speculative window W, including dedicated versus shared side pools, over q95 wall, q95 full-obligation occupancy, and hard-deadline unresolved rate; rerun on the globally-certified mixed-depth policy frontier rather than only the fixed 5+(15) policy."
+    },
+    {
+      "priority": 2,
+      "action": "Attack the heavy-tail head-of-line remainder without using completion order statistically: test prelaunch latency predictors, asymmetric side-slot allocation, and only semantics-preserving deterministic hedging/replication. Any race-to-first-output mechanism must prove that replica selection cannot change the paired label law."
+    },
+    {
+      "priority": 3,
+      "action": "Add candidate/incumbent latency asymmetry and side-specific noncompletion. Keep timeout as unresolved/no-decision unless a separately validated estimand explicitly includes timeout."
+    },
+    {
+      "priority": 4,
+      "action": "Calibrate the synthetic latency model from public or deployment-like request traces while keeping trace acquisition independent of paired outcomes; then recompute the scheduler Pareto frontier."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Solve a joint scheduler sweep over b in {8,16,32}, W/b ratios, and dedicated-versus-shared side pools using precommitted reveal and no-decision deadlines; report q95 wall, q95 full-obligation occupancy, unresolved-at-fixed-SLO, and identify whether the heavy-tail regime is limited by slot idleness or by head-of-line reveal."
+}
