@@ -1,0 +1,142 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "4a35c4305c96b5e1e788aa137aff8527b050cf66",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "299fb19cd2ad950120bdb0d54903c2b681b9676d",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T091200+0900.json",
+  "started_local": "2026-08-26T10:00:17+09:00",
+  "checkpointed_local": "2026-08-26T10:00:17+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404"
+  },
+  "checked_sources": [
+    {
+      "source": "Haddouche & Sakhi 2026 v2, Sequential Off-Policy Learning with Logarithmic Smoothing, Theorem 3.2 and Appendix C Theorem C.1",
+      "url": "https://arxiv.org/html/2506.10664v2",
+      "result": "Primary proof comparison: Theorem 3.2 uses one data-independent fixed prior P, global history and a single prior-mixture nonnegative martingale to obtain simultaneous all-time/all-posterior certification in the stationary setting. Appendix C instead permits past-measurable previous posteriors as references under arbitrary context drift by lifting to a product hypothesis space, paying sum KL(Q_k||Q_{k-1}), and targeting cumulative sequential risk with current-batch evidence. These are distinct objectives and should not be merged into one guarantee."
+    },
+    {
+      "source": "Haddouche & Guedj 2022, Online PAC-Bayes Learning, NeurIPS 2022 / arXiv:2206.00024, Theorem 2.3 and discussion",
+      "url": "https://arxiv.org/abs/2206.00024",
+      "result": "Primary-verified that predictable learned priors are compatible with sequential PAC-Bayes learning: each P_i may be F_{i-1}-measurable, posterior kernels may depend on the dataset, and one high-probability cumulative bound controls a chosen posterior sequence without paying a per-round union-bound confidence penalty. The paper explicitly identifies the remaining limitation: the theorem is pointwise in one posterior sequence, not simultaneous over every possible posterior sequence."
+    },
+    {
+      "source": "Shin, Ramdas & Rinaldo 2024, E-detectors: A Nonparametric Framework for Sequential Change Detection, arXiv:2203.03532",
+      "url": "https://arxiv.org/abs/2203.03532",
+      "result": "Primary-verified a concrete bounded-mean staleness detector. For X_t in [0,1] with stable conditional mean at most m, predictable e-increments such as 1+lambda(X_t/m-1) are valid without an iid assumption, and e-SR/e-CUSUM aggregation gives nonasymptotic average-run-length false-alarm control. Reported mean-change examples attain near-oracle asymptotic detection-delay rates under stated conditions."
+    },
+    {
+      "source": "Saha & Ramdas 2026, Non-partitioned e-detectors for nonparametric sequential change detection, arXiv:2607.28322",
+      "url": "https://arxiv.org/abs/2607.28322",
+      "result": "Abstract-level verification only: proposes non-partitioned e-detectors when both pre- and post-change laws are unknown within a class, with ARL/PFA control and first-order asymptotic delay claims under stated assumptions. Full theorem/proof was not inspected in this run, so this remains medium-confidence frontier evidence."
+    },
+    {
+      "source": "Wang & Ramdas 2023, Catoni-style Confidence Sequences for Heavy-Tailed Mean Estimation",
+      "url": "https://arxiv.org/abs/2202.01250",
+      "result": "Verified a separate robustification route for a drift-diagnostic layer under bounded-variance heavy tails: anytime-valid Catoni-style mean confidence sequences with near-sub-Gaussian behavior and law-of-iterated-logarithm-optimal width. No combined heavy-tail off-policy/vector/drift theorem was found."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r36-predictable-prior-pointwise-history",
+      "mechanism": "Use a predictable F_{i-1}-measurable learned prior sequence to concentrate PAC-Bayes complexity around configurations supported by earlier evidence, while allowing the posterior sequence itself to be data-dependent.",
+      "primary_sources": ["Haddouche & Guedj 2022 Theorem 2.3"],
+      "quantitative_or_formal_evidence": "The theorem gives one high-probability cumulative sequential PAC-Bayes bound for a predictable prior sequence and a posterior sequence, avoiding the round-by-round union-bound confidence burden discussed by the authors. Their comparison notes that naively repeating classical bounds incurs an O(m log(m/delta)/lambda) confidence contribution whereas the online construction has a single O(log(1/delta)/lambda) confidence term for the sequence.",
+      "scope": "Generic bounded-loss online PAC-Bayes cumulative conditional risk for a chosen posterior sequence. It is not the same as a single-current-policy off-policy global-history theorem and is not uniform over every possible posterior sequence.",
+      "failure_conditions": "If the learned prior places too little mass near a later good candidate the KL cost can be large. The pointwise theorem cannot be silently used after adaptively selecting among many posterior sequences as if it were a simultaneous all-sequences certificate.",
+      "transfer_hypothesis": "Use predictable learned priors for evidence-efficient candidate search, but retain a distinct uniform audit path for final certification.",
+      "confidence": "high for theorem; medium for optimizer transfer"
+    },
+    {
+      "id": "cf-g1-r37-dual-certificate-learned-optimizer-fixed-auditor",
+      "mechanism": "Separate optimization and certification. The optimizer may exploit a learned predictable prior/pointwise sequential bound for efficiency, while an independent fixed-prior global-history certificate performs the uniform all-time/all-posterior audit. Never transfer one certificate's guarantee onto the other.",
+      "primary_sources": ["Haddouche & Guedj 2022", "Haddouche & Sakhi 2026 v2 Theorem 3.2"],
+      "quantitative_or_formal_evidence": "The two source theorems cover complementary properties: learned predictable priors with pointwise sequential control versus fixed-prior global-history simultaneous all-k/all-Q control. Keeping them separate preserves each verified scope while allowing the search path to gain prior adaptation.",
+      "scope": "A synthesis architecture, not a single end-to-end theorem. Requires the final auditor to use its own valid fixed prior/support and evidence assumptions.",
+      "failure_conditions": "Optimization evidence and audit evidence can become statistically entangled if the auditor's prior or evaluation lineage is adapted using the same uncharged data. Passing the optimizer's bound is not proof of passing the audit bound.",
+      "transfer_hypothesis": "Maintain a fast learned-prior search lineage plus a conservative uniform certification shadow; only the latter authorizes irreversible adoption.",
+      "confidence": "medium"
+    },
+    {
+      "id": "cf-g1-r38-e-sr-bounded-staleness-diagnostic",
+      "mechanism": "Monitor a separately defined bounded diagnostic X_t in [0,1] whose stable-regime conditional mean is certified at most m. Feed valid predictable e-increments into e-SR or e-CUSUM; a controlled alarm routes evidence from long-history mode to a fresh/local-history lineage.",
+      "primary_sources": ["Shin, Ramdas & Rinaldo 2024"],
+      "quantitative_or_formal_evidence": "For the bounded conditional-mean null, e-process validity does not require iid observations. The detector controls average run length nonasymptotically at the chosen level; in stated sub-Gaussian/sub-exponential mean-change settings the detection delay has the near-oracle logarithmic/KL rate. The paper includes bounded Bernoulli-style simulations with target ARL 500 or 1000.",
+      "scope": "The detector certifies its monitored change hypothesis, not downstream optimizer risk or the optimality of forgetting historical evidence.",
+      "failure_conditions": "An invalid or adaptively overfit null boundary m breaks calibration. Reusing the optimizer's own selected score as the detector diagnostic can create feedback and self-confirmation. Slow/recurring drift can produce delayed or repeated resets.",
+      "transfer_hypothesis": "Use a compact calibration-miss or clipped one-step residual stream from a frozen/reference evaluator as an independent evidence-staleness channel; treat its alarm only as a routing signal.",
+      "confidence": "high for detector component; medium for memory-routing transfer"
+    },
+    {
+      "id": "cf-g1-r39-nonpartitioned-unknown-baseline-e-detector",
+      "mechanism": "Avoid fixing one exact pre-change law by aggregating point-null e-processes across candidate changepoints and optimizing over possible no-change distributions, potentially reducing hand-calibration of a single stable baseline.",
+      "primary_sources": ["Saha & Ramdas 2026 arXiv:2607.28322"],
+      "quantitative_or_formal_evidence": "Abstract reports ARL/PFA control and first-order asymptotically optimal delay under stated model classes, with bounded-mean, sub-Gaussian, Gaussian unknown-variance and Markov examples.",
+      "scope": "Abstract-level evidence only in this run; theorem conditions, computational cost and restart semantics remain unverified.",
+      "failure_conditions": "May be too conservative or computationally heavy for a high-frequency diagnostic; unknown whether repeated optimizer-driven regime changes preserve the intended practical behavior.",
+      "transfer_hypothesis": "If theorem inspection confirms suitable composite-null validity, use this in place of a hand-set m when the stable diagnostic baseline itself is uncertain.",
+      "confidence": "medium-low"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r31-predictable-past-prior",
+      "update": "The earlier frontier is partly closed. Haddouche & Guedj 2022 directly verifies predictable learned priors with historical/data-dependent posterior access in a pointwise cumulative online PAC-Bayes theorem. What remains open is the stronger combination needed for a single current off-policy candidate: learned past-dependent prior plus full historical reuse plus simultaneous all-time/all-posterior certification."
+    },
+    {
+      "candidate": "cf-g1-r35-e-detector-memory-regime-switch",
+      "update": "The routing idea now has a concrete minimal component: a bounded separately monitored diagnostic with a certified stable conditional-mean upper bound can feed e-SR/e-CUSUM and obtain nonasymptotic false-alarm ARL control without iid assumptions. The learning guarantee before/after a switch remains separate."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Predictable learned priors plus historical data automatically give a uniform all-posterior certificate.",
+      "evidence": "Not established. Online PAC-Bayes 2022 explicitly notes its learned-prior result is pointwise in one posterior sequence and identifies simultaneous control over all posterior sequences as a challenge.",
+      "reason": "Keep learned-prior search efficiency distinct from fixed-prior uniform audit validity."
+    },
+    {
+      "lead": "The same scalar optimized by the candidate generator can safely double as a drift/staleness detector.",
+      "evidence": "No theorem found supporting that reuse under adaptive selection; the e-detector only requires its own valid conditional-null construction.",
+      "reason": "Use a separately defined monitored diagnostic or explicitly pay for adaptivity before coupling the channels."
+    },
+    {
+      "lead": "The 2026 non-partitioned e-detector is ready to replace a hand-calibrated baseline in the proposed architecture.",
+      "evidence": "Only the abstract was verified in this run; full theorem/proof and computational/restart details were not inspected.",
+      "reason": "Keep as medium-confidence frontier until theorem-level verification."
+    }
+  ],
+  "frontier": [
+    "Inspect the full theorem/proof of Saha & Ramdas 2026 non-partitioned e-detectors and determine whether unknown-baseline composite-null validity is compatible with repeated restart/use as an evidence-staleness router.",
+    "Find or falsify a PAC-Bayes change-of-measure theorem that is uniform over all posterior sequences while allowing F_{i-1}-measurable learned priors; investigate hyperpriors, stochastic kernels, conditional mutual-information penalties or other explicit charges for prior adaptation.",
+    "Formalize restart-at-alarm semantics: determine which alarm-triggering data may parameterize a future prior and which may re-enter empirical evidence without double use, preferably under a stopping-time theorem.",
+    "Quantify false-memory-reset versus stale-memory costs under abrupt, gradual and recurring drift for bounded-mean e-SR and any verified non-partitioned detector.",
+    "Continue direct search for vector-valued off-policy confidence sequences under adaptive logging/candidate selection rather than assuming scalar alpha-splitting is optimal.",
+    "Robustify diagnostic and off-policy score layers separately under heavy tails before attempting a combined guarantee."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Compared the fixed-prior all-history off-policy proof against the Appendix C previous-posterior product-prior proof and separated their objectives.",
+      "Found the earlier Online PAC-Bayes theorem that directly closes part of the predictable-prior frontier, then preserved its explicit pointwise limitation.",
+      "Reduced the drift-router idea to a concrete bounded conditional-mean e-SR construction and retained the detector/learner guarantee separation.",
+      "Extended the frontier to unknown-baseline non-partitioned e-detection and heavy-tail diagnostic robustification without upgrading abstract-only evidence."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Inspect the full theorem and proof of Saha & Ramdas 2026 non-partitioned e-detectors to test whether an unknown-baseline staleness detector can retain ARL/PFA control through repeated restart semantics. In parallel, search for a uniform-over-posterior-sequences PAC-Bayes theorem with predictable learned priors, because Haddouche & Guedj 2022 closes predictable-prior plus history access only pointwise."
+}
