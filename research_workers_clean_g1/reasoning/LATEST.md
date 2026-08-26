@@ -53,41 +53,41 @@ Latest checkpoints in order:
 50. `2026-08-26T1701JST-followup3.md`
 51. `2026-08-26T1701JST-followup4.md`
 52. `2026-08-26T1802JST.md`
+53. `2026-08-26T1802JST-followup.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
-1. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only Decision/BatchConsumption/Outcome plus content-addressed `WorkspaceSnapshotV0`; commit/readback before effect boundaries.
-2. Replace mutable provider-batch `metadata.action_id` with immutable physical provider events plus append-only `ProposalBatchConsumptionEventV0`; the minimal overwrite characterization remains one model-like generation batch with two same-batch ghost `REFINE_ARGUMENT` no-ops.
-3. Add `RecoveryClassV0`: reducer-only structural actions (`DECOMPOSE`, `PROPOSE_ARGUMENT`, `REFINE_ARGUMENT`, `CHANGE_REPRESENTATION`) are replayable from the exact durable pre-workspace snapshot without re-selection or provider regeneration; checker/candidate actions fail closed when an effect may have occurred and Outcome is absent.
-4. Make decisions causally self-contained: every choice row must persist explicit node↔batch↔finalized-proposal identity, baseline rank/admission, structural transition preview/support, exact rational propensity, recovery class, and pre-workspace snapshot reference.
-5. Treat current `_finalize_kind()` loss of generator `target_step_ids` as a separate substrate defect/version. Do not silently fix it inside epsilon=0 journal instrumentation.
-6. Use reducer-owned pure mechanical transition reports `WOULD_MUTATE / WOULD_NOOP / WOULD_ERROR`, with stable reason codes and action-specific predicted version deltas. Mutation is not the same as mathematical progress.
-7. Freeze `ExecutionDecisionEventV0`, `ProposalBatchConsumptionEventV0`, `ExecutionOutcomeEventV0`, `WorkspaceSnapshotV0`, `RecoveryClassV0` and `SemanticRunProjectionV0` before randomized outcomes. Separate runtime node identity, semantic proposal hash and full envelope hash.
-8. Execute C229-C261 target-step/overwrite/trace/transition/journal/recovery regressions plus prior F0–F7 crash/replay/idempotence/RNG-isolation tests. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
-9. Logging-policy v0 remains D0-ranked supported pool <=5, epsilon=1/4 with exact rational propensities once enabled; record the full baseline frontier even when exploration support is narrower.
-10. Deterministic provider pilot remains frozen after journal validation: task-hash order, cap 200 eligible tasks, 10,000 task bootstrap resamples, <=5pp 95% CI half-width, preserving generation/execution/assembly cost separation. Stage A proceeds only if its prespecified lower-CI gate passes; otherwise move upstream to Stage B generation/retrieval/model-routing control.
+1. In the first environment able to materialize pinned CSSC source, executable-validate the now-statically-proven one-batch/two-ghost-`REFINE_ARGUMENT` path at the real action runtime. No Lean or live model is required; freeze the actual deterministic node order.
+2. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only Decision/BatchConsumption/Outcome plus content-addressed `WorkspaceSnapshotV0`; commit/readback before effect boundaries.
+3. Replace mutable provider-batch `metadata.action_id` with immutable physical provider events plus append-only `ProposalBatchConsumptionEventV0`; the migrated C263 oracle must retain both same-batch consumer edges.
+4. Add `RecoveryClassV0`: reducer-only structural actions (`DECOMPOSE`, `PROPOSE_ARGUMENT`, `REFINE_ARGUMENT`, `CHANGE_REPRESENTATION`) replay from exact durable pre-workspace state without re-selection/provider regeneration; checker/candidate actions fail closed when an effect may have occurred and Outcome is absent.
+5. Make decisions causally self-contained: explicit node↔batch↔finalized-proposal identity, baseline rank/admission, transition preview/support, exact rational propensity, recovery class, and pre-workspace snapshot reference.
+6. Treat current `_finalize_kind()` loss of generator `target_step_ids` as a separate substrate defect/version. Do not silently fix it inside epsilon=0 journal instrumentation; later prove the fix changes ghost-refine eligibility.
+7. Use reducer-owned `WOULD_MUTATE / WOULD_NOOP / WOULD_ERROR` mechanical transition reports with stable reason codes and predicted version deltas. Mutation is not mathematical progress.
+8. Freeze Decision/BatchConsumption/Outcome/WorkspaceSnapshot/RecoveryClass/SemanticRunProjection schemas, then execute C229-C266 regressions plus F0–F7 crash/replay/idempotence/RNG-isolation. Epsilon>0 remains forbidden until all pass.
+9. Logging-policy v0 stays D0-ranked support <=5, epsilon=1/4 exact rational propensity only after gates. Record full baseline frontier even when exploration support is narrower.
+10. Deterministic provider pilot remains frozen after journal validation: hash-ordered cap 200 eligible tasks, 10k task bootstrap, <=5pp 95% CI half-width, preserving generation/execution/assembly cost separation. Stage A proceeds only if its prespecified lower-CI gate passes; otherwise Stage B moves upstream to generation/retrieval/model routing.
 
 ## Newest synthesis
 
-- **C229–C253:** real controller finalization drops `target_step_ids`; current traces miss causal node→batch identity; physical provider events are mutably re-attributed; structural mutation/no-op/error needs explicit pre-effect preview; Decision/Consumption/Outcome and semantic-proposal identity contracts were frozen.
-- **C254:** the initial Stage-A structural set is materially easier to recover safely than checker/tool actions. At pinned CSSC, `DECOMPOSE`, argument edits and representation changes execute only deterministic in-memory reducers after proposal generation has already happened upstream.
-- **C255:** current JSONL persistence is terminal-result persistence, not a mid-run journal. A crash before `ControllerResult` construction loses the selected decision/intermediate workspace from the durable trace path.
-- **C256:** `ProofWorkspace` is immutable, versioned and already has `to_dict`/`workspace_from_dict`, so content-addressed pre/post workspace snapshots can make the causal journal replayable without inventing a second state model.
-- **C257–C258:** freeze recovery by effect class. Pure structural recovery replays the already-selected action under the original decision/propensity; it never reselects or consumes a new RNG draw. Effectful in-doubt actions are censored/fail-closed in v0 unless an actual idempotency/receipt contract is later proven.
-- **C259:** SQLite WAL+FULL can durably commit the journal boundary but cannot make a separate external effect exactly-once. Public idempotency contracts illustrate why effectful retries need stable operation identity plus substrate support.
-- **C260–C261:** Decision/Outcome schemas gain workspace-snapshot and recovery fields; initial randomized support must be defined by verified executor contracts, not by blindly enumerating all `SearchActionKind` values.
+- **C229–C253:** target-step loss, mutable provider attribution, missing causal trace identity and reducer transition semantics were isolated; pre-effect Decision/Consumption and post-effect Outcome contracts were frozen.
+- **C254–C261:** crash recovery must be stratified by effect class. Four Stage-A structural paths are deterministic reducer-only transitions at pinned CSSC; current JSONL is terminal-only, so add content-addressed pre/post `ProofWorkspace` snapshots and fail closed for effectful in-doubt actions.
+- **C262:** two distinct same-batch ghost-refine proposals are statically reachable sequentially in the real action runtime: first no-op leaves workspace version unchanged, sibling remains cache-valid, no second generation occurs, and `attribute_proposal_batch()` runs again on the same physical provider batch.
+- **C263:** exact characterization/migration oracle is fixed: one model-like generation call, two refine selections, no structural checker cost; current final provider `action_id` equals consumer 2, migrated design keeps immutable physical events plus two append-only batch-consumption edges.
+- **C264:** ghost refine is valid-but-nonapplicable, not malformed input: proposal validation checks alignment shape but live-hit detection is reducer-owned. Future legal support must distinguish frontier-valid from `WOULD_NOOP`.
+- **C265:** target-step-loss is part of the causal chain enabling the sibling no-op path, which is why fixing it must be substrate-versioned separately from logging equivalence.
+- **C266:** executable validation was not claimed because the local test container cannot resolve external GitHub; connector source inspection was exact, and the regression is fully specified for the next executable-capable environment.
 
 ## Exact continuation
 
-1. Executable-validate the one-call two-refine current-code characterization and migrated immutable-batch/two-consumption-edge oracle at the real action-runtime seam.
-2. Implement/freeze `WorkspaceSnapshotV0` canonicalization; add `to_dict -> from_dict -> to_dict` byte-canonical round-trip/hash tests and transactionally bind the pre snapshot to Decision/Consumption and post snapshot to Outcome.
-3. Implement/shared-test reducer transition preparation/report logic, especially DECOMPOSE +2 and duplicate/self-child deterministic errors.
-4. Implement journal tables, payload digests, uniqueness/conflict rules and commit ordering; run F0–F7 plus pure-reducer recovery and effectful-in-doubt fail-closed cases.
-5. Add target-step preservation as a separate substrate regression/version, not part of logging equivalence.
-6. Implement/freeze `SemanticRunProjectionV0`; verify epsilon=0 hard equivalence with independent logging RNG and no provider regeneration during pure recovery.
-7. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
-8. Continue only narrow public-source falsification/simplification searches and keep frontier nonempty. `2026-08-26T1802JST.md` is newest and is not global completion.
+1. Run C263 unchanged in an executable-capable environment; characterize current overwrite before migration.
+2. Implement immutable physical provider events + append-only consumption edges; rerun C263 migrated oracle.
+3. Implement/freeze `WorkspaceSnapshotV0` canonicalization and round-trip/hash tests; transactionally bind pre snapshot to Decision/Consumption and post snapshot to Outcome.
+4. Implement/shared-test reducer transition preparation/report logic and `RecoveryClassV0`, including pure-reducer recovery and effectful-in-doubt fail-closed cases.
+5. Run F0–F7 fault injection, add target-step preservation only as separate substrate version, and verify epsilon=0 `SemanticRunProjectionV0` equivalence with independent logging RNG.
+6. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
+7. Continue narrow public-source falsification/simplification searches and keep frontier nonempty. `2026-08-26T1802JST-followup.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
