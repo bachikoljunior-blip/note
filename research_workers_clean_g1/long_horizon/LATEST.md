@@ -1,36 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1201JST.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1300JST.md`
 
 Predecessor synthesis/state:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1102JST.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-26T1201JST.md`
 `research_workers_clean_g1/long_horizon/STATE.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `9`
 - role config revision: `5`
-- frozen source main SHA: `f7d7c01494e7d35819218c548d6323ff23756008`
+- frozen source main SHA: `edd7bbae25f519cabad7791f97f3306690618b83`
 - root blob: `2e1f998368a6848e737aa108c838edb4ad355cdb`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- pre-semantic second SHA-only lookup matched the frozen SHA; post-semantic head lookup observed `b9af3fb9e678f736758d515a7c68684d15d22ec1`, so no newer control/config was adopted.
+- pre-semantic second SHA-only lookup matched the frozen SHA; post-research SHA-only lookup also matched before checkpoint persistence.
 
 Current synthesis delta:
-- LongRCA Bench adds 1,140 natural long-horizon failures (median 145 steps). RCTA reaches `51.1%` responsible-role accuracy but only `24.1%` exact earliest root-step accuracy; the strongest baseline exact root-step accuracy is `13.2%`. Coarse attribution and exact rollback-target localization must therefore remain separate states.
-- TrajDebug shows why `earliest observed local error` is not a safe target rule: among non-critical local errors in its pilot, `61.9%` later self-repair, `31.4%` persist, and `6.6%` remain dormant. Candidate target filtering should track error lifecycle and terminal footprint.
-- DoVer demonstrates bounded counterfactual validation of a proposed failure location by loading the exact checkpoint, editing the implicated message/plan, and replaying. Many hypotheses are refuted or inconclusive, supporting explicit target-hypothesis testing when fork/replay budget exists.
-- The strict software/tool/GUI selector-only factorial is still not found: same alarm, candidates, restore layers, carry-forward, model and budget with only historical target selector varied.
+- Causal Agent Replay (CAR) adds executed same-policy counterfactual replay with effect confidence intervals and a point-of-commitment rule. This supports localization as a distribution with abstention rather than one brittle exact-step guess, but its validation is on synthetic SCMs/mocked tools and excludes real side effects.
+- `Credit Without Ground Truth` supplies strong negative evidence against using policy confidence, LLM-judge credit, or outcome-conditioned implicit credit as causal-step selectors. In ALFWorld, only 30.5% of defined Qwen decision turns are pivotal; policy-supported counterfactuals are undefined at 13.1% of Qwen and 26.8% of Llama intervened turns under the same finite replay budget. A low-confidence router recovers pivotal turns at chance level.
+- Counterfactual measurability is therefore a first-class state: undefined replay must not be treated as zero causal effect.
+- Who&When Pro gives exact warm-start injected step labels, but the public release is an evaluation/trace package rather than one unified replayable environment; its data-generation pipeline remains on the project roadmap. LongRCA similarly releases heterogeneous recorded trajectories, not one branchable runtime.
+- The strict selector-only factorial remains unfound: same alarm, candidates, restore/carry-forward, model and budget with only historical target selector varied and final task success measured.
 
 Updated controller decomposition:
-`failure/risk sensing -> intervention-advantage estimation -> intervention decision -> safe cut timing -> candidate checkpoint/edit set -> exact admissibility filter -> local-error lifecycle / terminal-footprint filtering -> responsible-role/region localization -> exact-step posterior + localization-confidence/abstention -> optional bounded counterfactual intervention probe -> historical target selector under uncertainty -> failed-branch carry-forward -> restore all relevant local/inference layers -> transition/handoff readiness check -> external-effect settlement -> commit-time revalidation -> repair stopping`
+`failure/risk sensing -> intervention-advantage estimation -> intervention decision -> safe cut timing -> candidate checkpoint/edit set -> exact admissibility filter -> local-error lifecycle / terminal-footprint filtering -> responsible-role/region localization -> replay-measurability test -> executed counterfactual effect distribution + confidence/abstention -> optional interaction-aware attribution -> historical target selector under uncertainty -> failed-branch carry-forward -> restore all relevant local/inference layers -> transition/handoff readiness check -> external-effect settlement -> commit-time revalidation -> repair stopping`
 
 Exact continuation:
-1. Search calibrated/abstaining root-step localization with confidence/coverage metrics on long software/tool/GUI trajectories.
-2. Search same-prefix counterfactual branch experiments comparing multiple rollback locations under one fixed corrective actuator and equal replay budget.
-3. Determine whether LongRCA/TrajErrBench-style datasets expose executable/replayable environments suitable for target-selector evaluation rather than diagnosis-only scoring.
-4. Search learned target selectors that optimize downstream intervention advantage instead of exact step classification, with recovery + disruption accounting.
-5. Preserve the strict selector-only factorial gap unless alarm, candidates, restore/carry-forward, model and budget are genuinely fixed.
-6. Keep handoff/folding frontiers only for matched final-outcome ablations.
+1. Search executed-replay localization with coverage/selective-risk/abstention curves on software/tool/GUI agents.
+2. Search same-prefix branches comparing multiple rollback targets under one fixed corrective actuator and equal token/action/retry budget.
+3. Inspect whether SearchAuditBench/TraceElephant/Who&When Pro source environments or code make faithful environment reconstruction feasible enough for a selector testbed; distinguish trace replay from environment replay.
+4. Search learned target selectors trained on intervention advantage and require recovery + disruption accounting.
+5. Require counterfactual-measurability/coverage reporting for replay methods; never map undefined replay to zero effect.
+6. Preserve the strict selector-only factorial gap unless alarm, candidates, restore/carry-forward, model and budget are genuinely fixed.
 7. Maintain nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
