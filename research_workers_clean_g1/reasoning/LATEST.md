@@ -32,48 +32,51 @@ Latest checkpoints in order:
 29. `2026-08-26T1157JST.md`
 30. `2026-08-26T1259JST.md`
 31. `2026-08-26T1359JST.md`
+32. `2026-08-26T1359JST-followup.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
-1. **Instrument before learning:** append-durable per-decision logging remains the first prerequisite; completed-run summaries are insufficient because interrupted high-cost trajectories would be preferentially lost.
-2. **Canonical full candidate rows:** use `ActionFrontierNode.to_dict()` plus frozen rank, budget admission, effect class and experiment gate; do not train from the current lossy `choice_set` projection alone.
-3. **Two identity hashes:** log a candidate-set hash independent of order and a ranked-choice hash that binds exact scheduler ordering and budget admissions.
-4. **Decision event before mutation:** emit `ExecutionDecisionEvent` after the frozen selection snapshot but immediately before `frontier.consume`, with stable run/decision ids, workspace hash/version, complete candidates, exact legal pool, deterministic baseline, full behavior distribution, chosen propensity, budget and pre-ledger boundary.
-5. **Outcome event on every path:** preserve post-workspace hash/version, verified progress, terminal acceptance and exact execution-ledger ids even for a post-decision no-op/invalidation path.
-6. **No structural pseudo-reward:** immediate positive labels are kernel/checker+safety verified facts and final accepted proof; decomposition/argument/representation edits receive credit only through future verified return.
-7. **Immutable shared generation cost:** provider ledger events stay batch-scoped and immutable; use append-only `ProposalBatchConsumptionEvent` joins for every node consumption.
-8. **Safe known-propensity randomization:** epsilon-randomize only when the deterministic baseline itself is in the P0 low-effect legal pool and there are at least two pool actions; otherwise baseline propensity is 1 with an explicit skip reason.
-9. **Reuse existing atomic trace primitive:** expose per-event atomic append/inject a decision sink rather than inventing a second persistence backend.
-10. **Headroom requires fresh provider data:** no bounded public committed run corpus currently supports real cost-share estimation; collect a small pinned provider-enabled sample and measure generation/execution/assembly shares before expecting Stage-A savings.
-11. **Two-stage controller factorization remains:** Stage A learns post-generation ExecutionSelection after instrumentation; Stage B later exposes retrieval/refill/model routing/generate-vs-skip before provider spend.
-12. **Compact-controller gap remains narrow:** broad full-agent RL and LLM strategy selectors exist; continue searching only for a separate compact heterogeneous learned controller over fixed/factored low-level proving with legal masks/propensities/cost-aware causal evaluation.
-13. **Conservative OPE/deployment:** exact propensities and support checks are mandatory; unsupported or shifted states fall back to the deterministic baseline.
-14. **Reproducibility:** every checkpoint/receipt carries the frozen semantic-control tuple and pinned public source commit/blob ids; absence claims remain bounded.
+1. **Instrumentation before policy learning:** append-durable causal events are still the first prerequisite; interrupted runs must not vanish from the dataset.
+2. **Lossless candidates:** decision logs use full `ActionFrontierNode.to_dict()` provenance, not the current lossy `choice_set` alone.
+3. **Two hashes:** candidate-set hash is order-invariant; ranked-choice hash binds scheduler order and frozen budget admissions.
+4. **Budget semantics have two layers:** retain the exact full `UnifiedBudgetSnapshot` plus raw `BudgetAdmission`, but separately record effective runtime eligibility because `remaining_budget_policy=false` intentionally ignores raw admission for selection.
+5. **Experiment eligibility is a third layer:** distinguish absent candidate, production-ineligible candidate, and production-eligible-but-experiment-disabled candidate.
+6. **Baseline is the exact current selector:** epsilon collection perturbs around the production deterministic baseline only when that baseline itself is in the safe randomized pool and the pool has at least two actions; otherwise propensity is 1.
+7. **Durable decision hook:** append `ExecutionDecisionEvent` after frozen selection and before `frontier.consume`; append an outcome on every post-decision path.
+8. **Verified reward only:** final accepted proof and newly checker+safety accepted facts are immediate positive labels; structural edits receive only downstream sequential credit.
+9. **Immutable shared generation provenance:** provider events remain batch-scoped/immutable; consumption is a separate append-only many-to-many event.
+10. **Idempotent crash semantics:** unmatched decision is censored data, not zero reward; duplicate event IDs are accepted only if canonical payload is byte-identical.
+11. **Reuse the atomic JSONL primitive:** add an optional controller event sink; do not put runtime callbacks in task/proposal semantic metadata.
+12. **Measure economic headroom first:** collect a pinned provider-enabled deterministic pilot until a prespecified CI precision target is met for generation/execution/assembly cost shares.
+13. **Two-stage controller factorization remains:** Stage A post-generation ExecutionSelection first; Stage B later controls retrieval/refill/model routing/generation before provider spend.
+14. **Compact-controller gap remains scoped:** continue only the narrow search for a separately learned heterogeneous controller over fixed/factored proving with legal masks/known propensities/cost-aware causal evaluation.
+15. **Conservative OPE/deployment:** log full behavior distributions; unsupported/shifted states fall back to deterministic baseline.
+16. **Reproducibility:** every checkpoint/receipt carries frozen control and public commit/blob pins; absence claims stay bounded.
 
 ## Current synthesis and newest updates
 
-- **C113:** full candidate provenance is already serialized by `ActionFrontierNode.to_dict()`; current `choice_set` discards obligation/source/batch/model/proposal/priority details.
-- **C114:** candidate identity and baseline ordering require separate canonical hashes.
-- **C115:** exact decision hook is after frozen `select_admissible_action` and before `frontier.consume`; full workspace fingerprint is available from canonical `ProofWorkspace.to_dict()`.
-- **C116:** outcome logs should use final accepted proof and newly checker+safety accepted facts as immediate verified labels; structural edits need sequential credit.
-- **C117:** shared model-batch provenance should be an append-only many-to-many consumption relation, never latest-consumer metadata rewriting.
-- **C118:** `JsonlTraceStore` already has an atomic fsync+replace append primitive; durability needs per-decision invocation, not a new storage mechanism.
-- **C119:** epsilon collection must fall back to deterministic baseline when baseline is outside the safe randomized pool, even if two other safe actions exist.
-- **C120:** a fresh bounded search still did not identify a compact separately learned heterogeneous formal-proof controller with fixed/factored substrate plus exact logged propensities; this remains a scoped evidence gap, not a universal nonexistence claim.
-- **C107–C112 remain prerequisites:** final-run-only trace durability, incomplete causal event fields, strong execution-ledger join, mutable batch attribution and lack of public real-cost traces are still active.
-- **C84/C85 remain important controls:** supervised strategy classification can look accurate while losing end-to-end; optimize verifier-grounded utility per real cost, not imitation accuracy.
+- **C121:** store one exact unified budget snapshot per decision and raw admissions per candidate; avoid a redundant second budget schema.
+- **C122:** raw budget `allowed` is not always production eligibility. With remaining-budget enforcement off, production can execute a row whose raw admission is false.
+- **C123:** log raw admission, effective runtime eligibility and experiment eligibility separately.
+- **C124:** deterministic baseline means the exact existing selector under frozen config; safe epsilon randomization is only a controlled perturbation around it.
+- **C125:** durable decisions without outcomes are censored trajectories; never impute zero reward/cost. Event IDs must be idempotent.
+- **C126:** add a no-op-default optional `decision_event_sink` to controller/runtime plumbing; keep I/O capability out of model-visible semantic metadata.
+- **C127:** choose the provider pilot size from a prospective precision target on cost-share estimates, not an arbitrary task count.
+- **C128:** canonical sorted-key compact UTF-8 JSON + SHA-256 supports stable candidate/workspace/event identities and direct regression tests.
+- **C113–C120 remain active:** full candidate provenance, dual hashes, decision/outcome/batch events, safe epsilon fallback and the narrow factorization gap remain the source-design basis.
+- **C107–C112 remain prerequisites:** final-run-only trace durability and mutable shared batch attribution remain defects until instrumented.
 
 ## Exact continuation
 
-1. Inspect `BudgetAdmission.to_dict()` and unified-budget serialization to freeze decision-event budget/exclusion schema without duplicating contradictory fields.
-2. Define canonical JSON hashing and tests: candidate-set hash invariant to row reordering; ranked-choice hash sensitive to scheduler order/admission changes.
-3. Locate the least invasive optional durable `decision_event_sink` plumbing and define crash/restart semantics for decisions without outcomes.
-4. Specify replay/idempotence rules: duplicate `(decision_id,event_type)` must be rejected or byte-identical, never silently appended twice.
-5. Define a precision-driven minimum provider-enabled collection for cost-share estimates (`proposal_generation / selected_execution / assembly / other`).
-6. Regression-test deterministic baseline equivalence after instrumentation, then run epsilon logging; train policies only after trace integrity/support diagnostics pass.
-7. Continue targeted source search for the narrow compact-controller factorization gap.
-8. Keep the frontier nonempty. `2026-08-26T1359JST.md` is the newest checkpoint and is not global completion.
+1. Inspect current CSSC tests to place minimal regression tests for raw-vs-effective budget eligibility, decision-before-consume durability, canonical hashes, duplicate-event idempotence and two-node shared-batch consumption.
+2. Specify `ExecutionOutcomeEvent` statuses for executed, post-decision invalidated/no-op, terminal, exception-after-decision and censored crash without conflating infrastructure failure with proof failure.
+3. Define the first learned controller's compact replay-stable state feature projection separately from the lossless event schema.
+4. Define support diagnostics for epsilon data: coverage by action/effect class, minimum propensity, effective sample size and state-shift fallback.
+5. With epsilon=0, regression-test that instrumentation does not change deterministic behavior/results/cost except trace-write overhead.
+6. Run the precision-driven provider-enabled cost-share pilot; only if Stage-A has material headroom proceed to randomized collection and policy fitting.
+7. Continue targeted source search for the narrow fixed/factored compact-controller gap.
+8. Keep the frontier nonempty. `2026-08-26T1359JST-followup.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
