@@ -1,0 +1,197 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T09:58:38+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T091010_JST.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "1358d108941a63addb095b7fcbc8c9d6ad96e3ca",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "299fb19cd2ad950120bdb0d54903c2b681b9676d",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": [
+      "own evaluation LATEST/checkpoint",
+      "public sources",
+      "sanitized DESIRED_STATE",
+      "evaluation role config"
+    ],
+    "head_resolution": "SHA-only refs/heads/main; no commit messages/diffs used semantically."
+  },
+  "search_bias": "evaluation/verifiers; reusable-validation selection correction; nonuniform transcript priors; prefix/mixture coding; fresh-audit switching; prior misspecification robustness",
+  "public_sources": [
+    {
+      "title": "What Fits (Into Few Tokens) Doesn't Overfit: Compression and Generalization in ML Research Agents",
+      "authors": "Martin Andres Bertran; Aaron Roth; Zhiwei Steven Wu",
+      "date": "2026-06-09",
+      "url": "https://arxiv.org/abs/2606.11045",
+      "used_scope": "Agentic input compression via one-bit ladder. The validation-dependent view is the binary improve/not-improve transcript; the j-th improvement checkpoint has a finite transcript class determined by improvement locations. The paper explicitly notes uniform token/transcript bounds can be loose and suggests sharper prior-weighted/PAC-Bayes descriptions as an open direction."
+    },
+    {
+      "title": "Generalization in Adaptive Data Analysis and Holdout Reuse",
+      "authors": "Cynthia Dwork; Vitaly Feldman; Moritz Hardt; Toniann Pitassi; Omer Reingold; Aaron Roth",
+      "date": "2015-06-08",
+      "url": "https://arxiv.org/abs/1506.02629",
+      "used_scope": "Description-length control for adaptive reuse: if prior outputs expose k bits, a union bound inflates a fixed-analysis failure probability by at most 2^k. Also motivates separating data-independent decoder/prior design from validation-dependent selection."
+    },
+    {
+      "title": "A unified recipe for deriving (time-uniform) PAC-Bayes bounds",
+      "authors": "Ben Chugg; Hongjian Wang; Aaditya Ramdas",
+      "date": "2023-02-07",
+      "url": "https://arxiv.org/abs/2302.03421",
+      "used_scope": "Time-uniform PAC-Bayes construction from nonnegative supermartingales, mixtures, convex duality and Ville. Used as support for prior-weighted time-uniform complexity accounting; not used as a direct theorem for the worker-local selected-candidate e-process rule."
+    },
+    {
+      "title": "Minimum Description Length Revisited",
+      "authors": "Peter Grünwald; Teemu Roos",
+      "date": "2019-08-21",
+      "url": "https://arxiv.org/abs/1908.08484",
+      "used_scope": "MDL perspective that nonuniform code/probability assignments can replace flat model counting, with complexity determined by code/probability mass rather than raw class cardinality."
+    },
+    {
+      "title": "On the role of data in PAC-Bayes bounds",
+      "authors": "Gintare Karolina Dziugaite; Kyle Hsu; Waseem Gharbieh; Gabriel Arpino; Daniel M. Roy",
+      "date": "2020-06-19",
+      "url": "https://arxiv.org/abs/2006.10929",
+      "used_scope": "Data-dependent priors can tighten certificates only when their data use is structurally separated from the empirical-risk term; used as a scope warning that fitting transcript priors on the same reused validation channel requires an additional validity argument or split, not as a direct e-process theorem."
+    }
+  ],
+  "new_derivations": {
+    "hierarchical_transcript_prior": {
+      "setup": "For a validation-dependent transcript u, factor prior mass as pi(u)=pi_core(stop_time, feedback_pattern)*pi_family(f)*pi_metadata(m), with every factor fixed before observing the reused validation data. The weighted-anytime commit threshold from the previous checkpoint becomes E_u >= 1/(alpha*pi(u)).",
+      "core_mixture": {
+        "T_max": 50,
+        "components": [
+          {"name":"flat_fallback","weight":0.25,"stop":"uniform over 1..50","feedback":"iid Bernoulli(0.5) over the realized pre-stop bits"},
+          {"name":"fast_sparse","weight":0.25,"stop":"capped geometric hazard 0.18","improvement_hazard":0.06},
+          {"name":"medium","weight":0.25,"stop":"capped geometric hazard 0.08","improvement_hazard":0.10},
+          {"name":"slow","weight":0.25,"stop":"capped geometric hazard 0.03","improvement_hazard":0.18}
+        ],
+        "exact_pattern_mass": "For structured component (s,h), pi(t,bits)=P_capped_geom_s(t)*h^r*(1-h)^(t-1-r), where r is the number of improvement bits among the t-1 feedback bits. The flat fallback assigns (1/50)*2^{-(t-1)}.",
+        "mixture_mass": "pi_core=sum_c w_c*pi_c",
+        "robust_regret_bound_bits": "Because each of the four components has weight 1/4, -log2(pi_core(u)) <= -log2(pi_c(u))+2 for every transcript u and every component c. In particular, prior misspecification can cost at most 2 bits relative to the flat fallback, while retaining large gains on sparse/early-stop transcripts."
+      },
+      "candidate_family_prior": "If candidate families are assigned a validation-independent canonical integer index k>=1, use pi_family(k)=1/[k(k+1)]. This telescopes to one and charges log2(k(k+1)) bits. A learned/custom family prior is allowed only if trained independently of the reused validation channel or its own selection cost is separately paid.",
+      "metadata_prior": "For a validation-dependent metadata bitstring m of length ell>=0, use pi_L(ell)=1/[(ell+1)(ell+2)] and pi_metadata(m)=pi_L(ell)*2^{-ell}. This charges ell + log2((ell+1)(ell+2)) bits and prevents hidden stop-time/metadata side channels from being treated as free.",
+      "scope_guard": "These are worker-local prior constructions. The numerical component parameters are illustrative, validation-independent codebook candidates, not empirical claims about any deployed system. Any parameter tuning using the same reused validation transcript must itself be indexed/charged or done on separate data."
+    },
+    "flat_fallback_mixture_guard": {
+      "mechanism": "Always reserve nonzero prior mass for a broad flat transcript component. Then a structured prior cannot catastrophically invalidate or arbitrarily over-penalize an unforeseen transcript: with fallback weight w0, its code is at most -log2(w0) bits worse than flat for every path.",
+      "four_component_special_case": "With w0=0.25 the worst-case excess relative to flat is <=2 bits. The same <=2-bit regret holds relative to each structured component because all four weights are equal.",
+      "measurement_value": "Prior design can be optimized for expected power without turning prior misspecification into an unbounded certificate penalty. This is a stronger operational requirement than reporting average code length alone."
+    },
+    "fresh_audit_switch_rule": {
+      "setup": "Under the prior checkpoint's stylized paired-sign alternative q=0.75, discordance rate rho=0.4 and fixed bet 0.75, expected log-e growth per independent task is g=rho*KL(Bern(q)||Bern(0.5))=0.0523248144 nats/task.",
+      "selection_bit_exchange_rate": "Each additional selection-complexity bit raises the log threshold by ln 2, costing approximately ln(2)/g = 13.247 independent task-equivalents in expected log-growth.",
+      "base_alpha_0_05": "The unpenalized expected-log threshold ln(20)/g is about 57.253 tasks.",
+      "hybrid_rule": "If a fresh confirmation block of A independent tasks is available, paying a transcript penalty B bits is expected-log more expensive than that block once B > A*g/ln2. Under this stylized alternative the break-even is about 1.51 bits for A=20, 3.77 bits for A=50, and 7.55 bits for A=100.",
+      "scope_guard": "This is an expected-log heuristic, not an exact finite-sample power theorem. Actual stopping power depends on discreteness, bet choice, effect size, discordance and task distribution."
+    },
+    "prior_learning_boundary": {
+      "rule": "A nonuniform prior is selection-safe only to the extent its probability assignment is fixed independently of the reused validation information whose adaptivity it is correcting. Hyperparameter/codebook selection from training-only data, simulation, public data or a disjoint prior-building split is admissible in principle; tuning it on the same validation transcript requires another selection-cost layer, a stability/privacy theorem, or a fresh split.",
+      "reason": "Otherwise prior learning itself becomes a validation-dependent side channel and the claimed code length understates the counterfactual selection universe.",
+      "scope_guard": "The analogy to data-dependent PAC-Bayes priors is conceptual; a direct theorem for this exact weighted-e construction would need to be stated separately."
+    }
+  },
+  "worker_local_quantitative_checks": {
+    "exact_expected_core_code_bits": {
+      "method": "Exact summation over stop time t=1..50 and improvement count r, weighting all exact bit patterns under each stylized true regime. Family/metadata costs excluded so the table isolates one-bit-ladder transcript cost.",
+      "regimes": {
+        "fast_s0.18_h0.06": {"flat":10.1991,"mix4":6.1336,"matched_component":5.2696,"mix_saving_vs_flat":4.0655},
+        "medium_s0.08_h0.10": {"flat":16.9505,"mix4":10.7677,"matched_component":10.2455,"mix_saving_vs_flat":6.1828},
+        "slow_s0.03_h0.18": {"flat":30.7083,"mix4":22.8421,"matched_component":22.0688,"mix_saving_vs_flat":7.8662},
+        "out_of_family_long_dense_s0.01_h0.35": {"flat":44.1432,"mix4":43.1976,"best_structured_component":44.1595,"mix_saving_vs_flat":0.9456}
+      },
+      "interpretation": "The flat fallback keeps the mixture close to flat even outside the intended sparse/early-stop regimes, while the structured mixture saves roughly 4-8 bits in the three represented regimes. Under the stylized q=.75,rho=.4 evidence rate those savings correspond to about 54,82,104 task-equivalents of expected log-threshold respectively.",
+      "scope_guard": "The regimes are worker-local stress-test distributions, not observed frequencies in any external system."
+    },
+    "power_stress_test": {
+      "simulation": "100000 independent Monte Carlo evidence trajectories per regime/prior, seed 20260826. Selection code B was sampled from the corresponding stylized transcript regime. After candidate selection, an independent paired-sign evidence process used rho=.4, q=.75, factor 1.5 on candidate-only win, 0.5 on incumbent-only win, 1 on concordance, alpha=.05, threshold 20*2^B. This isolates threshold-cost effects; it is not a simulation of the full adaptive proposal loop.",
+      "results": {
+        "fast": {"flat":{"mean_bits":10.1777,"cross_by_50":0.00671,"cross_by_100":0.15472,"cross_by_200":0.61549},"mix4":{"mean_bits":6.1282,"cross_by_50":0.04761,"cross_by_100":0.36344,"cross_by_200":0.81076}},
+        "medium": {"flat":{"mean_bits":16.8803,"cross_by_50":0.00283,"cross_by_100":0.07906,"cross_by_200":0.39252},"mix4":{"mean_bits":10.7821,"cross_by_50":0.02405,"cross_by_100":0.20610,"cross_by_200":0.59213}},
+        "slow": {"flat":{"mean_bits":30.6995,"cross_by_50":0.00113,"cross_by_100":0.03211,"cross_by_200":0.18045},"mix4":{"mean_bits":22.8895,"cross_by_50":0.00764,"cross_by_100":0.07383,"cross_by_200":0.25973}}
+      },
+      "interpretation": "A nonuniform robust prior can materially recover finite-horizon power versus flat transcript counting, but even the improved 6-23 bit penalties remain expensive at 10-50 task horizons. This strengthens the case for a hybrid switch to fresh confirmation rather than insisting on reused-validation certification for every transcript."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-robust-mixture-transcript-prior-v1",
+      "mechanism": "Use a predeclared mixture over plausible stop/improvement transcript models plus a flat fallback, then charge the realized transcript by -log2 mixture mass in the weighted-anytime certificate.",
+      "evidence": "Worker-local exact code calculations and 100k-trajectory finite-horizon stress tests; grounded in description-length adaptive-data analysis and time-uniform mixture/PAC-Bayes principles.",
+      "scope_guard": "Mixture components and weights must be validation-independent or their selection cost must be paid. Numeric parameters are illustrative stress-test codebooks."
+    },
+    {
+      "candidate_id": "eval-g1-flat-fallback-prior-robustness-v1",
+      "mechanism": "Reserve explicit prior weight for a flat transcript model. With weight 1/4, the structured mixture is never more than 2 bits worse than flat on any transcript and never more than 2 bits worse than any one equal-weight component.",
+      "evidence": "Direct mixture-probability inequality; no stochastic assumptions required beyond the predeclared probability assignment.",
+      "scope_guard": "This bounds certificate complexity regret, not statistical power regret under every effect distribution."
+    },
+    {
+      "candidate_id": "eval-g1-fresh-audit-complexity-switch-v1",
+      "mechanism": "Compute realized transcript complexity before confirmation and switch to fresh audit when the selection-bit penalty is larger than the expected evidence carried by an available fresh block, instead of mechanically paying the reused-data penalty.",
+      "evidence": "Worker-local expected-log calculation plus prior simulation showing 6-23 bit penalties remain severe at short horizons even after nonuniform coding.",
+      "scope_guard": "Switch threshold must be calibrated to the actual evidence process/effect regime; the reported 13.247 tasks per bit is only for q=.75,rho=.4,fixed-bet=.75."
+    },
+    {
+      "candidate_id": "eval-g1-validation-independent-prior-gate-v1",
+      "mechanism": "Treat transcript-prior construction itself as part of the evaluation protocol: learn/tune it only from validation-independent information, or explicitly charge/meta-correct its data dependence.",
+      "evidence": "Adaptive-data description-length logic plus PAC-Bayes data-dependent-prior literature showing prior/data separation is a first-class validity concern.",
+      "scope_guard": "Direct selected-e theorem for data-dependent priors remains to be derived; use this as a safety gate, not a claimed equivalence to PAC-Bayes."
+    }
+  ],
+  "measurement_validity_rules": {
+    "rule_1": "Report realized selection complexity as -log2 prior mass, not only raw feedback bit count. Sparse/early-stop transcripts can be much cheaper than flat worst-case counting, but only under a predeclared probability assignment.",
+    "rule_2": "Always include a broad fallback component in a power-optimized transcript prior and report worst-case regret to that fallback, not just average code length.",
+    "rule_3": "Candidate-family choice, stop time and metadata are free only if genuinely validation-independent or mechanically hidden; otherwise they are part of the adaptive transcript and must receive prior mass.",
+    "rule_4": "Do not tune the transcript prior on the same reused validation interactions and then evaluate complexity under that tuned prior without an additional selection correction.",
+    "rule_5": "At short task horizons, compare transcript-corrected reuse against fresh confirmation on the same utility axis. A formally valid reused-data certificate can be practically dominated by fresh audit when its code penalty is several bits.",
+    "rule_6": "Mixture-prior robustness should be expressed pathwise: pi_mix>=w_c*pi_c implies at most -log2 w_c extra bits for every transcript, independent of whether the deployment distribution matches the component."
+  },
+  "rejected_overgeneralizations": [
+    "Uniform transcript counting is the only selection-safe description-length correction.",
+    "A nonuniform prior learned after seeing the reused validation transcript is automatically valid because its final probabilities sum to one.",
+    "A prior that has lower average code length is necessarily safer; without a fallback it can impose arbitrarily bad penalties on misspecified paths.",
+    "Saving several description bits makes reused-validation certification automatically preferable to fresh audit; at small task horizons one bit can represent more than ten task-equivalents of expected log evidence in the tested stylized regime.",
+    "Candidate family and metadata can be ignored because the visible validation response is only one bit per query; any validation-dependent side channel that changes the selected candidate belongs in the transcript complexity."
+  ],
+  "frontier_queue": [
+    {
+      "priority": 1,
+      "action": "Derive an empirical-Bayes-like but validation-safe way to adapt mixture weights from prior runs or disjoint prior-building data, with explicit accounting when source runs are correlated. Compare static equal-weight mixture, hierarchical universal prior and split-learned prior."
+    },
+    {
+      "priority": 2,
+      "action": "Build a full adaptive proposal-loop simulator where the same validation transcript generates the next candidate, then compare naive reused PACE, flat prefix-weighted replay, robust mix4 replay and fresh-audit switching on false commits, power, total task usage and information returned to the proposer."
+    },
+    {
+      "priority": 3,
+      "action": "Replace the stylized Bernoulli improvement-hazard codebook with a validation-independent context-tree or finite-state transcript model and verify a pathwise regret bound against the flat fallback. Determine whether the extra model flexibility saves enough bits to offset mixture overhead."
+    },
+    {
+      "priority": 4,
+      "action": "Derive a direct theorem for data-dependent transcript priors in the weighted-anytime selected-e setting, separating safe split priors, DP/stability-limited priors and priors whose own selection must be charged."
+    },
+    {
+      "priority": 5,
+      "action": "Quantify the hybrid switch frontier under q in {0.60,0.65,0.70,0.75,0.80}, discordance in {0.2,0.4,0.6}, and fresh-block sizes 20-200, reporting resolved rate and unresolved rate rather than expected-log cost alone."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Construct a full adaptive proposal-loop simulator with validation-dependent candidate generation and a predeclared robust transcript mixture prior, then compare flat weighting, mix4 weighting and fresh-audit switching under both null and alternative across 10-200 independent tasks; separately derive how mixture weights may be learned from disjoint prior-building data without contaminating the reused validation certificate."
+}
