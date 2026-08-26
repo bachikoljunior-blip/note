@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "candidate": "continual_learning/CLDD-HPO-provenance@tachyonicClock/cldd",
+  "status": "primary_verified_with_material_hpo_randomness_and_documentation_provenance_correction",
+  "bootstrap_valid": true,
+  "verified_at": "2026-08-26T20:42:16+09:00",
+  "frozen_control_tuple": {
+    "note_main_sha": "9bdb5daf0f58e17d2904460d40741c4064c60045",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 15,
+    "downstream_control_blob": "f729106fae27fa9b2ded3210470ee54b7d76d656",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_worker_artifact": {
+    "path": "research_workers_clean_g1/continual_learning/RUN_20260826T1703_JST.md",
+    "blob": "0f4f4ae6e7db19d117f7726ff16a66ddf09a2ccf"
+  },
+  "primary_sources": [
+    {
+      "type": "official_source_commit",
+      "repository": "tachyonicClock/cldd",
+      "commit": "72d12ff2d1a6fca711fbbf46a1d1f85a189fdc7b",
+      "paths": ["dodo.py", "config/hp/detector.yml", "src/hpsearch_config.py"]
+    },
+    {
+      "type": "official_source_commit",
+      "repository": "tachyonicClock/cldd",
+      "commit": "f186455e3f39a8b3ac2e37b941cdbb8a7e8ecedb",
+      "paths": ["dodo.py", "config/hp/detector.yml", "src/hpsearch_config.py", "src/dd_hpsearch.py", "src/hpsearch.py", "main.py", ".gitignore", "Makefile"]
+    },
+    {
+      "type": "official_source_commit",
+      "repository": "tachyonicClock/cldd",
+      "commit": "a78a871c2e83d9f1f1e24aea1b749f790f579eb7",
+      "paths": ["config/hp/detector.yml"]
+    },
+    {
+      "type": "official_source_commit",
+      "repository": "tachyonicClock/cldd",
+      "commit": "7b0a474ae171388eb0a666c9b1e1431d2450b73d",
+      "paths": ["dodo.py", "dataset/DATASHEET.md"]
+    },
+    {
+      "type": "official_dataset_record",
+      "url": "https://zenodo.org/records/21232615",
+      "version": "v1"
+    },
+    {
+      "type": "official_dependency_documentation",
+      "product": "Optuna",
+      "version": "4.8.0",
+      "urls": [
+        "https://optuna.readthedocs.io/en/v4.8.0/reference/generated/optuna.study.create_study.html",
+        "https://optuna.readthedocs.io/en/v4.8.0/faq.html"
+      ]
+    }
+  ],
+  "verified_findings": [
+    {
+      "claim": "The immediate pre-change parent uses five detector-tuning error streams while f186455 expands the tuning input to ten.",
+      "result": "verified",
+      "detail": "At 72d12ff, ERROR_STREAM_SEEDS is generated with range(5). Commit f186455 changes that exact line to range(N_TRIALS), with N_TRIALS=10. task_tune_hp_detector consumes every ERROR_STREAM_SEEDS entry."
+    },
+    {
+      "claim": "The immediate parent and f186455 keep the detector HPO objective/protocol at 30 trials, maximize my_f1, overwrite mode.",
+      "result": "verified",
+      "detail": "config/hp/detector.yml is identical across the two commits: n_trials=30, metric=my_f1, maximize=true, mode=w."
+    },
+    {
+      "claim": "The detector HPO sampler path is not explicitly seeded, so exact trial proposals are not source-deterministic across fresh overwrite runs.",
+      "result": "verified",
+      "detail": "HPSearchConfig.new_study deletes the existing named study under mode=w and calls optuna.create_study without sampler=. Optuna 4.8.0 documents TPESampler as the default single-objective sampler and explicitly recommends TPESampler(seed=...) for reproducible suggestions. Therefore a fresh study is not guaranteed to reproduce the same TPE proposal path from source alone."
+    },
+    {
+      "claim": "The identified HPO nondeterminism in DDHPSearch is not primarily from within-study n_jobs parallelism.",
+      "result": "verified_with_scope",
+      "detail": "DDHPSearch.optimize calls optimize_with_max_trials without n_jobs; that helper forwards no n_jobs argument, so Study.optimize uses its default sequential execution. This narrows, but does not eliminate, nondeterminism: the unseeded sampler remains, and objective-side dependencies must separately be deterministic for exact replay."
+    },
+    {
+      "claim": "The exact realized HPO path/winner is not bound by tracked public Git artifacts.",
+      "result": "verified_with_public_repository_scope",
+      "detail": "The study journal defaults to logs/optuna.journal.log; best_params.yml and best_trial.yml are written beneath log directories; .gitignore excludes logs. Repository code search exposed the journal path only in source configuration, not a tracked journal artifact. The Makefile archives logs to a local scratch archive path. This establishes a public-Git provenance gap, not nonexistence of the original private/local artifacts."
+    },
+    {
+      "claim": "Using the July-8 lineage as the five-stream anchor changes the HPO objective as well as stream count.",
+      "result": "verified",
+      "detail": "a78a871 config/hp/detector.yml uses metric=f1, whereas 72d12ff and f186455 use metric=my_f1. A July-8-versus-final comparison therefore cannot isolate stream-count effect."
+    },
+    {
+      "claim": "Current public documentation is internally inconsistent with the executable tuning pipeline about detector-tuning stream count.",
+      "result": "verified_material_documentation_defect",
+      "detail": "Current dodo.py at 7b0a474 uses ten ERROR_STREAM_SEEDS and task_tune_hp_detector consumes all ten. Yet the current repository DATASHEET and Zenodo v1 description say the dataset has a 10-seed training set while also stating that each detector is tuned using five training error-streams. The 360-row CLDD-A description is compatible with 10 training + 10 evaluation rows, but the detector-tuning sentence is stale or otherwise inconsistent with current executable code."
+    }
+  ],
+  "scope_corrections": [
+    "Do not attribute before/after regenerated performance-table differences around f186455 solely to five-versus-ten tuning streams unless the realized HPO proposal path is matched or controlled. The source change is stream-count expansion, but a fresh unseeded TPE study can choose different trials/winner.",
+    "Do not use July-8 five-stream results as a clean stream-count ablation because the tuning objective is f1 there versus my_f1 later.",
+    "Do not claim the original experiment cannot be exactly reproduced in principle. The missing item is public provenance binding the realized journal/winner; an unpublished/local archive could still exist.",
+    "Treat the public DATASHEET/Zenodo five-training-error-stream sentence as documentation inconsistent with current code, not as authoritative evidence that the final executable pipeline tunes on five streams."
+  ],
+  "recommended_decisive_test": {
+    "design": "paired matched stream-count ablation",
+    "baseline_commit": "72d12ff2d1a6fca711fbbf46a1d1f85a189fdc7b",
+    "expanded_commit": "f186455e3f39a8b3ac2e37b941cdbb8a7e8ecedb",
+    "fixed_elements": [
+      "metric=my_f1",
+      "same detector search spaces",
+      "same evaluation seeds/streams",
+      "explicit identical TPESampler(seed=s) on both sides",
+      "same Optuna version/environment"
+    ],
+    "repeat": "multiple paired sampler seeds",
+    "goal": "separate stream-count effect from HPO stochastic variance"
+  },
+  "unresolved": [
+    "No public optuna.journal.log, best_trial.yml, best_params.yml or experiment archive was located that binds the realized paper/dataset HPO trajectory to a source SHA.",
+    "No exact replay of the original winning HPO path was performed in this audit.",
+    "The provenance relation between the Zenodo v1 binary files and a specific realized HPO journal/winner remains unbound by the inspected public metadata."
+  ],
+  "downstream_eligibility": {
+    "eligible": true,
+    "reason": "bootstrap_valid primary-source audit with exact source-qualified scope"
+  }
+}
