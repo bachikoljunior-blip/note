@@ -1,0 +1,108 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "844b6dc7c395bf56dded26d7b445a8468873f7d6",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "1ad5c71c3cabef8bf67f2dc02f1d2ec90c9e1917",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T143530+0900-r60.json",
+  "started_local": "2026-08-26T14:35:31+09:00",
+  "checkpointed_local": "2026-08-26T14:39:15+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false
+  },
+  "checked_sources": [
+    {
+      "source": "Chan, Golub & LeVeque, Updating Formulae and a Pairwise Algorithm for Computing Sample Variances, Stanford technical report STAN-CS-79-773 / COMPSTAT 1982",
+      "url": "https://dtic.minsky.ai/index/ADA083170",
+      "result": "Primary/archival metadata and abstract confirm the pairwise mean/variance update formula was developed specifically to improve numerical stability and includes rounding-error analysis. This directly supports replacing raw sum/sum-of-squares subtraction with centered pairwise summaries in the Gaussian pair certificate."
+    },
+    {
+      "source": "Chan, Golub & LeVeque 1983, Algorithms for Computing the Sample Variance: Analysis and Recommendations",
+      "url": "https://www.tandfonline.com/doi/abs/10.1080/00031305.1983.10483115",
+      "result": "Published follow-up identifies small variance relative to large data magnitude as a numerically difficult regime, matching the failure mode observed in the raw sufficient-statistic implementation."
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r61a-centered-fractional-pooling",
+      "claim": "The Gaussian lambda certificate should store each block as (n, mean, centered M2) rather than (n,S,Q); fractional pooling then has a cancellation-free nonnegative variance formula.",
+      "details": "For block summaries (n_i,m_i,M2_i), define w_0=lambda n_0, w_1=(1-lambda)n_1, n=w_0+w_1 and m=(w_0m_0+w_1m_1)/n. The pooled centered sum is M2(lambda)=lambda M2_0+(1-lambda)M2_1+(w_0w_1/n)(m_0-m_1)^2, hence v_lambda=M2(lambda)/n. This is algebraically identical to Q_lambda/n-(S_lambda/n)^2 but avoids subtracting two huge nearly equal numbers and is manifestly nonnegative in exact arithmetic."
+    },
+    {
+      "id": "cf-g1-r61b-stable-envelope-derivative",
+      "claim": "The envelope derivative can also be evaluated without raw S or Q, eliminating the main finite-precision cancellation in h'(lambda).",
+      "details": "At pooled (m,v), evaluate f_i=c_i+(n_i/2)log(2 pi v)+[M2_i+n_i(m_i-m)^2]/(2v), and set h'=f_0-f_1. This centered form is equivalent to the closed-form derivative in r60 but remains stable for very large offsets."
+    },
+    {
+      "id": "cf-g1-r61c-catastrophic-cancellation-demonstration",
+      "claim": "Raw Q/n-m^2 is not merely theoretically fragile: ordinary float64 can produce a negative variance of enormous magnitude in a realistic large-offset/small-spread pair, invalidating the certificate unless centered summaries are used.",
+      "experiment": "Generated two Gaussian blocks of sizes 1000 and 800 centered near 1e12 with standard deviation about 1 and a mean difference about 2. For lambda=0.5, raw float64 weighted Q/n-m^2 returned -134,217,728, while centered fractional pooling returned variance about 2.02389, consistent with a direct centered computation about 2.02365. The sign failure makes the raw implementation unusable in this regime; the centered formula remained finite and positive.",
+      "scope": "Numerical stress test in float64; exact values depend on draw, but the cancellation mechanism is deterministic and general."
+    },
+    {
+      "id": "cf-g1-r61d-bracketing-empirical-validation",
+      "claim": "The tangent-certified derivative bracket numerically matched direct two-dimensional primal optimization and showed the predicted logarithmic-in-log-threshold evaluation growth.",
+      "experiment": "Across 100 random nondegenerate Gaussian pair problems, scalar dual maxima and direct 2D primal min-max optimization agreed to worst absolute error about 1.3e-9. Across 200 further random pairs, a tangent-gap stopping target 1e-8 certified all observed scalar optima with at most 17 bisections. In a separate scaling stress test with block sizes proportional to ell in {10,30,100,300,1000,3000,10000} and additive score tolerance 1, median interior-root bisections were approximately {2,3,3,4,5,6,7}; maxima were {3,4,5,6,7,8,8}. This is consistent with O(log ell)=O(log log A) evaluations when ell=log A.",
+      "scope": "Synthetic numerical validation, not a proof or runtime benchmark of the full detector."
+    },
+    {
+      "id": "cf-g1-r61e-machine-safety-rule",
+      "claim": "Statistical validity and floating-point certification should be separated: threshold only a downward-certified lower endpoint of h; use derivative/tangent arithmetic only to decide whether more scalar evaluations are worth doing.",
+      "details": "A theoretically feasible lambda is a weak-dual lower certificate, but an upward floating-point rounding error could technically overshoot that exact value. A robust implementation should evaluate h with directed interval arithmetic or subtract a rigorously derived rounding envelope and threshold only the lower endpoint. If variance underflows, a lambda can be skipped with score -infinity; this loses power but cannot create false evidence. Tangent upper bounds need interval-safe derivatives only if a formal optimization-gap certificate is desired; inaccurate upper bounds cannot invalidate a correctly downward-rounded sampled lower score."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r61-centered-certified-gaussian-pair-kernel",
+      "mechanism": "Represent every recycled start by count, mean, centered M2 and predictive-log constant; compute fractional pooled variance by Chan-style pairwise pooling, evaluate h and h' in centered form, and threshold only interval-downward lower evidence.",
+      "quantitative_or_formal_evidence": "Removes a demonstrated float64 failure where raw variance became -1.34e8 instead of about 2.02 at mean scale 1e12; scalar-vs-primal agreement was about 1e-9 in random tests; tolerance-1 bisection count stayed <=8 through ell=10000 in the tested random scaling regime.",
+      "scope": "Implementation kernel for the r60 pair certificate; end-to-end detector timing and power remain unmeasured.",
+      "failure_conditions": "Input block summaries themselves must be maintained stably; extreme underflow/overflow still requires rescaling or interval/high-precision fallback; synthetic iteration counts are not worst-case bounds.",
+      "confidence": "high"
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Raw (n,S,Q) summaries are sufficient for a production implementation because the algebra is exact.",
+      "evidence": "Rejected in floating point. Large common offsets with small variance cause catastrophic Q/n-m^2 cancellation and can even flip the sign of the variance.",
+      "reason": "Use centered pairwise summaries throughout the recycled-start state."
+    },
+    {
+      "lead": "A standard optimizer's reported convergence tolerance is enough to make the evidence value formally safe.",
+      "evidence": "Not by itself. Statistical safety attaches to an exact lower certificate; floating-point evaluation must also be one-sided if machine-level rigor matters.",
+      "reason": "Threshold interval/downward lower values; treat numerical convergence only as a power optimization."
+    }
+  ],
+  "frontier": [
+    "Implement a small interval-arithmetic prototype for centered h(lambda), including safe log/variance bounds, and measure how much numerical slack is needed relative to ordinary double precision.",
+    "Warm-start lambda brackets across adjacent monitoring times and quantify whether average scalar evaluations fall from O(log log A) worst-asymptotic to O(1) in steady operation.",
+    "Continue the ARL-CADD tail frontier: derive a finite-moment/exponential-tail bound for predictive-score regret of the regularized online Gaussian predictor, then combine with mean/chi-square concentration for the explicit source representation.",
+    "Search for or construct a backup full-support Gaussian e-detector with finite expected delay under every distinct P,Q that can be mixed at vanishing weight without changing the full-KL leading constant.",
+    "Instantiate centered pair-dual kernels for Bernoulli and Poisson to test whether the same implementation architecture generalizes cleanly."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Converted the formal scalar certificate into a numerically stable centered-summary kernel.",
+      "Found and reproduced a severe cancellation bug in the naive raw-sufficient-statistic implementation.",
+      "Validated scalar strong-dual equality numerically against direct primal optimization.",
+      "Measured empirical bisection scaling over four orders of magnitude in block size.",
+      "Separated one-sided machine evidence certification from optional optimizer-gap certification."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "Prototype interval/downward-rounded centered h scoring and warm-started lambda brackets, then attack the remaining full-Gaussian ARL-CADD gap by bounding regularized predictive-score regret and exterior-certificate rare-event tails."
+}
