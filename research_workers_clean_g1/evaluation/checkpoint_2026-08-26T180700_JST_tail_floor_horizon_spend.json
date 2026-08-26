@@ -1,0 +1,183 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T18:07:00+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T171326_JST_seqe_boosting_inverse_discordant.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "cc9cb9fae8c79c150521a860142ab7d7b0e27e85",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_observed_for_write_safety_only": "62ec3e4c93da34d3931cf66089458f9abd50a739",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "own_feedback_found": false
+  },
+  "search_bias": "evaluation/verifiers; lifetime-FWER fresh-audit gates; SeqE-Guard query-path design; finite-horizon evidence allocation; delayed/sparse-signal robustness",
+  "public_sources": [
+    {
+      "title": "Admissible online closed testing must employ e-values",
+      "authors": "Lasse Fischer; Aaditya Ramdas",
+      "url": "https://arxiv.org/abs/2407.15733",
+      "used_scope": "SeqE-Guard maintains a product over queried candidates and unqueried e-values below 1; a true-discovery lower bound increments when the product reaches 1/alpha. The query path can be chosen online after observing the current e-value. This is the downstream multiple-testing interface used here; the new candidate-level e-value construction is worker-local."
+    },
+    {
+      "title": "Learning to Bet for Horizon-Aware Anytime-Valid Testing",
+      "authors": "Ege Onur Taga; Samet Oymak; Shubhanshu Shekhar",
+      "date": "2026-03-20",
+      "url": "https://arxiv.org/abs/2603.19551",
+      "used_scope": "Supports the general finite-horizon control principle: optimal anytime-valid betting depends on time and wealth, and more aggressive behavior can be optimal when behind schedule near a hard deadline. Used as conceptual support only; the exact tail-floor recurrence below is worker-local."
+    },
+    {
+      "title": "Inverse Sampling for McNemar's Test",
+      "author": "Mark Von Tress",
+      "publication": "International Journal of Statistics and Probability 6(1), 2017",
+      "url": "https://www.ccsenet.org/journal/index.php/ijsp/article/view/65236",
+      "used_scope": "Supports fixing the number r of discordant matched pairs so the discordant signs have a fixed exact-binomial sample size while total paired-task cost is random/negative-binomial."
+    },
+    {
+      "title": "Improving online FDR procedures via online analogs of e-closure and compound e-values",
+      "authors": "Ziyu Xu; Lasse Fischer; Aaditya Ramdas",
+      "date": "2026-03-25",
+      "url": "https://arxiv.org/abs/2603.24792",
+      "used_scope": "Background only for the next frontier: online e-closure/donation can strictly improve some online e-value procedures and explicitly targets adaptively generated hypothesis streams, including LLM-agent settings. It controls FDR/SupFDR, not the lifetime-FWER commit gate derived here."
+    }
+  ],
+  "new_derivations": {
+    "two_level_tail_floor_candidate_evalue": {
+      "setup": "After inverse sampling to r discordant pairs, let W be candidate-only wins. Under the equality null W~Binomial(r,1/2). Let C be SeqE-Guard's current off-query product from prior unqueried e-values below 1 and m=1/(alpha*C). For a deterministic upper-tail rejection set A_k={W>=k}, let p_k=P0(A_k) and require m*p_k<1.",
+      "construction": "Define c_k=(1-m*p_k)/(1-p_k), and define G_k(W)=m on A_k and c_k on its complement. Then E0[G_k]=1 exactly and 0<c_k<=1. If W is in A_k, query the candidate and C*G_k=1/alpha so the strict SeqE-Guard lower bound increments. Otherwise leave the candidate unqueried; G_k=c_k<1 enters U and the next product is C<-C*c_k, equivalently m<-m/c_k.",
+      "important_difference_from_prior_boosting": "This redesign is not constrained to pointwise increase the previous likelihood-ratio e-value. Mid-range e-values that would be >1 but insufficient to commit are deliberately collapsed toward the complement floor, because values in (1,m) consume null expectation without improving either immediate strict-commit status or future U-product wealth.",
+      "scope_guard": "Validity requires the candidate to be frozen before the fresh audit and the emitted candidate-level e-value to remain conditionally valid given the prior stream. The construction uses the fixed-discordant Binomial(r,1/2) null; it does not justify reuse of adaptive development data as fresh audit data."
+    },
+    "fixed_rejection_set_log_wealth_optimality": {
+      "result": "For a fixed current commit set A and threshold m, setting commit outcomes exactly to m is budget-minimal. Any noncommit value above 1 can be replaced by 1 without worsening the strict query path. On the complement, after fixing the remaining null expectation budget, Jensen's inequality makes a constant floor c maximize null expected log(min(G,1)). Therefore the two-level {m,c} form is optimal for preserving null-prefix log wealth among maps with the same commit set. For Binomial(r,q), q>1/2 versus Binomial(r,1/2), the monotone likelihood ratio makes an upper tail A_k the Neyman-Pearson choice for current alternative commit probability at a given null tail mass.",
+      "interpretation": "The previous high-dimensional boost-map search collapses to a one-dimensional choice of k when the utility is current commit power plus null-prefix wealth preservation."
+    },
+    "discreteness_slack_is_future_wealth": {
+      "r20_alpha05_initial_examples": [
+        {"k":15,"null_tail":0.020694732666015625,"q075_commit_power":0.6171726543871046,"floor":0.5984909570386298},
+        {"k":16,"null_tail":0.005908966064453125,"q075_commit_power":0.41484150253018015,"floor":0.88706229973714},
+        {"k":17,"null_tail":0.0012884140014648438,"q075_commit_power":0.22515604766431352,"floor":0.9754885530807611},
+        {"k":18,"null_tail":0.00020122528076171875,"q075_commit_power":0.09126043246487825,"floor":0.9961759501700267}
+      ],
+      "result": "For a single test, boundary randomization can spend discrete size slack to approach the exact level. In a repeated strict-commit stream, that same slack can instead be converted into c_k close to 1 and carried forward as future e-wealth. At m=20, randomizing the k=15 boundary all the way to null rejection probability .05 would exhaust the expectation budget and leave zero complement floor in the two-level representation, destroying future evidence after a nonrejection. Thus single-test power-optimal randomization need not be stream-utility optimal."
+    },
+    "finite_horizon_tail_choice_recurrence": {
+      "model": "For a pre-audit predictive prior pi that the current frozen candidate is genuinely improved, good discordant signs are Binomial(r,q_good), null signs are Binomial(r,1/2), and a false commit is terminal failure while a true commit is terminal success.",
+      "recurrence": "V_n(m)=max_k [pi*q_k + {pi*(1-q_k)+(1-pi)*(1-p_k)}*V_{n-1}(m/c_k)], over valid k plus a no-test action, with V_0=0.",
+      "observed_policy_r20_q075_H20": "On the tested log-m grid, pi in {0.05,0.10,0.20,0.30,0.40} produced the same survival-path action pattern to numerical resolution: k=17 for approximately the first 15 opportunities, then k=16 for the final 5. This uses conservative tails early to preserve product wealth and spends more remaining risk near the horizon.",
+      "scope_guard": "This is an approximate finite-grid Bellman solution under a stylized fixed q_good and prior. The e-validity of every chosen map does not depend on the prior being correct, but the power optimality does."
+    }
+  },
+  "worker_local_stress_tests": {
+    "common": "Exact probability calculations unless explicitly marked Monte Carlo. alpha=.05; strict SeqE-Guard commit query; r=20 fixed discordant signs per launched audit; good sign probability q=.75; null sign probability .5. The Bellman-tail-floor path is approximated by k=17 for the first 15 surviving candidate opportunities and k=16 for the final 5, with c_k recomputed from current m each time.",
+    "timing_patterns": {
+      "all_20_null": {"P_any_false_commit":0.047791386358723514},
+      "five_good_positions_1_to_5": {"P_any_true_commit":0.7206998052182204,"P_any_false_before_true_or_end":0.011628},
+      "five_good_positions_11_to_15": {"P_any_true_commit":0.7114678600858841,"P_any_false_before_true_or_end":0.020860},
+      "good_positions_5_10_15_20": {"P_any_true_commit":0.715344,"P_any_false_before_true_or_end":0.022896},
+      "comparison_to_prior_frozen_checkpoint": "The prior scalar/floor product boosts were stronger for front-loaded five-good candidates (about .951/.906 true-commit) but had zero observed true commits for five-good positions 11-15 in 100k runs; floor boost was about .0206 on the sparse 5/10/15/20 pattern. The new tail-floor horizon policy spends much more of the nominal FWER budget but removes most timing collapse in these tested patterns."
+    },
+    "all_five_of_twenty_placements": {
+      "number_of_placements": 15504,
+      "bellman_tail_floor": {"min_P_true":0.7114678600858841,"median_P_true":0.7823790287613622,"max_P_true":0.9135542747369993,"max_P_false_among_five_good_placements":0.023577},
+      "fixed_k17_all_20": {"min_P_true":0.7068963295584825,"median_P_true":0.7150460571205541,"max_P_true":0.7206998052182204,"all_null_P_false":0.02545530292195296},
+      "interpretation": "The horizon spend mainly raises median/best placement power while preserving nearly the same worst-placement true-commit probability as a fixed k=17 rule; it uses the additional global risk budget late in the horizon."
+    },
+    "risk_timing_ladder_fixed_tail": [
+      {"base_k":15,"all_null_P_false":0.049985,"five_good_1_5_P_true":0.948512,"five_good_11_15_P_true":0.110020,"sparse_P_true":0.252014},
+      {"base_k":16,"all_null_P_false":0.049995,"five_good_1_5_P_true":0.931393,"five_good_11_15_P_true":0.223482,"sparse_P_true":0.534105},
+      {"base_k":17,"all_null_P_false":0.025455,"five_good_1_5_P_true":0.720700,"five_good_11_15_P_true":0.711468,"sparse_P_true":0.632378},
+      {"base_k":18,"all_null_P_false":0.004017,"five_good_1_5_P_true":0.380278,"five_good_11_15_P_true":0.379513,"sparse_P_true":0.317433}
+    ],
+    "clustered_proposal_stream_100000": {
+      "proposal_process": "30 proposal opportunities; hot/cold Markov state with P(hot|hot)=.85 and P(hot|cold)=.15, initial hot=.5; P(good|hot)=.65 and P(good|cold)=.10; development-only triage launches .80 of good and .25 of null proposals; cap 20 launched audits. Candidate-quality/launch streams were Monte Carlo sampled; conditional audit commit probabilities were integrated analytically rather than sampling W.",
+      "mean_launched_audits":13.65824,
+      "P_any_true_commit":0.8564649428535805,
+      "P_any_false_commit":0.002903447821222816,
+      "P_no_commit":0.1406316093251967,
+      "comparison_to_prior_frozen_checkpoint": "Under the same stylized proposal process, prior floor/scalar product boosts reported about .667/.601 probability of any true commit. The new policy is materially stronger in this tested clustered regime, while its all-null risk is closer to the full .05 budget."
+    },
+    "effect_strength_robustness_r20_policy_trained_q075": [
+      {"q_good":0.60,"five_good_1_5_P_true":0.077299,"five_good_11_15_P_true":0.076308,"sparse_P_true":0.093328},
+      {"q_good":0.65,"five_good_1_5_P_true":0.203041,"five_good_11_15_P_true":0.200440,"sparse_P_true":0.225208},
+      {"q_good":0.70,"five_good_1_5_P_true":0.432395,"five_good_11_15_P_true":0.426856,"sparse_P_true":0.447832},
+      {"q_good":0.75,"five_good_1_5_P_true":0.720700,"five_good_11_15_P_true":0.711468,"sparse_P_true":0.715344},
+      {"q_good":0.80,"five_good_1_5_P_true":0.929381,"five_good_11_15_P_true":0.917476,"sparse_P_true":0.912776}
+    ],
+    "fixed_discordant_r_cost_frontier_at_rho04": [
+      {"r":10,"all_null_P_false":0.047829,"five_good_1_5_P_true":0.251592,"five_good_11_15_P_true":0.249145,"sparse_P_true":0.356356,"expected_pairs_all_null":494.67,"expected_pairs_good_1_5":389.90,"expected_pairs_good_11_15":451.43},
+      {"r":20,"all_null_P_false":0.047791,"five_good_1_5_P_true":0.720700,"five_good_11_15_P_true":0.711468,"sparse_P_true":0.715344,"expected_pairs_all_null":983.78,"expected_pairs_good_1_5":366.50,"expected_pairs_good_11_15":721.97},
+      {"r":30,"all_null_P_false":0.049149,"five_good_1_5_P_true":0.972968,"five_good_11_15_P_true":0.947856,"sparse_P_true":0.927767,"expected_pairs_all_null":1463.77,"expected_pairs_good_1_5":171.76,"expected_pairs_good_11_15":889.31},
+      {"r":50,"all_null_P_false":0.048850,"five_good_1_5_P_true":0.998985,"five_good_11_15_P_true":0.983004,"sparse_P_true":0.991335,"expected_pairs_all_null":2453.27,"expected_pairs_good_1_5":168.79,"expected_pairs_good_11_15":1389.35}
+    ],
+    "cost_interpretation": "Larger r can lower expected total paired observations when improvements arrive early because a successful candidate terminates after very few launched audits, but it greatly increases all-null and late-signal cost. Therefore r itself should be a horizon/timing-aware control variable rather than a fixed notion of statistical quality."
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-discreteness-recycling-tail-floor-v1",
+      "mechanism": "Turn each fixed-discordant exact-binomial audit into a two-level candidate e-value: current SeqE-Guard threshold m on a most-powerful upper tail and a constant complement floor carrying unused discrete null budget forward.",
+      "evidence": "Exact null-expectation derivation plus exhaustive 5-of-20 timing calculations and clustered-stream stress test.",
+      "scope_guard": "Requires conditionally fresh candidate audits and fixed-discordant sign symmetry; does not repair adaptive reuse bias. Uses more of the global false-commit budget than prior conservative boosts."
+    },
+    {
+      "candidate_id": "eval-g1-horizon-spend-tail-floor-v1",
+      "mechanism": "Choose the tail threshold as a predictable function of remaining horizon and current off-query wealth, conservative early and more aggressive near deadline.",
+      "evidence": "Finite-grid Bellman recurrence and exact r=20 timing enumeration; tested survival path approximately k17 for 15 opportunities then k16 for 5.",
+      "scope_guard": "Power optimality depends on the stylized alternative/prior; validity does not. Needs robust/minimax calibration before operational recommendation."
+    },
+    {
+      "candidate_id": "eval-g1-audit-depth-is-timing-control-v1",
+      "mechanism": "Treat fixed discordant count r as a decision variable jointly with tail threshold; larger r is cheap when true improvements arrive early but expensive under long null prefixes or late improvements.",
+      "evidence": "r=10/20/30/50 exact power plus expected inverse-sampling cost calculations at discordance rho=.4.",
+      "scope_guard": "Expected cost uses a fixed rho=.4 and ignores wall-clock/tool parallelism; low-rho tails can be much worse."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'pointwise e-value boosting is the only safe way to improve SeqE-Guard power.' A candidate-level e-value may be redesigned from its fresh sufficient statistic as long as conditional null expectation is <=1; deliberately shrinking non-decision-relevant mid-range values can preserve future query-path wealth.",
+    "Rejected: 'single-test exact-level randomization is automatically best in a repeated commit stream.' Spending all discrete slack on the current boundary can erase the complement floor and harm future opportunities.",
+    "Rejected: 'using nearly the full FWER budget early maximizes lifetime power.' k15/k16 are excellent for front-loaded improvements but exhibit severe late-signal collapse despite all-null FWER remaining near .05.",
+    "Narrowed: 'floor boosting cannot solve delayed signals.' A floor-only transform of a fixed raw e-value was insufficient, but a coupled rejection-tail plus floor redesign can remove most tested timing collapse by changing where null expectation is spent.",
+    "Narrowed: 'larger r is always more expensive.' Under early strong improvements, r=30-50 can reduce expected total paired observations through much faster termination; under all-null/late regimes it is substantially more expensive."
+  ],
+  "operational_note": {
+    "accidental_nonsemantic_mutation": "A branch named tmp-eval-noop was accidentally created at current note main during tool routing. No commits/content were added to that branch and it does not affect main or semantic state. The currently exposed connector does not provide branch deletion, so cleanup remains a nonsemantic repository-maintenance item outside this checkpoint's research conclusions."
+  },
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Solve a robust/minimax version of the tail-floor horizon policy over uncertain q_good and candidate-timing distributions. Compare fixed k17, 15xk17+5xk16, prior-weighted Bellman, and a least-favorable timing/effect mixture while keeping each emitted e-value conditionally valid."
+    },
+    {
+      "priority": 2,
+      "action": "Jointly optimize discordant depth r and tail threshold k under a total paired-task budget. Allow r to vary predictably by horizon/wealth and derive whether switching from cheap r=10 scanning to deeper r=30 confirmation dominates fixed r. Include rho uncertainty and negative-binomial tail risk, not only mean cost."
+    },
+    {
+      "priority": 3,
+      "action": "Formalize the dynamic value of discrete nonrandomization: compare deterministic slack-recycling tail-floor, boundary-randomized exact tests, raw likelihood-ratio e-values, and query-path boosts under identical lifetime-FWER and deadline utility. Derive when spending size slack now versus carrying it as e-wealth is optimal."
+    },
+    {
+      "priority": 4,
+      "action": "Remove inverse-sampling's random total cost by constructing fixed-total/censored paired audits that emit a conditionally valid candidate e-value with an analogous tail-floor decomposition uniformly over unknown discordance rate, or prove a meaningful impossibility/lower bound."
+    },
+    {
+      "priority": 5,
+      "action": "Inspect whether 2026 online compound-e-value/donation constructions can be adapted to the lifetime-FWER strict-commit objective without weakening to FDR/SupFDR; keep candidate-freeze/fresh-audit validity separate from multiplicity power."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Derive a least-favorable/minimax tail-floor policy for 20 candidate opportunities with q_good in [0.60,0.80] and unknown placement of 1-5 true improvements, then compare worst-case true-commit probability and all-null FWER against fixed k17 and the 15xk17+5xk16 horizon-spend schedule."
+}
