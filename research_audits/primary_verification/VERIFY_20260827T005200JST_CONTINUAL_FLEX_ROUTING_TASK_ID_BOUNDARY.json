@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "audited_at": "2026-08-27T00:52:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "8cefe8832032e8e789a20b1bf6c66db5ac08df15",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_candidate": {
+    "sealed_worker_artifact": "research_workers_clean_g1/continual_learning/RUN_20260826T2104_JST.md",
+    "sealed_worker_blob": "d41f468c56f2aa858f46219ef0a4f3f9b73588fa",
+    "claim_family": "FLEX long-horizon task routing: train/eval task-identity assumptions and fail-open routing boundary"
+  },
+  "primary_sources": [
+    {
+      "kind": "paper",
+      "id": "arXiv:2608.01437",
+      "title": "Beyond Routing Saturation: A Long-Horizon Class-Incremental Perspective on Expert Routing in Multimodal Continual Instruction Tuning"
+    },
+    {
+      "kind": "code",
+      "repo": "RINC-CL/FLEX",
+      "commit": "ba5bbccbfbad4ab9ba2985a56930a814aa1076be",
+      "paths": [
+        "config/benchmarks/FLEX.py",
+        "config/methods/purelora.py",
+        "config/methods/purelora_ranpac.py",
+        "method/base/context.py",
+        "method/custom/purelora/integration.py",
+        "method/custom/purelora/routers/proof.py",
+        "backbone/shared/eval/inference_engine.py"
+      ]
+    }
+  ],
+  "mechanical_findings": [
+    {
+      "finding": "FLEX is explicitly a 34-task ordered benchmark in code. Each task carries cur_task, source_task_name/source_task_id, output_dir and previous_task metadata, so task boundaries and exact task identity are available to the training/orchestration layer.",
+      "scope": "Benchmark/config contract; this does not by itself imply oracle inference."
+    },
+    {
+      "finding": "PureLoRA training uses the CLContext task_id (or configured cur_task) to activate exactly that expert and to accumulate routing features into that exact task-indexed prototype/router class. The PROOF-style router likewise receives task_id and trains current-task features against target=task_id. Therefore routed methods are supervised task-as-class learners at training time, not unsupervised discovery of latent task identity.",
+      "scope": "Pinned PureLoRA/PROOF-style public routing paths."
+    },
+    {
+      "finding": "The ordinary PureLoRA configuration sets oracle_expert_routing=false. In non-oracle evaluation, on_input_prep computes routing weights from image/text features and uses eval_task_id only for routing-match accounting when usable routing features/logits exist.",
+      "scope": "This supports genuine feature-based unknown-task routing in the normal successful-feature path."
+    },
+    {
+      "finding": "However, the evaluation engine supplies eval_task_id to model loading and prepare_next_task; prepare_next_task sets model.current_task_id and invokes integration.prepare_for_new_task(eval_task_id). PureLoRA prepare_for_new_task sets self.cur_task to that ground-truth eval task and initializes a one-hot mixture for it.",
+      "scope": "Pinned shared evaluation engine plus PureLoRA integration."
+    },
+    {
+      "finding": "Several non-oracle router failure/empty-feature paths fall back to self.cur_task. Because evaluation has just set self.cur_task from the ground-truth eval_task_id, a missing routing tower/feature, empty classifier logits, unavailable prototype, or analogous fallback can become a ground-truth-task one-hot route even though oracle_expert_routing=false.",
+      "scope": "Source-reachable fail-open path. No claim is made here about how often it occurred in the paper's reported FLEX runs."
+    }
+  ],
+  "verdict": {
+    "status": "SUPPORTED_WITH_MATERIAL_FAIL_OPEN_ORACLE_FALLBACK_SCOPE_GUARD",
+    "summary": "The public FLEX routing stack is not simply oracle-routed: its normal non-oracle path predicts task/expert from image/text features, and oracle_expert_routing defaults false. But the evaluator still knows the ground-truth eval task and synchronizes it into current task state. Because non-oracle routing fallbacks use that current task, the public implementation has a source-reachable fail-open path in which routing failure reverts to the ground-truth expert. FLEX should therefore be described as supervised task-as-class routing with feature-based inference under successful routing-feature availability, not as a task-identity-sealed evaluator under all failure modes.",
+    "scope_corrections": [
+      "Do not call FLEX routing unsupervised task discovery: exact task labels/boundaries supervise router state during training.",
+      "Do not call the normal successful-feature path oracle routing: oracle_expert_routing is false by default and feature-derived weights are used when available.",
+      "Do not claim the reported paper gains are caused by the fail-open fallback without measuring fallback incidence in the exact released experiment logs.",
+      "For a strict unknown-task evaluation contract, ground-truth eval_task_id should be kept out of mutable routing state and used only after prediction for scoring; missing-feature/empty-logit cases should fail closed or use a task-agnostic fallback."
+    ]
+  },
+  "next_verification": "Rotate away from continual_learning. Inspect the sealed C15 namespace with the highest under-audited public-code/raw-artifact claim, prioritizing a direct replay or provenance falsification rather than another paper-only numeric check."
+}
