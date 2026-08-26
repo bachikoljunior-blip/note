@@ -50,38 +50,41 @@ Latest checkpoints in order:
 47. `2026-08-26T1701JST.md`
 48. `2026-08-26T1701JST-followup.md`
 49. `2026-08-26T1701JST-followup2.md`
+50. `2026-08-26T1701JST-followup3.md`
+51. `2026-08-26T1701JST-followup4.md`
 
 Read `STATE.md` for the accumulated base, then source-qualified checkpoints above in order as needed. Newest checkpoint supersedes older frontier wording where they conflict.
 
 ## Top unresolved frontier
 
-1. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only decision/batch-consumption/outcome; commit/readback before effect boundaries; conservative censoring.
-2. Replace mutable provider-batch `metadata.action_id` in authoritative learning evidence with immutable `ProposalBatchConsumptionEvent` joins. The minimal normal-runtime overwrite fixture is one model-like generation call that emits two distinct same-batch `REFINE_ARGUMENT` no-ops on the initial root.
-3. Make decision traces causally self-contained: current `cache_fill` knows batch but not node IDs, while `choice_set`/`action_selected` know nodes but omit batch/proposal identity. Decision/consumption events must persist explicit node↔batch↔proposal joins.
-4. Treat current `_finalize_kind()` loss of generator-supplied `target_step_ids` as a separate substrate defect/version; do not silently fix it inside epsilon=0 journaling experiments.
-5. Use a reducer-owned pure three-way structural preview `EFFECTFUL / NO_EFFECT / WOULD_ERROR`; executor records and zero execution cost are not evidence of semantic progress.
-6. Keep `baseline_frontier_eligible`, structural preview status, and `exploration_supported` separate. Epsilon=0 preserves D0 behavior; exploratory alternatives may use only the frozen safe/effectful subset.
-7. Freeze `SemanticRunProjectionV0` with substrate version, finalized proposal identity, effect status/reason and workspace-version transition; exclude journal-only IDs/timing.
-8. Execute C229-C238 overwrite/trace/target-step/preview regressions plus prior crash/replay F0–F7. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
-9. Logging policy and deterministic provider pilot remain frozen: D0 supported pool <=5, epsilon=1/4 when eventually enabled; pilot cap 200 tasks, 10,000 task bootstrap resamples, <=5pp 95% CI half-width, preserve G/E/A.
-10. Stage A proceeds only with sufficient precision and lower-CI execution-cost share >=10% in a primary dimension or lower-CI multi-action task rate >=25%; otherwise shift upstream to Stage B. Keep public-source search narrow and frontier nonempty.
+1. Implement/validate the causal SQLite journal before randomized policy/OPE collection: WAL + synchronous=FULL; append-only Decision/BatchConsumption/Outcome; commit/readback before effect boundaries; conservative censoring.
+2. Replace mutable provider-batch `metadata.action_id` with immutable physical provider events plus append-only `ProposalBatchConsumptionEventV0`; the minimal overwrite characterization is one model-like generation batch with two same-batch ghost `REFINE_ARGUMENT` no-ops.
+3. Make decisions causally self-contained: every choice row must persist explicit node↔batch↔finalized-proposal identity, baseline rank/admission, structural transition preview/support and exact rational propensity.
+4. Treat current `_finalize_kind()` loss of generator `target_step_ids` as a separate substrate defect/version. Do not silently fix it inside epsilon=0 journal instrumentation.
+5. Use reducer-owned pure mechanical transition reports `WOULD_MUTATE / WOULD_NOOP / WOULD_ERROR`, with stable reason codes and action-specific predicted version deltas. Mutation is not the same as mathematical progress.
+6. Freeze `ExecutionDecisionEventV0`, `ProposalBatchConsumptionEventV0`, `ExecutionOutcomeEventV0` and `SemanticRunProjectionV0` before randomized outcomes. Separate runtime node identity, semantic proposal hash and full envelope hash.
+7. Execute C229-C253 target-step/overwrite/trace/transition/journal regressions plus prior F0–F7 crash/replay/idempotence/RNG-isolation tests. Epsilon>0 remains forbidden until all pre-randomization contracts pass.
+8. Logging-policy v0 remains D0-ranked supported pool <=5, epsilon=1/4 with exact rational propensities once enabled; record the full baseline frontier even when exploration support is narrower.
+9. Deterministic provider pilot remains frozen after journal validation: task-hash order, cap 200 eligible tasks, 10,000 task bootstrap resamples, <=5pp 95% CI half-width, preserving generation/execution/assembly cost separation.
+10. Stage A proceeds only with sufficient precision and either lower-CI execution-cost share >=10% in a primary dimension or lower-CI multi-action-task rate >=25%; otherwise move upstream to Stage B generation/retrieval/model-routing control. Keep public-source search narrow and frontier nonempty.
 
 ## Newest synthesis
 
-- **C229–C233:** real controller finalization drops `target_step_ids`; this simplifies the overwrite regression to one provider batch/two ghost refines with one model-call budget, but target-step preservation must be separately versioned as a substrate fix.
-- **C234:** final trace is not currently sufficient to reconstruct node→batch causality: batch aggregate and selected nodes are emitted in different events without a durable join, while mutable ledger attribution loses earlier consumers.
-- **C235–C236:** `argument_records` and zero action-execution cost both conflate meaningful structural mutations with deterministic no-ops. Semantic effect must be an explicit Outcome field, not inferred from “executed” records or cheapness.
-- **C237:** the one-call fixture has clean event invariants: exactly one model batch, two selected refines, zero checker calls, and current final provider request/usage/charge attribution ending on node2.
-- **C238:** DecisionEvent v0 needs finalized proposal identity/body-or-content-address plus batch/source, branch/obligation versions, baseline rank/admission, preview/support and exact propensity; opaque node IDs alone are insufficient for replay/OPE.
+- **C229–C233:** real controller finalization drops `target_step_ids`; the overwrite regression reduces to one provider batch/two ghost refines with one model-call budget, while target-step preservation must be independently substrate-versioned.
+- **C234–C238:** current result traces cannot reconstruct node→batch causality and structural “executed” records/zero execution cost cannot distinguish mutation from no-op. Decision events therefore need explicit finalized proposal identity and batch/source joins.
+- **C239–C240:** successful DECOMPOSE advances the workspace by +2 whereas successful argument/representation transitions are +1. Preview status is renamed mechanically to `WOULD_MUTATE / WOULD_NOOP / WOULD_ERROR` so mutation is never conflated with usefulness.
+- **C241–C245:** preserve runtime node ID separately from a semantic proposal hash that excludes transport/cost metadata; the exact one-call two-refine characterization test, provider-event filter and shared reducer-preview architecture are fixed.
+- **C246:** ghost REFINE payloads pass proposal validation because argument payload validation checks alignment shape but not live-step existence/coverage; the reducer is where the no-hit becomes a no-op.
+- **C247–C253:** transition reason-code taxonomy and complete causal schemas are frozen: Decision committed before effect, BatchConsumption in the same transaction, Outcome after immediate execution truth, censored when Outcome is absent; semantic projection excludes journal-only mechanics and includes substrate/proposal/transition semantics.
 
 ## Exact continuation
 
-1. Freeze concrete Python code for the one-call two-refine generator/current+migrated regression, including provider metadata and exact event filters.
-2. Specify canonical finalized-proposal fingerprint and explicit node↔batch representation in DecisionEvent/ConsumptionEvent schemas.
-3. Design reducer-owned `StructuralEffectReport` plus preview/reducer parity tests, including deterministic decomposition errors and empty-payload current semantics.
-4. Add target-step-preservation as a separate substrate regression/version.
-5. Extend causal Decision/Outcome journal and `SemanticRunProjectionV0`, then run crash/replay, idempotence/conflict, epsilon=0 RNG isolation and effect-parity tests.
-6. Only after these pass, run the frozen deterministic provider pilot and Stage-A gate.
-7. Continue narrow public-source falsification/simplification searches and keep frontier nonempty. `2026-08-26T1701JST-followup2.md` is newest and is not global completion.
+1. Executable-validate the one-call two-refine current-code characterization and migrated immutable-batch/two-consumption-edge oracle at the real action-runtime seam.
+2. Implement/shared-test reducer transition preparation/report logic, especially DECOMPOSE +2 and duplicate/self-child deterministic errors.
+3. Implement journal tables, payload digests, uniqueness/conflict rules and C248–C251 commit ordering; run F0–F7 fault injection.
+4. Add target-step preservation as a separate substrate regression/version, not part of logging equivalence.
+5. Implement/freeze `SemanticRunProjectionV0` with semantic proposal hashes and immediate transition outcomes; verify epsilon=0 hard equivalence with independent logging RNG.
+6. Only after all pre-randomization tests pass, run the frozen deterministic provider pilot and apply the Stage-A gate; do not run epsilon>0 earlier.
+7. Continue only narrow public-source falsification/simplification searches and keep frontier nonempty. `2026-08-26T1701JST-followup4.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, or other-role receipts.
