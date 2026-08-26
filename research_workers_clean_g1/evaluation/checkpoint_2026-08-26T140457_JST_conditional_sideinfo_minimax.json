@@ -1,0 +1,145 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-26T14:04:57+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-26T131301_JST_fresh_q_mixture.json",
+  "inherits_prior_candidates": true,
+  "control": {
+    "frozen_main_sha": "496385107d27c71b3d0fce9749bf966dd47272df",
+    "root_control_revision": 9,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "later_main_sha_observed_transport_only": "d198f92a8e34f8e0e5a30a45699b84e6bcd70a1d",
+    "later_control_not_inspected_or_adopted": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_other_role_configs": false,
+    "read_shared_execution_ledger": false,
+    "feedback_status": "absent_404",
+    "semantic_inputs": ["own evaluation LATEST/checkpoint", "public sources", "sanitized DESIRED_STATE", "evaluation role config"],
+    "head_resolution": "SHA-only refs/heads/main; later head observation used only for transport/write safety."
+  },
+  "search_bias": "evaluation/verifiers; conditional paired-sign e-processes with task side information; shared-task heterogeneity; robust alternative uncertainty; finite-horizon minimax versus Bayes mixtures",
+  "public_sources": [
+    {
+      "title": "Sequential testing of conditionally constrained hypotheses",
+      "author": "Eugenio Clerico",
+      "date": "2026-06-04",
+      "url": "https://arxiv.org/abs/2606.06769",
+      "used_scope": "For nulls defined by finitely many conditional constraints, every e-process is pointwise dominated by a predictable product of affine one-step e-variables. The paper explicitly frames predictable affine factors as a lossless action class for conditional sequential testing; limitation: finitely many constraints."
+    },
+    {
+      "title": "Safe testing",
+      "authors": "Peter Grunwald; Rianne de Heide; Wouter Koolen",
+      "date": "2024-03-07",
+      "url": "https://doi.org/10.1093/jrsssb/qkae011",
+      "used_scope": "Conditional e-variables may be constructed just in time from all information available before the next outcome, including covariates, provided the conditional safety property holds; products then remain safe under optional continuation. The paper also warns that overlapping data cannot simply be multiplied as if fresh."
+    },
+    {
+      "title": "Strong duality for the GROW criterion",
+      "authors": "Ashwin Ram; Martin Larsson; Johannes Ruf; Aaditya Ramdas",
+      "date": "2026-06-23",
+      "url": "https://arxiv.org/abs/2606.24768",
+      "used_scope": "GROW gives a worst-case log-growth criterion against composite alternatives; bounded e-variables admit a general minimax strong-duality characterization. Used as theoretical support for treating transfer uncertainty as an explicit robust alternative set rather than a single point prediction."
+    },
+    {
+      "title": "Time-sensitive anytime-valid testing",
+      "authors": "Eugenio Clerico; Tobias Wegel; Iskander Azangulov; Patrick Rebeschini",
+      "date": "2026-05-07",
+      "url": "https://arxiv.org/abs/2605.06521",
+      "used_scope": "Finite-time utility and hard deadlines can favor policies different from asymptotic GRO; the optimal-control formulation depends on time and wealth, so worst-case log growth and reject-by-deadline utility should be measured separately."
+    }
+  ],
+  "new_derivations": {
+    "covariate_conditioned_paired_sign_factor": {
+      "setup": "For task t let Z_t be task-side information observed before paired labels/outcomes. Encode X_t=+1 for candidate-only success, -1 for incumbent-only success, 0 for concordance. Under the conditional sign null require P(X_t=+1 | F_{t-1}, Z_t) <= P(X_t=-1 | F_{t-1}, Z_t).",
+      "factor": "For any predictable b_t=b(F_{t-1},Z_t) in [0,1], e_t=1+b_t X_t is a conditional e-variable because E[e_t | F_{t-1},Z_t]=1+b_t(P(+)-P(-)) <= 1. Concordant tasks contribute factor 1. Equivalently q_bet=(1+b_t)/2 gives factors 2q_bet and 2(1-q_bet) on discordant signs.",
+      "consequence": "Task difficulty, benchmark family, cost class, or other pre-outcome covariates may safely choose the next bet and can absorb arbitrarily dependent/predictable task ordering, provided the sign-null is itself asserted conditional on those covariates. The Clerico complete-class result implies that for finitely constrained conditional nulls, searching beyond predictable affine one-step factors cannot improve pointwise testing power.",
+      "scope_guard": "This does not permit covariates computed from the fresh paired labels, post-outcome judge features, or task-selection signals that are descendants of the outcome being bet on. Nor does one candidate-level e-process solve multiplicity across an adaptive stream of candidates."
+    },
+    "finite_map_robust_log_growth": {
+      "setup": "Two pre-outcome task strata: low/high with frequencies .5/.5 and discordance rates .2/.6. Consider three alternative transfer maps for discordant candidate-win probabilities: correct=(.60,.80), flat=(.70,.70), inverted=(.80,.60).",
+      "minimax_grid": "Maximizing the minimum expected per-task log growth over q_low,q_high in [0.5001,0.8999] yielded approximately q_low=.79254, q_high=.60986 with worst-case expected log growth .025236 nats/task; expected log growth was essentially equalized across all three maps.",
+      "counterintuitive_result": "The robust solution is not the pointwise middle map. Because the high stratum is three times more likely to be discordant, minimax hedging allocates the stronger bet to the low-discordance stratum and a weaker bet to the high-discordance stratum to equalize regret across possible transfer inversions.",
+      "scope_guard": "This is a stylized two-stratum finite alternative set, not a general formula for arbitrary task distributions. If the robust alternative set includes the null q=.5 itself, worst-case positive log growth collapses to zero and pure maximin becomes too conservative without an additional utility/regret criterion."
+    },
+    "hierarchical_map_mixture": {
+      "construction": "Maintain three covariate-aware e-processes corresponding to the correct/flat/inverted transfer maps and average their wealth with protocol-fixed prior weights (equal weights in the stress test). This is a valid e-process because it is a fixed convex mixture of valid conditional e-processes; component wealth performs implicit posterior-like reweighting without post-hoc selecting the largest component.",
+      "interpretation": "Bayes-style map mixtures and GROW-style worst-case bets optimize different objectives. The mixture retains substantial average power under uncertainty, whereas the maximin bet buys a much flatter worst-case rejection profile at the cost of short-horizon resolution."
+    }
+  },
+  "worker_local_simulation": {
+    "design": "Monte Carlo paired-sign stream with threshold 1/alpha=20, alpha=.05. Task stratum high with probability .5; discordance rho_low=.2, rho_high=.6. Alternative maps correct=(q_low=.60,q_high=.80), flat=(.70,.70), inverted=(.80,.60). 60,000 trajectories per map/strategy/horizon; null checks 120,000 trajectories per horizon. Simulations are illustrative finite-grid stress tests, not external empirical evidence.",
+    "reject_by_horizon": {
+      "T20": {
+        "fixed_q75": {"correct":0.0760,"flat":0.04443,"inverted":0.02417,"average":0.04820,"worst":0.02417},
+        "equal_weight_map_mixture": {"correct":0.04612,"flat":0.02112,"inverted":0.01112,"average":0.02612,"worst":0.01112},
+        "minimax_log_growth": {"correct":0.00393,"flat":0.00372,"inverted":0.00397,"average":0.00387,"worst":0.00372}
+      },
+      "T50": {
+        "fixed_q75": {"correct":0.53485,"flat":0.35585,"inverted":0.21138,"average":0.36736,"worst":0.21138},
+        "equal_weight_map_mixture": {"correct":0.50362,"flat":0.28473,"inverted":0.15140,"average":0.31325,"worst":0.15140},
+        "minimax_log_growth": {"correct":0.19290,"flat":0.17638,"inverted":0.16128,"average":0.17686,"worst":0.16128}
+      },
+      "T100": {
+        "fixed_q75": {"correct":0.85633,"flat":0.65580,"inverted":0.42085,"average":0.64433,"worst":0.42085},
+        "equal_weight_map_mixture": {"correct":0.87252,"flat":0.63877,"inverted":0.44535,"average":0.65221,"worst":0.44535},
+        "minimax_log_growth": {"correct":0.55003,"flat":0.53527,"inverted":0.51763,"average":0.53431,"worst":0.51763}
+      }
+    },
+    "null_sanity": {
+      "iid_task_strata": {
+        "T20": {"fixed_q75":0.00273,"map_mixture":0.00114,"minimax":0.00019},
+        "T50": {"fixed_q75":0.02300,"map_mixture":0.01363,"minimax":0.00684},
+        "T100": {"fixed_q75":0.03478,"map_mixture":0.02711,"minimax":0.02178},
+        "T200": {"fixed_q75":0.04034,"map_mixture":0.03755,"minimax":0.03611}
+      },
+      "markov_task_difficulty_T200": {"covariate_oracle_process":0.03916,"fixed_q75":0.03928,"map_mixture":0.03724,"minimax":0.03627},
+      "interpretation": "All empirical crossing rates stayed below .05. The proof, not Monte Carlo, provides validity; the Markov difficulty check only catches implementation mistakes and illustrates that predictable dependence in task strata need not break a conditionally valid sign process."
+    }
+  },
+  "new_or_updated_candidate_findings": [
+    {
+      "candidate_id": "eval-g1-conditional-affine-sideinfo-gate-v1",
+      "mechanism": "Condition paired-sign validity on pre-outcome task covariates and choose each affine sign bet predictably from those covariates/history. Treat task difficulty as side information for bet allocation rather than as extra independent samples.",
+      "evidence": "Direct conditional-expectation derivation; Safe Testing just-in-time conditional e-variable rule; Clerico 2026 complete-class theorem for finitely constrained conditional hypotheses.",
+      "scope_guard": "Requires conditional sign-null after conditioning on every feature used to set the bet. Fresh labels/post-outcome features cannot enter before the factor is fixed."
+    },
+    {
+      "candidate_id": "eval-g1-transfer-map-mixture-v1",
+      "mechanism": "Represent uncertainty in pre-audit-to-fresh transfer as a protocol-fixed mixture over several covariate-effect maps, then let fresh component wealth reweight them implicitly.",
+      "evidence": "Convex-mixture e-process proof plus worker-local three-map stress test. At T=100 the map mixture had average reject-by-horizon .652 versus .644 for fixed q=.75, with worst-map .445 versus .421.",
+      "scope_guard": "Short-horizon results reversed: at T=20 fixed q=.75 had higher average/worst rejection than the equal-weight mixture. Prior/map support must be tuned on disjoint meta-data or otherwise safely accounted for."
+    },
+    {
+      "candidate_id": "eval-g1-grow-minimax-transfer-hedge-v1",
+      "mechanism": "Choose covariate-specific sign bets by maximizing worst-case expected log growth over a prespecified transfer-map uncertainty set.",
+      "evidence": "GROW theory motivates the criterion; worker-local grid equalized expected log growth across three transfer maps and gave the strongest worst-map T=100 rejection (.518) among tested uncertainty-aware strategies, but very weak T=20 rejection (~.004).",
+      "scope_guard": "Worst-case asymptotic log growth is not the same objective as reject-by-deadline utility. Use only when the ambiguity set and long-horizon robustness objective are genuinely appropriate."
+    }
+  ],
+  "rejected_or_narrowed_generalizations": [
+    "Rejected: 'shared task difficulty or predictable task ordering automatically invalidates paired-sign e-processes.' It need not: condition the sign null on pre-outcome covariates/history and use predictable affine factors. What matters is conditional validity, not i.i.d. task difficulty.",
+    "Rejected: 'a black-box complex e-process can exploit conditional task features better than predictable affine betting in this finite-constraint setting.' Clerico's complete-class result says every e-process is pointwise dominated by such a predictable affine product under the stated class.",
+    "Narrowed: 'minimax/GROW robustness is a safe default for short evaluation budgets.' In the stylized stress test it greatly reduced 20-task rejection despite strong worst-case 100-task behavior; finite-horizon utility must be evaluated separately.",
+    "Narrowed: 'Bayesian mixtures dominate fixed bets under model uncertainty.' Equal-weight map mixing improved the T=100 average and inverted-map performance but lost badly at T=20; mixture priors and deadline matter.",
+    "Rejected: 'any task feature can be used as side information.' Features influenced by the fresh labels/outcomes, post-hoc judge decisions, or outcome-adaptive task selection can violate the conditional sign constraint and must be gated out or explicitly modeled."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Derive a time-sensitive/minimax-regret policy for covariate-conditioned paired signs that optimizes reject-by-deadline or asymmetric harmful-commit utility over a transfer-map ambiguity set, rather than worst-case long-run log growth. Compare Bellman/REGROW-style policies with fixed convex map mixtures on 10-200 task horizons."},
+    {"priority":2,"action":"Introduce shared task difficulty across multiple candidate comparisons and formalize when current-task covariates are pre-outcome/predictable. Separate within-candidate conditional validity from run-level multiplicity under cross-candidate dependence; construct a counterexample where a post-outcome task feature breaks the e-process."},
+    {"priority":3,"action":"Move reused-development candidate evaluation from fixed-horizon e-values to actual anytime PACE paths. Include stopping time, running supremum and any returned metadata in the selectable transcript before applying selection/description-length corrections."},
+    {"priority":4,"action":"For repeated modification streams, compare run-level alpha spending, e-closed testing, and dependence-robust e-value multiple testing while keeping candidate-generation data adaptivity as a separate validity axis."},
+    {"priority":5,"action":"Build a disjoint-meta calibration protocol for transfer-map support/prior weights and report sensitivity to missing/inverted maps, task-family shift, discordance-rate shift, harmful-commit cost and unresolved decisions."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Solve a finite-horizon robust control problem for covariate-conditioned paired-sign betting under a small transfer-map ambiguity set, with explicit harmful-commit/unresolved costs, then add a post-outcome-side-information counterexample to pin down the filtration boundary before moving to cross-candidate multiplicity."
+}
