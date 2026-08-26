@@ -1,0 +1,116 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T05:03:12.934408+09:00",
+  "invocation_started_at": "2026-08-27T04:59:29+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T043050_JST_prelaunch_latency_ordering_validity.json",
+  "control": {
+    "frozen_main_sha": "57b44c6166ffc99fc3232b32dffa07376768c008",
+    "root_control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5,
+    "root_manifest_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a1f36343813191c8a0bdf63a24cc70426c50de33",
+    "semantic_freeze_observed": true,
+    "presemantic_sha_readbacks": ["57b44c6166ffc99fc3232b32dffa07376768c008","57b44c6166ffc99fc3232b32dffa07376768c008"]
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "own_feedback_missing_404": true
+  },
+  "public_sources": [
+    {
+      "title": "Scheduling LLM Inference with Uncertainty-Aware Output Length Predictions",
+      "date": "2026-04-01",
+      "url": "https://arxiv.org/abs/2604.00499",
+      "relevance": "Shows heavy-tailed stochastic decode length and motivates distribution/tail-aware physical scheduling rather than point-length scheduling; its serving objective favors SJF/TIE, which is intentionally distinguished here from fixed-prefix evaluation makespan."
+    },
+    {
+      "title": "Beyond Prediction: Tail-Aware Scheduling for LLM Inference",
+      "date": "2026-06-16",
+      "url": "https://arxiv.org/abs/2606.18431",
+      "relevance": "Shows prediction-driven size scheduling can be fragile under shift and memory pressure and motivates comparing predictor-based policies against prediction-free/tail-aware physical controls."
+    },
+    {
+      "title": "Longest Processing Time rule for identical parallel machines revisited",
+      "date": "2018-01-16",
+      "url": "https://arxiv.org/abs/1801.05489",
+      "relevance": "Provides classical makespan context for why a fixed-prefix evaluation scheduler may benefit from starting long critical jobs early rather than importing SJF intuition from throughput-oriented serving."
+    }
+  ],
+  "synthetic_model": {
+    "status": "Worker-local synthetic Monte Carlo only; not a deployment serving claim.",
+    "task_set_size": 128,
+    "slots": 32,
+    "max_statistically_revealed_pairs": 50,
+    "paired_sign_e_process": "+ factor 1.5, - factor 0.5, commit threshold 20",
+    "statistical_reveal_order": "uniform random precommitted order for fixed/two-layer policies; completed out-of-order pairs remain quarantined until the contiguous prefix is available",
+    "candidate_median_latency_scale": 2.0,
+    "pair_latency": "max(candidate-side latency, incumbent-side latency)",
+    "latency_model": "correlated lognormal, log sigma 1.2, shared latent-task component 0.45, plus independent 1% x10 side stragglers",
+    "predictor": "prelaunch X=D+Gaussian noise; lower X predicts shorter pair latency",
+    "two_layer_physical_policy": "statistical reveal order is never changed. Current frontier is always launch-priority. Remaining physical slots may choose jobs only inside positions [front, front+32+W), with W in {16,32,64}; predicted-long starts higher-X jobs first, predicted-short starts lower-X jobs first. Physical completion order never determines statistical inclusion.",
+    "occupancy": "effective occupancy counts launched pair-runtime consumed up to decision time assuming immediate cancellation; full-obligation occupancy counts full pair-runtime of every launched pair even if decision occurs first."
+  },
+  "representative_results": {
+    "simulation_trajectories": 3000,
+    "predictor_noise_sd": 0.75,
+    "mean_predictor_correlation_with_log_pair_latency": 0.5643,
+    "alternative": "paired sign q=0.75 independent of latency/predictor",
+    "fixed_launch": {"commit_rate":0.9227,"wall_q95":88.1198,"effective_occupancy_q95":766.2923,"full_obligation_occupancy_q95":884.6214},
+    "predicted_long_W16": {"commit_rate":0.9227,"wall_q95":88.1332,"wall_delta_pct":0.0153,"effective_occupancy_q95":435.2836,"effective_occupancy_delta_pct":-43.1961,"full_obligation_occupancy_q95":506.7626,"full_obligation_delta_pct":-42.7142},
+    "predicted_long_W32": {"commit_rate":0.9227,"wall_q95":88.2319,"wall_delta_pct":0.1272,"effective_occupancy_q95":521.5195,"effective_occupancy_delta_pct":-31.9425,"full_obligation_occupancy_q95":596.1322,"full_obligation_delta_pct":-32.6116},
+    "predicted_long_W64": {"commit_rate":0.9227,"wall_q95":89.4099,"wall_delta_pct":1.4640,"effective_occupancy_q95":686.2161,"effective_occupancy_delta_pct":-10.4498,"full_obligation_occupancy_q95":776.9089,"full_obligation_delta_pct":-12.1761},
+    "predicted_short_W16": {"commit_rate":0.9227,"wall_delta_pct":1.9934,"effective_occupancy_delta_pct":-43.1633,"full_obligation_delta_pct":-42.7142},
+    "predicted_short_W32": {"commit_rate":0.9227,"wall_delta_pct":3.1454,"effective_occupancy_delta_pct":-31.8361,"full_obligation_delta_pct":-32.6116},
+    "predicted_short_W64": {"commit_rate":0.9227,"wall_delta_pct":6.6669,"effective_occupancy_delta_pct":-10.3748,"full_obligation_delta_pct":-12.1234},
+    "predictor_sorted_statistical_order": {"commit_rate":0.9130,"wall_q95":27.3127,"wall_delta_pct":-69.0050,"effective_occupancy_delta_pct":-23.5363,"full_obligation_delta_pct":-12.4411,"interpretation":"Not a safe physical-only comparator: it changes which task signs enter the prefix and therefore changes the statistical sample under sign-latency dependence."}
+  },
+  "predictor_quality_robustness": {
+    "additional_trajectories_per_noise_level": 1000,
+    "noise_sd_to_mean_corr": {"3.0":0.2222,"1.5":0.3877,"0.35":0.6651},
+    "predicted_long_W16_wall_delta_pct": {"corr_0.22":-0.6273,"corr_0.39":-0.1166,"corr_0.67":0.1987},
+    "predicted_long_W16_effective_occupancy_delta_pct": {"corr_0.22":-41.5809,"corr_0.39":-41.7794,"corr_0.67":-41.2681},
+    "predicted_long_W16_full_obligation_delta_pct": {"corr_0.22":-45.9692,"corr_0.39":-44.9117,"corr_0.67":-43.1412},
+    "predicted_long_W32_wall_delta_pct": {"corr_0.22":-0.6273,"corr_0.39":0.2288,"corr_0.67":0.0000},
+    "predicted_long_W32_effective_occupancy_delta_pct": {"corr_0.22":-31.0645,"corr_0.39":-31.5613,"corr_0.67":-29.6655},
+    "interpretation": "Across the tested predictor qualities, bounded lookahead rather than prediction accuracy supplied most of the occupancy reduction; predicted-long was consistently no worse than predicted-short for fixed-prefix q95 wall in these cells."
+  },
+  "null_validity_check": {
+    "construction": "D is symmetric; marginal P(+)=0.5, but P(+|D)=logistic(-beta*D). Fast/low-D tasks favor candidate. Predictor noise sd=0.75. Twenty thousand independent task sets per beta.",
+    "beta_0.25": {"covariate_blind_random_statistical_order_false_commit":0.03850,"predictor_sorted_statistical_order_false_commit":0.14520},
+    "beta_0.5": {"covariate_blind_random_statistical_order_false_commit":0.03765,"predictor_sorted_statistical_order_false_commit":0.34465},
+    "two_layer_pathwise_result": "For fixed and all two-layer physical policies the revealed task/sign sequence is exactly the same pathwise because physical completion can delay but never select/reorder the precommitted statistical prefix. With no wall-time-dependent dropping/decision rule, commit/noncommit is therefore identical pathwise to the covariate-blind fixed statistical order; no Monte Carlo approximation is needed for this invariance.",
+    "key_result": "Physical scheduling can exploit latency predictions without inheriting the severe selection bias of predictor-sorted statistical inclusion, provided it never changes which task outcomes enter the test or their statistical reveal order."
+  },
+  "new_measurement_validity_rules": [
+    "Use a strict two-layer architecture: statistical inclusion/reveal order is covariate-blind unless the null is explicitly valid conditional on the ordering covariates; physical scheduling may use latency information only if completed results are quarantined until the precommitted statistical prefix is available.",
+    "Bound speculative lookahead. In this synthetic model, W=16 retained essentially the same q95 wall under predicted-long scheduling while cutting q95 effective and full-obligation occupancy by about 43%; unbounded/far-ahead speculation is not free even when it is statistically safe.",
+    "Do not import SJF intuition from serving directly into fixed-prefix evaluation. When the objective is contiguous-prefix completion rather than mean request latency, starting predicted-long or tail-risk critical jobs earlier can dominate predicted-short physical priority; the serving objective and evaluation objective must be separated.",
+    "Treat predictor-sorted statistical order as a different estimand/sampling design, not as a systems optimization. Its large wall-time gain can be entirely confounded with task reweighting and can invalidate a marginal sign-null.",
+    "Separate effective occupancy from full-obligation occupancy. Cancellation support materially changes resource cost even if statistical validity and wall time are unchanged.",
+    "The pathwise invariance result fails if hard deadlines, timeout-based dropping, completion-order acceptance, or cancellation determine which outcomes enter the test. Those mechanisms require their own validity analysis."
+  ],
+  "scope_guards": [
+    "All wall/occupancy values are synthetic normalized-time Monte Carlo and are not measurements of any deployed LLM stack.",
+    "The 3000-trajectory representative q95 values and 1000-trajectory predictor-quality cells have Monte Carlo uncertainty; the pathwise statistical-order invariance is exact for the stated simulator logic.",
+    "Predicted-long uses a noisy point score, not a calibrated latency distribution or upper-tail quantile; no claim is made that LPT is globally optimal for the actual online prefix-completion problem.",
+    "No result extends to GPU memory coupling, side-level slot reuse, preemption overhead, correlated candidate/incumbent service time beyond the synthetic model, or outcome-dependent launch/cancel rules.",
+    "The strong predictor-sorted false-commit inflation is an existence stress test, not evidence that real evaluation latency currently correlates with candidate advantage."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Replace point predicted-long priority with critical-prefix tail-risk scheduling: within a covariate-blind fixed statistical reveal order, prioritize jobs by a prelaunch upper-quantile/tail-risk latency score while keeping bounded W. Compare FIFO, predicted-long, tail-risk/UCB-like, and prediction-free age/soft-priority physical policies under predictor miscalibration and distribution shift."},
+    {"priority":2,"action":"Add a hard wall-clock deadline whose only safe output on expiry is unresolved; quantify resolved-by-deadline, q95 wall, effective/full occupancy and verify no timeout-based task dropping or result selection changes the statistical prefix."},
+    {"priority":3,"action":"Extend to side-level asynchronous candidate/incumbent slot reuse while preserving pair-level fixed reveal order; test whether launching long predicted sides earlier reduces pair max-latency and occupancy without sign-dependent cancellation."},
+    {"priority":4,"action":"Continue the separate covariate-conditional inference branch for cases where predictor-sorted statistical order is desired; require falsifiable conditional sign symmetry or explicit stratified/conditional e-processes rather than marginal fairness."}
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Simulate critical-prefix tail-risk physical scheduling with the statistical reveal order fixed and covariate-blind. Use W in {8,16,32,64}; compare FIFO, predicted-long point score, upper-quantile/tail-risk score and a prediction-free soft-priority baseline under calibrated, miscalibrated and shifted latency distributions. Add a hard wall deadline that returns unresolved only, report resolved-by-deadline plus q95 wall/effective/full occupancy, and confirm pathwise commit identity whenever no deadline is triggered."
+}
