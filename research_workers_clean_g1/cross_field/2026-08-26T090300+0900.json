@@ -1,0 +1,138 @@
+{
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 9,
+  "role_control_revision": 8,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "679a03671244ad269b7e084e4e0fad701e61982b",
+    "desired_state_blob": "2e1f998368a6848e737aa108c838edb4ad355cdb",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_main_sha_observed_for_write_safety_only": "9a8d1228e10bae24b5ac5b0229af20b2dc6c678b",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-26T080300+0900.json",
+  "started_local": "2026-08-26T09:02:50+09:00",
+  "checkpointed_local": "2026-08-26T09:03:00+09:00",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_sanitized_feedback": "not_found_404",
+    "note": "The semantic control tuple was frozen before reading role-local state or public sources. A later SHA-only head lookup observed a newer main for write safety only; no newer control semantics were read or adopted."
+  },
+  "checked_sources": [
+    {
+      "source": "Maxime Haddouche, Benjamin Guedj, Online PAC-Bayes Learning, NeurIPS 2022 / arXiv:2206.00024v2",
+      "url": "https://arxiv.org/html/2206.00024v2",
+      "result": "Primary-verified a direct answer for the past-only-prior frontier in generic online PAC-Bayes. The paper defines an online predictive prior sequence P_i with P_i measurable with respect to F_{i-1}; Theorem 2.3 permits these past-dependent priors and arbitrary evolving posterior kernels under bounded loss and dependent data. Corollary 3.1 gives a practical update trading current loss against KL(Q||P_i), and the special case P_i=previous posterior yields a sequential Gibbs/previous-posterior-as-prior update."
+    },
+    {
+      "source": "Maxime Haddouche, Otmane Sakhi, Sequential Off-Policy Learning with Logarithmic Smoothing, arXiv:2506.10664v2, 12 May 2026",
+      "url": "https://arxiv.org/html/2506.10664v2",
+      "result": "Primary-verified the crucial boundary: Theorem 3.2 is simultaneous over every update k and every posterior Q but explicitly assumes a data-independent reference prior P. Therefore the 2022 predictable-prior theorem cannot be silently imported into this off-policy theorem without a new derivation. The same theorem also directly yields deterministic-policy certification when Q is an atomic point mass that has positive prior mass."
+    },
+    {
+      "source": "Karampatziakis, Mineiro, Ramdas, Off-policy Confidence Sequences, arXiv:2102.09540",
+      "url": "https://arxiv.org/abs/2102.09540",
+      "result": "Primary abstract re-verifies nonparametric, nonasymptotic off-policy confidence sequences valid uniformly over time and arbitrary stopping for contextual bandit policy evaluation, including gated deployment. No direct multivariate/vector-valued off-policy theorem was found in this pass."
+    },
+    {
+      "source": "J. Jon Ryu, Gregory W. Wornell, Gambling-Based Confidence Sequences for Bounded Random Vectors, arXiv:2402.03683",
+      "url": "https://arxiv.org/abs/2402.03683",
+      "result": "Primary-verified a general time-uniform confidence-sequence construction for bounded multidimensional processes with E[Y_t|F_{t-1}]=mu. This supplies a possible reduction route for a frozen off-policy target's vector reward after importance weighting, but the paper is not itself an off-policy theorem and does not certify adaptive policy-family search."
+    },
+    {
+      "source": "Dziugaite, Hsu, Gharbieh, Arpino, Roy, On the Role of Data in PAC-Bayes Bounds, AISTATS 2021",
+      "url": "https://proceedings.mlr.press/v130/karolina-dziugaite21a.html",
+      "result": "Primary-verified that data-dependent priors can materially tighten PAC-Bayes bounds when the data used to construct the prior are excluded from the empirical-risk term; the paper reports cases where this changes a vacuous bound into a nonvacuous one. This is corroborating evidence for strict lineage separation, not a sequential off-policy result."
+    }
+  ],
+  "candidates_new": [
+    {
+      "id": "cf-g1-r31-predictable-past-prior",
+      "mechanism": "Learn or reuse a PAC-Bayes reference prior only from information available strictly before the current observation/batch. Represent the prior sequence P_i as F_{i-1}-measurable and update the next posterior against P_i, optionally using the previous posterior as the next prior when absolute-continuity support is preserved.",
+      "primary_sources": ["Haddouche & Guedj 2022, Theorem 2.3 and Corollary 3.1"],
+      "quantitative_or_formal_evidence": "The theorem explicitly permits past-dependent prior kernels P_i and arbitrary evolving posterior kernels for bounded losses and dependent data. In the previous-posterior special case, each update minimizes current expected loss plus KL(Q||Q_i)/lambda and remains an online predictive sequence. The source does not provide a universal numeric gain over a fixed prior; the benefit is a formal reduction of the relevant KL distance when past evidence predicts the next useful posterior.",
+      "scope": "Generic online PAC-Bayes with bounded loss; not directly an off-policy contextual-bandit theorem. The prior at time i must be measurable from F_{i-1}; same-current-batch prior learning is not free under this result.",
+      "failure_conditions": "A prior that adapts to the current evidence being certified can invalidate the guarantee. Support can collapse because the online predictive sequence requires an absolute-continuity chain. Under abrupt regime changes, previous-posterior priors may cause inertia. Most importantly, the 2026 sequential off-policy theorem currently fixes a data-independent P, so combining the two requires a new off-policy derivation.",
+      "transfer_hypothesis": "For iterative configuration optimization, allow the next evaluation prior to be shaped by completed earlier rounds, while freezing it before the new evidence arrives. This can lower complexity cost without a dedicated holdout purely for prior construction, but off-policy reuse should remain on the fixed-prior theorem until a predictable-prior OPE proof is available.",
+      "confidence": "high for generic online PAC-Bayes; medium-low for off-policy transfer until rederived"
+    },
+    {
+      "id": "cf-g1-r32-atomic-deterministic-offpolicy-certificate",
+      "mechanism": "Preassign positive atomic prior mass to each deployable deterministic configuration/policy. In the sequential off-policy PAC-Bayes bound choose the posterior Q as a point mass delta_theta on the selected configuration, making the posterior-induced policy exactly deterministic rather than a randomized mixture.",
+      "primary_sources": ["Haddouche & Sakhi 2026 v2, policy representation and Theorem 3.2", "standard PAC-Bayes/Occam discrete-prior identity"],
+      "quantitative_or_formal_evidence": "For an atomic prior P with P(theta)>0, KL(delta_theta||P)=log(1/P(theta)). Substituting Q=delta_theta into Theorem 3.2 gives a simultaneous-all-k deterministic-policy bound whose complexity penalty is [log(1/P(theta))+log(1/delta)]/[lambda (k+1)m]. With a uniform prior over M predeclared configurations this becomes log(M)/[lambda N] plus the confidence term.",
+      "scope": "Direct for finite/countable atomic configuration families that are represented by the theorem's predictor-policy mapping and remain in prior support. This is a derivation from the theorem rather than a separately named derandomization theorem.",
+      "failure_conditions": "A continuous prior gives infinite KL to an exact point mass. A newly invented configuration with zero prior mass is uncertified. Very large candidate dictionaries pay a log inverse prior-mass penalty. Adaptive expansion after seeing evidence needs preallocated countable mass or a new evaluation lineage/prior before using new evidence.",
+      "transfer_hypothesis": "Use an atomic codebook prior over concrete automation configurations, optionally weighted by description length or structural simplicity. This preserves deterministic deployment while retaining same-stream sequential PAC-Bayes certification and makes candidate-family growth pay an explicit code-length-like complexity cost.",
+      "confidence": "high for the mathematical specialization; medium for practical config-codebook design"
+    },
+    {
+      "id": "cf-g1-r33-frozen-vector-offpolicy-gate-by-reduction",
+      "mechanism": "For a frozen target policy and several bounded outcome coordinates, transform each logged interaction into a bounded vector-valued off-policy score and feed that vector process into a joint gambling-based confidence sequence rather than splitting alpha independently across coordinates.",
+      "primary_sources": ["Karampatziakis et al. 2021", "Ryu & Wornell 2024"],
+      "quantitative_or_formal_evidence": "Ryu & Wornell give time-uniform confidence sets for bounded vector processes with constant conditional mean. Standard importance weighting gives an unbiased target-policy reward vector when logging propensities/support are correct. The combination is therefore a plausible reduction for a fixed target under stationarity, but no dedicated off-policy multivariate theorem or matched sample-efficiency number versus scalar alpha splitting was found.",
+      "scope": "Frozen target policy, stationary target mean, correctly known/predictable propensities, and bounded vector score after any required weighting. If clipping is used, its induced bias/changed estimand must be explicitly handled rather than ignored.",
+      "failure_conditions": "Adaptive post-hoc target search is not covered by the generic vector theorem. Large importance weights may violate practical boundedness/tightness. Correlated outcomes can help joint geometry but no guaranteed sample saving was quantified here. Nonstationarity breaks the constant-mean premise unless the estimand is reformulated.",
+      "transfer_hypothesis": "For a frozen candidate batch, jointly monitor utility, contamination, reliability and cost as a vector certificate. Keep adaptive candidate generation outside this layer; only after freezing a candidate should the vector gate reuse its logged evidence under a validated off-policy score construction.",
+      "confidence": "medium for the reduction; low for claimed efficiency until directly benchmarked"
+    }
+  ],
+  "evidence_updates": [
+    {
+      "candidate": "cf-g1-r30-certificate-preserving-mixture-deployment",
+      "update": "The deterministic-deployment frontier is partially resolved for atomic candidate families. The 2026 sequential off-policy theorem already certifies every Q simultaneously; with an atomic prior, choosing Q=delta_theta directly certifies deterministic d_theta with finite penalty log(1/P(theta)). Randomized mixture deployment is only necessary when the useful deterministic member lacks positive prior mass or a continuous parameterization makes the point mass infinite-KL."
+    },
+    {
+      "candidate": "cf-g1-r28-sequential-offpolicy-pacbayes-same-stream",
+      "update": "Past-dependent priors are formally allowed by the older generic Online PAC-Bayes theorem, but the current sequential off-policy theorem still states a data-independent P. Therefore same-stream adaptive posterior search is verified, while same-stream off-policy certification with a learned predictable prior remains an open composition rather than an established corollary."
+    }
+  ],
+  "deferred_or_negative_evidence": [
+    {
+      "lead": "Because Online PAC-Bayes permits F_{i-1}-measurable priors, the 2026 sequential off-policy theorem automatically permits a previous-posterior prior.",
+      "evidence": "Not established. Theorem 3.2 of the sequential off-policy paper explicitly assumes a data-independent prior P even though it cites online PAC-Bayes tools.",
+      "reason": "A predictable-prior off-policy extension needs its own supermartingale/change-of-measure derivation before deployment."
+    },
+    {
+      "lead": "A deterministic config selected from a continuous PAC-Bayes posterior inherits the mixture certificate for free.",
+      "evidence": "False in general. A Dirac posterior against a continuous prior is typically singular/infinite-KL. The clean deterministic route found here relies on positive atomic prior mass.",
+      "reason": "Use an atomic/countable config prior, retain randomized mixture deployment, or add a separate deterministic re-evaluation certificate."
+    },
+    {
+      "lead": "A direct vector-valued off-policy confidence sequence under adaptive logging and adaptive policy-family search was found.",
+      "evidence": "Not found in this pass. Dedicated off-policy CS results are scalar/policy-difference oriented; the vector result found is generic for bounded constant-conditional-mean vector processes.",
+      "reason": "Treat vector off-policy inference as a fixed-target reduction candidate only until a direct theorem or full derivation is verified."
+    },
+    {
+      "lead": "Learning a data-dependent prior from any part of the same evidence is harmless if the prior helps compress the posterior.",
+      "evidence": "False without conditions. The verified online result requires P_i to be measurable before the current datum; the AISTATS data-dependent-prior result excludes prior-training data from the empirical-risk term.",
+      "reason": "Freeze prior lineage before the evidence it will certify, or pay a separately justified data-dependent-prior correction."
+    }
+  ],
+  "frontier": [
+    "Find or derive a sequential off-policy PAC-Bayes theorem with P_k measurable from F_{k-1}, preserving all-k/all-Q validity under predictable logging; quantify its complexity term versus the fixed-P theorem and identify support-collapse guards.",
+    "Turn the frozen-vector off-policy reduction into a complete theorem: define the exact bounded vector score, prove its conditional mean under predictable logging, handle clipping/bias explicitly, then benchmark joint vector confidence sets against scalar alpha splitting under correlated outcomes.",
+    "Develop an atomic/countable configuration prior for adaptive deterministic deployment: compare uniform finite dictionaries with description-length/code priors and specify how unsupported newly generated configs force a new prior/evaluation lineage.",
+    "Stress-test previous-posterior/predictable priors under abrupt drift and recurring regimes; search for change-point/restart mechanisms that regain adaptation without discarding valid old evidence unnecessarily.",
+    "Continue the heavy-tail branch: replace bounded/light-tail off-policy scores with robust e-process or truncation schemes while retaining deterministic atomic certification and explicit support coverage.",
+    "Formalize the layered architecture without crossing guarantees: prior-covered adaptive search -> support/coverage abstention -> deterministic atomic or mixture certificate -> frozen multi-coordinate gate -> anytime baseline-difference check -> pathwise hard shield."
+  ],
+  "termination_diagnostics": {
+    "report_readiness_detected": true,
+    "actions_taken_instead_of_stopping": [
+      "Resolved the past-only-prior question at the generic Online PAC-Bayes level and then checked the current off-policy theorem rather than assuming the results compose.",
+      "Derived and source-checked a deterministic atomic-posterior specialization of the sequential off-policy theorem, materially narrowing the mixture-versus-deterministic frontier.",
+      "Searched directly for multivariate off-policy confidence sequences; finding no dedicated theorem, downgraded the result to a fixed-target vector reduction and preserved the missing-proof frontier.",
+      "Maintained a nonempty frontier covering predictable-prior OPE, vector OPE, atomic code priors, drift, and heavy tails."
+    ],
+    "frontier_nonempty": true
+  },
+  "exact_next_action": "First attempt a predictable-prior extension of the 2026 sequential off-policy theorem by combining its LS supermartingale with an F_{k-1}-measurable prior kernel, checking whether conditional Donsker-Varadhan/Ville steps preserve the all-k/all-Q statement. In parallel, formalize the fixed-target vector off-policy score and verify the conditional-mean/boundedness assumptions needed by Ryu-Wornell. If either proof fails, identify the exact obstruction and fall back to frozen candidate lineages with atomic priors and separate scalar off-policy gates."
+}
