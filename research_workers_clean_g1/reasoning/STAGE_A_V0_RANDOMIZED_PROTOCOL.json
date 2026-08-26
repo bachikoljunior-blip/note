@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "protocol_id": "reasoning-stage-a-v0-epsilon",
+  "semantic_body_sha256": "b652eb8c686c8552d7494aba6333fdaa1fcf3b2828262ddb54ae54dc1370258d",
+  "hash_rule": "semantic_body_sha256 is SHA-256 of canonical UTF-8 JSON for this object with semantic_body_sha256 and hash_rule omitted, ensure_ascii=false, sort_keys=true, separators=(',', ':')",
+  "status": "precollection_frozen",
+  "parent_feature_manifest_id": "reasoning-stage-a-v0",
+  "parent_feature_manifest_semantic_sha256": "c1f8cacb3b8eedc8ed665869a378e9e71a7a36653fd3efa717c36cc940a81838",
+  "substrate_commit": "f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8",
+  "epsilon": 0.25,
+  "support_floor_design": 0.05,
+  "max_single_decision_importance_weight_design": 20.0,
+  "max_randomized_pool_size": 5,
+  "safe_action_kinds": [
+    "decompose",
+    "propose_argument",
+    "refine_argument",
+    "change_representation"
+  ],
+  "pool_rule": {
+    "baseline": "exact node selected by production select_admissible_action under frozen runtime config/snapshot",
+    "eligible": "candidate is in frozen current valid frontier AND effective_selection_allowed=true AND experiment_allowed=true AND action kind in safe_action_kinds",
+    "construction": "if baseline is eligible, take baseline plus up to four highest-ranked other eligible nodes in exact frozen production ranked order; canonical pool order for probabilities is baseline first then selected alternatives in ranked order",
+    "skip": "if baseline is not eligible or resulting pool size < 2, execute baseline deterministically with propensity 1.0"
+  },
+  "probability_rule": {
+    "baseline": "(1-epsilon)+epsilon/L",
+    "alternate": "epsilon/L",
+    "outside_pool": "0",
+    "target_policy_support": "v0 learned policy may assign non-baseline mass only to current randomized-pool members; otherwise deterministic baseline fallback is part of target/deployed policy"
+  },
+  "random_draw": {
+    "algorithm": "SHA-256 counterless deterministic uniform",
+    "seed_hex": "d6883da98913d6db740c50e54a49dcdd",
+    "message": "UTF-8 string protocol_id|run_id|decision_index|ranked_choice_sha256",
+    "u64": "unsigned big-endian integer of first 8 SHA-256 digest bytes",
+    "uniform": "(u64+0.5)/2^64",
+    "selection": "first cumulative-probability interval in canonical pool order containing uniform; last pool member absorbs floating-point rounding residue",
+    "log": "message components, exact ordered pool, exact probability vector, u64, uniform, chosen node, chosen propensity"
+  },
+  "support_reporting": {
+    "required": [
+      "decision_count",
+      "randomized_fraction",
+      "pool_size_distribution",
+      "minimum_nonzero_propensity",
+      "zero_support_target_mass",
+      "importance_weight_quantiles",
+      "decision_level_ESS",
+      "theorem_group_count_by_action_kind",
+      "theorem_group_weight_concentration",
+      "theorem_clustered_uncertainty"
+    ],
+    "ess_formula": "(sum w)^2 / sum(w^2)",
+    "zero_support_rule": "no OPE claim for target mass outside behavior support; v0 deploy/evaluation policy falls back to exact deterministic baseline there"
+  },
+  "change_control": "Any change to epsilon, safe_action_kinds, pool construction, seed, draw algorithm, probability formula, support floor, or fallback semantics creates a new protocol_id/version and requires re-baselining."
+}
