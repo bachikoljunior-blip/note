@@ -1,0 +1,118 @@
+{
+  "schema_version": 3,
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "certificate_id": "cf-g1-r76-i1-shell-1p1-direct-joint",
+  "status": "randomized_continuum_shell_certificate_not_machine_interval_verified",
+  "created_at": "2026-08-27T01:37:58+09:00",
+  "control_snapshot": {
+    "note_main_sha_frozen": "32d38bb8b56d4bcac8eccc89c2d584dfaa776a4e",
+    "desired_state_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "control_revision": 10,
+    "role_control_revision": 8,
+    "config_revision": 5
+  },
+  "design": {
+    "P": "N(0,1)",
+    "target_shell": "1 <= D_KL(Q||P) <= 1.1 for Gaussian Q=N(mu,r), mu>=0; mu<0 follows by global sign symmetry",
+    "T0": 700,
+    "g": 16,
+    "H": 48,
+    "burn_in": 16,
+    "individualized_states_for_scale": 3,
+    "alpha": 0.05,
+    "scale_weight": 0.3333333333333333,
+    "pi_1": 0.3690702464285426,
+    "pi_2": 0.1309297535714574,
+    "early_threshold_nats": 5.09111284555668,
+    "late_threshold_nats": 6.127438894105984,
+    "design_beta": 0.1,
+    "transport_target_pair_failure": 0.09
+  },
+  "exact_simulator": {
+    "candidate_identity": "logC=[lhat(U∪A)-lhat(U)-r_b(T)]+[lhat(V∪B)-lhat(V)-r_b(H)]-lhat(A∪B)",
+    "gaussian_mle_loglik": "lhat(S)=-|S|/2*[log(2*pi)+1+log(SSE(S)/|S|)]",
+    "snml_regret_increment": "d_n=(n+1)/2 log n - n/2 log(n-1) - 1/2 log(2e) + log Gamma((n-1)/2)-log Gamma(n/2); r_b(N)=sum_{n=b+1}^N d_n",
+    "joint_event": "both adjacent candidates fail their own weighted threshold on the same generated path",
+    "atomic_generation": "for offset x in 0..16 generate independent Gaussian sufficient statistics for U=P^16, A=P^(T-16), gap P^x, gap Q^(16-x), and three Q^16 blocks; aggregate sums and within-SSE exactly for early/late candidates"
+  },
+  "monte_carlo": {
+    "paths_per_anchor_offset": 4000,
+    "offsets": "all integers x=0..16",
+    "one_sided_clopper_pearson_delta_per_bound": 1e-8,
+    "stage1": {
+      "selection": "fixed before simulation: I in {1.00,1.01,...,1.10}; 101 equally spaced t values; at each I, log variance interpolates from the exact-level lower to upper variance root",
+      "anchor_count": 1111,
+      "rng": "numpy PCG64; per-offset seed 246810+x; common random numbers reused across fixed stage1 anchors",
+      "joint_CP_bound_count": 18887,
+      "max_anchor_offset_CP_upper": 0.04724202678202208,
+      "min_anchor_allowed_single_observation_KL_radius": 0.0003379891414668386,
+      "anchor_parameter_count_hash_sha256": "0b6fe0474ac14789ebfcffa8e136ead4a21850bd18b989133611b59bde6744ee"
+    },
+    "stage2": {
+      "selection": "after stage1 coverage only, choose one shell point from each uncovered potential rectangle then deduplicate to 1073 anchors; evaluate these selected locations using independent stage2 Monte Carlo randomness",
+      "anchor_count": 1073,
+      "rng": "numpy PCG64; per-offset seed 864209+x; independent of stage1 selection/evaluation randomness",
+      "joint_CP_bound_count": 18241,
+      "max_anchor_offset_CP_upper": 0.048478231656054284,
+      "min_anchor_allowed_single_observation_KL_radius": 0.00025349185610012894,
+      "anchor_parameter_count_hash_sha256": "ba92928ae9aa317e4fc5309c46d250bb935b08fdd7c62e6e5e13d13379a76962"
+    },
+    "total_joint_CP_bounds": 37128,
+    "simultaneous_monte_carlo_confidence_lower_bound_by_union_bound": 0.99962872,
+    "adaptivity_note": "stage2 locations are data-dependent on stage1, so stage2 CP evaluation deliberately uses independent randomness; conditional on stage1 selection the stage2 exact-binomial bounds remain valid, and the two stage error budgets are union-bounded"
+  },
+  "transport_and_continuum_cover": {
+    "gaussian_path_KL": "for target Q and anchor Qa at offset x, D(path_Q||path_Qa)=(64-x) D_KL(Q||Qa)",
+    "gaussian_single_observation_KL": "D_KL(N(mu,r)||N(ma,ra))=0.5[log(ra/r)+(r+(mu-ma)^2)/ra-1]",
+    "binary_data_processing": "if anchor CP gives p_a<=u<0.09, any target satisfying (64-x)D_KL(Q||Qa)<=kl(0.09||u) has target joint-pair failure <=0.09 at that offset",
+    "anchor_radius": "rho_a=min_x kl(0.09||u_ax)/(64-x)",
+    "cell_grid": {
+      "mu_intervals": 250,
+      "variance_intervals": 300,
+      "mu_edges": "linear on [0,sqrt(2.2)]",
+      "variance_edges": "geometric on [0.04253335688065968,4.760313534710804]",
+      "potential_shell_cells": 6353,
+      "stage1_uncovered_cells": 1117,
+      "final_uncovered_cells": 0
+    },
+    "cell_intersection_test": "D_P(mu,r)=0.5[mu^2+r-1-log r]. Its exact rectangle minimum uses mu_low and r clipped to 1; its maximum uses mu_high and the variance endpoint with larger r-1-log r. A rectangle is conservatively retained whenever min<=1.1 and max>=1.",
+    "cell_cover_test": "For fixed anchor Qa, D_KL(Q||Qa) is jointly convex in (mu,r), with diagonal Hessian entries 1/ra and 1/(2r^2). Hence its maximum on each retained rectangle is attained at a corner. A cell is certified when one anchor has all four corner divergences <=rho_a.",
+    "stage1_best_anchor_cells": 4799,
+    "stage2_best_anchor_cells": 1554,
+    "worst_cell_best_cover_ratio": 0.9919074072550138,
+    "minimum_absolute_single_observation_KL_slack_at_worst_ratio_cell": 0.000023533239940143336,
+    "worst_ratio_cell": {
+      "mu_interval": [0.6466925080747418,0.6526254668644184],
+      "variance_interval": [0.06606339331395246,0.06711051376590718],
+      "best_anchor_index_in_combined_stage_order": 1019,
+      "max_corner_KL": 0.002884464318039459,
+      "anchor_radius": 0.0029079975579796025
+    },
+    "result": "Conditional on the simultaneous CP event and the stated float64 geometry, every Gaussian Q in the full shell 1<=D_KL(Q||P)<=1.1, both mean signs by symmetry, has neighboring-pair threshold-failure probability <=0.09 for every discrete offset x=0..16 under the H=48/T0=700 scale."
+  },
+  "independent_engineering_stress": {
+    "status": "not part of the randomized certificate",
+    "grid": "21 information levels from 1 to 1.1 times 61 normalized log-variance directions times all 17 offsets",
+    "paths_per_point_offset": 5000,
+    "joint_event_evaluations": 108885000,
+    "rng": "independent PCG64 base seed 975310+x",
+    "worst_empirical_joint_failure": {
+      "rate": 0.0254,
+      "I": 1.0,
+      "variance": 3.8838065767716183,
+      "mu": 0.6877566229489116,
+      "offset": 16
+    },
+    "max_failure_by_I": [[1.0,0.0254],[1.005,0.0248],[1.01,0.0242],[1.015,0.0236],[1.02,0.0222],[1.025,0.0218],[1.03,0.0212],[1.035,0.0208],[1.04,0.0202],[1.045,0.0198],[1.05,0.0192],[1.055,0.0186],[1.06,0.0186],[1.065,0.0184],[1.07,0.018],[1.075,0.0178],[1.08,0.0176],[1.085,0.017],[1.09,0.0168],[1.095,0.0162],[1.1,0.0156]],
+    "paired_radial_check": "Across 31 normalized directions, all 17 offsets and 5000 common-random paths each, there were 0 cases out of 2,635,000 where the joint-failure event occurred at I=1.1 but not at I=1.0. This is engineering evidence only, not a monotonicity theorem."
+  },
+  "scope_and_limitations": [
+    "This closes only the first finite shell 1<=KL<=1.1 for Gaussian step changes, not all KL>=1.",
+    "The statistical Monte Carlo uncertainty is explicitly union-bounded, including the adaptive stage through independent stage2 evaluation.",
+    "The geometric cell/root arithmetic is ordinary float64 and has not yet been replaced by directed-rounding or interval arithmetic; therefore this is not machine-verified adoption-grade evidence.",
+    "No claim is made for heavy tails, non-Gaussian alternatives, within-sample changepoint mixtures, or other detector classes."
+  ],
+  "exact_next_action": "Extend the direct-joint shell cover outward from 1.1 using the same two-stage independent-Monte-Carlo construction, preferably in progressively wider KL shells until an analytic high-information tail bound can take over. In parallel replace float64 shell-intersection and corner-cover comparisons with directed-rounding/interval arithmetic. Only after full KL>=1 coverage is closed should the 9-state {3,3,3} bank be treated as a full-floor candidate; then repeat the radial construction for I_floor=0.5/H=96 and I_floor=0.25/H=192."
+}
