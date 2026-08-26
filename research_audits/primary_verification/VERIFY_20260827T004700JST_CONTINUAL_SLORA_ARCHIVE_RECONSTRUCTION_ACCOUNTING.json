@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "audited_at": "2026-08-27T00:47:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "8cefe8832032e8e789a20b1bf6c66db5ac08df15",
+    "root_control_revision": 10,
+    "root_control_blob": "025d0efc635aca01e0e25d293f40004d90dc663b",
+    "downstream_control_revision": 16,
+    "downstream_control_blob": "6ea7bf1cafad8881496223af968ffd7579d30814",
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "source_candidate": {
+    "sealed_worker_artifact": "research_workers_clean_g1/continual_learning/RUN_20260826T2104_JST.md",
+    "sealed_worker_blob": "d41f468c56f2aa858f46219ef0a4f3f9b73588fa",
+    "claim_family": "SLoRA active-state versus archive-state and reconstruction-cost accounting"
+  },
+  "primary_code": {
+    "repo": "alina1031/SLoRA",
+    "commit": "0faf15fd6562ed3e146e8733205f59ef9742ba0f",
+    "paths": [
+      "src/train/cl_train_slora.py",
+      "src/model/builder.py",
+      "scripts/train/my_run/slora_pre.sh",
+      "scripts/train/my_slurm/slora_pre.sh",
+      "scripts/eval/my_run/eval_cl_slora_pre.sh",
+      "README.md"
+    ]
+  },
+  "mechanical_findings": [
+    {
+      "finding": "Before task t>1, the released SLoRA-Pre trainer starts from the base model, iterates every prior order directory, loads each prior max.safetensors, and merges that denoised LoRA into the model with merge_and_unload before creating one fresh LoRA for the current task.",
+      "consequence": "Current trainable adapter count is constant with task count, but startup/reconstruction performs one historical-delta replay per prior task."
+    },
+    {
+      "finding": "The released evaluation builder similarly resolves all order* directories and sequentially loads/merges each denoised task delta before evaluation. There is no inference router or active historical adapter bank in this path.",
+      "consequence": "Deployed in-memory active routing state can be constant, while released reconstruction I/O and merge work grow approximately linearly in the number of retained task deltas."
+    },
+    {
+      "finding": "Each training order directory retains adapter_model.safetensors and additionally writes max.safetensors after denoising. The top-level training launcher uses eight tasks and LoRA rank 64 over q_proj, k_proj, v_proj, o_proj, up_proj, gate_proj and down_proj for Meta-Llama-3-8B-Instruct.",
+      "consequence": "The experiment's retained archive is not constant-size even though only one new LoRA is trainable at a time."
+    },
+    {
+      "finding": "The pinned repository contains no first-class training/evaluation path that serializes the fully merged continual model into a compact replacement checkpoint and then discards prior order directories. All public continual train/eval paths inspected reconstruct by replaying order directories.",
+      "consequence": "A compacted merged checkpoint is not a supported public lifecycle contract at this commit. A user could in principle add a full-model save after merge, but that is an untested adaptation and would trade the delta archive for a full backbone checkpoint rather than demonstrating a compact retained continual delta."
+    }
+  ],
+  "parameter_accounting": {
+    "released_example": "Meta-Llama-3-8B-Instruct, rank 64, 32 layers, hidden size 4096, intermediate size 14336, 8 KV heads / 32 attention heads; seven target projections per layer.",
+    "raw_lora_formula": "per linear module r*(in_dim+out_dim); sum over q,k,v,o,up,gate,down and all 32 layers",
+    "raw_lora_parameters_per_task": 167772160,
+    "nominal_raw_tensor_payload_per_task_bf16_or_fp16_mib": 320,
+    "eight_task_raw_tensor_payload_only_gib": 2.5,
+    "scope_note": "This is a parameter/tensor-payload calculation for the released example configuration, excluding safetensors metadata, configs, trainer/checkpoint state and the additional denoised max.safetensors files. The denoised file has adaptive per-module rank selected from candidate fractions and therefore requires actual run artifacts for an exact byte count."
+  },
+  "verdict": {
+    "status": "SUPPORTED_AND_QUANTIFIED_WITH_SCOPE_GUARD",
+    "summary": "The sealed worker's lifecycle distinction is supported. SLoRA's active trainable adapter and inference routing state need not grow with T, but the released reproducibility archive and the startup/evaluation reconstruction path do grow with T. For the public eight-task Llama-3-8B example, raw rank-64 adapter tensor payload alone is nominally about 320 MiB per task, or 2.5 GiB across eight task directories, before counting denoised copies and other files.",
+    "scope_corrections": [
+      "Do not describe SLoRA as constant-storage without specifying deployed active state versus retained experiment/archive state.",
+      "Do not describe the 2.5 GiB calculation as measured repository artifact bytes; it is a mechanically derived tensor-payload figure under the released example architecture/configuration.",
+      "Do not claim the method fundamentally requires replaying all task deltas forever. This audit establishes that the pinned public scripts do so and do not expose a supported compacted replacement path; a new implementation could change that lifecycle.",
+      "Do not count merge-and-unload as an inference router. It reconstructs one merged model before use."
+    ]
+  },
+  "next_verification": "Inspect the sealed FLEX claim from the same continual-learning artifact: pin the official RINC-CL/FLEX implementation and determine exactly what task-boundary information, fingerprint normalization, router calibration data, and task-correlated metadata are available at training and evaluation."
+}
