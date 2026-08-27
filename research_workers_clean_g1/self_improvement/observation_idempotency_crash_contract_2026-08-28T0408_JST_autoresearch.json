@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T04:08:00+09:00",
+  "frozen_control": {
+    "note_main_sha": "ab7d475334153c77932b30e91f2324a0abd17ac1",
+    "control_revision": 12,
+    "config_revision": 6
+  },
+  "candidate": {
+    "id": "hugoferreira-autoresearch-observe@6d77db4ffda09f01f6bc749d55e894b9d9099603",
+    "repository": "hugoferreira/autoresearch",
+    "revision": "6d77db4ffda09f01f6bc749d55e894b9d9099603",
+    "class": "real autoresearch observation/evidence lifecycle"
+  },
+  "observed": {
+    "steady_state_idempotency": {
+      "status": "implemented",
+      "scope": "current implementation attempt plus clean candidate ref/SHA and instrument; existing samples satisfy or top up the requested target unless --append is used",
+      "positive_features": [
+        "non-baseline observation requires a named candidate ref",
+        "worktree must be clean and HEAD must match the candidate ref",
+        "prior observations are filtered by attempt and candidate ref/SHA",
+        "stored samples are reused instead of blindly re-running once durable"
+      ]
+    },
+    "pre_execution_logical_query_prepare": {
+      "status": "not_observed",
+      "evidence": "runAndRecordObservationWithDecorator calls instrument.Run before allocating an observation ID or writing observation state"
+    },
+    "crash_window": {
+      "status": "present_by_code_order",
+      "window": "instrument/evaluator finishes after consuming the evaluation surface, but process dies before artifact/observation persistence",
+      "consequence": "next observe invocation sees insufficient durable samples and may run the same logical candidate/instrument evaluation again"
+    },
+    "logical_exactly_once_consumption": {
+      "status": "not_established",
+      "reason": "idempotency is derived from already-recorded observation/sample sufficiency rather than a stable pre-dispatch logical query record"
+    },
+    "hard_kill_fault_matrix": {
+      "status": "not_found_in_targeted_search",
+      "scope": "no claim of absence beyond inspected/searchable public revision"
+    }
+  },
+  "design_distinction": {
+    "steady_state_idempotency": "do not repeat work once a durable result exists",
+    "crash_atomicity": "if external/evaluation work completed but its local record did not, recovery must reconcile rather than consume the evaluation again",
+    "required_for_scarce_holdout": "both"
+  },
+  "composition_with_sequence_79": "AegisEvo provides a stable logical job ID/fencing above retries; hugoferreira/autoresearch provides strong candidate-snapshot-scoped sample reuse but exposes the same pre-record crash window because evaluator execution precedes logical result persistence. These are complementary evidence that stable identity must be created and charged before evaluation dispatch, not inferred after success.",
+  "next_falsifier": "Take an idempotent-by-default observe implementation and inject process death immediately after instrument completion but before WriteObservation. Verify whether restart consumes a second physical evaluation. Then add a stable pre-run logical observation/query ID plus provider receipt reconciliation and require identical logical/physical consumption under uninterrupted versus kill-resume execution."
+}
