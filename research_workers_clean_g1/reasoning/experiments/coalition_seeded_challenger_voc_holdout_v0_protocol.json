@@ -1,0 +1,59 @@
+{
+  "schema": "coalition_seeded_challenger_voc_holdout_v0_protocol",
+  "created_at": "2026-08-28T08:35:13+09:00",
+  "derived_only_from": ["experiments/coalition_seeded_challenger_voc_dev_v0_protocol.json", "experiments/coalition_seeded_challenger_voc_dev_v0_results.json"],
+  "frozen_semantic_control": {
+    "note_main_sha": "bacec85e03c37c8d4ed3944e1f5214f2fb3e26a8",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Untouched transfer confirmation for the incumbent-preserving sequential value-of-computation challenger derived on n=12 development only. C589/C590/C591 remain frozen and are not used for fitting, threshold choice, or this holdout.",
+  "holdout": {
+    "n": 14,
+    "families": {
+      "cubic": {"generator": "random_regular_graph", "degree": 3, "seeds": [887000,887001,887002,887003,887004,887005,887006,887007,887008,887009]},
+      "quartic": {"generator": "random_regular_graph", "degree": 4, "seeds": [887100,887101,887102,887103,887104,887105,887106,887107,887108,887109]},
+      "watts": {"generator": "watts_strogatz_graph", "k": 4, "p": 0.2, "seeds": [887200,887201,887202,887203,887204,887205,887206,887207,887208,887209]},
+      "erdos": {"generator": "erdos_renyi_graph", "p": 0.25, "seeds": [887300,887301,887302,887303,887304,887305,887306,887307,887308,887309]}
+    }
+  },
+  "search_contract": "Exactly the search_contract and seeded-start selection in coalition_seeded_challenger_voc_dev_v0_protocol.json, with corrected oracle semantics: Hamming-rank equality across variable orders and direct exhaustive truth comparison in each compiled order's own relabeled coordinates.",
+  "incumbent": "Complete the existing two-arm natural+RCM policy first and retain its verified final endpoint permanently.",
+  "challenger": "Independently search the seeded arm. Final output is min-live among the retained two-arm incumbent and every actually evaluated challenger endpoint. No challenger action can replace the incumbent with a worse endpoint.",
+  "frozen_sequential_policy": {
+    "name": "dev_high_recall_25_11_9",
+    "checkpoints": [0,64,128],
+    "thresholds": {"initial_best_gap_max": 25, "after64_best_gap_max": 11, "after128_best_gap_max": 9},
+    "gap": "best verified challenger live nodes observed so far minus final two-arm incumbent live nodes",
+    "execution": [
+      "Evaluate seeded initial order (challenger compile index 1). If it already beats incumbent, stop with that verified endpoint. Else if gap>25, stop with incumbent.",
+      "Otherwise continue challenger through at most compile index 65 (64 further BDD compilations), stopping immediately if any verified challenger endpoint beats incumbent. If exhausted, stop. If still active at index 65 and gap>11, stop with incumbent.",
+      "Otherwise continue through at most compile index 129, again stopping immediately on first verified endpoint that beats incumbent. If exhausted, stop. If still active at index 129 and gap>9, stop with incumbent.",
+      "Otherwise continue until first verified challenger endpoint beats incumbent or the seeded challenger is exhausted. Stop immediately at first certificate; do not continue merely to improve an already-better challenger endpoint."
+    ],
+    "all_challenger_BDD_compilations_charged": true,
+    "no_threshold_or_rule_change_after_holdout_outcomes": true
+  },
+  "comparators": {
+    "two_arm": "zero challenger cost; incumbent quality baseline",
+    "fixed64": "open challenger on every case; initial compile plus at most 64 further challenger compilations, stop immediately on first verified benefit certificate; otherwise return incumbent",
+    "fixed128": "same with at most 128 further challenger compilations",
+    "exhaustive_challenger": "evaluate full seeded challenger trajectory and return best verified endpoint among incumbent and all challenger endpoints; quality upper comparator for this fixed challenger search contract, not a deployment-cost baseline"
+  },
+  "co_primary_metrics": [
+    "Hard invariant: sequential final live nodes <= two-arm final live nodes for every case; any violation is an implementation failure.",
+    "Sequential total challenger compilations divided by exhaustive-challenger total challenger compilations.",
+    "Aggregate gain recovered = (two-arm live sum - sequential live sum) / (two-arm live sum - exhaustive-challenger live sum), when exhaustive gain is positive.",
+    "Missed-benefit regret versus exhaustive challenger in live nodes, both sum and max case.",
+    "Sequential vs fixed64/fixed128 at comparable challenger compute: report aggregate live and candidate compilations without post-hoc retuning."
+  ],
+  "predeclared_usefulness_rule": {
+    "hard_invariant_required": true,
+    "if_exhaustive_gain_positive": "useful transfer only if sequential recovers >=40% of exhaustive aggregate gain while using <=65% of exhaustive challenger compilations and achieves strictly positive aggregate gain over two-arm",
+    "if_exhaustive_gain_zero": "report no demonstrated value for optional seeded challenger on this holdout; do not reinterpret compute savings as reasoning gain"
+  },
+  "frozen_holdout_exclusion": ["C589","C590","C591"],
+  "scope": "Synthetic positive-monotone graph 2-CNF ROBDD ordering only. This confirmation tests an incumbent-preserving sequential challenger, not a general proof-search controller."
+}
