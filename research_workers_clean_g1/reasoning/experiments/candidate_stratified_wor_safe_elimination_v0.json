@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "protocol_id": "candidate_stratified_wor_safe_elimination_v0",
+  "created_at": "2026-08-28T00:13:00+09:00",
+  "status": "preregistered_before_outcomes",
+  "purpose": "Evaluate a candidate-targeted safe-demotion design that samples Shapley marginal contributions uniformly without replacement inside coalition-size strata, using small finite populations and time-uniform PPR confidence sequences.",
+  "design_origin": "Theory-driven follow-up after the preregistered permutation-WoR experiment showed valid but conservative rare-effect confidence bounds; this protocol is prospective for the present outcomes but not independent of that preceding observation.",
+  "frozen_semantic_control": {
+    "note_main_sha": "3b4965ab49c0c848983ee9d13c2e05fcd80a0b5e",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "game": {
+    "n_players": 10,
+    "minimal_supports": [[0,1],[2,3],[4,5],[6,7],[0,2,4,6,8,9]],
+    "monotone_binary": true,
+    "coalition_universe_size": 1024,
+    "target_players": [0,1,2,3,4,5,6,7,8,9],
+    "rare_interaction_players": [8,9],
+    "outcomes_not_computed_at_preregistration": true
+  },
+  "identity": "For target i, phi_i=(1/10)*sum_{k=0}^9 mu_{i,k}, where mu_{i,k} is the mean of Delta_i(S)=v(S union {i})-v(S) over all S subset N\\{i} of size k.",
+  "strata": {
+    "k": [0,1,2,3,4,5,6,7,8,9],
+    "population_sizes": [1,9,36,84,126,126,84,36,9,1],
+    "sampling": "For each target and stratum, draw predecessor coalitions uniformly without replacement using a seed-specific random permutation of the stratum population; no outcome-dependent resampling.",
+    "marginal_range": [0,1]
+  },
+  "allocation": {
+    "budget_unit": "unique coalition-value calls for one target candidate",
+    "budgets": [128,256,384,512,640,768,896,1024],
+    "total_marginal_samples": "floor(B/2)",
+    "why_exact": "For a fixed target, distinct predecessor coalitions exclude i and distinct successors include i, so sampled marginal edges have disjoint endpoint identities; each marginal sample costs exactly two unique coalition-value calls.",
+    "waterfill_rule": "Allocate samples one at a time to the non-full stratum with the smallest current sample count; break ties by smaller k. Continue until floor(B/2) samples are allocated or all 512 predecessor coalitions are exhausted.",
+    "outcome_independence": "Allocation counts depend only on B, k and stratum capacity, never on observed marginal values or sampled coalition identities."
+  },
+  "confidence": {
+    "method": "Waudby-Smith and Ramdas 2020 binary hypergeometric prior-posterior-ratio confidence sequence independently within each stratum",
+    "working_prior": {"family":"beta-binomial","a":1.0,"b":1.0},
+    "per_target_familywise_alpha": 0.05,
+    "per_stratum_alpha": 0.005,
+    "running_intersection": true,
+    "combined_upper": "U_i=(1/10)*sum_k U_{i,k}",
+    "simultaneity_scope": "For each target candidate separately, Bonferroni across 10 time-uniform stratum CSs gives familywise <=0.05. This protocol does not claim simultaneous 0.05 control across an unbounded sequence of different target candidates.",
+    "source": "Waudby-Smith & Ramdas, Confidence Sequences for Sampling Without Replacement, NeurIPS 2020, Theorem 2.1"
+  },
+  "point_estimate": "At every frozen budget here all 10 strata receive at least one sample; estimate phi_i as the equally weighted mean of the ten observed stratum sample means. A fully enumerated stratum uses its exact mean.",
+  "safe_elimination": {
+    "thresholds": [0.0,0.001,0.005],
+    "rule": "For target i, certify phi_i<=epsilon only when combined one-sided upper U_i<=epsilon or all 512 target marginals are exactly enumerated.",
+    "sampled_zero_is_never_authoritative": true,
+    "exact_zero": "Requires exact target marginal enumeration or a structural proof; epsilon-negligibility may stop earlier via the valid upper bound."
+  },
+  "seed_set": "0..999",
+  "metrics": [
+    "per-target point-estimate error and RMSE",
+    "rare-positive sampled-zero rate",
+    "per-target upper-bound coverage",
+    "false-elimination rate by epsilon",
+    "unique coalition-value cost to certification",
+    "stratum sample allocation at each budget",
+    "comparison against the global permutation-WoR protocol, explicitly noting that the present cost is per target candidate"
+  ],
+  "comparison_rules": {
+    "no_outcome_dependent_changes": true,
+    "exact_truth": "Compute exact Shapley only after this protocol is durable.",
+    "fairness_note": "Permutation-WoR amortizes one global coalition cache across estimates for all players; this candidate-targeted protocol spends its stated budget on one candidate. Compare them as alternatives for a single candidate-demotion decision, not as equal-cost all-player estimators."
+  },
+  "next_action": "Implement the fixed waterfill allocation and per-stratum PPR CS, validate each finite-population CS endpoint against brute-force tiny populations, then run seeds 0..999 at the frozen budget grid without changing any rule after outcomes."
+}
