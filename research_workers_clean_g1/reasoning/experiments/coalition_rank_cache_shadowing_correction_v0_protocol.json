@@ -1,0 +1,19 @@
+{
+  "schema":"coalition_rank_cache_shadowing_correction_v0_protocol",
+  "created_at":"2026-08-28T05:21:39.488013+09:00",
+  "frozen_semantic_control":{"note_main_sha":"79ca1416ce33c2b73f74f41ef284a6e4168bce32","desired_state_control_revision":12,"desired_state_blob":"5c91671e1470d0fa4e2a53f918493004dd3750c3","reasoning_config_revision":6,"reasoning_config_blob":"cc8b37410994561a016a72c467b25ff0582d6462"},
+  "defect":"In role-local ROBDD experiment code, `_rank`/`rankrec` stores its intended cache key in local variable `k=(u,level)` and later reuses the same Python variable name `k` as an enumerate loop index before `self.rank_cache[k]=...`. Nonterminal rank results are therefore stored under small integer loop indices rather than `(node,level)` tuples and are not memoized on subsequent recursive lookup. Terminal tuple keys remain unaffected. The recursion still computes exact vectors, but rank-cache-state counts and rank/runtime performance claims are invalid until corrected.",
+  "scope_audit":[
+    "Exact rank-vector values remain candidates for retention only if fixed-cache and buggy-cache evaluators agree against independent closed-form or fresh direct truth/count oracles.",
+    "ROBDD live/allocated node counts, candidate-compilation counts, accepted relocation moves, widths, rebuild counts and allocation/live ratios are computed outside rank-cache indexing and are not mechanically changed by this defect.",
+    "Any wall-clock result that included rank evaluation is downgraded to non-authoritative until a fixed-cache rerun on new or explicitly correction-scoped cells.",
+    "Any reported `rank_cache_states` from affected code is invalid."
+  ],
+  "predeclared_correction_tests":[
+    "Microreproduce shadowing: after ranking a nontrivial OBDD, buggy cache keys must include integers and omit most reachable nonterminal `(node,level)` keys; fixed cache must use tuple keys and visit/cache every reachable nonterminal path state needed by the recursion.",
+    "For constructed equivalence formulas m=4,6,8,10,12 under interleaved and blocked orders, buggy and fixed rank vectors must both equal closed-form `(1+z^2)^m`; compare only fixed-cache performance/cache metrics.",
+    "Rerun the relative rebuild-controller design with fixed rank memoization on a new holdout before making runtime comparisons; retain prior exactness/rebuild/allocation results only within their unaffected scope.",
+    "Do not overwrite old result artifacts; append correction evidence and supersede timing interpretations in newest checkpoint/LATEST."
+  ],
+  "scope":"Correction of local experiment instrumentation/performance accounting only; no semantic change to monotone-boundary theorem or proof-library authority."
+}
