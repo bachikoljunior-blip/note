@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T20:08:00+09:00",
+  "implementation": "research_workers_clean_g1/evaluation/durable_planned_slot_replay_monitor_2026-08-27.py",
+  "outer_cs": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_v3_warm_root_2026-08-27.py",
+  "stress": {
+    "seed": 202608273,
+    "campaigns": 80,
+    "blocks_per_campaign": 18,
+    "endpoint_checks": 1440,
+    "crashes_before_deadline": 1061,
+    "crashes_after_deadline": 379,
+    "duplicate_delivery_rejects": 660,
+    "late_delivery_rejects": 2638,
+    "max_recovery_endpoint_abs_diff": 0.0,
+    "threshold_decision_mismatches": 0,
+    "durable_state_roundtrip_mismatches": 0
+  },
+  "operational_model": [
+    "Each block freezes planned slot IDs, deadline, and B_cap before slot outcomes.",
+    "The monitor persists an ordered journal of closed {predictable_weight, block_score} summaries plus at most one active block.",
+    "Recovery rebuilds V3 by replaying closed summaries in order; V3 root caches are not scientific durable state.",
+    "If recovery occurs after the frozen active-block deadline, the active block closes immediately with every missing slot scored one.",
+    "Events arriving during simulated downtime are not retroactively recovered; they remain operational no-result and therefore fail closed.",
+    "Duplicate and late deliveries are rejected rather than replacing a previously accepted or failed planned-slot outcome."
+  ],
+  "conclusion": "Across the tested multi-block crash/restart campaigns, journal replay reproduced the uninterrupted durable post-recovery V3 endpoint exactly at all 1,440 checks and produced no threshold-decision or state-roundtrip mismatch.",
+  "scope_guards": [
+    "This validates deterministic replay/state-machine behavior under the tested crash model; it is not a proof against storage corruption or adversarial journal tampering.",
+    "The operational outage model intentionally changes which canonical results are available; equality is required between persisted/recovered execution and a direct execution under the same availability history, not against a hypothetical no-outage run.",
+    "Replay correctness does not strengthen the underlying V3 confidence-sequence theorem."
+  ]
+}
