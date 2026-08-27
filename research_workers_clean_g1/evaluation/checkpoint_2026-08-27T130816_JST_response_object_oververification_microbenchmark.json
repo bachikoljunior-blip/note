@@ -1,0 +1,146 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T13:08:16+09:00",
+  "invocation_started_at": "2026-08-27T13:02:33+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T120349_JST_minimal_decision_sufficient_statistic_verifier.json",
+  "control": {
+    "frozen_main_sha": "23764927a1067af99b7e17f407584c2429660389",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true,
+    "post_freeze_repository_writes_do_not_change_semantic_tuple": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "feedback_path_missing_404": true
+  },
+  "public_sources": [
+    {
+      "title": "vLLM issue #51187: batch-invariant concurrent workload has non-identical logprobs with identical emitted tokens",
+      "date": "2026-08-05",
+      "url": "https://github.com/vllm-project/vllm/issues/51187",
+      "observations": "With VLLM_BATCH_INVARIANT=1, Qwen3-0.6B, greedy temperature=0, seed=0, five byte-identical repeats produced 3 distinct response/logprob outputs at 44 co-resident sequences and 2 distinct outputs at 45. The issue reports 188 and 128 diverging (request, repeat-pair) observations respectively, max logprob deltas 4.685e-02 and 3.906e-02, and no emitted-token divergence at any position. A second server lifetime was fully reproducible, so the effect is intermittent and fingerprint/lifetime-specific."
+    },
+    {
+      "title": "vLLM issue #51290: TP>1 batch-invariance failure attributed to fused all-reduce + RMSNorm",
+      "date": "2026-08-06",
+      "url": "https://github.com/vllm-project/vllm/issues/51290",
+      "observations": "Qwen2.5-7B-Instruct on H100, eight identical runs: TP=1 produced 1 distinct bit-exact output, TP=4 produced 8, and TP=4 with fuse_allreduce_rms=False returned to 1. The report states near-ties can change emitted tokens, showing that token stability is runtime-fingerprint dependent rather than implied by logprob-only mismatch observations."
+    },
+    {
+      "title": "vLLM Batch Invariance documentation",
+      "date": "2026-07-16",
+      "url": "https://docs.vllm.ai/en/stable/features/batch_invariance/",
+      "relevance": "Batch invariance is explicitly beta, is intended to make outputs independent of batch size/order, requires supported GPU/runtime conditions, and may trade performance for reproducibility."
+    },
+    {
+      "title": "LLM-42: Enabling Determinism in LLM Inference with Verified Speculation",
+      "date": "2026-01-25",
+      "url": "https://arxiv.org/abs/2601.17768",
+      "relevance": "Systems precedent for decode -> verify -> rollback before commit. The present checkpoint narrows the verifier target from token equality to the exact downstream decision statistic when that is sufficient."
+    }
+  ],
+  "main_result": {
+    "title": "A public vLLM failure trace gives direct empirical evidence that full response-object equality can massively over-verify relative to emitted-token and paired-decision equality; a reproducible microbenchmark was added to measure the hierarchy directly.",
+    "public_trace_derivation": {
+      "source": "vLLM issue #51187",
+      "repeat_pairs_per_request": 10,
+      "workload_44": {
+        "requests": 44,
+        "possible_request_repeat_pair_observations": 440,
+        "reported_logprob_response_divergences": 188,
+        "derived_response_object_mismatch_rate": 0.42727272727272725,
+        "reported_token_divergences": 0
+      },
+      "workload_45": {
+        "requests": 45,
+        "possible_request_repeat_pair_observations": 450,
+        "reported_logprob_response_divergences": 128,
+        "derived_response_object_mismatch_rate": 0.28444444444444444,
+        "reported_token_divergences": 0
+      },
+      "interpretation": "If the verified response object includes exact logprobs, 28.4%-42.7% of request/repeat-pair observations in these two reported workloads disagree while the emitted token sequence is identical. Any frozen deterministic scorer that depends only on emitted tokens/text therefore has score-bit mismatch 0 on the same trace, and any paired oriented-sign decision assembled solely from such unchanged score bits is also unchanged. This is direct evidence of over-verification for that exact observed trace, not a portable rate estimate.",
+      "scope_guard": "The issue is a public bug report rather than an independent reproduction; the author observed intermittency across server lifetimes. The derived denominator assumes the reported diverging (request, repeat-pair) counts range over all 44*10 and 45*10 comparisons described in the issue."
+    },
+    "contrastive_runtime_evidence": {
+      "source": "vLLM issue #51290",
+      "result": "A separate TP=4 configuration produced 8 distinct bit-exact outputs over 8 repeats and could change tokens on near-ties, while TP=1 and disabling fuse_allreduce_rms restored bit stability in the reported test.",
+      "implication": "Do not infer token/score/sign stability from a pooled logprob mismatch rate. The mismatch hierarchy must be measured per runtime/model/hardware/batching fingerprint."
+    },
+    "mismatch_hierarchy_refinement": {
+      "levels": [
+        "response object including decision-irrelevant metadata/logprobs",
+        "emitted token sequence / decoded text",
+        "per-side deterministic binary score bit",
+        "paired binary score pair",
+        "oriented ternary sign Z in {-1,0,+1}"
+      ],
+      "new_terminology_guard": "The previous symbol r_raw should be split when necessary. A response object containing logprobs/metadata can mismatch even when raw emitted text/tokens do not. Reports must specify the exact observable being hashed rather than saying only 'raw output'.",
+      "deterministic_mapping_relations": "For a frozen deterministic scorer, identical text implies identical score; identical score pairs imply identical oriented sign. Bit-pair mismatch can still preserve sign exactly through 00<->11 concordant swaps."
+    },
+    "reproducible_microbenchmark": {
+      "path": "research_workers_clean_g1/evaluation/decision_stat_mismatch_microbenchmark.py",
+      "blob": "0c124b891301d7d06d807bf2bef666677287035a",
+      "creation_commit": "af6c47576427d87321533872c9b0de890d40a92e",
+      "design": "Self-contained 16-question public-domain multiple-choice benchmark with candidate/incumbent prompt variants and a frozen deterministic first-match <answer>[A-D]</answer> scorer. collect records exact runtime fingerprint, response projection hash including logprobs, token/text hashes, binary scores, and earliest scorer-certificate token. compare reports response/token/text/score-pair/oriented-sign mismatch rates plus canonical instability and 00<->11 concordant swaps.",
+      "execution_status": "Script syntax and stdlib selftest were executed successfully in the local analysis environment before repository write. GPU/vLLM collection was not executable in the current automation environment, so no new live mismatch rates are claimed from this script yet.",
+      "why_publicly_reproducible": "The benchmark contains its own fixed questions, scorer, collection schema, runtime fingerprint fields, and compare logic; reproduction requires only a compatible public vLLM/model runtime for collect, while compare/selftest are stdlib-only."
+    },
+    "exact_early_certificate": {
+      "scorer": "first complete <answer>[A-D]</answer> tag; malformed/missing tag is incorrect",
+      "theorem": "For this frozen first-match scorer, once a complete valid answer tag appears in a canonical token prefix, no future suffix can change the parsed answer. Therefore the canonical score bit is exactly certified at the earliest prefix containing the first complete tag. For paired sign Z, Z is exactly fixed once both candidate and incumbent score bits have such certificates.",
+      "consequence": "A verify-before-reveal implementation can stop canonical replay after the decision certificate rather than after full natural-language completion, if no other downstream observer consumes the suffix. This can reduce verifier runtime in addition to reducing rollback frequency; the benchmark records certificate_token/full_tokens to measure the savings.",
+      "non_applicability": "The certificate does not hold for last-match parsers, free-form semantic judges, outputs whose later text can revise the scored state, or interactive/stateful environments unless the protected transcript also includes the relevant next-state transition."
+    }
+  },
+  "new_measurement_validity_rules": [
+    "Never report a single 'raw-output mismatch rate' without naming the exact observable. Distinguish response-object/logprob mismatch from emitted-token/text mismatch.",
+    "A high response-object mismatch rate can be decision-irrelevant. Measure the nested hierarchy response-object -> token/text -> score bits -> score pair -> oriented sign under the exact downstream scorer.",
+    "Stratify mismatch estimates by exact runtime/model/hardware/batching/fusion fingerprint. Do not pool across fingerprints and then use the pooled rate as a certificate for a rare or changed stratum.",
+    "For deterministic prefix-monotone scorers, verify the earliest exact decision certificate rather than full completion when downstream policy ignores the suffix.",
+    "Treat public bug-trace mismatch frequencies as scoped observations, not stable population rates, especially when the source itself reports intermittency across process lifetimes.",
+    "Do not infer oriented-sign stability from token stability in another runtime regime; TP/fusion changes can cross the token boundary even when a separate concurrency bug changed only logprobs."
+  ],
+  "scope_guards": [
+    "No O, other worker, downstream, legacy or aggregate-ledger state was used.",
+    "No GPU inference was performed in this run; the new microbenchmark has not yet produced local live-system mismatch estimates.",
+    "The 42.7% and 28.4% values are derived from one public issue's reported request/repeat-pair counts, not independent replication or universal vLLM rates.",
+    "The TP=4 issue demonstrates the possibility of token divergence in its tested configuration but does not provide enough information to estimate score-pair or oriented-sign mismatch for the benchmark scorer here.",
+    "The early-certificate theorem is exact only for the frozen first-match scorer and observer-closed policy described above."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Run the new microbenchmark on a GPU-enabled public vLLM setup in at least three exact fingerprints: default fast path, batch-invariant single-GPU/low-concurrency canonical path, and a stress path with larger concurrency or TP. Report r_response_object, r_tokens, r_text, r_score_pair, r_sign, certificate fraction, and canonical instability separately by fingerprint."
+    },
+    {
+      "priority": 2,
+      "action": "Add a public issue-fixture analyzer that encodes the #51187 aggregate counts and explicitly separates response-metadata mismatch from token mismatch, so the empirical over-verification example is machine-checkable without GPU access."
+    },
+    {
+      "priority": 3,
+      "action": "Extend exact early certificates beyond first-match multiple choice to JSON/schema structured outputs. Characterize which parsers are prefix-monotone and which require full termination or canonical state-transition verification."
+    },
+    {
+      "priority": 4,
+      "action": "For a runtime where token mismatches occur, measure how often token/text changes actually cross the deterministic scorer boundary and then the paired oriented-sign boundary. Quantify r_tokens-r_score and r_score_pair-r_sign rather than assuming either gap is small."
+    },
+    {
+      "priority": 5,
+      "action": "Extend the decision-certificate benchmark to stateful agent transitions by logging a canonical hash of the evaluator/environment next-state alongside Z, and test whether suffix differences can alter future state despite identical current sign."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Make the public #51187 aggregate observation machine-checkable inside the evaluation namespace and then search for or execute a GPU-accessible repeated-inference trace where emitted tokens differ, so the benchmark can empirically locate both the response->token and token->score/sign boundaries rather than only the first gap."
+}
