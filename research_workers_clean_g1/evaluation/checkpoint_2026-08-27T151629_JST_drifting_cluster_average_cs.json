@@ -1,0 +1,112 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T15:16:29+09:00",
+  "invocation_started_at": "2026-08-27T14:57:24+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T151121_JST_nested_cluster_cs_correction.json",
+  "control": {
+    "frozen_main_sha": "f8c877d2451933876ac5128b33c9070f60605511",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false
+  },
+  "main_result": {
+    "title": "Process-level rare-mismatch inference can remain anytime-valid under arbitrary cross-cluster mean drift by targeting the average conditional mean directly; a fixed bounded-mgf mixture keeps O(1/m) zero-mismatch resolution rather than paying a generic Hoeffding O(1/m^2) price.",
+    "artifact": {
+      "path": "research_workers_clean_g1/evaluation/cluster_average_conditional_mean_cs.py",
+      "blob": "958bd2d029355b19fb6149b28f223c1d9b21c1e3",
+      "creation_commit": "e48485fc80fb9ef2354f808a41129dc8db1d9016",
+      "estimand": "mu_bar_t = t^{-1} sum_{i<=t} E[Y_i | F_{i-1}]",
+      "cluster_contract": "one predeclared bounded Y_t in [0,1] per top-level process/workload/server-lifetime cluster; lower-level dependence may be arbitrary",
+      "default_lambdas": [0.125,0.25,0.5,1.0,2.0,4.0,8.0,16.0],
+      "default_weights": "uniform over the eight fixed lambda components"
+    },
+    "derivation": {
+      "convexity": "For lambda>0 and y in [0,1], exp(-lambda*y) <= 1-(1-exp(-lambda))*y.",
+      "component_supermartingale": "With a=1-exp(-lambda) and mu_i=E[Y_i|F_{i-1}], product_i exp(-lambda Y_i)/(1-a mu_i) is a nonnegative supermartingale.",
+      "average_reduction": "log(1-a x) is concave, so product_i(1-a mu_i) <= (1-a mu_bar_t)^t. Therefore exp(-lambda sum Y_i)/(1-a mu_bar_t)^t is pathwise upper-bounded by that supermartingale.",
+      "mixture": "A fixed convex mixture over lambda components remains upper-bounded by a nonnegative supermartingale. Ville therefore gives P(exists t: E_t(mu_bar_t)>=1/alpha)<=alpha.",
+      "confidence_endpoint": "The mixture is nondecreasing in candidate m, so binary-search inversion gives an anytime-valid upper endpoint for the time-varying average conditional mean itself, without assuming a constant p."
+    },
+    "why_this_matters": [
+      "A generic sub-Gaussian/Hoeffding mixture for drifting means would need roughly O(1/m^2) zero-mismatch clusters to certify a rare rate m. The bounded chord construction exploits Y in [0,1] and remains O(1/m) on the zero path.",
+      "This removes the need to choose between 'stable-p lease or no useful rare-rate certificate'. Time-varying conditional mismatch burden can be tracked directly as an average, provided the top-level cluster sequence itself is prospectively defined.",
+      "It also sharpens the earlier warning from average-mean testing literature: adaptive predictable bets that are valid for a per-time conditional-mean null need not remain valid for an average-conditional-mean null, but a fixed mixture can be designed to remain valid."
+    ],
+    "zero_mismatch_planning_alpha_0_05_default_mixture": [
+      {"tolerance":0.05,"clusters":73},
+      {"tolerance":0.02,"clusters":183},
+      {"tolerance":0.01,"clusters":368},
+      {"tolerance":0.005,"clusters":737},
+      {"tolerance":0.001,"clusters":3688}
+    ],
+    "comparison_to_stable_p_default_artifact": {
+      "zero_path": "At alpha=.05, stable-p nested betting needed 378 zero clusters for U<=1%, while the new drifting-average default mixture needs 368. This tiny difference is due to different fixed mixture grids, not a theorem that the drifting estimand is always easier.",
+      "sparse_mismatch_examples": [
+        {"clusters":400,"mismatching_clusters":1,"stable_p_upper":0.016456461784769616,"average_conditional_mean_upper":0.01826458266495089},
+        {"clusters":400,"mismatching_clusters":2,"stable_p_upper":0.021827578486717514,"average_conditional_mean_upper":0.02378431714152039},
+        {"clusters":800,"mismatching_clusters":1,"stable_p_upper":0.008258484777256516,"average_conditional_mean_upper":0.009166792695442506},
+        {"clusters":800,"mismatching_clusters":5,"stable_p_upper":0.017842444142906377,"average_conditional_mean_upper":0.01878973357011169}
+      ],
+      "scope": "The stable-p values and drifting-average values use different default mixtures and different estimands. They are operational comparisons, not a dominance proof."
+    },
+    "implementation_sanity_not_proof": {
+      "simulation": "30,000 Bernoulli trajectories per pattern, 500 clusters, alpha=.05, evaluated crossing at the true running average conditional mean.",
+      "patterns": [
+        {"name":"sinusoidal p_t roughly .01-.019","ever_noncoverage":0.0284},
+        {"name":"step p_t .002 then .03","ever_noncoverage":0.028066666666666667},
+        {"name":"alternating p_t .001/.03","ever_noncoverage":0.0252}
+      ],
+      "interpretation": "All were below 5% in this implementation stress. Validity rests on the supermartingale domination derivation, not these simulations."
+    },
+    "external_alignment": {
+      "Chugg_Ramdas_2025": "arXiv:2512.21300 explicitly targets average conditional means of bounded variables with no stationarity assumption and derives variance-adaptive CSs.",
+      "average_mean_eprocess_warning": "A separate average-mean testing supplement distinguishes the stronger per-time conditional-mean null from the weaker running-average null and notes that fixed mixture strategies can be valid under both while arbitrary predictable betting strategies need not be."
+    }
+  },
+  "measurement_validity_rules": [
+    "If the operational quantity is average reliability across changing process lifetimes, estimate the average conditional mean directly rather than forcing a constant fingerprint rate.",
+    "Do not reuse an adaptive betting strategy merely because it was valid under a per-cluster stable-mean null; average-mean validity is a separate theorem/contract.",
+    "Fixed mixture components may be chosen from public or disjoint calibration before the current outcome, but selecting the lambda mixture after seeing the current cluster score is not free.",
+    "The top-level process/workload cluster remains the statistical unit; a drift-robust average-mean CS does not license request-level pseudoreplication."
+  ],
+  "scope_guards": [
+    "The new CS targets the equal-cluster average conditional mean, not a request-weighted average when cluster sizes differ.",
+    "It does not turn retrospectively selected process cells into a prospective sequence.",
+    "Default lambda weights were not optimized against the current public mismatch outcomes.",
+    "No forbidden semantic inputs were read."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Compare the new fixed bounded-mixture average CS against the 2025 Chugg-Ramdas variance-adaptive average-conditional-mean CS on rare zero/sparse mismatch streams, emphasizing finite-sample 0.1%-5% upper endpoints rather than generic width."
+    },
+    {
+      "priority": 2,
+      "action": "Build a process/server-lifetime fingerprint lease state machine that chooses stable-p versus drifting-average inference based only on pre-outcome configuration/stability evidence and never resets lifetime error budget on reclassification."
+    },
+    {
+      "priority": 3,
+      "action": "Optimize a predeclared lambda mixture for rare mismatch tolerances under a robust prior over zero/sparse cluster failures and check worst-case delay under occasional mismatches."
+    },
+    {
+      "priority": 4,
+      "action": "Continue public search for full repeated-output traces or explicit frozen scorer labels to resolve token-to-score/sign propagation."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Benchmark the new drifting-average CS against the Chugg-Ramdas 2025 empirical-Bernstein average-mean CS in the low-rate regime, then decide whether the more complex variance-adaptive method materially improves process-level rare-mismatch certification."
+}
