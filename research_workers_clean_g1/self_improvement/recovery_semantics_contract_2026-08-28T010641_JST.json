@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T01:06:41+09:00",
+  "frozen_control": {
+    "note_main_sha": "08db752917cade84312e77d755eb17ada884f4ee",
+    "control_revision": 12,
+    "config_revision": 6,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "purpose": "Source-bound decomposition of crash/restart semantics for persistent self-improvement controllers. Published/measured properties are separated from proposed self-improvement-specific extensions.",
+  "sources": [
+    {
+      "id": "resume_means_resume",
+      "type": "primary_paper",
+      "title": "Resume Means Resume: A Machine-Checked Conformance Contract for Checkpoint, Interrupt, and Resume Semantics in Workflow Persistence Layers",
+      "arxiv": "2608.03836v3",
+      "date": "2026-08-08",
+      "scope": "workflow persistence/resume semantics; deterministic fault harness including real SIGKILL; TLA+/TLAPS reference contract"
+    },
+    {
+      "id": "dart",
+      "type": "primary_paper",
+      "title": "DART: Semantic Recoverability for Structured Tool Agents",
+      "arxiv": "2605.23311v1",
+      "date": "2026-05-22",
+      "scope": "dependency/effect-aware semantic admissibility of rollback targets in structured tool agents"
+    },
+    {
+      "id": "crab",
+      "type": "primary_paper",
+      "title": "Crab: A Semantics-Aware Checkpoint/Restore Runtime for Agent Sandboxes",
+      "arxiv": "2604.28138",
+      "date": "2026-04-30",
+      "scope": "OS/sandbox checkpoint granularity and recovery correctness below the agent/workflow semantic layer"
+    },
+    {
+      "id": "iterion",
+      "type": "public_implementation",
+      "repository": "SocialGouv/iterion",
+      "revision": "67ebb057914af6030d150b3ecadb6824731eeb0c",
+      "paths": [
+        "docs/resume.md",
+        "pkg/runtime/checkpoint.go",
+        "pkg/runtime/resume_failure_char_test.go"
+      ],
+      "scope": "durable run checkpoint state including accounting and public resume/rewind semantics"
+    }
+  ],
+  "layer_contracts": {
+    "resume_plane": {
+      "status": "published_and_fault_measured",
+      "source": "resume_means_resume",
+      "properties": {
+        "PC": "prefix continuation",
+        "EO": "effect exactly-once",
+        "FD": "fork determinism",
+        "CV": "checkpoint validity",
+        "CO": "consume-once",
+        "RD": "recovery determinism"
+      },
+      "evidence_boundary": "The paper separates ordinary exception probes from real SIGKILL and uses an external durable effect ledger. It reports that some framework/API resume semantics that look correct under interrupts become at-least-once under crash, and that consume-once can fail under concurrent cross-process resume. These are workflow/runtime semantics, not proof of self-improvement semantic validity."
+    },
+    "semantic_rollback_admissibility": {
+      "status": "published_matched_evidence",
+      "source": "dart",
+      "required_checks": [
+        "failed instance identified",
+        "candidate restore boundary stable",
+        "dependency scope admissible",
+        "no conflict with committed downstream work",
+        "effect policy permits replay/restore"
+      ],
+      "matched_results": [
+        {
+          "domain": "navigation",
+          "retry_only": {"success": 1.0, "replay": 18.0, "upstream_replay": 14.0, "latency_ms": 25752.95},
+          "coarse_state_retry": {"success": 1.0, "replay": 4.0, "latency_ms": 7013.64},
+          "component_entry_only": {"success": 0.0, "failure": "contract failure"},
+          "comp_frozen_latest_admissible": {"success": 1.0, "replay": 1.0, "latency_ms": 2527.10}
+        },
+        {
+          "domain": "schedule_form",
+          "retry_only": {"success": 1.0, "replay": 29.0, "upstream_replay": 24.0, "latency_ms": 34690.47},
+          "component_entry_only": {"success": 0.0, "failure": "no recovery"},
+          "comp_frozen_latest_admissible": {"success": 1.0, "replay": 1.0, "preserved_instances": 5, "latency_ms": 1141.17}
+        },
+        {
+          "domain": "diagnosis",
+          "retry_only": {"success": 1.0, "replay": 16.5, "upstream_replay": 10.5, "latency_ms": 21174.59},
+          "coarse_state_retry": {"success": 1.0, "replay": 5.0, "latency_ms": 5878.80},
+          "component_entry_only": {"success": 0.0, "failure": "no recovery"},
+          "comp_frozen_latest_admissible": {"success": 1.0, "replay": 2.0, "latency_ms": 2113.80}
+        }
+      ],
+      "scope_guard": "This supports semantic rollback selection under DART's reviewed dependency/effect policies. It does not establish a universal admissibility oracle or a common-budget self-improvement controller comparison including Continue and strategy redirect."
+    },
+    "sandbox_state_recovery": {
+      "status": "published_system_evidence",
+      "source": "crab",
+      "evidence": "Crab reports that more than 75% of turns produce no recovery-relevant sandbox state; semantics-aware checkpoint selection raises reported recovery correctness from 8% to 100%, cuts checkpoint traffic by up to 87%, and stays within 1.9% of fault-free execution time in its tested scope.",
+      "scope_guard": "This is below the workflow/controller semantic layer and does not decide which self-improvement lineage or rollback target is semantically admissible."
+    },
+    "controller_accounting_durability": {
+      "status": "public_implementation_and_unit_tested",
+      "source": "iterion",
+      "persisted_fields": [
+        "restart node and outputs",
+        "loop and round-robin counters",
+        "loop previous/current snapshots and budget marks",
+        "artifact versions",
+        "node recovery attempts",
+        "pending interaction/session state",
+        "tokens",
+        "cost",
+        "iterations",
+        "active duration",
+        "cumulative run spend"
+      ],
+      "implementation": "buildCheckpoint persists budget tokens/cost/iterations/elapsed/unpriced accounting plus CostUSDTotal; restoreBudgetAccounting restores consumed accounting on resume instead of granting a fresh allowance.",
+      "test": "TestResumeFromFailure_BudgetSpendRestored sets a workflow max cost of 1.0 and a checkpoint with 5.0 already spent; resume must fail BUDGET_EXCEEDED before the restart node executes, preserving failed_resumable state.",
+      "rewind_semantics": "Public documentation states rewind preserves budget accounting and loop counters, retains artifact versions and append-only event history, and uses CAS to avoid concurrent resume/rewind races.",
+      "important_limit": "The public checkpoint restores outputs/controller accounting, not arbitrary uncommitted workspace files; Git/persisted artifacts remain the durable workspace authority. No complete arbitrary-SIGKILL equivalence matrix over controller state was found in this run."
+    },
+    "evaluation_consumption_transaction": {
+      "status": "hypothesis_unvalidated",
+      "motivation": "Self-improvement consumes evaluation queries, emits selection feedback, spends statistical risk/wealth and may promote or reject artifacts. Crash/retry can silently duplicate or refund these effects even when workspace/model state resumes correctly.",
+      "proposed_properties": [
+        "Every evaluation query has a durable unique id bound to candidate/incumbent artifact identities and evaluation snapshot.",
+        "Query issuance/score observation/feedback emission/statistical spend/promotion decision are monotone auditable state transitions.",
+        "A crash cannot invisibly reissue a consumed evaluation, erase an unfavorable score, refund query or error budget, or re-emit richer feedback without an explicit retry policy and audit record.",
+        "Resume/rewind preserves or explicitly invalidates evaluation-consumption state under a transaction id; selection-unused outer tests remain unconsumed until final evaluation.",
+        "Statistical candidate-local evidence and any cross-candidate spending are restored from durable state before further proposals are evaluated."
+      ],
+      "scope_guard": "This contract is a derived research hypothesis from the observed gap; it is not claimed as a published theorem or validated implementation."
+    }
+  },
+  "composition": {
+    "minimum_recovery_stack_hypothesis": [
+      "resume-plane conformance (PC/EO/FD/CV/CO/RD)",
+      "semantic rollback admissibility before choosing a restore target",
+      "durable monotone controller/accounting state",
+      "durable evaluation-consumption/statistical-spend state",
+      "immutable/versioned artifact identity and complete action chronology"
+    ],
+    "missing_whole_system": "No public real-LLM self-improvement system was confirmed in this run to combine all layers with kill injection across controller transaction phases, common-budget Continue/whole-restart/artifact-preserving-rewind/strategy-redirect comparison, and an outer test unused by selection/rollback/routing/stopping."
+  },
+  "next_falsification": {
+    "reference_run": "Execute uninterrupted controller lineage and record immutable artifacts, effects, budget, evaluation queries, statistical spend, action/proposal chronology and outer result.",
+    "kill_sweep": "Inject SIGKILL at each durable phase boundary and selected interior points, then resume from durable state only.",
+    "equivalence_checks": [
+      "external effect ledger",
+      "active artifact/node identity",
+      "lineage",
+      "controller phase",
+      "budget/spend",
+      "evaluation query ids and score-consumption ledger",
+      "selection-feedback emissions",
+      "statistical wealth/error spend",
+      "promotion/rollback state",
+      "pending tool/side-effect cursor",
+      "final outer result"
+    ]
+  }
+}
