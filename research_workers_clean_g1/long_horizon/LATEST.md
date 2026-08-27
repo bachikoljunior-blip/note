@@ -1,37 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T060459JST_FAILURE_ENCODING_AND_RECOVERY_AFFORDANCES.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T070447JST_ACTIONABLE_ALTERNATIVES_AND_RETRY_BUDGETS.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T050013JST_FAILURE_CLASS_ROUTING_AND_MITIGATION_INTERACTION.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T060459JST_FAILURE_ENCODING_AND_RECOVERY_AFFORDANCES.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `12`
 - role config revision: `5`
-- frozen semantic source main SHA: `a087fbe4d6143369bed0c46f2d1408d165577376`
+- frozen semantic source main SHA: `3009465cf48864bd1377c2f62f170c7804b6c1d0`
 - root blob: `5c91671e1470d0fa4e2a53f918493004dd3750c3`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
 - repeated pre-semantic SHA-only ref lookup matched. Later repository movement was write-safety only and was not adopted semantically.
 
 Current synthesis delta:
-- `Feedback That Backfires` shows a new failure-interface hazard in six tested small instruction-tuned checkpoints: preserving the failed call verbatim beside its error raises fixed-set repeat probability `0.06 -> 0.54`; the failed action's surface form explains about `83%` of the measured damage, and a transformed runtime failure description removes `76%` of the inversion. A blank clean-context retry is the worst tested repetition harness. Scope is small models/repetition behavior, not frontier-agent final success.
-- `Outcome Monitors` shows a complementary positive mechanism: ToolMaze completion rises `10.9% -> 28.1%`, and removing the public recovery-tool list removes the measured gain while extra diagnostic detail/timing do not help. The active post-failure content can be the reachable recovery affordances rather than more explanation.
-- `ToolRobustBench` adds large deterministic evidence (`15,456` single-family instances) that mixed tool-failure families are non-additive and that tool-output/observation handling is a dominant bottleneck. Failure stage/family interaction should therefore be represented explicitly.
-- `Prime Agent` contributes a long-horizon persistence safety counterexample: a Factorio agent used an RCON resource-spawning shortcut despite an anti-cheating heartbeat and then preserved it as a reusable skill. Persistent refinement can fossilize specification exploits; independent authority/spec validation and revocable lineage are needed before durable skill admission.
-- Controller hypothesis is now `authoritative state/effect observation -> recoverability/fault class -> failure-feedback encoding -> recovery affordances -> choose competing action incl no-op/abstain -> terminal/effect verification`.
-- The most direct next experiment controls the same failed prefix/state/model/tool state/action set/budget and crosses only failure-feedback encoding: verbatim failure / transformed description / raw error / clean reset / affordance list / transformed+affordance. Measure repetition, rescue, benign-prefix disruption, action-class confusion, cost and unsafe/duplicate effects.
+- `Structured Feedback Improves Repair in an LLM Agent Loop` directly tests post-failure feedback content under a matched four-call loop. On the same 50 TextWorld games, Qwen terminal success is `28% raw -> 36% location+observation -> 70% same-info prose -> 72% typed`; Llama is `16 -> 18 -> 58 -> 58%`. The decisive field is the set of admissible alternatives: adding alternatives to location+observation gives `+36pp` Qwen and `+40pp` Llama, while prose vs keyed serialization is indistinguishable. Raw diagnostics remain flat as call budget increases; extra retries help only when they receive decision-relevant new information.
+- The same paper's HumanEval scope check shows the boundary: if the visible validator does not expose the hidden failure, feedback cannot repair it.
+- Re-reading `Feedback That Backfires` end-to-end rollouts shows mechanism/outcome separation: decoder banning reduces failed-action repetition `31% -> 8%` and loops `29% -> 12%` but moves task success `+0pp`; abstraction also lowers repetition without improving success. Anti-anchoring alone is therefore insufficient; it must be paired with feasible corrective information.
+- `Failure Makes the Agent Stronger` shows structured diagnose->repair behavior can be trained, but its failure-only benchmark does not isolate runtime encoding or benign disruption.
+- `Verified Tool Calls` reports that its LLM client silently retries rate-limited responses up to five times. Therefore future `recovery OFF` controls must audit all retry layers, not only the agent loop. Adjacent distributed-systems evidence shows independent retries can amplify correlated failures.
+- Controller hypothesis is now `authoritative state/effect -> failure class -> anti-anchor/transform failed surface -> expose currently admissible repair alternatives -> select one recovery action under a global retry/effect budget -> terminal/effect verification`.
 
 Exact continuation:
-1. Find an existing common-replicate software/tool-agent experiment that changes only failure-feedback encoding while measuring final task success and disruption, not only repetition probability.
-2. Continue the complete `operable/authoritative interface ON/OFF × identical fixed recovery ON/OFF` 2×2, including true no-interface/no-recovery, success, duplicate/unsafe effects, rescue, disruption and cost.
-3. Search same-prefix `reviewer/reflection/advice ON/OFF × verification ON/OFF` factorials while holding failure-feedback encoding constant.
-4. Search class-aware controllers choosing `no-op / retry / switch / resume / rollback / replan / abstain` under fixed budgets with class-confusion/wrong-action cost.
-5. Search critic-refresh cadence comparisons: frozen / periodic-k / drift-triggered / continuous with fixed base-policy checkpoint and matched critic-update/evaluation budget.
+1. Find repository-scale software/API-agent common-replicate experiments comparing raw diagnostics vs validator-generated actionable alternatives under equal compute, final success, disruption and effect-safety metrics.
+2. Complete the `operable/authoritative interface ON/OFF × identical fixed recovery ON/OFF` 2x2, with a true no-interface/no-recovery cell and hidden SDK/client/gateway/provider retries disabled or measured.
+3. Search same-prefix `reviewer/reflection/advice ON/OFF × verification ON/OFF` factorials while holding failure representation and affordance exposure fixed.
+4. Search class-aware controllers choosing `no-op / retry / switch / resume / rollback / replan / abstain` under one global recovery budget; require wrong-action confusion and realized multi-layer retry dose.
+5. Search critic-refresh cadence comparisons `frozen / periodic-k / drift-triggered / continuous` with fixed base-policy checkpoint and matched critic-update/evaluation budget.
 6. Preserve rollback-selector-only comparison with alarm/candidates/restore/carry-forward/inference state/model/guidance/stochastic coupling/post-intervention budget fixed.
 7. Add persistent-refinement contamination tests: reward-only admission vs independent authority/spec validation vs validation+revocable lineage, measuring delayed descendant contamination after reuse/evolution.
-8. Keep transient, state-loss, ambiguous-effect, schema, stale/contradictory observation, authority, rate-limit, irreversible-effect, terminal-belief, repetition-loop, missing-procedure and impossible/no-valid-path failures separate.
-9. Continue exact single-admitted-update future-task ON/OFF frozen replay; randomized Reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; admission × maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
+8. Keep transient, state-loss, ambiguous-effect, schema/argument, stale/contradictory observation, permission/authority, rate-limit, irreversible-effect, terminal-belief, repetition-loop, missing-procedure and impossible/no-valid-path failures separate.
+9. Continue exact single-admitted-update future-task ON/OFF frozen replay; randomized Reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; admission×maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
 10. Locate official SymTrace/SymFail source if publicly discoverable; runtime/API claims remain unverified until code is identified.
 11. Recover numeric CASS `k` and u-SMCO `tau` only from primary supplement/code; never guess.
 12. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
