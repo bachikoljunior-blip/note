@@ -1,0 +1,42 @@
+{
+  "schema": "coalition_incremental_rebuild_controller_v2_protocol",
+  "created_at": "2026-08-28T05:18:33.284414+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "reason_for_v2": "V1 showed that an absolute allocated/live threshold of 4 is miscalibrated because fresh rebuilt managers themselves can have ratios above 4. V2 freezes relative-to-last-fresh triggers before new outcomes and uses new sizes/seeds.",
+  "holdout": {
+    "n_values": [11,13,15],
+    "seeds": [742011,742043,742079,742117],
+    "observation_budgets": {"11":400,"13":600,"15":800},
+    "game": "generated monotone simple game from subset-minimal random supports; new streams not used in V1",
+    "player": "seed mod n",
+    "observation_stream": "seeded sample without replacement"
+  },
+  "strategies": {
+    "always_incremental": "persistent incremental conjunction, no rebuild",
+    "periodic_32": "rebuild every 32 effective boundary changes since last rebuild",
+    "relative_1_5": "after an initialization fresh baseline at the first effective update, rebuild when current allocated/live ratio >= 1.5 times the ratio immediately after the previous fresh rebuild",
+    "relative_2_0": "same but multiplier 2.0",
+    "hybrid_relative2_or_64": "rebuild when relative multiplier reaches 2.0 or 64 effective updates since the previous rebuild"
+  },
+  "baseline_semantics": "For relative strategies the first effective boundary state is freshly rebuilt once as initialization, its allocated/live ratio is the baseline, and later rebuilds replace that baseline with the new fresh ratio. Initialization is reported separately and not counted as a trigger rebuild.",
+  "correctness_oracle": "At every effective update independently fresh-rebuild current reduced boundary and require exact full rank-vector equality for every strategy; oracle time excluded from strategy runtime.",
+  "cost_accounting": {
+    "primary": ["strategy update/rebuild/rank time", "trigger rebuild count", "cumulative nonterminal allocations"],
+    "memory_proxy": ["maximum current allocated/live ratio", "maximum ratio relative to last-fresh baseline", "maximum current allocated nonterminals"],
+    "reporting": "Keep runtime and memory separate; report cell-wise and aggregate comparisons to periodic_32 and always_incremental."
+  },
+  "predeclared_tests": [
+    "Zero exact-rank mismatches required.",
+    "Compare relative_1_5 and relative_2_0 trigger counts; a useful relative trigger should fire materially less than V1 absolute ratio_4 while lowering stale-state proxies versus always_incremental.",
+    "Compare relative_2_0 to periodic_32; report cell count of runtime and memory wins, without after-outcome scalarization.",
+    "Compare hybrid_relative2_or_64 to relative_2_0 to detect whether a periodic backstop catches long low-ratio drift.",
+    "No conclusion extends beyond these monotone-game streams or establishes asymptotic behavior."
+  ],
+  "scope": "Twelve new small monotone-game streams. Relative trigger multipliers are exploratory but frozen before V2 outcomes."
+}
