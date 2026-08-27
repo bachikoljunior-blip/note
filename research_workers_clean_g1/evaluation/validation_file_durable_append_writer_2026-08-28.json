@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_at": "2026-08-28T04:09:26.601196+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifact": "research_workers_clean_g1/evaluation/file_durable_append_writer_2026-08-28.py",
+  "artifact_blob_after_readback": "cb8f1555df59fef8dbee56f0f646a359d60adf35",
+  "paired_gate": "research_workers_clean_g1/evaluation/durable_launch_capability_gate_2026-08-28.py",
+  "result": {
+    "crash_boundaries": {
+      "after_append_before_fsync": {"failed_call_returned_no_capability": true, "exact_retry_succeeded": true, "slot_authorized_after_retry": true},
+      "after_fsync_before_readback": {"failed_call_returned_no_capability": true, "exact_retry_succeeded": true, "slot_authorized_after_retry": true},
+      "after_readback_before_return": {"failed_call_returned_no_capability": true, "exact_retry_succeeded": true, "slot_authorized_after_retry": true}
+    },
+    "partial_frame_length_bytes": 358,
+    "partial_nonempty_cuts_rejected_on_retry_before_repair": 357,
+    "empty_cut_treated_as_clean_prior_prefix_and_retried_safely": true,
+    "all_cut_cases_succeeded_after_external_truncate_to_verified_prior_prefix": 358,
+    "exact_uncertain_ack_retry_appended_no_duplicate_frame": true,
+    "exact_uncertain_ack_retry_reissued_identical_capability_in_deterministic_harness": true,
+    "stale_expected_before_cas_rejected": true
+  },
+  "validated_properties": [
+    "The concrete writer checks the complete current file bytes against expected_before before append; exact prior-frame bytes are the only idempotent retry exception.",
+    "An exact uncertain-ack retry fsyncs and readbacks the already-present expected frame instead of appending a duplicate.",
+    "No crash-injected call returned a LaunchCapability. A later retry issued one only after a successful fsync/readback path.",
+    "A nonempty torn frame fails the writer CAS and requires external recovery to the independently verified valid journal prefix before retry.",
+    "For first creation, file fsync is followed by parent-directory fsync before the acknowledgement is returned."
+  ],
+  "scope": [
+    "Crash injection was executed on a local POSIX-like filesystem in-process; it tests API/control-flow behavior around uncertain acknowledgement, not the physical persistence probability of a real power-loss/storage-controller failure.",
+    "The launch gate was exercised with the same deterministic injected adapter substrate as its prior contract validation because exact production repository siblings were not locally mountable in this runtime.",
+    "The writer is single-process/single-writer and whole-file CAS. It does not provide cross-process file locking, distributed consensus, or protection against a storage device that falsely acknowledges fsync.",
+    "Torn-tail repair is intentionally not performed by the writer because the writer cannot independently determine the scientific valid-prefix boundary; repair remains the framed journal recovery layer's responsibility."
+  ],
+  "frontier": [
+    "Run this concrete writer plus the persisted launch gate against the exact production durable adapter/V3/K-guard sibling files in one repository-local runtime.",
+    "Add cross-process writer fencing or an explicit single-writer lease if the actual launcher can have multiple OS processes; current whole-file CAS alone is not a mutual-exclusion primitive.",
+    "Wire launch execution so score generation itself receives/validates the LaunchCapability before starting, not only SLOT persistence afterward.",
+    "Crash-inject CLOSE fsync/readback plus report-exposure acknowledgement under the same concrete writer and production reporting snapshot implementation."
+  ],
+  "frontier_nonempty": true
+}
