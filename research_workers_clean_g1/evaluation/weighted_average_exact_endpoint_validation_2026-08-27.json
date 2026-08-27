@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T17:11:35+09:00",
+  "prototype": "research_workers_clean_g1/evaluation/weighted_average_exact_endpoint_2026-08-27.py",
+  "contract": {
+    "scores": "Y_i in [0,1]",
+    "weights": "0 < w_i <= 1, fixed before current Y_i",
+    "target": "m_t = sum_i w_i E[Y_i|F_{i-1}] / sum_i w_i",
+    "component": "E_lambda(m)=exp(-lambda sum_i w_i Y_i)/D_max(m)",
+    "envelope": "D_max(m)=max prod_i(1-(1-exp(-lambda w_i))*mu_i) subject to 0<=mu_i<=1 and sum_i w_i mu_i=Wm"
+  },
+  "implementation": {
+    "method": "Exact breakpoint/water-filling KKT solver. Precompute intervals in c where mu_i=clip(1/a_i-c/w_i,0,1). On an interval S(c)=C-Kc and log D_max(c)=B+K log c, so each envelope query is a segment lookup plus closed-form evaluation.",
+    "setup_complexity_per_lambda": "O(n log n)",
+    "log_dmax_query": "O(log n) after setup",
+    "endpoint_inversion": "monotone bisection over m using a fixed lambda mixture",
+    "fail_closed": ["nonfinite/out-of-range weight", "weight > predeclared normalized cap 1", "score outside [0,1]", "invalid alpha/mixture", "lost water-filling monotonicity"]
+  },
+  "randomized_validation": {
+    "kkt_and_internal_consistency": {
+      "cases": 20000,
+      "n_range": "2..79",
+      "weight_range": "log-uniform 0.01..1",
+      "lambda_range": "log-uniform 0.02..15",
+      "max_weighted_constraint_residual": 2.3501200985265314e-12,
+      "max_abs_logD_breakpoint_vs_direct_mu_formula": 2.660927034270344e-13,
+      "bound_failures": 0,
+      "kkt_failures": 0
+    },
+    "two_coordinate_direct_scalar_optimization": {
+      "cases": 3000,
+      "median_abs_logD_difference": 5.551115123125783e-16,
+      "p99_abs_logD_difference": 3.715837031958989e-08,
+      "max_abs_logD_difference": 1.7765759547927473e-06,
+      "interpretation": "Largest discrepancies occurred near active bounds and are compatible with bounded scalar optimizer tolerance; no counterexample to the KKT solution was found."
+    },
+    "small_multivariate_slsqp": {
+      "attempted_cases": 1000,
+      "solver_successes": 984,
+      "solver_nonconvergences": 16,
+      "water_filling_worse_than_successful_solver_by_more_than_1e-8": 0,
+      "median_signed_logD_advantage_vs_solver": 2.6922908347160046e-15,
+      "p99_abs_logD_difference": 2.722926180655743e-08,
+      "max_abs_logD_difference": 3.576017651510388e-07,
+      "interpretation": "Nonconverged SLSQP runs are not counted as validation successes or contradictions."
+    },
+    "endpoint_monotonicity_and_conservative_dominance": {
+      "random_cases": 500,
+      "exact_endpoint_above_conservative_endpoint": 0,
+      "outcome_monotonicity_violations": 0,
+      "median_absolute_endpoint_reduction_vs_conservative": 0.039471948244161364,
+      "p90_absolute_endpoint_reduction_vs_conservative": 0.22416605302270445,
+      "max_absolute_endpoint_reduction_vs_conservative": 0.5989032421285392,
+      "scope": "Deliberately heterogeneous synthetic predictable weights and low fractional mismatch scores; these are not production width estimates."
+    }
+  },
+  "regression_reproduction_at_1pct_zero_mismatch": [
+    {"weight_pattern":"all 1","exact_first_process_count":348,"conservative_first_process_count":350},
+    {"weight_pattern":"0.25,1 alternating starting at 0.25","exact_first_process_count":556,"conservative_first_process_count":560},
+    {"weight_pattern":"1/16,2/16,4/16,8/16,1 repeating","exact_first_process_count":895,"conservative_first_process_count":903},
+    {"weight_pattern":"nine 0.1 then one 1 repeating","exact_first_process_count":1822,"conservative_first_process_count":1840}
+  ],
+  "local_runtime_microbenchmark_seconds": [
+    {"n":50,"setup_all_5_lambdas":0.000923932,"exact_endpoint_after_setup":0.003625063,"conservative_endpoint":0.002672926},
+    {"n":200,"setup_all_5_lambdas":0.003518918,"exact_endpoint_after_setup":0.003433624,"conservative_endpoint":0.002558261},
+    {"n":1000,"setup_all_5_lambdas":0.018202721,"exact_endpoint_after_setup":0.003823773,"conservative_endpoint":0.002666787},
+    {"n":5000,"setup_all_5_lambdas":0.264247893,"exact_endpoint_after_setup":0.004238699,"conservative_endpoint":0.002521646},
+    {"n":20000,"setup_all_5_lambdas":1.065771219,"exact_endpoint_after_setup":0.014735815,"conservative_endpoint":0.002940772}
+  ],
+  "runtime_interpretation": "After breakpoint precomputation, exact endpoint cost is nearly flat through n=5000 in this Python microbenchmark. Rebuilding the five breakpoint tables dominates at large n; the prototype is not yet incremental, so a streaming deployment should not rebuild from scratch at every observation.",
+  "measurement_validity": [
+    "The exact endpoint is for the time-varying predictable-weight average conditional mean; it is not automatically a fixed population request-mismatch rate.",
+    "Realized process size that can react to the current outcome is not a valid weight under this contract.",
+    "Endpoint narrowing versus the conservative prototype is mathematical/synthetic evidence only, not a production calibration result.",
+    "Successful numerical checks support implementation correctness but do not replace the supermartingale proof already recorded in the predecessor checkpoint."
+  ],
+  "next_actions": [
+    "Add an incremental or batched breakpoint-table update path so streaming monitoring does not pay O(n log n) rebuild cost every observation.",
+    "Formalize prospective equal-size exposure blocks under adaptive process termination and state exactly which observed-block or counterfactual exposure estimand is controlled.",
+    "Compare this exact envelope with public importance-weighted/time-uniform methods under the same predictable-weight estimand rather than generic interval width."
+  ]
+}
