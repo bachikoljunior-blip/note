@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T08:31:14.479346+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "bacec85e03c37c8d4ed3944e1f5214f2fb3e26a8",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T081931_JST_two_slot_and_distributed_cas.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/exact_runtime_preflight_manifest_2026-08-28T082953_JST.json",
+      "purpose": "Exact blob-pinned transitive runtime graph preflight"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/default_runtime_dynamic_reload_liveness_analysis_2026-08-28T083052_JST.json",
+      "purpose": "Static exact-source proof of default-path process-epoch permit invalidation"
+    }
+  ],
+  "result": "The exact provenance runtime graph was pinned through its currently identified transitive role-local siblings, including the provenance wrapper, base runtime, compliance/provenance CLOSE layers, historical and provenance auditors, launch gates, attempt ledger, score wrapper, reserved-score pipeline, legacy reporting adapter, atomic frame codec, reporter, V3/K-guard core and StableSidecarJournalIO. Every listed Git blob was fetchable by exact SHA. Before full local byte execution, exact-source inspection found a blocking default-path liveness defect: durable_attempt_reservation_ledger_2026-08-28.py generates _BOOT_SECRET with secrets.token_bytes(32) at module import, but the provenance wrapper reloads a fresh base runtime for each public operation and the base runtime reloads a fresh attempt module for each reservation/launch operation. Thus reserve_and_issue normally MACs the permit under attempt-module secret A while launch_reserved_score validates it under independently generated secret B and fails before scorer execution. Dependency-injected campaigns that reuse one attempt module can mask this defect. The identified failure is fail-closed/liveness, not evidence inflation.",
+  "validated_contracts": [
+    "The exact transitive graph currently needed by the default provenance runtime is connector-visible and blob-pinned; no identified filename/blob was missing from the role-local repository state.",
+    "The top-level provenance runtime does not cache _base(): each public operation executes a fresh base runtime module object unless base_runtime_module is injected.",
+    "The base runtime does not cache _default_attempt(): reserve_and_issue and launch_reserved_score each execute a fresh durable_attempt_reservation_ledger module unless attempt_module is injected.",
+    "The attempt module generates a fresh 32-byte _BOOT_SECRET at import, signs permits with it in acknowledge_reservation and checks the current module secret in validate_launch_permit before ledger validation.",
+    "Therefore preserving the same attempt module/process-epoch secret across RESERVE -> SCORE is a necessary default-runtime liveness condition. A process restart may still intentionally invalidate in-memory permits under the fail-closed policy."
+  ],
+  "measurement_validity_rules": [
+    "Exact-runtime integration must test the default wrapper path, not only dependency-injected paths; injection can accidentally stabilize process-local state and hide reload defects.",
+    "Process-epoch authorization state must be stable within one process lifecycle but must not silently become durable across restart when recovery policy requires fail-closed no-relaunch.",
+    "A dynamic import helper that always module_from_spec/exec_module's a module containing random process-local state is semantically different from importing that module once, even when the source blob is identical.",
+    "Treat the current defect as liveness/fail-closed until evidence shows a path that admits a score under mismatched authorization; do not overstate it as a false-positive statistical failure.",
+    "Do not substitute a simplified semantic runtime for the blocked exact default path. Preserve blob-pinned bytes and record execution/tooling gaps explicitly."
+  ],
+  "scope_limitations": [
+    "The module-reload defect is established by exact blob-pinned source control flow, not by executing the complete repository-local sibling graph in one Python directory during this invocation.",
+    "The connected repository exposes source content through the connector but not as a local filesystem mount/export to the container runtime, so full byte import/execution remained unavailable here.",
+    "A caller that explicitly reuses the same base_runtime_module/attempt_module object can avoid the observed secret mismatch; this does not validate the documented default wrapper path.",
+    "No claim is made about distributed storage behavior beyond the prior checkpoint; this run focused on exact runtime module identity/process-epoch semantics."
+  ],
+  "frontier": [
+    "Create a process-stable blob-pinned runtime context/registry that imports each exact sibling once per process and injects the same attempt module through ADMIT/RESERVE/SCORE/SLOT/COMMIT/CLOSE while preserving restart invalidation.",
+    "Byte-execute RESERVE -> SCORE on the exact default wrapper before and after the stable-context change; require the current default to reproduce permit-MAC rejection and the fixed path to execute the scorer exactly once.",
+    "After fixing within-process module identity, resume the two-slot StableSidecarJournalIO campaign and inject crashes around SLOT fsync, COMMIT fsync and CLOSE fsync with exact compliance replay after restart.",
+    "Verify that any module-cache/context fix is blob-identity checked and cannot accidentally reuse stale code after a configured process restart or semantic control change."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a role-local candidate runtime context that verifies the exact Git blob SHA of each sibling before one-time import, stores one attempt-module instance for the process epoch, and routes the provenance runtime operations with explicit module injection. First test the minimal same-process RESERVE -> SCORE path: one durable reservation must yield one valid permit and exactly one scorer call. Then simulate process restart by constructing a new context and require the old permit to fail while durable reservation recovery remains fail-closed. Only after those two checks resume the full two-slot stable-sidecar lifecycle."
+}
