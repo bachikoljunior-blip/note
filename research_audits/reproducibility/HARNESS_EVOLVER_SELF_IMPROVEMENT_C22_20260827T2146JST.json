@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "generation": "clean_g1",
+  "created_at": "2026-08-27T21:46:57.154851+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "bedd0bcd851ce36123eefd785647338fb546e15b",
+    "root_control_revision": 12,
+    "root_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 20,
+    "downstream_control_blob": "aa151ff897e280d58539e37b2edd337e9167e896",
+    "role_config_revision": 2,
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true,
+    "later_head_observed": "62991e5206ed2aca663bbc931a8a859673d00a5c",
+    "later_control_or_semantics_adopted": false
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c22-20260827T190131JST-b490f11a",
+    "active_wave_blob_at_freeze": "6bb6e838c5a20c07b14d9ee4a5bfbe1d7648e255",
+    "source_set_digest": "b490f11a06264094dabc9b3d225f4852b375a12c75a1d601b344a2353a75b7d0",
+    "status_at_freeze": "sealed_awaiting_comparators"
+  },
+  "source_candidate": {
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-27T1804_JST_strategy_reopening_implementation_boundary.md",
+    "source_artifact_blob": "aa1c4b973e3d8623e154926fea4637d3d2ea59ab",
+    "source_local_candidate_id": null,
+    "display_label": "Harness Evolver strategy reopening / evaluation-isolation boundary",
+    "identity_join_eligible": false,
+    "identity_note": "The sealed source artifact does not expose an explicit source-local candidate identifier. This audit is bound to the exact namespace/path/blob and must not be fuzzy-joined downstream by title or semantic alias."
+  },
+  "audited_public_system": {
+    "repository": "raphaelchristi/harness-evolver",
+    "audited_revision": "87fa7612358acccb01d34abf72426a7e47329642",
+    "current_main_sha_observed": "87fa7612358acccb01d34abf72426a7e47329642",
+    "current_main_matches_worker_revision": true,
+    "official_artifacts": [
+      {"path":"skills/evolve/SKILL.md","blob":"038121efe3af6e220677df22ce145a097e9412c6"},
+      {"path":"agents/harness-architect.md","blob":"7f8d3a018f8ff304a2da8afb8eee93da94b9cb18"},
+      {"path":"tools/setup.py","blob":"9b4010e4b2fef614a29661b18aef70791ef3a738"},
+      {"path":"tools/iteration_gate.py","blob":"0c3f3af34a01bb52c4b681957c240b4ce52dde3d"},
+      {"path":"skills/certify/SKILL.md","blob":"64e731f9c4e3e7922df76963fc4527242b90c9c3"},
+      {"path":"CHANGELOG.md","blob":"46d6f948f38723cf7caa28410eca88b65f33e475"}
+    ]
+  },
+  "grade": {
+    "overall": "B",
+    "official_implementation_support": "A-",
+    "strategy_reopening_causal_effect": "C",
+    "public_demo_generalization_evidence": "B-",
+    "exact_independent_replay_readiness": "C+",
+    "matched_independent_reproduction": "C / not located in this search"
+  },
+  "findings": [
+    {
+      "finding": "Explicit strategy reopening is genuinely wired into the documented evolve path.",
+      "evidence": "skills/evolve/SKILL.md auto-triggers the Opus harness-architect after three consecutive iterations within 1% or a score drop. harness-architect.md classifies topology and proposes one-iteration migrations such as single-call->RAG/tools, chain->parallel, ReAct stopping/hierarchical routing, and ensemble/verification.",
+      "scope": "This verifies implementation intent and routing, not that reopening improves outer-test performance."
+    },
+    {
+      "finding": "Reopening competes with separately specified stopping heuristics rather than following one executable evidence-validated control law.",
+      "evidence": "The same evolve skill separately states: three scores within 2% => consider architect or stop; target reached => stop; average improvement <0.5% over five iterations => stop. tools/iteration_gate.py implements another three-gate formulation, but repository search plus the audited evolve skill show no invocation of iteration_gate.py in the main /harness:evolve path.",
+      "scope": "The control semantics are therefore partly orchestration-instruction behavior rather than one uniquely replayable gate implementation."
+    },
+    {
+      "finding": "The 30% held_out partition is an adaptive candidate-selection surface, not an untouched outer lockbox.",
+      "evidence": "tools/setup.py creates only train and held_out splits. Every evolve iteration ranks candidates with read_results.py --split held_out, and pairwise comparison also uses held_out. No third outer_test/final_test/lockbox split was found in the audited repository. Changelog v5.1.2 fixes a different leak by preventing held_out failures from being copied into train regression guards, but repeated winner selection on held_out remains by design.",
+      "scope": "This does not make held_out scores invalid; it limits them to adaptively selected in-loop evidence and weakens claims of untouched final generalization."
+    },
+    {
+      "finding": "Fresh setup does not deterministically reproduce the train/held_out membership from the same input corpus.",
+      "evidence": "assign_splits() calls random.shuffle(examples) without setting or recording a seed. .evolver.json stores dataset name/id but not a split seed or explicit example-id membership list. If only the original corpus is available and the remote LangSmith dataset snapshot is not, the probability that two independent uniform 70/30 shuffles yield the same train subset is 1/C(n,floor(0.7n)): n=20 => 1/38,760 = 2.58e-5; n=30 => 1/14,307,150 = 6.99e-8; n=50 => 1/2,250,829,575,120 = 4.44e-13.",
+      "scope": "An existing LangSmith dataset_id can preserve the original split for that account/object; the defect is independent/public reconstruction from inputs, not necessarily same-dataset rerun."
+    },
+    {
+      "finding": "The certification step measures repeatability on the configured dataset, not post-selection generalization on a fresh outer set.",
+      "evidence": "skills/certify/SKILL.md runs run_eval.py three times using the same .evolver.json dataset and reports mean/std. This can detect stochastic instability or judge variance, but it does not create or consume an untouched outer dataset after adaptive evolution.",
+      "scope": "STABLE therefore means repeatable score on the configured evaluation surface, not independently validated generalization."
+    },
+    {
+      "finding": "The public agno-deepknowledge 0.575->1.000 example remains primary project evidence, not a matched independent reproduction.",
+      "evidence": "Fresh web/repository search on 2026-08-27 found the result in the official README/package mirrors and listings, but no source-matched third-party rerun with the same dataset, model snapshot, split membership, proposer budget and outer evaluation.",
+      "scope": "Absence in this search is not proof that no private or unindexed reproduction exists."
+    }
+  ],
+  "independent_checks": {
+    "split_membership_probability_recalculation": {
+      "assumption": "uniform independent shuffle and comparison of train-set membership only",
+      "n20_train14": {"combinations":38760,"same_membership_probability":0.000025799793601651186},
+      "n30_train21": {"combinations":14307150,"same_membership_probability":6.989512236888549e-8},
+      "n50_train35": {"combinations":2250829575120,"same_membership_probability":4.4428063814946377e-13}
+    },
+    "repository_drift_check": "Current public main SHA equals the worker-pinned revision, so these implementation findings are current as of the audit."
+  },
+  "reproducibility_requirements_for_upgrade": [
+    "Persist immutable dataset example IDs and split membership or a deterministic split seed plus source-corpus hash.",
+    "Separate adaptive candidate selection, strategy-reopening diagnostics and final untouched outer evaluation into auditable channels.",
+    "Wire one explicit executable strategy-control policy or persist the exact branch decision and threshold state for each iteration.",
+    "Publish a source-matched evolution run bundle with model/version, dataset snapshot, evaluator/rubric snapshot, proposer budget, candidate chronology, merge decisions and final outer-test results.",
+    "Provide a matched causal ablation of plateau-stop versus architect-reopen versus scheduled architecture search at equal compute, ideally with an independent rerun."
+  ],
+  "scope_guards": [
+    "Do not infer that strategy reopening is harmful; the audit establishes adaptive-selection and replay limitations, not a negative causal effect.",
+    "Do not infer that the reported official demo is fabricated; it is primary in-loop evidence whose outer-generalization status is unresolved.",
+    "Do not join this audit downstream by display label because the sealed source artifact lacks an explicit source-local candidate id."
+  ],
+  "continuation": {
+    "frontier_nonempty": true,
+    "reopen_this_subject_if": [
+      "a public version adds deterministic/exported split identity or an outer-test channel",
+      "a source-matched raw evolution bundle becomes public",
+      "a matched independent reproduction or failure report appears",
+      "a causal matched-budget architect-reopening ablation is released"
+    ],
+    "exact_next_action": "On the next valid invocation, resolve the then-current exact control/wave tuple and audit a different source-qualified candidate with materially reducible reproducibility uncertainty; do not repeat Harness Evolver unless a listed reopen condition occurs."
+  }
+}
