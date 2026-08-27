@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "artifact": "reservation_compliance_close_replay_2026-08-28.py",
+  "artifact_sha256_local": "88cadfd560f6e7045e773f77e16ff318d8878d8015d562615237128a9e5ce54c",
+  "artifact_blob_after_readback": "ac69f485383118192b533e258bb6033b454ca9b3",
+  "auditor_blob": "0a845daa2675ba2c769c231769b1729f7e78f01d",
+  "semantic_freeze": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "validation": {
+    "bypass_fail_closed": {
+      "plan": [
+        "valid_bound_committed",
+        "unreserved_lower_level_slot",
+        "never_completed_reserved_slot"
+      ],
+      "legacy_slot_accepting_score": 0.3333333333333333,
+      "compliance_closed_score": 0.6666666666666666,
+      "completed_compliant": 1,
+      "fail_closed_slots": 2,
+      "assertion": "The bypass SLOT remained durably present in main but replay closed the block with score=1 for that slot."
+    },
+    "missing_commit_gate": {
+      "before_reconciliation": "prepare_close raised RecoveryCommitRequired for slot 1",
+      "after_exact_commit": {
+        "block_score": 0.1,
+        "all_slots_compliant": true
+      }
+    },
+    "torn_close": {
+      "close_frame_bytes": 2634,
+      "partial_cuts_tested": 2633,
+      "partial_cuts_kept_block_active_and_reporting_rows_zero": 2633
+    },
+    "tamper_rejection": {
+      "closed_row_tamper_rejected": true,
+      "closed_row_error": "persisted compliance closed row mismatch",
+      "compliance_payload_tamper_rejected": true,
+      "compliance_payload_error": "rederived compliance audit mismatch"
+    },
+    "mixed_legacy_history": {
+      "closed_rows": [
+        {
+          "block_id": "L",
+          "planned_size": 1,
+          "completed_canonical": 1,
+          "missing_or_failed": 0,
+          "block_score": 0.2,
+          "exposure_weight": 1.0
+        },
+        {
+          "block_id": "B2",
+          "planned_size": 2,
+          "completed_canonical": 1,
+          "missing_or_failed": 1,
+          "block_score": 0.5,
+          "exposure_weight": 1.0
+        }
+      ],
+      "reporting_rows": 2,
+      "assertion": "A legacy closed row replayed unchanged, followed by a compliance row whose bypass slot was forced to 1; reporter state advanced from the two scientific rows."
+    }
+  },
+  "measurement_validity_rules": [
+    "Scientific closure is defined by the rederived reservation-compliance row, not historical atomic SLOT acceptance.",
+    "A bound SLOT lacking only COMMIT must be reconciled before CLOSE so crash bookkeeping cannot silently discard a valid durable score; unreconciled attempts cannot be closed as compliant.",
+    "The compliance audit payload and its digest are embedded in CLOSE and rederived from the exact pre-CLOSE main prefix plus reservation ledger on replay.",
+    "A torn compliance CLOSE never partially advances reporting state; only the complete checksummed CLOSE commits the scientific row.",
+    "Legacy closed rows are replayable without reinterpretation; the new rule applies to compliance CLOSE events."
+  ],
+  "deployment_blocker": [
+    "The old durable_k_guard_hybrid_journal replay and old launch-capability gate still bind the legacy reporting adapter. After a compliance CLOSE whose audited row differs from legacy SLOT acceptance, those old components will reject/reconstruct the wrong state. A new gate/runtime replay binding must be installed before deploying compliance CLOSE."
+  ],
+  "next_action": "Create a compliance-aware launch-capability gate/runtime adapter that uses reservation_compliance_close_replay for all post-close recovery while preserving legacy ADMIT acknowledgement, then byte-execute the full ADMIT -> RESERVE -> SCORE -> bound SLOT -> COMMIT -> compliance CLOSE -> next ADMIT lifecycle against repository-local sibling files."
+}
