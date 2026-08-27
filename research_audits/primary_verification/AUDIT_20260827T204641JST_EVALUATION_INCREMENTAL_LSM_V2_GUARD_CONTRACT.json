@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "audit_id": "primary-verification-20260827T204641JST-evaluation-incremental-lsm-v2-guard-contract",
+  "created_at": "2026-08-27T20:46:41+09:00",
+  "role": "primary_source_verifier",
+  "generation": "clean_g1",
+  "frozen_control": {
+    "note_main_sha": "2bc7a520f84ce87cacfc4bd64347393a44fa698c",
+    "desired_state_control_revision": 12,
+    "downstream_state_control_revision": 20,
+    "role_config_revision": 5,
+    "semantic_freeze_observed": true
+  },
+  "source_identity": {
+    "namespace": "evaluation",
+    "active_wave_id": "clean-g1-wave-c22-20260827T190131JST-b490f11a",
+    "active_wave_source_set_digest": "b490f11a06264094dabc9b3d225f4852b375a12c75a1d601b344a2353a75b7d0",
+    "checkpoint": {
+      "path": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T181542_JST_incremental_v2_storage.json",
+      "blob": "c9633bd99304da69f573dfd199f9299f9f35c078"
+    },
+    "v1": {
+      "path": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_2026-08-27.py",
+      "blob": "61e276bdc6bb9a9d831d3a0638251e4ced780071"
+    },
+    "v2": {
+      "path": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_v2_2026-08-27.py",
+      "blob": "6cb7201c27f7f63da2d20e8f0764f99a6f7cba4c"
+    },
+    "validation": {
+      "path": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_v2_validation_2026-08-27.json",
+      "blob": "547f29bdb2d46ab3fcd5a17ec012292b18a90627"
+    }
+  },
+  "claims_audited": [
+    "V2 is a storage/computational refactor only and does not change the numerical/statistical contract.",
+    "V2 matches V1 numerically under the reported randomized validation harness.",
+    "V2 reduces prototype peak memory and build time under the reported tracemalloc stress harness."
+  ],
+  "observations": [
+    {
+      "id": "O1",
+      "type": "artifact_evidence",
+      "finding": "The tracked validation artifact reports 30 randomized datasets with seed 20260829, max_abs_log_e_difference=0.0, max_abs_upper_endpoint_difference=0.0, and zero binary-counter invariant failures. Both versions used 40 root iterations and 50 endpoint iterations in that harness.",
+      "scope": "Worker-produced tracked validation artifact; not an independent external rerun."
+    },
+    {
+      "id": "O2",
+      "type": "source_contract_difference",
+      "finding": "V1 upper_endpoint rejects endpoint_iterations < 30 with ValueError('endpoint_iterations too small for fail-closed numerical use'). V2 removes that check and accepts the caller-supplied endpoint_iterations value, including values below 30.",
+      "scope": "Direct source comparison at the frozen note SHA."
+    },
+    {
+      "id": "O3",
+      "type": "validation_gap",
+      "finding": "The reported V1/V2 equivalence harness uses endpoint_iterations=50, so it does not exercise the low-iteration API region where O2 changes behavior.",
+      "scope": "Direct comparison of tracked validation configuration and source."
+    },
+    {
+      "id": "O4",
+      "type": "performance_evidence",
+      "finding": "The tracked stress harness reports V1 peak 6,143,971 bytes versus V2 4,472,091 bytes (27.2117169823881% reduction) and V1 build 3.6388640800000758 s versus V2 2.8016687739999497 s (23.007050760744782% reduction) for n=3000, five lambda components under one local Python tracemalloc runtime.",
+      "scope": "Prototype local measurement only; no production latency/memory generalization."
+    },
+    {
+      "id": "O5",
+      "type": "representation_change",
+      "finding": "V1 retains duplicate raw lower_items/upper_items alongside sorted hinge/suffix structures. V2 removes those duplicate tuple payloads and retains per-item threshold/value arrays plus suffix aggregates, which is consistent with the claimed storage optimization in the exercised path.",
+      "scope": "Source-level structural comparison; does not by itself prove all numerical contracts unchanged."
+    }
+  ],
+  "verdicts": {
+    "normal_configuration_v1_v2_equivalence": {
+      "status": "artifact_supported_not_independently_reproduced",
+      "reason": "Tracked randomized validation reports exact equality for the exercised 40-root/50-endpoint configuration."
+    },
+    "storage_only_refactor_all_numerical_contracts_unchanged": {
+      "status": "contradicted",
+      "reason": "The fail-closed endpoint_iterations>=30 API guard exists in V1 and is absent in V2, so low-iteration caller behavior changed."
+    },
+    "reported_memory_and_build_time_improvement": {
+      "status": "artifact_supported_harness_specific",
+      "reason": "The tracked local tracemalloc benchmark reports the stated reductions, but this is not a general performance guarantee."
+    },
+    "statistical_validity_harm_from_removed_guard": {
+      "status": "not_established",
+      "reason": "This audit establishes a fail-closed numerical/API contract regression. It does not establish that the returned low-iteration endpoint is anti-conservative or invalid; no such stronger claim is made."
+    }
+  },
+  "decision_relevance": {
+    "downstream_correction_required": true,
+    "correction": "Do not describe V2 as a purely storage-only refactor with unchanged numerical contract. Limit equality claims to the validated configuration unless the minimum endpoint-iteration guard is restored or low-iteration behavior is separately specified and validated.",
+    "o_admission_scope": "If this candidate is considered downstream, preserve the local performance measurements and normal-configuration equality separately from the contradicted all-contracts-unchanged claim."
+  },
+  "independence": {
+    "wrote_exploration_worker_state": false,
+    "wrote_worker_feedback": false,
+    "read_O_for_exploration_direction": false
+  },
+  "exact_next_action": "Depth-convergence Batch B: inspect only current O_FEED entries marked accepted_for_o=true plus active contradiction keys, normalize their source-qualified task/artifact identities and tested scope, and do not reopen historical bulk replay unless a current source-qualified change reintroduces it."
+}
