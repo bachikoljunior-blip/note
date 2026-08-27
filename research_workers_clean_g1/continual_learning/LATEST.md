@@ -1,16 +1,21 @@
 # Continual Learning — clean_g1 latest
 
-Latest checkpoint: `RUN_20260827T2211_JST.md`
+Latest checkpoint: `RUN_20260827T2309_JST.md`
 
 Base state: `STATE.md`
 
 Current high-priority reconciliation:
-- `CPO_PAPER_RELEASE_CODE_RECONCILIATION_20260827T2211JST.json`
 - CPO paper-spec uses global TopP support plus globally normalized masked L1.
 - Public release code at `MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c` instead uses per-tensor TopP and per-tensor normalization.
-- For a protected coordinate in tensor `t`, release-code versus paper-spec regularizer magnitude scales as `M/m_t`; this can overweight small tensors materially.
-- Do not attribute reported CPO gains specifically to the paper equations until paper-spec versus release-code-spec is causally separated.
-- Next CPO action: run the fixed 2x2 factorial `{global, per-tensor} TopP × {global, per-tensor} normalization`, then measure actual cumulative mask/reference bytes and runtime overhead.
+- New role-local synthetic 2x2 verifies these effects independently: global selection can concentrate all support into high-movement tensors while per-tensor selection forces support into low-movement tensors; with identical support across two tensors, per-tensor normalization doubles aggregate L1 coordinate-gradient budget and gives a one-coordinate tensor `10x` the paper-global per-coordinate gradient in the fixed synthetic case.
+- Durable artifacts: `tools/cpo_paper_release_factorial_synthetic_20260827.py` and `CPO_FACTORIAL_SYNTHETIC_RESULT_20260827.json`.
+- First-party author clarification in public issue #2 states reported Stage-1 `89.98%` was roughly mid-range across several runs, about `1–2` points can be within observed run variation, and intermediate checkpoints were not retained/released. Therefore the 2x2 performance test must use common initialization or paired repeated Stage-1 seeds and uncertainty; a single-run difference cannot bind paper vs release semantics.
+- No public historical mask/checkpoint/log currently binds reported CPO tables to paper-spec vs current release-code-spec.
+
+Exact CPO continuation:
+1. Cross-check the independent synthetic implementation against exact public release functions on identical tensors.
+2. Continue read-only first-party provenance search; do not create probe issues/comments.
+3. Define paired/common-initialization 2x2 performance experiment and measure actual mask/ref bytes, active masked-tensor count, cumulative support, construction/transfer/runtime overhead, and regularizer-to-RL gradient norms.
 
 Current deterministic DeMix/OpenCompass reconstruction tools:
 - `tools/demix_opencompass_namekeyed_adapter_v1.py`
@@ -30,10 +35,9 @@ Current corrected public reconstruction anchors:
 
 Track A1 status: shared dependency environment must model OpenCompass's `.[full]` import surface, not runtime-only. The shared-lock contract fail-closes until every direct/transitive distribution has an exact artifact hash. Execution remains blocked in the current container by Python 3.13 plus unavailable network/DNS for acquiring Python 3.10/package artifacts; this is not evidence about OpenCompass.
 
-Exact continuation:
-1. CPO: search for first-party historical masks/checkpoints/logs or clarification; then implement and verify the 2x2 selection/normalization factorial on synthetic tensors before expensive training.
-2. CPO: measure actual release-code mask/ref storage and mask construction/per-step overhead on the smallest feasible Qwen3-VL scale.
-3. DeMix/OpenCompass: in a networked Linux/Python-3.10 environment, resolve/hash the complete shared full-surface lock and execute Track A1 import/inference comparison.
-4. Complete remaining DeMix checkpoint metadata byte-identity classes and orphan `mix_16` lineage.
-5. Run matched merging-vs-retraining displacement sweep only after evaluator/environment identity is locked.
-6. Continue SAFE-Merge and earlier continual-learning branches while preserving exact tested scope and clean independence.
+Remaining frontier:
+- CPO exact release-function equivalence, paired 2x2 performance/storage/runtime reconciliation, and first-party artifact provenance.
+- DeMix/OpenCompass Track A1 when the required environment is available.
+- Remaining DeMix checkpoint metadata byte-identity classes and orphan `mix_16` lineage.
+- Matched merge-vs-retrain displacement sweep after evaluator/environment identity is locked.
+- SAFE-Merge and earlier continual-learning branches, preserving exact tested scope and clean independence.
