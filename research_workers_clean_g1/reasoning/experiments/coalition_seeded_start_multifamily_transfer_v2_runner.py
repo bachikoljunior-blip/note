@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, importlib.util, json, math
+import argparse, importlib.util, json
 from pathlib import Path
 import networkx as nx
 
@@ -8,6 +8,23 @@ BASE_PATH = HERE / "coalition_seeded_start_predictor_confirm_v1_runner.py"
 spec = importlib.util.spec_from_file_location("seed_gate_base", BASE_PATH)
 base = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(base)
+
+# Reproducibility repair before any v2 outcome was observed:
+# the persisted v1 runner compares truth bitsets across variable relabelings.
+# Hamming-rank is permutation invariant, but the raw assignment-indexed truth
+# bitset is not. Check each order against an exhaustive direct oracle in that
+# order's own relabeled coordinates, and compare only rank across orders.
+_orig_compile_order = base.compile_order
+def _compile_order_checked(g, order, oracle_rank=None):
+    r = _orig_compile_order(g, order, None)
+    edges = base.relabeled_edges(g, order)
+    direct_truth = base.direct_truth_bits(g.number_of_nodes(), edges)
+    if r["truth"] != direct_truth:
+        raise AssertionError("direct truth-bitset oracle mismatch")
+    if oracle_rank is not None and r["rank"] != oracle_rank:
+        raise AssertionError("Hamming-rank oracle mismatch")
+    return r
+base.compile_order = _compile_order_checked
 
 FAMILY_ORDER = ("cubic", "quartic", "watts", "erdos")
 DEFAULT_CASES = {
@@ -37,9 +54,9 @@ def run_case(family, seed):
     rcm = list(nx.utils.reverse_cuthill_mckee_ordering(g))
     seeded, sw, kd = base.seeded_order(g, seed, natural, rcm)
     ref = base.compile_order(g, natural)
-    oracle = (ref["rank"], ref["truth"])
-    two, _ = base.commit_policy(g, {"rcm": rcm, "natural": natural}, oracle)
-    three, st3 = base.commit_policy(g, {"rcm": rcm, "natural": natural, "seeded": seeded}, oracle)
+    oracle_rank = ref["rank"]
+    two, _ = base.commit_policy(g, {"rcm": rcm, "natural": natural}, oracle_rank)
+    three, st3 = base.commit_policy(g, {"rcm": rcm, "natural": natural, "seeded": seeded}, oracle_rank)
     stage_live = [st3["natural"][1]["live"], st3["rcm"][1]["live"], st3["seeded"][1]["live"]]
     label = int(stage_live[2] < stage_live[0] and stage_live[2] < stage_live[1])
     x = base.graph_features(g, natural, rcm, seeded, sw, kd)
@@ -111,6 +128,6 @@ def main():
         if args.seeds: raise SystemExit("--seeds requires --family")
         cases=[(f,s) for f in FAMILY_ORDER for s in DEFAULT_CASES[f]]
     records=[run_case(f,s) for f,s in cases]
-    out={"schema":"coalition_seeded_start_multifamily_transfer_v2_results","protocol":"coalition_seeded_start_multifamily_transfer_v2_protocol.json","records":records,"aggregate":aggregate(records),"family_aggregate":{f:aggregate([r for r in records if r["family"]==f]) for f in FAMILY_ORDER if any(r["family"]==f for r in records)}}
+    out={"schema":"coalition_seeded_start_multifamily_transfer_v2_results","protocol":"coalition_seeded_start_multifamily_transfer_v2_protocol.json","oracle_note":"truth bitset checked against exhaustive direct oracle in each order's relabeled coordinates; Hamming rank checked invariant across orders","records":records,"aggregate":aggregate(records),"family_aggregate":{f:aggregate([r for r in records if r["family"]==f]) for f in FAMILY_ORDER if any(r["family"]==f for r in records)}}
     print(json.dumps(out,indent=2,sort_keys=True))
 if __name__=="__main__": main()
