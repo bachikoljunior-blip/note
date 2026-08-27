@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T08:19:31+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "3dff64912d405392d25f0ca51ed3bcb9275c51d1",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T080938_JST_stable_sidecar_full_lifecycle.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/stable_sidecar_journal_io_2026_08_28.py",
+      "blob_after_readback": "a7fc9e82ccb636e0aaa55bf1793a28dac8ac58fc"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/validation_stable_sidecar_two_slot_recovery_race_2026-08-28.py",
+      "blob_after_readback": "2fa5a9869ccb569641b3fca75f8a6dba2deba46b",
+      "validation": "research_workers_clean_g1/evaluation/validation_stable_sidecar_two_slot_recovery_race_2026-08-28.json",
+      "validation_blob": "716e020f10df39bbf7f15666f2d848280de27a47"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/validation_stable_sidecar_lock_tamper_detection_2026-08-28.py",
+      "blob_after_readback": "e79305dd998f391d3bbd0e91f51e344f1d111764",
+      "validation": "research_workers_clean_g1/evaluation/validation_stable_sidecar_lock_tamper_detection_2026-08-28.json",
+      "validation_blob": "eea1e2cd155246c9566d59c203ca76514b59077b"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/distributed_cas_vs_fencing_model_2026-08-28.py",
+      "blob_after_readback": "ef4f8a7373df4d59f95f8b84411b7c9178a7700f",
+      "validation": "research_workers_clean_g1/evaluation/validation_distributed_cas_vs_fencing_model_2026-08-28.json",
+      "validation_blob": "2335c78e8d954f491463447ed53996ff3b8bac5a"
+    }
+  ],
+  "public_sources": [
+    {
+      "url": "https://docs.cloud.google.com/storage/docs/request-preconditions",
+      "claim_used": "Cloud Storage generation-match preconditions make a mutation proceed only when the target generation matches, and are documented for safe read-modify-write/race prevention."
+    },
+    {
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html",
+      "claim_used": "S3 If-Match conditional writes fail when the current ETag differs; concurrent conditional writes on the same object allow a winner while later mismatched writes fail."
+    },
+    {
+      "url": "https://etcd.io/docs/v3.6/learning/api/",
+      "claim_used": "etcd transactions atomically compare values/revisions/versions and apply success/failure operations, providing compare-and-swap primitives."
+    }
+  ],
+  "result": "The single-slot stable-sidecar result was extended to a two-slot block and a distributed-storage design boundary. In 300 two-slot multiprocessing campaigns, slot s0 had duplicate RESERVE contenders while slot s1 completed normally; exactly two scorer launches occurred in all 300 runs (one per durable reservation), the two attempt identities were distinct in all runs, and restart replay matched exactly in all runs. When s0's SLOT won the deadline race, its deliberately missing COMMIT was recovered from the same durable SLOT identity before CLOSE in 183/300 runs, yielding exact block score 0.3. When CLOSE won first, s0 remained fail-closed in 117/300 runs and block score was exactly 0.6. Separately, 100/100 deliberate sidecar-path rebinds while a process held the old lock inode were detected as StableLockProtocolViolation before the operation could report success; this is detection only, not safety against uncooperative mutation. For multi-host storage, a small state model showed that storage-enforced generation/ETag CAS serializes same-object writers and duplicate reservation creation without a local flock, while a lease whose data writes do not check ownership admits a stale-writer counterexample. A monotonic fence is therefore required only when the protected side effect cannot itself be guarded by the same atomic storage precondition; for journal/ledger mutation, strong conditional writes can be the fencing primitive themselves if every mutation uses them and stochastic launch remains downstream of one uniquely successful durable reservation.",
+  "validated_contracts": [
+    "Two-slot block semantics remain fail-closed under concurrent reservation and deadline races in the tested event-layer model: a normal slot can commit while another slot either commits through same-attempt recovery or is scored as failure after CLOSE wins.",
+    "Duplicate reservation contenders for the same slot cannot both launch the scorer when launch authority is minted only after one storage/CAS winner; exactly two launches for two distinct durable reservations occurred in 300/300 two-slot campaigns.",
+    "A durable SLOT with missing COMMIT can be reconciled by committing the exact stored SLOT identity without a second stochastic launch, after which CLOSE can be retried from the new exact main prefix.",
+    "The sidecar facade detects an observed lock-path inode rebind at operation exit and refuses to report success; 100/100 deliberate rebind trials triggered the protocol violation.",
+    "For an object store with an atomic generation/ETag match precondition, two writers that both read the same generation cannot both mutate that object. The model's two possible write orders each had exactly one winner.",
+    "A lease that is not enforced by the data write is insufficient: after lease reassignment, the stale owner can still overwrite the new owner's value. A storage-enforced monotonic fence rejects that stale write."
+  ],
+  "measurement_validity_rules": [
+    "Keep storage serialization and external-side-effect fencing conceptually separate. Strong conditional object writes may replace a lock for journal/ledger bytes, but they do not automatically fence an unrelated external resource.",
+    "A scorer launch must remain causally downstream of one uniquely successful durable reservation mutation. If a conditional reservation write times out ambiguously, recovery may verify durable identity but must not mint a fresh stochastic launch permit under the fail-closed policy.",
+    "Do not add a lease merely for comfort if the storage layer already provides exact conditional mutation; a lease without data-plane enforcement is weaker than storage CAS and can create false confidence.",
+    "Use a monotonic fence when the protected operation cannot be expressed as an atomic conditional write on the same authoritative storage state, and require the resource itself to reject stale fence values.",
+    "Lock-path rebind detection is not equivalent to safety against malicious/uncooperative mutation. The cooperative local protocol still requires that compliant callers never rename, unlink, or replace the stable sidecar lock path."
+  ],
+  "scope_limitations": [
+    "The two-slot campaign is contract-faithful at the event/durability layer but still does not byte-execute the entire blob-pinned provenance/reporting sibling graph in one local checkout.",
+    "The local concurrency results assume a single host, cooperative processes, and reliable POSIX flock. The distributed CAS/fencing result is a small state model plus public storage/API guarantees, not a benchmark of S3, Cloud Storage, etcd, network partitions, or timeout distributions.",
+    "S3 ETag, Cloud Storage generation numbers, and etcd revisions have different semantics and APIs. The common claim is only that an atomic server-side precondition can serialize the exact protected mutation when correctly used; no one backend is selected here.",
+    "The model does not make external scorer RPCs idempotent. It preserves the current fail-closed rule that ambiguous recovery must not relaunch a stochastic attempt unless deterministic replay has separately been proven."
+  ],
+  "frontier": [
+    "Byte-execute the full blob-pinned provenance runtime sibling graph with StableSidecarJournalIO as the only main/ledger writer and confirm that its exact ADMIT/RESERVE/SLOT/COMMIT/CLOSE bytes and compliance replay match the contract-faithful campaigns.",
+    "Extend the two-slot campaign to score-completion crashes at every boundary around SLOT fsync, COMMIT fsync and CLOSE fsync, including simultaneous recovery of one slot while another slot finishes normally.",
+    "Specify an abstract GenerationCASWriter interface whose write returns authoritative generation/version and whose retry path distinguishes definite precondition failure from ambiguous transport timeout; map it separately onto one concrete backend before claiming multi-host deployability.",
+    "For external side effects that cannot be protected by storage CAS, define a monotonic fencing-token contract and prove that every side-effecting endpoint rejects lower tokens rather than merely checking a renewable lease."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Create a blob-pinned exact-runtime preflight manifest for the provenance sibling graph, load every required evaluation-local module from one directory, verify each Git blob SHA before import, then run the two-slot campaign through the real runtime functions rather than the contract-faithful event harness. Inject StableSidecarJournalIO for main and reservation writes. The pass condition is byte-equal durable events plus identical compliance replay/block score across restart; if a sibling cannot be materialized, record the exact missing filename/blob instead of substituting another semantic implementation."
+}
