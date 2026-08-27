@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "self_improvement",
+  "sequence": 64,
+  "created_at": "2026-08-27T17:06:58+09:00",
+  "frozen_control": {
+    "note_main_sha": "7c0efbf3860e5022910dd39a6bc4403d09372592",
+    "root_control_revision": 11,
+    "role_config_revision": 6
+  },
+  "sources": [
+    {
+      "slug": "TASKCOEVOLVE-2608.20169",
+      "title": "Task-CoEvolve: Efficient Harness Optimization via Adaptive Validation Task Selection",
+      "url": "https://arxiv.org/abs/2608.20169",
+      "version_observed": "v2, 2026-08-24",
+      "public_repo": "https://github.com/Agent4Science-UTokyo/Task-CoEvolve",
+      "repo_observation": "As observed 2026-08-27, repository contains README/figures and states code will be available soon; executable implementation is not yet public."
+    },
+    {
+      "slug": "POSTTRAIN-STRATEGY-2608.19072",
+      "title": "What is Missing from AI Post-Training AI: An Empirical Analysis",
+      "url": "https://arxiv.org/abs/2608.19072",
+      "version_observed": "v1, 2026-08-19"
+    }
+  ],
+  "source_bound_findings": {
+    "adaptive_validation": {
+      "text_classification_protocol": "20 evolution iterations, 3 candidate harnesses per iteration, 60 candidates total; separate train/validation/test splits.",
+      "held_out_results": {
+        "full_search_100pct_avg": 48.6,
+        "task_coevolve_20pct_avg": 49.3,
+        "task_coevolve_7pct_avg": 47.6
+      },
+      "selection_estimator_calibration": {
+        "rho_20pct_spearman_estimated_vs_full_validation": 0.62,
+        "rho_20pct_estimated_winner_true_rank": "12/60",
+        "rho_20pct_estimated_winner_true_score_vs_best": "51.3 vs 54.7",
+        "rho_7pct_spearman_estimated_vs_full_validation": 0.13,
+        "rho_7pct_estimated_winner_true_rank": "10/60",
+        "rho_7pct_estimated_winner_true_score_vs_best": "46.4 vs 47.8"
+      },
+      "ablation_20pct_avg": {
+        "fixed_subset": 47.2,
+        "random_resample": 48.2,
+        "plus_sampling_aware_estimation": 48.8,
+        "plus_variance_weighted_selection": 49.3
+      },
+      "terminal_bench_boundary": "The same 89 Terminal-Bench 2.1 tasks are used for search and final evaluation; this branch is not an untouched outer-test result.",
+      "interpretation": "Adaptive task allocation can reduce fixed-subset overfitting and evaluation cost, but its partial-set estimator is too noisy to treat as a behavioral certificate, especially at low sampling rates."
+    },
+    "strategy_lock_in": {
+      "recognized_adjacent_experiment_pairs": 3557,
+      "strategy_changes": 74,
+      "strategy_change_rate": 0.0208,
+      "decomposition": {
+        "training_objective_family_change_rate": 0.0098,
+        "data_source_change_rate": 0.0107,
+        "stage_structure_change_rate": 0.0003
+      },
+      "experience_scaffold": "Persistent experiment journal + skill/library context + evaluator guidance materially improves execution (+12.6 points on GSM8K and +40.8 on HumanEval in reported runs) but does not reliably reopen the training strategy.",
+      "human_guidance_boundary": "Binding pre-training human guidance can redirect the initial strategy, but after training starts the agent returns to within-strategy local adjustment loops.",
+      "compute_boundary": "On AIME 2025, the richer scaffold used about 7.9x baseline tokens while yielding almost no robust gain; extra compute was spent on denser refinement inside the locked strategy.",
+      "interpretation": "Execution-level adaptation and strategy-level reopening are distinct control problems. A statistically careful acceptor can still optimize inside the wrong proposal family if no mechanism ever reopens the strategy choice."
+    }
+  },
+  "design_contract": {
+    "separate_controls": [
+      "evaluation-allocation controller: choose informative tasks efficiently but do not certify promotion",
+      "candidate acceptor: certify incumbent-vs-candidate evidence under repeated observation",
+      "strategy-reopening controller: explicitly decide when accumulated evidence warrants changing proposal family / training paradigm",
+      "outer evaluator: remain unused by proposal generation, acceptance, rollback, routing and stopping"
+    ],
+    "required_logging_for_adaptive_validation": [
+      "candidate immutable identity",
+      "task inclusion probabilities for every evaluated candidate",
+      "sampled task IDs and outcomes",
+      "estimator definition/version",
+      "estimated score and full-set calibration audit when available",
+      "selection decision and next-proposal feedback payload"
+    ],
+    "non_claim": "Task-CoEvolve is evidence for evaluation-budget allocation, not for anytime-valid promotion safety. The post-training study is evidence for strategy lock-in, not a demonstrated strategy-reopening intervention."
+  },
+  "preregistered_next_experiment": {
+    "goal": "Measure whether cheaper adaptive screening and explicit strategy reopening improve long-run self-improvement without weakening promotion validity.",
+    "matched_factors": {
+      "evaluation_allocation": ["full fixed validation", "uniform resample", "variance-weighted adaptive sampling with sampling-aware estimator"],
+      "promotion": ["raw strict-better", "candidate-local anytime-valid paired gate"],
+      "strategy_reopening": ["implicit/no trigger", "explicit evidence-triggered strategy-reopening decision point"]
+    },
+    "controls": [
+      "same base model and harness mutation budget",
+      "same candidate/proposal compute within matched arms where causal comparison requires it",
+      "fresh outer test never queried by search, acceptance, rollback, routing or early stopping",
+      "separate reporting of execution-level edits and strategy-level changes",
+      "complete proposal chronology and task-sampling chronology"
+    ],
+    "primary_failure_modes": [
+      "false promotion from noisy partial evaluation",
+      "search stagnation inside a suboptimal strategy family",
+      "adaptive overfitting to task-selection feedback",
+      "outer-test leakage through selection or stopping"
+    ]
+  },
+  "frontier": "Find a real >10-proposal LLM self-improvement system that combines adaptive evaluation allocation or another compute-efficient screen with candidate-local anytime-valid promotion, durable cross-proposal statistical spending, an explicit strategy-reopening mechanism, complete proposal/evaluation chronology, immutable promotion identity and an untouched outer test. If none exists, seek a replayable system where these components can be composed under matched proposal sequences."
+}
