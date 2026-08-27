@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "audit_time": "2026-08-28T06:47:00+09:00",
+  "generation": "clean_g1",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "fa230054dc013636080949911da2a05b2eb8c33f",
+    "root_control_revision": 12,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 24,
+    "downstream_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5
+  },
+  "source_worker_artifact": {
+    "namespace": "open_source",
+    "path": "research_workers_clean_g1/open_source/RUN_20260828_0505_FRESH_SINK_CURSOR_REGRESSION.md",
+    "blob": "bce1b9106f62544e580480635545f69f33e9fea0",
+    "selection_snapshot_note_main_sha": "8d544fd1254edec52ea2959806444c06ad8a2670",
+    "source_local_candidate_id": "clean-os-g1-007"
+  },
+  "primary_source": {
+    "repository": "lbx154/Argus",
+    "commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98"
+  },
+  "status": "primary_source_code_verified_projection_gap_reachable; proposed_cursor_fix_unimplemented",
+  "verified": [
+    "JsonlEventSink._append() appends the canonical events.jsonl row under events.lock before attempting Mission View projection. Projection exceptions are swallowed and do not roll back the canonical append.",
+    "The Mission View update path reduces only the single supplied event against the current materialized mission-view.json and atomically replaces that view. It does not first reconcile a contiguous prefix of the canonical event log and stores no canonical-log cursor.",
+    "round.review.completed is non-idempotent with respect to duplicate or missing replay: status continue/blocked increments review.rejected_attempts from the current materialized count.",
+    "Therefore a source-reachable sequence exists in which event E1 is durably appended, its Mission View write fails, and later E2 is durably appended and projected successfully. The canonical log contains E1+E2 while the materialized rejected_attempts can reflect only E2. This is a process-consistency/projection-hole claim; no production incident was observed in this audit.",
+    "event_log_paths() retains all numeric generations, but cold Mission View bootstrap replays only events.jsonl.1 and events.jsonl, each through an 8 MiB tail. Retained .2/.3/... generations are therefore not part of this bootstrap path even though the canonical event-log helper can enumerate them.",
+    "Mission View schema version 6 stores last_event_ts but no authoritative canonical event position. Timestamp is not sufficient to prove that every earlier canonical projected event was incorporated exactly once.",
+    "The existing canonical event append itself writes and closes the Python file handle without an explicit fsync in this function. This audit does not infer power-loss durability from process-level append success and keeps that as a separate question."
+  ],
+  "scope": [
+    "This verifies a source-level reachable divergence between canonical log and a non-idempotent materialized projection when projection persistence fails after canonical append. It does not estimate failure frequency or show that a deployed Argus instance has encountered the sequence.",
+    "The worker's event_log_id, schema-7 embedded cursor, all-generation reconciliation, and double-checked lock-order migration are proposed adaptations, not current Argus behavior and not measured improvements.",
+    "Cold-bootstrap history omission and live projection-hole repair are related recovery weaknesses but should not be conflated with power-loss durability of the canonical log.",
+    "A future repair must preserve one global lock order if it combines events.lock with mission-view.lock; this audit did not execute a deadlock test."
+  ],
+  "downstream_implication": "When an append-only event log is authoritative and materialized read models contain non-idempotent reducers, best-effort one-event fanout is insufficient for reconstructible correctness. A derived projection needs a durable contiguous-prefix position or equivalent source-bound receipt, and recovery must be able to reconcile from the authoritative history before advancing the projection.",
+  "worker_feedback_written": false,
+  "exploration_state_mutated": false,
+  "exact_next_action": "Rotate to an under-audited C26 namespace. Prefer a quantitative or code-level candidate whose evidence status can change through direct primary replay; do not treat the proposed Argus cursor design as implemented until a pinned commit contains the state/cursor binding and fault regressions."
+}
