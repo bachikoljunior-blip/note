@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T04:09:50.090297+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T040737_JST_launch_capability_gate.json",
+  "main_result": {
+    "launch_gate": "research_workers_clean_g1/evaluation/durable_launch_capability_gate_2026-08-28.py",
+    "launch_gate_blob": "e06dc0550f65182d31b96e6b841d680b487f3b41",
+    "writer": "research_workers_clean_g1/evaluation/file_durable_append_writer_2026-08-28.py",
+    "writer_blob_after_readback": "cb8f1555df59fef8dbee56f0f646a359d60adf35",
+    "validation": "research_workers_clean_g1/evaluation/validation_file_durable_append_writer_2026-08-28.json",
+    "validation_blob_after_readback": "39e265d29782a02acbc9f6bfe2c41055c65e2569",
+    "result": "Implemented a concrete whole-file CAS + append + file fsync + parent-directory fsync on creation + full readback writer. Exact expected-before+frame already present is treated as an uncertain-ack idempotent retry and is fsynced/read back without duplicate append; any other current bytes fail closed.",
+    "ack_boundary_stress": "Crash injection after append-before-fsync, after fsync-before-readback and after readback-before-return returned no capability in the failed call; exact retry then succeeded and yielded a usable capability. For a 358-byte ADMIT frame, all 357 nonempty partial cuts were rejected before repair, and all 358 cut cases succeeded after recovery/truncation to the independently verified prior prefix. Exact retry produced no duplicate frame and deterministic capability identity was preserved in the harness."
+  },
+  "measurement_validity_rules": [
+    "Uncertain acknowledgement is not failure-to-persist and not success-to-launch. The only safe retry states are the exact prior durable prefix or the exact prior prefix plus the intended frame.",
+    "A nonempty torn frame must fail the writer CAS and be repaired by the journal layer to a verified valid prefix before retry; the writer must not guess the scientific recovery boundary.",
+    "An exact frame found after uncertain acknowledgement may be fsynced and read back again and then acknowledged without appending a duplicate event.",
+    "No launch capability can be returned on any injected crash path because capability delivery occurs only after the writer returns exact durable readback.",
+    "The in-process POSIX crash harness validates control flow and idempotence, not real power-loss persistence probabilities or dishonest storage-controller fsync acknowledgements.",
+    "Whole-file CAS is not cross-process mutual exclusion. If multiple launch processes are possible, add fencing/locking before treating this writer as the sole durable writer."
+  ],
+  "frontier": [
+    "Byte-execute the concrete writer plus launch gate against the exact production durable adapter/V3/K-guard sibling files in a repository-local runtime.",
+    "Determine whether the actual evaluation launcher can have multiple OS processes. If yes, add a writer lease/fencing token or OS-level lock and stress stale-writer recovery; if no, record the single-process invariant explicitly.",
+    "Move capability checking to the score-generation launch boundary itself so an unauthorized job cannot consume compute or reveal a score before SLOT persistence.",
+    "Use the same writer acknowledgement discipline for CLOSE and only expose the numerical reporting snapshot after durable CLOSE readback; crash-inject residual-alpha fresh allocation at that boundary.",
+    "Define a non-retroactive legacy-journal migration path that never issues launch authority for rows lacking enriched pre-score ADMIT metadata."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a score-launch wrapper that requires a valid LaunchCapability before invoking any score-producing callable, binds the callable request to block_id/slot_id and the capability's exact admitted plan, and returns an opaque score result that can only be persisted through prepare_slot_authorized; stress wrong/stale/tampered capabilities and crash/retry so unauthorized work cannot become scientific evidence."
+}
