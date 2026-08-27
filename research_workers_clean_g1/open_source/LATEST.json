@@ -4,8 +4,8 @@
   "control_revision": 12,
   "config_revision": 5,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0505_FRESH_SINK_CURSOR_REGRESSION.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0410_CURSOR_STATE_ATOMICITY_DURABILITY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0602_CURSOR_AMBIGUITY_AND_DURABILITY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0505_FRESH_SINK_CURSOR_REGRESSION.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -29,21 +29,20 @@
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Turn the current source-shaped fresh-sink E1 projection-write failure -> fresh-sink E2 success witness into two exact failure variants and finalize a schema-7 contiguous-prefix reconciliation API. Use distinct sink-owned event_log_id, not caller event_id, and embed the authoritative projection cursor in the same mission-view.json replacement. For cold migration, avoid mission-view-lock -> events-lock inversion by a double-checked events.lock -> mission-view.lock rebuild; schema<=6 has no trustworthy cursor and must full-rebuild once rather than infer from timestamps/caller IDs. Benchmark recent-first opaque-cursor location against authoritative all-generation fallback. Keep candidate-008 power-loss durability separate and unclaimed until canonical-fsync-before-view fault injection exists. Re-read current Argus main next invocation and keep optional Manager transition_id provenance separate.",
+  "exact_continuation": "Turn the two Mission View persistence variants into literal Argus tests: (A) pre-replace projection loss must be repaired from canonical E1 before fresh-sink E2; (B) real replace followed by EIO must be resolved by readback so E1 is not double-applied. Implement the exact schema-7 migration table with embedded event_log_id cursor and legacy-null-cursor one-extra-rebuild semantics. Factor a lock-order-safe event_log_locked helper for events.lock -> mission-view.lock stable all-generation replay. Extend the recent-first byte cursor locator benchmark to deeper generations/boundary positions while keeping full JSON replay authoritative. Separately design candidate-008 fault injection for event-file fsync, rollover-directory fsync, Mission View post-replace ambiguity, and log-durable-before-view ordering. Re-read Argus main next invocation and keep optional Manager transition_id provenance separate.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
     "public_main_advance_count_observed": 0,
-    "candidate_007_status": "strengthened with a deterministic source-shaped fresh-sink semantic-divergence regression and a concrete schema-7 migration/lock-order design",
-    "candidate_007_literal_witness": "force the first Mission View _write_unlocked call to fail for round.review.completed status=continue, discard that sink, append a second status=blocked event from a fresh sink; canonical log contains both while current single-event projection yields rejected_attempts=1 versus canonical replay=2",
-    "candidate_007_witness_scope": "the full Argus test was not executed locally; a minimal source-shaped simulation reproduced the exact 1-vs-2 reducer arithmetic and current source makes the persistence/projection order deterministic",
-    "candidate_007_identity_refinement": "use a distinct sink-owned event_log_id that overwrites caller input; do not overload existing caller event_id/id identity fields; persisted handle_event and direct append share one prepared mapping and one normalization path",
-    "candidate_007_cursor_location": "Mission View schema 7 embeds the last contiguously projected event_log_id in the same mission-view.json atomic replacement as the derived state",
-    "candidate_007_reconcile_contract": "under events.lock -> mission-view.lock, locate current cursor across stable retained generations and reduce every projected canonical event through the newly appended target; absent/unlocatable cursor triggers authoritative all-generation rebuild; write failure leaves prior view/cursor authoritative",
-    "candidate_007_legacy_migration": "schema<=6 has no trustworthy cursor; force one all-generation rebuild rather than infer from last_event_ts or caller IDs. Legacy-only history may remain cursorless after rebuild until the first new sink-owned projected event performs one further full rebuild and establishes a trustworthy cursor",
-    "candidate_007_lock_order": "current snapshot_mission_view holds mission-view.lock before _bootstrap_view; new canonical rebuild must not acquire events.lock from there. Use a double-check: read/release mission lock, then acquire events.lock -> mission-view.lock, re-read, rebuild only if still needed",
-    "candidate_007_event_key_scope": "Python _event_id and frontend eventKey should prefer event_log_id for replay-cardinality stability, but this does not make non-idempotent reducers globally replay-safe; contiguous-prefix reconciliation remains the correctness mechanism",
-    "candidate_006_status": "maintained and promoted to shared correctness fallback for schema migration/cursor recovery; stable all-generation replay is required, not just a reporting improvement",
-    "candidate_008_status": "maintained separately; current source still does not establish canonical-log durable-before-derived-view ordering for power loss and no power-loss incident was reproduced",
+    "candidate_007_status": "strengthened with explicit pre-replace versus post-replace-ambiguous failure semantics, an exact schema-7 migration contract, and a measured recent-first opaque-cursor locator optimization",
+    "candidate_007_variant_a": "pre-replace Mission View loss leaves canonical E1 durable but view behind; fresh-sink E2 must reconcile E1 then E2 and end rejected_attempts=2",
+    "candidate_007_variant_b": "Mission View replace can land before an EIO is observed; recovery must read back state/cursor before replay or E1 can be double-applied, yielding rejected_attempts=3 instead of 2",
+    "candidate_007_internal_precedent": "Argus continuous.json already implements file fsync + replace + directory fsync + post-replace ambiguity detection and has a replace-then-fail regression test",
+    "candidate_007_schema7": "schema<=6 forces one all-generation rebuild; schema7 stores projection.event_log_id in the same mission-view.json replacement; legacy-only rebuild may persist null cursor and the first later sink-owned projected event performs one additional full rebuild to establish the anchor",
+    "candidate_007_identity": "normalize_event_envelope preserves unknown envelope fields and frontend EventMsg is open; use a distinct sink-owned event_log_id that overwrites caller input and is minted once in a shared persisted-event preparation path",
+    "candidate_007_cursor_benchmark": "local synthetic 32 generations / 80k rows / 42.61 MiB: recent-first raw-byte cursor search median newest 0.18ms, middle 4.66ms, oldest 9.24ms, missing 41.32ms; full all-generation JSON parse 154.35ms; not production filesystem performance",
+    "candidate_007_lock_order": "writer order is events.lock -> mission-view.lock while current snapshot bootstraps under mission-view.lock; use a double-check that releases mission lock before acquiring events.lock -> mission-view.lock",
+    "candidate_006_status": "maintained as authoritative all-generation fallback for schema migration, missing/unlocatable cursor, and cold recovery",
+    "candidate_008_status": "strengthened by same-repository continuous-state durability precedent; event log still lacks explicit file fsync/directory fsync and Mission View lacks directory fsync, but no power-loss incident or hardware fault was reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate"
   },
   "independence": {
