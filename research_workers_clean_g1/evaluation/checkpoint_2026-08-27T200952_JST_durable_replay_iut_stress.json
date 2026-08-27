@@ -1,0 +1,89 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T20:09:52+09:00",
+  "invocation_started_at": "2026-08-27T19:57:59+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T200530_JST_streaming_interrupt_iut.json",
+  "control": {
+    "frozen_main_sha": "9f8e7d51e9a8d6226d6dfb14583e72ac1864b306",
+    "root_control_revision": 12,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true,
+    "later_repository_advances_not_adopted_as_semantic_control": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "public_sources_used": true,
+    "connector_discovery_mutation_performed": false
+  },
+  "main_result": {
+    "durable_planned_slot_replay": {
+      "implementation_path": "research_workers_clean_g1/evaluation/durable_planned_slot_replay_monitor_2026-08-27.py",
+      "implementation_blob": "aabe6506684d3bf5a68ca6c01b0da0a03c082126",
+      "validation_path": "research_workers_clean_g1/evaluation/durable_planned_slot_replay_monitor_validation_2026-08-27.json",
+      "validation_blob": "e248ca5efe9cee76482769b9043ad216cebbb6ee",
+      "design": "Persist scientific journal state rather than V3 cache state: ordered closed {predictable_weight,block_score} summaries plus at most one active pre-admitted block. Recovery reconstructs V3 by replaying closed summaries in order; an active block recovered at/after deadline closes fail-closed before further evidence is admitted.",
+      "stress": {
+        "campaigns": 80,
+        "blocks_per_campaign": 18,
+        "endpoint_checks": 1440,
+        "crashes_before_deadline": 1061,
+        "crashes_after_deadline": 379,
+        "duplicate_delivery_rejects": 660,
+        "late_delivery_rejects": 2638,
+        "max_recovery_endpoint_abs_diff": 0.0,
+        "threshold_decision_mismatches": 0,
+        "durable_state_roundtrip_mismatches": 0
+      },
+      "conclusion": "In the tested outage model, crash/restart and replay were decision-path identical to direct execution under the same operational availability history. Cache/root memo state is therefore not required as durable scientific state."
+    },
+    "joint_iut_stress": {
+      "design_path": "research_workers_clean_g1/evaluation/joint_equal_process_exposure_iut_gate_2026-08-27.json",
+      "design_blob": "b493f8edcd53850954780cf3b8a9c711ba2102dd",
+      "simulation_path": "research_workers_clean_g1/evaluation/joint_iut_gate_simulation_2026-08-27.json",
+      "simulation_blob": "cc85aa94917df73ee4fd20d0de22abd1a93b36fb",
+      "result": "For the frozen AND decision 'both channels are below tolerance', component tests can each run at global alpha and release only when both reject; no Bonferroni split is needed for that one intersection-union decision. In a toy two-e-process stress with dependence ranging from independent to fully shared Bernoulli draws, 100k-run fully shared checks gave false conjunctive-safe crossing 0.05065 when both means were exactly unsafe-boundary .05 and 0.05002 when one mean was .05 and the other .005. The small .05065 Monte Carlo excess is sampling noise around the theoretical level-.05 guarantee, not evidence of violation.",
+      "timing_example": "When both toy channels had mean .005 and 50% shared draws, both threshold-20 and threshold-40 rules crossed in all tested runs, but median stop was 73 versus 90 steps.",
+      "scope": "The no-split rule is for one conjunctive decision. Two displayed numerical upper bounds still need an explicit simultaneous-coverage construction if joint 95% coverage is claimed."
+    },
+    "inherited_from_predecessor": {
+      "streaming_v3": "V3 passed interleaved append/query regression with zero decision mismatches and mandatory cache invalidation in ordinary and edge-weight streams.",
+      "fail_closed_endpoint": "Pre-admitted no-result slots score one and cannot be erased by late retry.",
+      "ope_boundary": "OPE policy value and predictable reliability weighting are different estimands except in explicitly matched special cases; current-outcome-dependent realized weights can move the target by an order of magnitude in the stored counterexample.",
+      "trace_frontier": "Public serving evidence still lacks the preferred same-fingerprint raw divergent output plus deterministic scorer dataset needed to measure token->score->paired-sign propagation directly."
+    }
+  },
+  "measurement_validity_rules": [
+    "Persist/replay scientific summaries, not numerical cache implementation details, when replay yields pathwise-equivalent confidence-sequence decisions.",
+    "Recovery after the frozen deadline must fail-close the active block before any later retry can change its planned-slot outcome.",
+    "A conjunctive safe-decision IUT can use each valid component test at alpha without multiplicity splitting because the unsafe null is a union; do not generalize this to joint confidence-bound coverage or arbitrary post-hoc combinations.",
+    "Simulation is a stress test of implementation/logic, not the source of the IUT error guarantee.",
+    "Keep OPE, predictable weighting, and realized-size weighting separated by estimand before comparing width or power."
+  ],
+  "scope_guards": [
+    "No forbidden semantic inputs were read and no connector-discovery mutation occurred.",
+    "The crash/restart stress models JSON-like durable state and deterministic replay; it does not address malicious corruption or partial-write atomicity.",
+    "The joint IUT simulation uses simple Bernoulli e-processes, not the full V3 two-channel implementation.",
+    "All stress numbers are synthetic/local and are not production reliability measurements."
+  ],
+  "frontier": [
+    {"priority":1,"action":"Implement the actual two-channel fail-closed monitor that feeds the same closed block score into equal-process (unit weight) and planned-exposure (B/Bcap predictable weight) V3 channels, and require the threshold-20 IUT decision to be replay-stable across crash/restart."},
+    {"priority":2,"action":"Stress predictable adaptation of future block size B_t from past closed blocks while freezing B_t before current outcomes; verify both channel targets and the joint IUT remain valid and that realized completed count never enters the exposure weight."},
+    {"priority":3,"action":"Add explicit simultaneous-bound reporting mode with a frozen alpha allocation and compare its stopping delay against the decision-only IUT without choosing modes after seeing outcomes."},
+    {"priority":4,"action":"Find or generate a same-fingerprint public repeated-inference trace with divergent raw/token outputs plus deterministic scorer contract, then measure raw->token->score->paired-sign propagation without pseudoreplication."},
+    {"priority":5,"action":"Search for a nontrivial bounded-importance-ratio setting where an OPE policy-value estimand and a reliability-weighted estimand are provably identical before any numerical method comparison."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Build the actual dual-channel journal/replay wrapper over V3: each closed fail-closed block appends once to the equal-process channel with weight 1 and once to the planned-exposure channel with frozen weight B/Bcap; evaluate the AND safety gate at component threshold 20 and require crash/recovery replay to preserve both channel endpoints/e-values and the joint decision."
+}
