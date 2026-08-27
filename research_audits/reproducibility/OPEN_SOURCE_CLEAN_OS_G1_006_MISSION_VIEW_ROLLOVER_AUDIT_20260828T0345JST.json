@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "audited_at": "2026-08-28T03:45:52.829968+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "acdb0f519079c8c63499210ebbef91f7ed6cb6e7",
+    "root_control_revision": 12,
+    "root_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_control_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "role_config_revision": 2,
+    "presemantic_head_checks": [
+      "acdb0f519079c8c63499210ebbef91f7ed6cb6e7",
+      "acdb0f519079c8c63499210ebbef91f7ed6cb6e7"
+    ],
+    "semantic_freeze_respected": true
+  },
+  "candidate_identity": {
+    "namespace": "open_source",
+    "source_artifact_blob": "6408429436087a103373faaa941069fb972cfad0",
+    "source_local_candidate_id": "clean-os-g1-006",
+    "wave_id": "clean-g1-wave-c24-20260828T005432JST-e1c4c313",
+    "active_wave_blob": "1f0279130a7c2357232f5aeb51683bd7a3b7ec3e",
+    "wave_selection_snapshot_note_main_sha": "3050eb7a585755be9e9004202e1dfb75e152272a",
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_0000_MISSION_VIEW_ROLLOVER_SNAPSHOT_TRANSITION_TESTMAP.md",
+    "source_path_blob_verified": true
+  },
+  "subject": "Argus Mission View cold-bootstrap recovery across retained event-log generations and concurrent rollover",
+  "grade": {
+    "overall": "B+",
+    "official_artifact_support": "A",
+    "current-main structural confirmation": "A",
+    "independent_structural_reproduction": "A-",
+    "production_incidence": "C",
+    "proposed_fix_efficacy": "C+"
+  },
+  "official_source": {
+    "repository": "lbx154/Argus",
+    "worker_observed_source_commit": "6953a117d102fc038035bbe654ae55f676b435e6",
+    "fresh_public_main": "93a01f185f3c4800f127feca0739dbe7331c1950",
+    "fresh_main_ahead_by": 15,
+    "relevant_current_files": [
+      "argus_skill/core/mission_view/_snapshot.py",
+      "argus_skill/core/mission_view/_view_state.py",
+      "argus_skill/life/event_log.py",
+      "tests/core/test_mission_view.py",
+      "tests/tools/test_event_log_query.py"
+    ]
+  },
+  "findings": [
+    {
+      "id": "older-generation-bootstrap-gap",
+      "status": "confirmed_current_main",
+      "evidence": "At public main 93a01f185f3c4800f127feca0739dbe7331c1950, _bootstrap_view still iterates only events.jsonl.1 then events.jsonl. event_log.py separately states that every generation is retained and event_log_paths() enumerates .2/.3/... then .1 then live in canonical oldest-to-newest order. Therefore a cold Mission View bootstrap can omit projected events that exist only in retained generations >= .2.",
+      "scope": "Cold bootstrap/recovery reconstruction only. This does not show normal online projection loses events."
+    },
+    {
+      "id": "tail-truncation-gap",
+      "status": "confirmed_current_main",
+      "evidence": "_tail_jsonl still reads at most the final 8 MiB of each selected file. Even within .1 or live, a projected event older than that tail is omitted during cold reconstruction.",
+      "scope": "Only event-sourced Mission View reconstruction; no claim about the canonical event log itself."
+    },
+    {
+      "id": "all-generation-utility-exists",
+      "status": "confirmed_official_test",
+      "evidence": "tests/tools/test_event_log_query.py already constructs events.jsonl.2, .3, .1 and live and verifies iter_call_events returns them in oldest-to-newest order. Thus the repository already has a tested all-generation ordering primitive, but Mission View bootstrap does not use it.",
+      "scope": "This test validates event-log query ordering, not Mission View reconstruction or rollover snapshot atomicity."
+    },
+    {
+      "id": "path-name-rollover-toctou",
+      "status": "independently_reproduced_structurally",
+      "evidence": "A fresh stdlib filesystem reproduction matching Argus rotation semantics started with .2=A, .1=B, live=C, enumerated those path names, then rotated .1->.3 and live->.1 and created live=D before opening all stored names. Reading the previously enumerated names returned A,C,D and omitted B although B remained durable as .3. Opening/pinning the three files before the renames and reading captured end offsets returned the intended A,B,C snapshot.",
+      "observed_vectors": {
+        "enumerated_names": ["events.jsonl.2", "events.jsonl.1", "events.jsonl"],
+        "read_after_rollover_by_name": ["A-oldest", "C-newest", "D-newlive"],
+        "read_from_preopened_descriptors": ["A-oldest", "B-middle", "C-newest"]
+      },
+      "scope": "This is a deterministic source-shaped filesystem reproduction, not an observed Argus production incident and not an end-to-end execution of Argus Mission View code."
+    },
+    {
+      "id": "lock-order-constraint",
+      "status": "confirmed_by_source",
+      "evidence": "JsonlEventSink._append takes events.lock and calls update_mission_view_event while still holding it; Mission View mutation takes mission-view.lock. snapshot_mission_view currently takes mission-view.lock only. A repair that acquires events.lock while already holding mission-view.lock would invert writer order and can deadlock. A safe cold-path design must avoid mission-view.lock -> events.lock inversion, for example by acquiring events.lock before mission-view.lock and double-checking bootstrap state, or by pinning event files/end offsets under the event lock before replay.",
+      "scope": "Constraint on a future repair; the current code does not itself acquire the inverted second lock."
+    },
+    {
+      "id": "freshness",
+      "status": "issue_persists_after_worker_snapshot",
+      "evidence": "Public main is 15 commits ahead of the worker-observed 6953a117 source. _snapshot.py is unchanged across that range and fresh main still contains the two-file bootstrap. event_log.py changed only outside the relevant generation/rotation semantics. No matching public Mission View bootstrap issue was found in a repository issue search during this audit.",
+      "scope": "Absence of a discovered issue is not proof no private/unindexed report exists."
+    }
+  ],
+  "interpretation": "clean-os-g1-006 is strongly supported as a concrete recovery-correctness defect and patch target. The source-level failure is simpler than a statistical headline: retained history and tested all-generation ordering exist, but Mission View cold bootstrap ignores generations >=.2 and truncates selected generations to 8 MiB. The additional rollover race is mechanically reproducible if a future implementation merely enumerates names and opens them later. The candidate should not be described as a proven production incident, and the proposed pinned-fd or lock-held repair has not yet been implemented and regression-tested in Argus.",
+  "reproduction_boundary": {
+    "confirmed": [
+      "current official source shape",
+      "retained-generation ordering utility",
+      "deterministic path-rebinding omission under matching rename semantics",
+      "preopened-descriptor snapshot preserves intended pre-roll files"
+    ],
+    "not_confirmed": [
+      "an observed production Mission View omission",
+      "frequency or user impact in deployed Argus",
+      "end-to-end Argus regression using concurrent writer/bootstrap barriers",
+      "correctness/performance of a specific proposed patch"
+    ]
+  },
+  "recommended_decisive_tests": [
+    "Add a Mission View cold-bootstrap regression with projected state only in events.jsonl.2/.3 and assert reconstruction includes it in canonical order.",
+    "Add a >8 MiB generation regression with a projected event before the old tail boundary.",
+    "Add a two-thread barrier test that forces rollover between snapshot selection and replay and asserts no retained generation omission and no deadlock.",
+    "Compare correctness-first events-lock-held replay versus preopened-descriptor/end-offset capture, preserving writer lock order and exact-once projection after the snapshot boundary."
+  ],
+  "reopen_condition": "Reaudit clean-os-g1-006 when Argus changes Mission View bootstrap/event-log snapshot semantics, lands matching regressions, publishes a production incident/telemetry measurement, or provides a competing fix whose exact lock/snapshot behavior can be tested.",
+  "exact_next_action": "On the next valid invocation, audit a different exact C24 identity row with independent numerical/raw-artifact leverage. Do not repeat clean-os-g1-006 unless the reopen condition fires; if selecting another Argus candidate, keep Mission View observability recovery separate from clean-os-g1-005 handoff authority/fencing."
+}
