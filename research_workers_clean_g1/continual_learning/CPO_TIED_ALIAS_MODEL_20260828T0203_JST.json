@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "role": "continual_learning",
+  "finding": "CPO public 4B mask builder traverses state_dict aliases while CLGRPOTrainer traverses named_parameters with duplicate removal; for tied input/output embeddings this can persist an lm_head mask/reference/index entry that the trainer never consumes.",
+  "public_release_anchor": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+  "transformers_anchor": "v4.57.3",
+  "model_anchor": "Qwen/Qwen3-VL-4B-Instruct initial public lineage (config blob d51ae92 lineage; repository commit ebb281ec70b05090aa6165b016eac8ec08e71b17 retains the same config)",
+  "model_facts": {
+    "vocab_size": 151936,
+    "hidden_size": 2560,
+    "tie_word_embeddings": true,
+    "tied_alias_scalars": 388956160,
+    "public_safetensors_total_size_bytes": 8875631616,
+    "public_index_contains_lm_head_weight": false,
+    "public_index_contains_input_embedding_weight": true
+  },
+  "release_code_facts": {
+    "mask_builder_input": "model.state_dict()",
+    "mask_builder_selection": "per-tensor floor(10%) TopP, then discard top values equal to zero",
+    "trainer_parameter_iteration": "raw_model.named_parameters() / unwrapped.named_parameters() with PyTorch default remove_duplicate=true",
+    "qwen3_vl_tied_key": "lm_head.weight",
+    "module_registration_order": ["model", "lm_head"],
+    "expected_consumed_alias": "model.language_model.embed_tokens.weight",
+    "expected_unused_duplicate_mask_key": "lm_head.weight"
+  },
+  "conditional_overhead_if_tied_embedding_moves_and_full_10pct_alias_mask_is_nonzero": {
+    "alias_selected_positions": 38895616,
+    "unused_current_mask_file_bytes": 544538624,
+    "unused_current_mask_file_gib": 0.50714111328125,
+    "unused_trainer_auxiliary_bytes": 855703552,
+    "unused_trainer_auxiliary_gib": 0.79693603515625,
+    "components": {
+      "dense_bool_mask_bytes": 388956160,
+      "float32_reference_bytes": 155582464,
+      "int64_flat_index_bytes": 311164928
+    }
+  },
+  "conditional_independent_four_task_support_scenario": {
+    "cumulative_union_fraction": 0.3439,
+    "unused_current_mask_file_gib": 0.8605460205078125,
+    "unused_trainer_auxiliary_gib": 1.8571507568359373
+  },
+  "scope_guards": [
+    "The unused-alias storage/runtime overhead is conditional on the tied embedding having positive movement; compute_importance_mask.py drops a tensor when all selected differences are zero.",
+    "This is a release-code/source-algebra finding, not a measured task_k.pt size or process RSS measurement.",
+    "It does not apply to the public Qwen3-VL-8B-Instruct configuration, whose tie_word_embeddings is false and whose safetensors index contains a distinct lm_head.weight.",
+    "The CPO launcher references an unpinned local Qwen3-VL-4B-Instruct path; the public model config has been stable since its October 2025 initial lineage, but an unreleased local model variant cannot be ruled out without the original run artifact.",
+    "No claim is made that paper-table runs used this exact public release path."
+  ],
+  "sources": [
+    "https://github.com/MaolinLuo/CPO/blob/9429452cb536a9e713b73b91c0011b96df44962c/src/compute_importance_mask.py",
+    "https://github.com/MaolinLuo/CPO/blob/9429452cb536a9e713b73b91c0011b96df44962c/src/trainer/grpo_trainer_cl.py",
+    "https://github.com/MaolinLuo/CPO/blob/9429452cb536a9e713b73b91c0011b96df44962c/scripts/GSPO-CL-4B/run_cpo.sh",
+    "https://github.com/MaolinLuo/CPO/blob/9429452cb536a9e713b73b91c0011b96df44962c/requirements.txt",
+    "https://github.com/huggingface/transformers/blob/v4.57.3/src/transformers/models/qwen3_vl/modeling_qwen3_vl.py",
+    "https://github.com/huggingface/transformers/blob/v4.57.3/src/transformers/modeling_utils.py",
+    "https://github.com/pytorch/pytorch/blob/main/torch/nn/modules/module.py",
+    "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/blob/ebb281ec70b05090aa6165b016eac8ec08e71b17/config.json",
+    "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct/blob/70c41a926abfc92501c4a4da369a8d6312915b61/model.safetensors.index.json",
+    "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct/blob/main/config.json",
+    "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct/blob/main/model.safetensors.index.json"
+  ],
+  "next_test": "On the smallest faithful public tied-embedding CPO run, record state_dict alias data_ptr identity, new_mask keys, exact selected counts, task_k.pt bytes, and whether lm_head.weight is absent from named_parameters(); then implement a deduplicated state_dict-by-storage control and compare files/RSS without changing the effective protected physical parameter set."
+}
