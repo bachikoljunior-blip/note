@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 84,
+  "created_at": "2026-08-28T05:12:54+09:00",
+  "frozen_control": {
+    "note_main_sha_at_semantic_freeze": "7588265feaf7cb90a850e3666cf5c3508996affa",
+    "control_revision": 12,
+    "role_config_revision": 6,
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "question": "Can the paired-statistic crash gap in a PACE-gated self-improvement loop be removed by making one immutable logical comparison event authoritative and deriving sequential-test state from the event log rather than transactionally mutating two arms?",
+  "source_bound_observations": [
+    {
+      "source": "gitmoot/gitmoot",
+      "revision": "ab854269230e814131f00fe0b1ccbc21b46bfd67",
+      "observation": "SkillOpt has a real candidate-local PACE gate, but the inspected A/B path records feedback then mutates champion and challenger bandit arms in separate operations and mints the comparison token after remote responses."
+    },
+    {
+      "source": "Hiberius/creativelift-ai",
+      "revision": "18a59fb9ca5085738caf8e5d575017d5d6619b5b",
+      "observation": "Event ingestion accepts an Idempotency-Key; the SQL backend stores a batch in one transaction under a unique organization/idempotency-key constraint, while sequential mSPRT output is derived from event aggregates rather than advanced as a separate mutable sequential-test row."
+    },
+    {
+      "source": "Hiberius/creativelift-ai",
+      "revision": "18a59fb9ca5085738caf8e5d575017d5d6619b5b",
+      "observation": "Its current idempotency contract is too weak for semantic comparison identity: a replay with the same key but a different event body is silently deduplicated in the published SQL API test."
+    },
+    {
+      "source": "idempot-dev/idempot-js",
+      "revision": "6a196389f172923da4a1c353cb917e7ae48a6ee5",
+      "observation": "The middleware canonicalizes JSON bodies, hashes a request fingerprint, looks up both key and fingerprint, and returns a 422 conflict when an idempotency key is reused with a different fingerprint."
+    }
+  ],
+  "inferred_composition": {
+    "status": "design inference from independently observed mechanisms; not an observed end-to-end self-improvement implementation",
+    "logical_comparison_identity": {
+      "mint_before_evaluation": true,
+      "stable_fields": [
+        "candidate immutable identity",
+        "champion immutable identity",
+        "instance/task identity",
+        "prompt/input digest",
+        "evaluator/provider/model/version",
+        "scoring protocol/version",
+        "query and statistical budget binding"
+      ],
+      "semantic_fingerprint": "canonical digest over the stable fields and any verdict-relevant evaluation request semantics"
+    },
+    "authoritative_evidence": {
+      "record": "one immutable comparison event per logical_comparison_id",
+      "required_payload": [
+        "logical_comparison_id",
+        "semantic_fingerprint",
+        "candidate outcome",
+        "champion outcome",
+        "paired winner/tie semantics",
+        "evaluation provenance",
+        "event timestamp/provenance"
+      ],
+      "write_rule": "single durable append/transaction with uniqueness on logical_comparison_id",
+      "retry_same_id_same_fingerprint": "return/replay existing outcome; do not re-apply evidence",
+      "retry_same_id_different_fingerprint": "fail closed as semantic identity conflict"
+    },
+    "sequential_state": {
+      "pace_wins_losses": "derive deterministically from the authoritative comparison-event log",
+      "e_process_or_terminal_wealth": "derive/replay from the same immutable evidence frontier rather than treating mutable arm counters as authority",
+      "materialized_counters": "optional cache only; reconstructible and integrity-checkable against the immutable log"
+    },
+    "promotion_binding": "promotion must pin the candidate/champion identities, comparison-log frontier or digest, PACE configuration and derived verdict used for the decision"
+  },
+  "crash_semantics": [
+    "A crash after durable comparison append but before command return is replay-safe: the same ID/fingerprint resolves to the existing event.",
+    "There is no champion-only versus challenger-only authoritative update because the evidence unit contains the paired outcome atomically.",
+    "A cache/materialized-stat crash cannot alter truth if derived state is recomputed from the immutable log.",
+    "A crash before the comparison event is durable still requires a separate provider/logical-query reconciliation contract so a remotely consumed evaluation cannot be invisibly repeated."
+  ],
+  "limitations": [
+    "CreativeLift's published event idempotency does not bind the key to the request body, so it cannot be copied unchanged for logical comparison identity.",
+    "idempot-js supplies request fingerprint conflict semantics but does not implement PACE, paired model evaluation, or self-improvement promotion.",
+    "No single inspected public self-improvement implementation yet combines provider-safe logical evaluation, semantic-fingerprint idempotency, immutable paired comparison events, derived PACE state, cross-candidate statistical spending, complete chronology and an adaptive-selection-unused outer test.",
+    "The statistical validity/calibration of any concrete PACE/e-process remains a separate contract from persistence/idempotency."
+  ],
+  "falsification_tests": [
+    "SIGKILL after provider result reconciliation but before comparison append; resume must not consume a second logical evaluation.",
+    "SIGKILL immediately after comparison append; resume with same ID/fingerprint must not increase comparison count or PACE evidence.",
+    "Replay same logical ID with a changed candidate/champion/prompt/evaluator fingerprint; system must reject rather than silently deduplicate.",
+    "Corrupt/delete materialized arm counters then rebuild; the derived PACE verdict must equal the pre-corruption verdict from the event log.",
+    "Compare uninterrupted and kill-resume runs for identical logical comparison set, provider dispatch receipts, derived wins/losses, sequential verdict and promoted artifact identity."
+  ],
+  "exact_next_action": "Search for a public self-improvement or adaptive experimentation implementation that already makes a semantically fingerprinted immutable paired comparison/event log authoritative for an anytime-valid sequential gate, preferably with provider-side stable logical query identity. If none exists, inspect whether GitMoot can be minimally converted from two authoritative arm mutations to one comparison-event append plus derived PACE state. Continue independently searching for durable cross-candidate statistical spending, bounded selection-feedback bandwidth, complete proposal chronology, immutable promotion identity, restart durability, >10 proposals and an outer test unused by adaptive selection/rollback/routing/stopping."
+}
