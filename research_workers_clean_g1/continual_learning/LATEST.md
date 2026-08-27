@@ -1,6 +1,6 @@
 # Continual Learning — clean_g1 latest
 
-Latest checkpoint: `RUN_20260828T0107_JST.md`
+Latest checkpoint: `RUN_20260828T0203_JST.md`
 
 Base state: `STATE.md`
 
@@ -9,41 +9,28 @@ Current high-priority reconciliation:
 - Public release at `MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c` uses per-tensor TopP plus per-tensor normalization.
 - Source-locked executable equivalence remains in `tools/cpo_release_equivalence_harness_20260828.py` / `CPO_RELEASE_EQUIVALENCE_RESULT_20260828.json`.
 - Public 4B/8B ZeRO-3 path still has the source-level `1/world_size` owner-only regularizer attenuation identified in `RUN_20260828T0011_JST.md`; public 8-GPU launchers imply nominal lambda 100 is lambda-equivalent about 12.5 on that release path unless corrected. This is source-level algebra, not a live 8-GPU reproduction or proof about unreleased paper-table code.
-- New operational finding: the current public CPO bookkeeping is sparse in protected coordinates but dense in masks. `CLGRPOTrainer` persistently retains dense bool masks, float32 protected references and int64 flat indices. For mask-domain scalar count `N` and accumulated support `u`, logical persistent auxiliary tensor payload is `N + 12uN` bytes; current saved cumulative-mask tensor payload is `N + 4uN` bytes, excluding Python/serialization/transient overhead.
-- Whole-model/full-mask-domain scenarios using public Qwen3-VL BF16 weight indexes: after the first 10% mask, auxiliary state is about 9.09 GiB for 4B and 17.96 GiB for 8B. Under independent 10% supports across four masks (`u=34.39%`), it is about 21.19 GiB / 41.86 GiB. These are scenarios, not measured actual mask-domain memory.
-- Release code retains successive cumulative `task_k.pt` files. Under the same independent/full-domain scenario four masks contain about 31.49 GiB (4B) or 62.21 GiB (8B) of logical tensor payload in total.
-- Mask construction retains the current state dict while loading the previous full model/state dict, so two BF16 weight payloads can coexist: about 16.53 GiB (4B) or 32.66 GiB (8B) before other/transient memory. This is source-structure payload, not measured RSS.
-- Durable calculation artifact: `CPO_AUX_STATE_MEMORY_MODEL_20260828.json`.
-- Reference anchoring is not a new discrepancy: both paper practical objective and release anchor the cumulative protected support to the immediately previous task checkpoint.
+- Public CPO bookkeeping is sparse in protected coordinates but dense in masks. `CLGRPOTrainer` persistently retains dense bool masks, float32 protected references and int64 flat indices. For a trainer-visible mask-domain scalar count `N` and accumulated support `u`, logical persistent auxiliary tensor payload is `N + 12uN` bytes, excluding Python/serialization/transient overhead.
+- **New tied-alias correction:** public Qwen3-VL-4B-Instruct has tied input/output embeddings. CPO's mask builder traverses `state_dict()` aliases while the trainer traverses `named_parameters(remove_duplicate=true)`. Therefore the builder can persist an `lm_head.weight` mask/ref/index entry that the trainer never consumes. For the 151936×2560 tied matrix, if the embedding moves and the full top-10% alias mask is nonzero, that dead alias is about 0.507 GiB in the current mask file and 0.797 GiB in persistent trainer auxiliary tensors. This does not apply to public Qwen3-VL-8B-Instruct, where embeddings are untied.
+- Durable alias calculation artifact: `CPO_TIED_ALIAS_MODEL_20260828T0203_JST.json`.
+- Real accounting must now separate physical unique scalars, mask-builder `state_dict()` scalars/keys, mask-file scalars/keys after filtering+union, and trainer-effective deduplicated `named_parameters()` scalars/keys.
+- Previous whole-model/full-mask-domain scenarios remain scenarios rather than measured actual mask-domain memory: one 10% mask was about 9.09 GiB for 4B and 17.96 GiB for 8B; independent four-mask union (`u=34.39%`) about 21.19/41.86 GiB. Tied aliases can add dead bookkeeping on top for tied configurations.
+- Mask construction retains current state dict while loading the previous full state dict, so two BF16 weight payloads can coexist; actual peak RSS remains unmeasured.
+- Reference anchoring is not a discrepancy: both paper practical objective and release anchor cumulative protected support to the immediately previous task checkpoint.
 
 Exact CPO continuation:
-1. Measure real mask-domain scalar count, per-task new support, cumulative union/overlap and actual `task_k.pt` bytes; compare with the source-structural memory model.
-2. Profile trainer CPU RSS plus per-step device-copy bytes/time for dense mask / float refs / int64 indices under ZeRO-2 and ZeRO-3 offload.
-3. Execute minimal distributed equivalence: single-rank reference vs current owner-only ZeRO-3 vs owner-only×world-size correction; measure post-reduction regularizer/RL gradient ratio and logged-vs-true regularizer magnitude.
-4. Expand quality factorial to `global/per-tensor selection × global/per-tensor normalization × uncorrected/corrected DP scaling` with paired initialization/seeds.
-5. Measure mask-construction peak RSS/wall time and continue read-only first-party provenance search for paper-table mask/scaling semantics.
+1. Run the smallest faithful tied-embedding CPO case and measure input-embedding/`lm_head` storage alias identity, builder `float_keys`/`total_params`, duplicate mask presence, exact `task_k.pt` bytes and trainer-visible `named_parameters()` keys.
+2. Add a storage-deduplicated mask-builder control that preserves the same trainer-effective physical protected set; compare file bytes, RSS, build time and behavior.
+3. Measure real physical/state_dict/mask-file/trainer-effective mask-domain counts, per-task new support, cumulative union/overlap and actual `task_k.pt` bytes.
+4. Profile trainer CPU RSS and per-step device-copy bytes/time under ZeRO-2 and ZeRO-3 offload; measure mask-construction peak RSS/wall time.
+5. Execute single-rank reference vs current owner-only ZeRO-3 vs owner-only×world-size correction; then expand to `global/per-tensor selection × global/per-tensor normalization × uncorrected/corrected DP scaling` with paired seeds.
+6. Continue read-only first-party provenance search for paper-table mask/scaling semantics.
 
-Current deterministic DeMix/OpenCompass reconstruction tools:
-- `tools/demix_opencompass_namekeyed_adapter_v1.py`
-- `tools/demix_opencompass_namekeyed_adapter_v2.py`
-- `tools/demix_opencompass_namekeyed_adapter_v3.py`
-- `tools/demix_opencompass_public_reconstruction_contract_20260827T1513JST.json`
-- `tools/demix_opencompass_track_a1_hf_fixture_20260827.py`
-- `OPENCOMPASS_051_PUBLICATION_PROVENANCE_20260827.json`
-- `OPENCOMPASS_051_052_PAIRED_ENV_CONTRACT_20260827.json`
-- `OPENCOMPASS_051_052_TRACK_A_DEPENDENCY_BOUNDARY_20260827.json`
-- `OPENCOMPASS_TRACK_A1_HF_FIXTURE_CONTRACT_20260827.json`
-- `OPENCOMPASS_TRACK_A1_SHARED_LOCK_SPEC_20260827.json`
-
-Current corrected public reconstruction anchors:
-- OpenCompass 0.5.1 first-party publication source anchor: tag `0.5.1.post1` at `ecc86a2728c06fd2c1ad34f1d0094f42b5243c78`.
-- OpenCompass 0.5.2 sensitivity anchor: `974179240a1a4e3c0ff14c60621cf1f6c95b287a`.
-
-Track A1 status: shared dependency environment must model OpenCompass's `.[full]` import surface, not runtime-only. The shared-lock contract fail-closes until every direct/transitive distribution has an exact artifact hash. Prior execution environment incompatibility/network acquisition limits remain environment blockers, not evidence about OpenCompass.
+Current deterministic DeMix/OpenCompass reconstruction tools and anchors remain unchanged from the predecessor checkpoint. Track A1 still requires a fully hashed shared Python 3.10 `.[full]` dependency environment; environment acquisition limits are not evidence about OpenCompass.
 
 Remaining frontier:
-- CPO real memory/storage/runtime and distributed scaling measurements, expanded quality factorial and first-party provenance.
+- CPO tied-alias dead-bookkeeping measurement/deduplication.
+- CPO real memory/storage/runtime, physical-vs-effective mask accounting and distributed scaling measurements.
+- CPO expanded quality factorial and historical paper-table provenance.
 - DeMix/OpenCompass Track A1 when the required environment is available.
 - Remaining DeMix checkpoint metadata byte-identity classes and orphan `mix_16` lineage.
-- Matched merge-vs-retrain displacement sweep after evaluator/environment identity is locked.
-- SAFE-Merge and earlier continual-learning branches, preserving exact tested scope and clean independence.
+- Matched merge-vs-retrain displacement sweep, SAFE-Merge and earlier continual-learning branches, preserving exact tested scope and clean independence.
