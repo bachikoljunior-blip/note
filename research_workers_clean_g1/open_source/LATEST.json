@@ -4,8 +4,8 @@
   "control_revision": 12,
   "config_revision": 5,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260827_1807_BOOT_FENCE_EVENT_IDEMPOTENCY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260827_1709_FENCE_CALLERS_LITERAL_REGRESSIONS.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260827_1812_INTENT_EVENT_ONCE_MISSIONSPEC.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260827_1807_BOOT_FENCE_EVENT_IDEMPOTENCY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -15,26 +15,25 @@
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Inspect PreparedManagerHandoff.commit and Manager.commit_vertical_decision to determine the least-invasive intent-bound replacement-reset history change; then specify an event-log append_event_once primitive over retained events.jsonl generations with stable task event IDs and fsync semantics; then freeze the exact front-door mission_spec needed to reconstruct a target row after Manager reconciliation but before Backlog insert; finally turn front-door and daemon-boot fence initiation into one source-shaped begin/reconcile/finalize helper. Keep external/admin PIPELINE_STATE whole-object writer fencing separate.",
+  "exact_continuation": "Inspect event_payload_schemas and Mission View reducers for life.planner.task_added to map every compatibility surface of event_id; then inspect BacklogItem.from_jsonable and generic Backlog.update for a backward-compatible immutable creation_stamp; then freeze exact begin_handoff/record_manager_receipt/finalize_or_reconcile signatures and CAS state transitions. Keep global/external PIPELINE_STATE writer fencing separate.",
   "run_findings": {
     "current_public_argus_main": "7cb5546d364c7d11dcc3bff4151993b7aa72a414",
     "daemon_boot_is_semantic_handoff_initiator": true,
-    "daemon_boot_current_failure_suppression_is_process_local_not_durable_reconciliation": true,
-    "front_door_and_boot_share_callback_before_continuous_replace_ordering": true,
-    "handoff_fence_must_be_first_class_continuous_state_field": true,
-    "handoff_fence_origins": ["front_door", "daemon_boot"],
-    "handoff_dispatch_modes": ["operator_priority_backlog", "continuous_provider_seed"],
-    "strict_manager_receipt_needs_intent_bound_reset_evidence": true,
+    "handoff_fence_must_support_front_door_and_daemon_boot_origins": true,
+    "intent_bound_reset_threading_path_identified": "PreparedManagerHandoff or daemon intent -> commit_vertical_decision -> reset_stage_for_new_intent -> reset_stage_for_replacement_intent -> _set_stage history transition_id",
     "current_reset_history_has_no_intent_or_transition_id": true,
+    "frontdoor_mission_spec_fields_frozen": true,
+    "priority_and_timestamp_must_be_assigned_once_under_backlog_lock": true,
     "continuous_task_event_type": "life.planner.task_added",
     "continuous_task_event_source": "manager_operator",
-    "continuous_task_event_uses_same_backlog_item_id": true,
     "event_sink_has_no_stable_event_id_or_dedup": true,
+    "event_append_once_can_reuse_events_lock_and_retained_generations": true,
+    "durable_event_once_requires_file_fsync_and_rotation_directory_durability": true,
     "exact_backlog_insert_alone_cannot_guarantee_exactly_one_task_added_event": true,
-    "candidate_event_fix": "stable creation-derived event_id plus append_event_once under events.lock with durable append and retained-generation dedup",
+    "event_id_candidate": "planner-task-added:v1:<item_id>:<sha256(creation_stamp)>",
     "backlog_atomic_rewrite_still_lacks_explicit_file_and_directory_fsync": true,
-    "manager_handoff_identity_current_version": 3,
-    "candidate_refined": "clean-os-g1-005-shared-boot-frontdoor-disabled-fence-strict-intent-bound-manager-receipt-dispatch-mode-finalization-exact-backlog-insert-idempotent-task-added-event-exact-rearm-route-identity-v4"
+    "shared_handoff_lock_order_candidate": "manager pipeline lock outside; continuous lock only for exact CAS phases; backlog and events locks sequential",
+    "candidate_refined": "clean-os-g1-005-shared-disabled-fence-intent-bound-reset-receipt-crash-reconstructible-mission-spec-durable-exact-backlog-idempotent-event-append-exact-rearm-route-v4"
   },
   "independence": {
     "clean_exploration": true,
