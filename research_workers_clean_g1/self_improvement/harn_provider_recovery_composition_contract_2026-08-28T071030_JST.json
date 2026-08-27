@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T07:10:30+09:00",
+  "source_qualified_id": "HARN-HYPOTHESIS-PROVIDER-RECOVERY-COMPOSITION",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "3e9914a229f5e9fc134460dac9c8a5cb158637c9",
+    "control_revision": 12,
+    "role_config_revision": 6,
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "primary_public_source": {
+    "repository": "burin-labs/harn",
+    "released_tag": "v0.10.118",
+    "released_commit": "40a4030d5c2204d27975cfd22f4d65fbe89ad2cc",
+    "release_published_at": "2026-08-27T00:55:21Z",
+    "provider_execution_file_blob": "41626d4802e499db0b336f4b5ada775b53bb5536",
+    "provider_transport_file_blob": "7d955436f68f154c79b0b5fbd63b815ddde78c9b",
+    "provider_submit_file_blob": "ff9e4c9c989335ac8ec5adc80b65fd3f2780596d",
+    "batch_execution_test_blob": "f0dc08af6141f4dc53ad6a035f143ccfc0c4f598"
+  },
+  "new_observation": {
+    "summary": "The provider-side crash/idempotency seam left open by the released hypothesis workflow already has a concrete sibling implementation inside the same released Harn runtime: durable model-batch execution writes a provider operation before dispatch, content-binds its identity to a hash-bound execution manifest, retries only providers with a declared deterministic create token, and otherwise fails closed into reconciliation instead of blind replay.",
+    "hash_bound_execution_identity": "The batch execution id is derived from SHA-256(manifest). The manifest is produced from the durable request ledger plus provider/model/workload/tool-format and batch policy inputs; validation recomputes the manifest hash and rejects changed request/job/artifact identity.",
+    "stable_operation_identity": "Each provider operation id is sha256(execution_id : next_revision : operation_kind), and the submit stage receives that exact id through HARN_MODELS_BATCH_OPERATION_ID.",
+    "write_ahead_provider_state": "The execution persists operation status planned and then dispatching before the provider stage. On restart, a dispatching operation with a durable receipt is committed; without a receipt it is retried only when idempotency_mode=deterministic_client_token, otherwise execution returns reconciliation-required and does not issue another provider create.",
+    "bedrock_provider_binding": "The Bedrock batch adapter derives clientRequestToken = sha256('bedrock-batch:' + operation_id), includes it in the provider create request, and records the token in the submission receipt. Its transport declares deterministic_token recovery. Providers without an equivalent documented token declare reconcile_only and retry_after_ambiguous_acceptance=false.",
+    "crash_injection_evidence": "Released E2E tests kill the process after provider acceptance but before the local submission receipt. The deterministic-token path resumes with the same operation id and records retry_planned; the ordinary ambiguous path refuses the retry and leaves the durable execution state unchanged. Separate tests cover pre-call kill and post-receipt kill.",
+    "public_hypothesis_adapter_status": "Searches of the public burin-labs Harn source found hypothesis.operation only in the testbench/workflow host boundary and deterministic scenario adapter. No public provider-backed hypothesis.operation adapter was found that reuses this model-batch provider-operation protocol."
+  },
+  "composition_candidate": {
+    "name": "hypothesis-operation-over-durable-provider-journal",
+    "steps": [
+      "Before remote evaluation, bind stable hypothesis operation_receipt_id to a canonical request digest containing frozen registration/assignment, candidate artifact identity, case/trial, evaluator/scorer version and provider/model config.",
+      "Materialize that logical evaluation as a hash-bound provider operation before dispatch. A changed digest under the same logical id must fail closed.",
+      "If the provider documents a deterministic idempotency token, derive it from the stable logical operation and reuse it after a crash. If it does not, persist UNKNOWN/reconciliation-required and never blind-resubmit the evaluation.",
+      "Only after the provider receipt is reconciled may the host append the immutable paired observation to the hypothesis ledger.",
+      "Recompute the anytime-valid decision from the immutable observation ledger and bind any promotion to exact candidate artifact, ledger frontier, gate configuration and decision fingerprint."
+    ],
+    "why_this_is_stronger_than_sequence_85": "Sequence 85 established immutable paired evidence and ledger-derived anytime-valid decisions but left provider exactly-once/reconciliation as an external-adapter requirement. The same released runtime now supplies a concrete, crash-tested provider-operation pattern for that missing boundary; the remaining work is an integration seam, not an unknown mechanism."
+  },
+  "adjacent_cross_registration_evidence": {
+    "repository": "karsar/ai-scientist-guards",
+    "source_commit": "2edd4278122aab338bc5888f61a6f377f358a544",
+    "paper": "Structural Enforcement of Statistical Rigor in AI-Driven Discovery: A Functional Architecture",
+    "paper_arxiv": "2511.06701",
+    "useful_mechanism": "The Research Monad threads LORD++ online-FDR state through each hypothesis test, and the public simulation reports naive fixed-threshold FDR around 41% versus about 1.1% under LORD++ over 2000 hypotheses.",
+    "durability_limit": "In the inspected public path runResearch constructs initializeState on every runner invocation and carries LordState through in-memory StateT. LordState tracks currentTime and discoveries but the inspected runner has no crash-durable restart ledger. This is evidence for cross-hypothesis statistical accounting, not yet restart-durable cross-generation self-improvement spending."
+  },
+  "important_scope_limits": {
+    "not_end_to_end_hypothesis_provider_adapter": "The released Harn hypothesis workflow and released Harn model-batch recovery are separate public paths. This run did not find a released host adapter that composes them end-to-end.",
+    "not_provider_universal_exactly_once": "Only transports with an equivalent documented deterministic create token may retry automatically. Harn deliberately fails closed for other providers; this is reconciliation safety, not universal exactly-once execution.",
+    "upload_side_effect_scope": "The Bedrock input S3 upload precedes the batch create and may be repeated on a retry; the deterministic token protects provider job creation. Do not overstate this as exactly-once for every preparatory remote side effect.",
+    "mixed_provider_scope": "The batch execution enters deterministic_client_token mode only when every prepared job declares deterministic_token recovery; otherwise it conservatively requires reconciliation.",
+    "cross_registration_statistics_still_missing": "The released Harn hypothesis inference controls repeated looks and multiplicity inside one frozen registration/family. A durable statistical wealth/error/query ledger spanning successive self-improvement registrations remains unverified.",
+    "outer_test_still_missing": "The hypothesis gate split is consumed for promotion and therefore is not a third untouched outer test.",
+    "ai_scientist_guard_scope": "The LORD++ adjacent implementation is an AI-discovery hypothesis stream, not evidence that a self-improving agent has benefited from this controller; its inspected protocol state is not crash durable."
+  },
+  "falsification_plan": [
+    "Implement or locate a provider-backed hypothesis.operation adapter that maps the stable operation_receipt_id and canonical evaluation digest into Harn's write-ahead provider operation. SIGKILL after remote acceptance and before the first observation append.",
+    "For Bedrock, prove the resumed dispatch uses the identical clientRequestToken and resolves to one provider job identity. For a reconcile-only provider, prove the resumed process performs zero blind create retries and blocks feedback/statistical consumption until reconciliation.",
+    "Reuse the same logical evaluation id with any changed candidate/evaluator/provider/request digest and require fail-closed conflict rather than replay.",
+    "SIGKILL after provider receipt reconciliation but before paired observation append, after observation append but before decision attestation, and after decision but before promotion. Recovered provider dispatch count, observation set, decision and promoted artifact must match an uninterrupted run.",
+    "Add a restart-durable online-FDR/FWER spending ledger across at least two successive candidate registrations. Kill after a test result is observed but before wealth update and prove restart cannot refund, duplicate or reset the statistical charge.",
+    "Instrument a third outer test and prove zero reads/queries from tuning, gate acceptance, rollback, routing, stopping, strategy reopening and crash recovery before final evaluation."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Search new Harn commits/PRs and public host adapters for an end-to-end hypothesis.operation bridge that reuses the released model-batch write-ahead provider recovery protocol. If absent, source-bind the smallest safe bridge contract from operation_receipt_id + canonical evaluation digest to provider operation/token/reconciliation and find a public crash test at that exact seam. In parallel search for a restart-durable online-FDR/FWER or alpha-wealth ledger spanning successive adaptive registrations and for a third test surface that is never consumed by tune/gate/rollback/routing/stopping."
+}
