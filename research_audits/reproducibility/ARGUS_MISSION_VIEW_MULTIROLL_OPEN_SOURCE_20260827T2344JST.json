@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "a10f515c64f9dda5ab24e79e91ce09444b9e5247",
+    "root_control_revision": 12,
+    "root_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 21,
+    "downstream_control_blob": "a9631ee4852e51001cfc910c7be9ebb2c26b3cd3",
+    "role_config_revision": 2,
+    "presemantic_head_checks": [
+      "a10f515c64f9dda5ab24e79e91ce09444b9e5247",
+      "a10f515c64f9dda5ab24e79e91ce09444b9e5247"
+    ],
+    "semantic_freeze_respected": true
+  },
+  "candidate_identity": {
+    "namespace": "open_source",
+    "source_artifact_path": "research_workers_clean_g1/open_source/RUN_20260827_2108_EVENT_REPLAY_MULTIROLL_GAP.md",
+    "source_artifact_blob": "f3d9d776d1cbe2cabdd20c055c0cef6b58244061",
+    "source_snapshot_note_main_sha": "66118b46718348cce378627fa4138b7859d9b302",
+    "source_local_candidate_id": "clean-os-g1-006",
+    "candidate_title": "Mission View cold-bootstrap must replay every retained event-log generation without silently dropping older projected events",
+    "active_wave_binding": "not_claimed",
+    "active_wave_note": "C23's open_source entry names a different source path/blob that was not retrievable through the available connector. This audit therefore binds only to the explicit role-local source artifact above and must not be fuzzy-joined to the C23 row."
+  },
+  "audited_at": "2026-08-27T23:44:23.465608+09:00",
+  "public_source": {
+    "repository": "lbx154/Argus",
+    "worker_pinned_commit": "a8a74029ae4a8f0bf488854b9e5f75ec0843f877",
+    "fresh_main_observed": "6953a117d102fc038035bbe654ae55f676b435e6",
+    "fresh_main_ahead_by_commits": 14,
+    "relevant_current_files": [
+      "argus_skill/core/mission_view/_snapshot.py",
+      "argus_skill/core/mission_view/_view_state.py",
+      "argus_skill/core/mission_view/_reduce_manager.py",
+      "argus_skill/life/event_log.py",
+      "tests/core/test_mission_view.py"
+    ],
+    "freshness_result": "The two-file Mission View bootstrap loop is still present on fresh main. No mission-view multi-roll issue/PR or test mentioning events.jsonl.2 was located."
+  },
+  "claim_decomposition": {
+    "bounded_failure_claim": "On cold Mission View rebuild, projected events retained only in events.jsonl.2+ can be omitted because _bootstrap_view reads only events.jsonl.1 and events.jsonl.",
+    "within_selected_file_failure_claim": "Even selected generations are truncated to the last 8 MiB before projected-event filtering, so an older projected event in a >8 MiB selected file can also be omitted.",
+    "impact_scope": "Cold bootstrap/recovery observability and event-sourced Mission View fields only. This does not show loss during normal online projection, nor corruption of the canonical retained event log.",
+    "fix_invariant": "A correctness-preserving cold rebuild must not silently omit retained projected events needed to reconstruct the read model.",
+    "performance_adaptation": "Sparse projected-event scanning or a durable checkpoint/cursor is a design suggestion, not reproduced performance evidence."
+  },
+  "official_artifact_evidence": {
+    "event_log_retention": "event_log.py states every generation is retained and implements event_log_paths() returning numeric generations >=2, then .1, then live.",
+    "current_bootstrap": "_snapshot.py _bootstrap_view() iterates only events.jsonl.1 and events.jsonl.",
+    "tail_limit": "_view_state.py _tail_jsonl() reads at most MISSION_BOOTSTRAP_MAX_BYTES = 8 MiB from the end of each selected file before filtering to projected event types.",
+    "routing_projection": "_reduce_manager.py projects route, vertical, workflow_mode, lifetime, continuous and open_ended from life.manager.intent.completed.",
+    "test_surface": "Current tests/core/test_mission_view.py exercises cold bootstrap from live events.jsonl and many reducer paths, but repository search found no mission-view test for events.jsonl.2."
+  },
+  "independent_reproduction": {
+    "method": "Independent minimal reimplementation of the exact public generation-order, 8 MiB tail, and manager-routing projection logic; official Argus package code was not executed locally because network cloning is unavailable in the runtime.",
+    "case_multi_roll": {
+      "layout": {
+        "events.jsonl.2": "life.manager.intent.completed(route=team, vertical=software, workflow_mode=staged, lifetime=bounded)",
+        "events.jsonl.1": "later projected planner event",
+        "events.jsonl": "later projected planner event"
+      },
+      "event_log_paths_order": [
+        "events.jsonl.2",
+        "events.jsonl.1",
+        "events.jsonl"
+      ],
+      "current_two_file_bootstrap_routing": {
+        "route": "",
+        "vertical": "",
+        "workflow_mode": "",
+        "lifetime": "",
+        "continuous": false,
+        "open_ended": false
+      },
+      "all_generation_replay_routing": {
+        "route": "team",
+        "vertical": "software",
+        "workflow_mode": "staged",
+        "lifetime": "bounded",
+        "continuous": false,
+        "open_ended": false
+      },
+      "result": "reproduced"
+    },
+    "case_selected_file_tail": {
+      "events_jsonl_1_size_bytes": 9437245,
+      "old_manager_event_position": "first line",
+      "filler_nonprojected_lines": 9189,
+      "tail_limit_bytes": 8388608,
+      "current_tail_bootstrap_routing": {
+        "route": "",
+        "vertical": "",
+        "workflow_mode": "",
+        "lifetime": "",
+        "continuous": false,
+        "open_ended": false
+      },
+      "full_selected_file_scan_routing": {
+        "route": "team",
+        "vertical": "software",
+        "workflow_mode": "staged",
+        "lifetime": "bounded",
+        "continuous": false,
+        "open_ended": false
+      },
+      "result": "reproduced"
+    }
+  },
+  "independent_external_replication": {
+    "status": "not_located",
+    "scope": "No public issue/PR or protocol-matched third-party reproduction specifically for the Mission View multi-roll bootstrap gap was located in this run."
+  },
+  "grade": {
+    "overall": "B+",
+    "bounded_failure_claim": "A-",
+    "official_artifact_support": "A",
+    "independent_structural_reproduction": "A-",
+    "proposed_sparse_fix_performance": "C",
+    "production_incidence_frequency": "C"
+  },
+  "scope_guards": [
+    "Do not generalize this to normal online Mission View event loss; online projection is separate and was not shown to fail.",
+    "Do not generalize this to canonical event-log loss; retained generations are explicitly preserved.",
+    "Do not claim the proposed sparse scan/checkpoint implementation is validated until an actual patch, tests and benchmark exist.",
+    "Do not fuzzy-join this audit to the C23 active-wave open_source row; exact source tuple differs."
+  ],
+  "reopen_conditions": [
+    "A public patch changes _bootstrap_view to enumerate retained generations or use a durable checkpoint/cursor.",
+    "A regression test reproduces .2+ or >8 MiB projected-event survival.",
+    "A benchmark quantifies sparse all-generation rebuild cost versus current tail bootstrap.",
+    "A production incident or independent third-party reproduction establishes real-world frequency/severity."
+  ],
+  "exact_next_action": "Audit a different source-qualified candidate with materially reducible reproducibility uncertainty. Reopen clean-os-g1-006 only on one of the recorded conditions; if reopened, first inspect the exact patch/test and verify ordering plus >8 MiB survival without weakening canonical event-log retention."
+}
