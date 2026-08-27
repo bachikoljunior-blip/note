@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 12,
+  "config_revision": 5,
+  "created_at": "2026-08-28T02:08:22+09:00",
+  "topic": "past-only adaptive priority proposals remain unbiased while proposal quality is learned online",
+  "public_evidence": [
+    {
+      "source": "Ryu and Boyd, Adaptive Importance Sampling via Stochastic Convex Programming",
+      "url": "https://arxiv.org/abs/1412.4845",
+      "date": "2014-12-16",
+      "result": "For exponential-family proposals, importance-sampling variance is convex in the natural parameter. Their adaptive sampler updates the proposal while accumulating the estimate; the estimator is unbiased and its variance is asymptotically optimal over the proposal family under the paper's assumptions."
+    },
+    {
+      "source": "Lu, Rainforth, Zhou, van de Meent, Teh, On Exploration, Exploitation and Learning in Adaptive Importance Sampling / Daisee",
+      "url": "https://arxiv.org/abs/1810.13296",
+      "date": "2018-10-31",
+      "result": "Treats adaptive importance sampling as an online-learning problem and gives a sublinear cumulative pseudo-regret guarantee, reinforcing that exploration/exploitation of proposal choices is itself an optimization problem rather than a fixed heuristic."
+    },
+    {
+      "source": "Finke, Johansen, Lee, Murray, Resampling in conditional SMC algorithms",
+      "url": "https://arxiv.org/abs/2606.25603",
+      "date": "2026-06-24",
+      "result": "Properly weighted adaptive resampling is compatible with unbiased SMC normalizing-constant estimation. This remains the particle-resampling correctness layer beneath the past-only adaptive priority policy."
+    }
+  ],
+  "derived_martingale_argument": {
+    "setup": "At step t choose q_t from history F_{t-1}; require q_t(i)>0 whenever W_i>0. Draw A_t~q_t and Y_t with E[Y_t|A_t=i,F_{t-1}]=p_i under the base continuation law.",
+    "increment": "X_t = (W_{A_t}/q_t(A_t)) Y_t",
+    "conditional_expectation": "E[X_t|F_{t-1}] = sum_i q_t(i) W_i p_i/q_t(i) = theta = sum_i W_i p_i",
+    "consequence": "q_t may depend arbitrarily on past samples, past proxy-quality estimates, or a past-only choice of epsilon_t without biasing the running risk average, provided the exact q_t used for each draw is logged and support/base-transition conditions hold.",
+    "scope": "This proves expectation preservation for the one-step branch-risk abstraction. Sequential environment/tool proposal changes still require the separate trajectory likelihood ratios identified in r108-r109."
+  },
+  "past_only_second_moment_monitor": {
+    "candidate_second_moment": "S(q') = sum_i W_i^2 p_i/q'_i",
+    "unbiased_observation_from_current_q_t": "H_t(q') = W_{A_t}^2 Y_t / (q_t(A_t) q'_i) evaluated at i=A_t, so E[H_t(q')|F_{t-1}] = S(q')",
+    "defensive_bound": "If both current and candidate proposals have floors q_t(i)>=epsilon_min W_i and q'(i)>=epsilon_min W_i, then 0<=H_t(q')<=1/epsilon_min^2 for Bernoulli Y_t.",
+    "use": "Past draws can therefore compare the second moments of future epsilon/proposal candidates without using future outcomes. A confidence-sequence or conservative bounded-mean gate can choose the next epsilon from past data while the risk estimator itself remains conditionally unbiased regardless of whether that choice is variance-optimal."
+  },
+  "toy_pilot_then_adapt_stress": {
+    "purpose": "Check that a past-only data-dependent epsilon choice avoids the clear fixed-epsilon harm from r109 without introducing detectable bias in a synthetic rare-event model.",
+    "branches": 4096,
+    "base_risk": 0.002049191968799276,
+    "proxy_noise_sd": 1.5,
+    "epsilon_candidates": [0.2,0.4,0.6,0.8,1.0],
+    "true_variance_efficiency_vs_base_by_epsilon": {"0.2":0.86735,"0.4":1.08632,"0.6":1.19694,"0.8":1.20117,"1.0":1.0},
+    "macro_replicates": 3000,
+    "pilot_draws_per_replicate": 5000,
+    "evaluation_draws_per_replicate": 5000,
+    "pilot_proposal": "base W",
+    "selection_rule": "choose epsilon minimizing the pilot unbiased second-moment estimate over the fixed candidate grid; use selected q only for later evaluation draws",
+    "selected_counts": {"0.2":173,"0.4":231,"0.6":1091,"0.8":1388,"1.0":117},
+    "mean_estimate_minus_truth": 0.0000029799573999082264,
+    "monte_carlo_standard_error_of_mean": 0.000008028896433509254,
+    "bias_in_standard_errors": 0.37115,
+    "empirical_variance_efficiency_vs_all_base": 1.05745,
+    "interpretation": "The past-only adaptive rule showed no detectable bias and modestly beat all-base sampling while avoiding the harmful fixed epsilon=0.2 configuration. This is a finite synthetic engineering check, not a theorem or agent benchmark."
+  },
+  "negative_or_scope_evidence": [
+    "Past-only adaptivity preserves expectation but does not guarantee good variance; an unstable or noisy selection rule may still waste samples.",
+    "The simple empirical second-moment selector can overfit rare pilot failures. A sequential confidence/regularization layer is still needed before treating epsilon adaptation as robust.",
+    "Ryu-Boyd's asymptotic optimality is for their exponential-family stochastic-convex-programming setting; it does not directly prove optimality of the discrete branch-priority mixture used here.",
+    "Daisee's regret theorem supports online proposal learning but is not an SMC normalizing-constant theorem for stochastic agent trees.",
+    "No AGI capability conclusion follows."
+  ],
+  "next_tests": [
+    "Replace pilot argmin with an anytime bounded-second-moment confidence gate that only moves epsilon away from 1 when a candidate is certified to reduce S(q) by a meaningful margin.",
+    "Test predictable epsilon adaptation under proxy drift/nonstationarity and compare against fixed base, fixed priority and oracle epsilon using common random paths.",
+    "Extend from iid descendant selection to dependent/systematic sibling resampling while preserving Finke proper weighting.",
+    "Investigate agent/tool settings where base transition likelihoods are unavailable and determine whether replay must remain under the base environment law for identifiable deployment-risk estimation."
+  ]
+}
