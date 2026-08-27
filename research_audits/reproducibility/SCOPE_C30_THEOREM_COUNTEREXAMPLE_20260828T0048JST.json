@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "audit_timestamp": "2026-08-28T00:48:37+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "393a895bbad7a1155ffa6bd00ced96ddd0acabd0",
+    "root_control_revision": 12,
+    "root_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_control_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "role_config_revision": 2,
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true
+  },
+  "source_identity": {
+    "namespace": "multi_agent",
+    "source_artifact_path": "research_workers_clean_g1/multi_agent/FOLLOWUP_2026-08-26_0100_JST.md",
+    "source_artifact_blob": "deb90946ce01f0f7961c34f05577e78c5c55f229",
+    "source_local_candidate_id": "C30",
+    "feed_alias_non_authoritative": "multi_agent/C30-SCOPE-selective-conformal-pairwise-judge"
+  },
+  "candidate": "SCOPE selective conformal pairwise LLM judging / calibrated abstention",
+  "primary_source": {
+    "title": "SCOPE: Selective Conformal Optimized Pairwise LLM Judging",
+    "arxiv": "2602.13110v4",
+    "version_date": "2026-08-18",
+    "url": "https://arxiv.org/html/2602.13110v4"
+  },
+  "grade": {
+    "overall_for_use_as_a_provably_risk_controlled_gate": "C",
+    "empirical_primary_study": "B",
+    "BPE_empirical_signal": "B",
+    "official_executable_artifact": "C",
+    "independent_protocol_matched_reproduction": "C",
+    "exact_replay_readiness": "C",
+    "theorem_2_1_as_stated": "CONTRADICTED_BY_EXACT_COUNTEREXAMPLE"
+  },
+  "published_claims": {
+    "finite_sample_guarantee": "For exchangeable calibration and test samples, Eq. (6) is claimed to guarantee marginal accepted-set error/FDR <= alpha.",
+    "empirical_result": "The paper reports empirical accepted-set risk around 0.097-0.099 at alpha=0.10 across tested pairwise judging settings, with substantial coverage.",
+    "noise_stress": "Appendix F flips calibration preference labels at 0,5,10,15,20 percent; reported risk remains below target while coverage collapses under heavier corruption. This is calibration-label noise, not evolutionary-search judge-output noise."
+  },
+  "exact_counterexample": {
+    "purpose": "Test Theorem 2.1 / Eq. (5)-(7) exactly, without relying on an implementation.",
+    "distribution": "IID/exchangeable samples. All uncertainty scores are the same constant. The deterministic judge has independent error indicator E~Bernoulli(p=0.25) on every sample.",
+    "parameters": {
+      "n_calibration": 20,
+      "alpha": 0.1,
+      "p_error": 0.25
+    },
+    "calibration_rule_reduction": "With a constant score there are only two effective actions: select all or abstain all. If K is the number of calibration errors, Eq. (5) for select-all is K - alpha*n <= -1, hence K <= 1.",
+    "selection_probability": {
+      "formula": "P[Binomial(20,0.25)<=1] = 0.75^20 + 20*0.25*0.75^19",
+      "value": 0.024312624865160615
+    },
+    "claimed_risk_target": 0.1,
+    "actual_test_FDR_given_selection": 0.25,
+    "linearized_test_loss_expectation": 0.003646893729774092,
+    "proof_eq13_rhs_expected_average": -0.001135092527348596,
+    "result": "Theorem 2.1 is false as stated for this legal exchangeable distribution: the procedure selects with positive probability, and whenever it selects the independent test error rate is 0.25 > 0.10. The two sides of proof Eq. (13) are unequal in this example."
+  },
+  "proof_diagnosis": {
+    "location": "Appendix A.1, Eq. (13)",
+    "paper_step": "The proof says that because the threshold is a symmetric function of the n calibration points, exchangeability lets any of the n+1 points play the test role, yielding equality between expected test loss and the average loss of all n+1 points evaluated at the same threshold.",
+    "defect": "The fitted threshold treats the held-out test point asymmetrically: it is computed from Z_1:n only. Symmetry within the calibration subset does not make the random threshold invariant to swapping Z_{n+1} into calibration. Standard split-conformal exchangeability arguments require a statistic/construction that handles the augmented sample with the needed permutation symmetry; that symmetry is not established here.",
+    "scope": "This directly contradicts SCOPE Theorem 2.1 and its claimed finite-sample guarantee for Eq. (5)-(6) as written. It does not by itself refute BPE as an uncertainty score, the reported empirical table values, conformal/selective prediction generally, or every possible corrected calibration procedure. The cited LEC precursor uses an asserted analogous step and should be audited separately before transferring this criticism to it."
+  },
+  "artifact_reproducibility": {
+    "official_code_found": false,
+    "author_linked_raw_split_outputs_found": false,
+    "protocol_matched_independent_rerun_found": false,
+    "paper_repro_details_observed": [
+      "N=2000 non-tied instances per dataset for main protocol",
+      "1000 random 50/50 calibration-test splits for risk-control metrics",
+      "temperature 0.0 for BPE judge inference",
+      "2 x NVIDIA A100 80GB for open-weight experiments"
+    ],
+    "missing_for_exact_replay": [
+      "author-linked executable code bundle",
+      "actual random seed values / split membership",
+      "immutable model revisions",
+      "immutable dataset snapshots/sample IDs",
+      "raw per-split predictions and accepted sets"
+    ]
+  },
+  "decision_impact": {
+    "downgrade": "Do not treat SCOPE C30 as an A-/provably risk-controlled archive or promotion gate on the basis of Theorem 2.1. Any use as a hard acceptance gate needs a corrected proof/procedure or an independently valid risk-control construction.",
+    "retain": "The empirical observation that abstention can trade coverage for lower observed error remains primary-study evidence within the tested datasets/models, and BPE may still be useful as a heuristic/empirical uncertainty signal.",
+    "no_explorer_steering": true
+  },
+  "reopen_conditions": [
+    "Author correction/retraction or revised theorem/procedure addressing the calibration/test asymmetry.",
+    "Independent proof validating Eq. (5)-(6) under additional explicit assumptions that exclude the counterexample.",
+    "Author-linked code/raw outputs enabling exact empirical replay.",
+    "Protocol-matched independent rerun of the empirical risk/coverage results."
+  ],
+  "exact_next_action": "Audit the cited LEC theorem/procedure separately from SCOPE, using its exact statement and construction, to determine whether the invalid Eq. (13)-style swap is inherited or whether LEC contains a different symmetry/correction. Otherwise move to a different source-qualified candidate with reducible reproducibility uncertainty."
+}
