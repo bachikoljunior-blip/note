@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T04:07:37.540303+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T031014_JST_durable_k_guard_journal_integration.json",
+  "main_result": {
+    "artifact": "research_workers_clean_g1/evaluation/durable_launch_capability_gate_2026-08-28.py",
+    "artifact_blob_after_readback": "e06dc0550f65182d31b96e6b841d680b487f3b41",
+    "validation": "research_workers_clean_g1/evaluation/validation_durable_launch_capability_gate_2026-08-28.json",
+    "validation_blob_after_readback": "f1470699bc5d7bb9e37051ef8524017f9f56c274",
+    "result": "Added an explicit DurableAppendWriter acknowledgement boundary plus LaunchCapability. The capability is issued only after exact expected-before + ADMIT full-journal readback, and the capability-gated slot entry point rechecks the acknowledged prefix, ADMIT/reporting/slot-plan/deadline digests and current recovered active block before preparing score-bearing SLOT evidence.",
+    "crash_integrity_stress": "Contract-faithful injected-adapter harness rejected all 350 partial acknowledgement byte cuts and all 350 single-byte mutations of the acknowledged durable prefix, plus tampered capability payload, wrong block, wrong slot, stale-after-CLOSE and truncated-after-ack cases. The exact acknowledged frame issued a capability that remained reusable across distinct admitted slots of the same active block.",
+    "remaining_enforcement_boundary": "Historical replay modules remain immutable and still expose the old prepare_slot API. The new gate therefore removes caller discipline only for an active launcher wired through prepare_slot_authorized; it does not make a malicious/direct import of the old API impossible."
+  },
+  "measurement_validity_rules": [
+    "Prepared ADMIT bytes are never launch authority. Only exact durable readback acknowledgement can create a launch capability.",
+    "A launch capability is bound to one exact durable ADMIT prefix, block identity, slot plan, deadline, reporting admission and adapter semantics; truncation or mutation of that prefix invalidates it.",
+    "Capability reuse is allowed only while the exact admitted block remains active; CLOSE or a different active block makes it stale.",
+    "The capability hash is integrity binding, not secret authentication. Statistical/crash validity assumes non-adversarial callers and a writer that really implements CAS + append + durability acknowledgement + readback.",
+    "Scientific semantics are unchanged: this artifact changes durable operation authorization only, not the K-guard, estimator, alpha allocation, reporting phase or tested scope.",
+    "Because exact production sibling files were not locally executable in this environment, the current crash suite validates the gate contract against an injected deterministic adapter; production byte-execution remains required before stronger implementation claims."
+  ],
+  "frontier": [
+    "Byte-execute the persisted gate against the exact bound durable adapter and production V3/K-guard sibling files in a repository-local runtime, repeating the full acknowledgement-boundary crash suite without the injected fake adapter.",
+    "Implement a concrete DurableAppendWriter over the actual journal storage and inject crashes at append-before-fsync, fsync-before-readback, and readback-before-capability-delivery; uncertain acknowledgement must never issue a capability and exact retry must be idempotent.",
+    "Wire the real score-bearing launcher exclusively to prepare_slot_authorized while keeping historical replay modules immutable, so direct prepare_slot is not an active-runtime bypass.",
+    "Stress production V3 residual-alpha fresh allocation and CLOSE/report-exposure acknowledgement under the launch-capability path.",
+    "Define a non-retroactive migration rule for legacy ADMIT/SLOT/CLOSE rows that predate enriched reporting metadata and therefore cannot honestly receive pre-score launch capabilities."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement and validate a concrete single-writer file/storage DurableAppendWriter whose append_fsync_readback performs expected-before CAS, append, fsync, and full readback; crash-inject the three acknowledgement sub-boundaries and prove that only an exact durable acknowledgement yields a usable LaunchCapability, with exact idempotent retry after recovery."
+}
