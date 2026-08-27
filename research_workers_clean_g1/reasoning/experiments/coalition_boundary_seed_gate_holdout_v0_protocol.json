@@ -1,0 +1,32 @@
+{
+  "schema":"coalition_boundary_seed_gate_holdout_v0_protocol",
+  "created_at":"2026-08-28T05:30:45+09:00",
+  "frozen_semantic_control":{"note_main_sha":"6a906fa3157e8a1d92f2d3dde0eeeef786b9fbbf","desired_state_control_revision":12,"desired_state_blob":"5c91671e1470d0fa4e2a53f918493004dd3750c3","reasoning_config_revision":6,"reasoning_config_blob":"cc8b37410994561a016a72c467b25ff0582d6462"},
+  "purpose":"Test on fresh untouched graph instances whether a cheap structural gate can avoid paying for a seeded-diverse restart when the diverse start is structurally implausible. The gate threshold was selected after observing the development matrix and the separate small-holdout V1, so only this new holdout can supply transfer evidence for the gate.",
+  "families":{
+    "complete_bipartite_6_8":{"generator":"networkx.complete_bipartite_graph","a":6,"b":8,"n":14},
+    "barbell_7_2":{"generator":"networkx.barbell_graph","m1":7,"m2":2,"n":16},
+    "lollipop_8_8":{"generator":"networkx.lollipop_graph","m":8,"n_path":8,"n":16},
+    "circular_ladder_8":{"generator":"networkx.circular_ladder_graph","n_rungs":8,"n":16},
+    "cubic16_s881201":{"generator":"networkx.random_regular_graph","degree":3,"n":16,"seed":881201},
+    "cubic16_s881227":{"generator":"networkx.random_regular_graph","degree":3,"n":16,"seed":881227},
+    "quartic16_s881243":{"generator":"networkx.random_regular_graph","degree":4,"n":16,"seed":881243},
+    "watts16_s881259":{"generator":"networkx.watts_strogatz_graph","n":16,"k":4,"p":0.25,"seed":881259}
+  },
+  "formula":"Positive monotone graph 2-CNF: conjunction over edges (x_u OR x_v).",
+  "compiler":"Same exact Shannon/reduced ordered BDD compiler and exhaustive truth-bitset plus Hamming-rank oracle as small-holdout V1.",
+  "local_search":{"neighborhood":"all distinct one-variable remove-and-reinsert orders","candidate_filter":"vertex-separation width <= current_width + 1","selection":"minimum live nodes then allocated nodes then lexicographic order","accept":"strict live-node improvement","max_accepted_moves_per_arm":3},
+  "starts":{"natural":"sorted labels","reverse_cuthill_mckee":"networkx RCM","seeded_diverse":{"candidate_count":24,"seed_base":881401,"selection":"same deterministic max-min normalized Kendall rule as small-holdout V1 with eligibility <= min(conventional widths)+2 and minimum-width fallback"}},
+  "gate":{"name":"seed_width_plus1","decision":"include seeded arm iff seeded start vertex-separation width <= min(natural width, RCM width)+1; otherwise run the two-arm controller","rationale":"The prior development seeded win had post-stage width one above RCM while the fresh small holdout seeded starts were at least two above the best conventional width or fallback-poor. This rule is outcome-derived and therefore has no evidential status until tested here.","cost_accounting":"Always charge generation of the 24 seeded candidate permutations and their width/Kendall screening to structural_screen_ms and width_evaluations even when seeded is skipped. BDD candidate compilations remain the primary expensive cost."},
+  "policies":{"two_arm_one_then_commit":"natural+RCM one-stage screening then commit winner and continue to <=3 accepted moves","always_three_arm_one_then_commit":"natural+RCM+seeded one-stage screening then commit winner and continue to <=3 accepted moves","gated_three_arm":"apply seed_width_plus1 before any seeded BDD compilation; if gate false run two-arm; if true run three-arm","full_two_arm3":"run natural and RCM independently to <=3 accepted moves and select best endpoint"},
+  "predeclared_tests":[
+    "All completed endpoints must match exact truth bitset and rank vector.",
+    "Primary: compare gated_three_arm with always_three_arm on final live nodes and charged BDD candidate compilations; report gate-open frequency.",
+    "Secondary: compare gated_three_arm with two_arm and full_two_arm3. A gate is useful only if it avoids seeded BDD work without increasing final live nodes on the tested cell, or if opening it yields a quality improvement worth explicit cost.",
+    "Report every false-negative gate event where seeded would have won after one stage or produced a better final endpoint under always-three but the gate skipped it.",
+    "Report every false-positive gate event where gate opened but seeded neither won the commit nor improved final endpoint.",
+    "Do not tune threshold after outcomes; any revised threshold requires a new untouched holdout."
+  ],
+  "resource_guard":{"max_candidate_compilations_per_policy_cell":2200,"max_wall_clock_seconds_per_policy_cell":30,"on_guard":"mark incomplete and exclude from gate-quality claims"},
+  "scope":"Synthetic small positive-monotone 2-CNF BDD ordering only. Structural gate is a cheap action-selection heuristic, not a universal BDD ordering theorem or proof-utility policy."
+}
