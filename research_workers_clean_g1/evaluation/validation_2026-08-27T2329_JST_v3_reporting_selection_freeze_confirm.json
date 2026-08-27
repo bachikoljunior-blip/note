@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T23:29:38+09:00",
+  "question": "Can a reporting-alpha allocation pair be chosen after seeing the same V3 evidence while still guaranteeing that both selected bounds cover with probability at least .95, and can a selection-rule-aware construction beat all-pairs union insurance?",
+  "frozen_control": {
+    "main_sha": "89701a762b7d087e51d557901bfbcaf7e422b071",
+    "root_control_revision": 12,
+    "config_revision": 6,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "exact_results": {
+    "same_history_counterexample": {
+      "construction": "Two independent valid e-values. For each channel, E=1/.045 with probability .045 and E=0 otherwise, so E[E]=1. After observing both, choose allocation (.045,.005) if channel 1 is high, otherwise choose (.005,.045) if channel 2 is high; both pairs are members of the nine-split grid.",
+      "selected_pair_any_miscoverage_probability": 0.087975,
+      "nominal_joint_alpha": 0.05,
+      "conclusion": "The constraint alpha_equal+alpha_exposure=.05 does not by itself protect classical selected-pair SoS coverage when the split is chosen from the same evidence. The failure is exact, not Monte Carlo."
+    },
+    "e_by_vs_strict_sos": {
+      "derivation": "If exactly two intervals are selected, FCR=E[V]/2. Therefore P(any selected interval misses)=P(V>=1)<=E[V]<=2*FCR. To infer strict SoS error <=delta from FCR alone requires FCR<=delta/2. Encoding nine allocation pairs as 18 candidate intervals, e-BY at q=delta/2 with |S|=2 uses per-selected-interval alpha=q*2/18=delta/18.",
+      "delta": 0.05,
+      "required_fcr_q": 0.025,
+      "e_by_per_selected_interval_alpha": 0.002777777777777778,
+      "uniform_all_18_intervals_union_alpha": 0.002777777777777778,
+      "conclusion": "For the stronger two-bound SoS target, e-BY/FCR is not a free replacement for simultaneous insurance; under this direct encoding the sufficient conversion collapses to the same uniform union budget."
+    },
+    "predictable_freeze_and_confirm_theorem": {
+      "statement": "Let tau be a stopping time. Let the chosen allocation k_hat and channel budgets (a1,a2) be F_tau-measurable with a1+a2<=delta. After tau, start fresh channel e-processes at wealth 1 whose one-step factors are conditionally e-valid given the full past, including k_hat. Then conditional Ville bounds give P(channel j ever miscovers after tau | F_tau)<=a_j. A union bound conditional on F_tau gives P(any selected bound miscovers | F_tau)<=a1+a2<=delta; averaging over F_tau yields unconditional selected-pair coverage >=1-delta. K does not appear.",
+      "requirements": [
+        "Allocation is frozen before any post-selection reporting factor is observed.",
+        "Reporting evidence after tau is conditionally e-valid given all pilot information and the selected allocation.",
+        "Pilot evidence is not reused inside the fresh reporting e-process unless separately justified by a conditional/selective construction.",
+        "The two reporting channels may be dependent; the within-pair union bound does not require independence.",
+        "Optional stopping/continuation after tau remains allowed through the e-process guarantee."
+      ],
+      "interpretation": "This is a selection-rule-aware SoS construction that removes the K-way multiplicity penalty by paying an evidence-reset/fresh-confirmation cost instead."
+    },
+    "log_e_crossover_heuristic": {
+      "uniform_9_pair_selection_penalty_nats": 2.1972245773362196,
+      "rule": "For a fixed selected pair k with prior mass pi_k, all-pairs insurance raises each channel log-threshold by log(1/pi_k). A fresh reset discards pilot log-evidence L_j(tau). Under a stationary log-e-growth approximation, fresh confirmation has smaller remaining log-threshold on channel j when L_j(tau)<log(1/pi_k).",
+      "guard": "This is a planning heuristic only. Choosing between insured reuse and fresh reset after inspecting the same evidence requires its own precommitted outer validity argument; do not use the inequality as an uncorrected post-hoc method switch."
+    }
+  },
+  "synthetic_null_stress": {
+    "validator": "research_workers_clean_g1/evaluation/validate_v3_reporting_selection_freeze_confirm_2026-08-27.py",
+    "model": "Two independent fair-sign e-processes with factors 1.5 on + and .5 on -, 200000 trajectories, horizon 200, pilot 40. At the pilot, allocate .045 to the channel with the larger running-max log evidence and .005 to the other.",
+    "seed": 20260827,
+    "naive_same_history_rate": 0.07051,
+    "freeze_confirm_rate": 0.041065,
+    "uniform_all_pairs_insured_rate": 0.00783,
+    "interpretation": "The exact counterexample already proves invalidity. This separate stress shows the same direction in a conventional optional-stopping e-process: same-history reallocation exceeds 5%, while fresh confirmation and simultaneous nine-pair insurance stay below 5% in this tested synthetic condition."
+  },
+  "public_evidence": [
+    {
+      "title": "Post-selection inference for e-value based confidence intervals",
+      "authors": "Ziyu Xu; Ruodu Wang; Aaditya Ramdas",
+      "arxiv": "2203.12572",
+      "doi": "10.1214/24-EJS2253",
+      "use": "e-BY controls FCR for selected e-CIs under arbitrary dependence/selection and extends to stopping times; FCR is kept distinct from the stricter probability that both intervals in one selected pair cover."
+    },
+    {
+      "title": "Confidence Intervals for Selected Parameters",
+      "authors": "Yoav Benjamini; Yotam Hechtlinger; Philip B. Stark",
+      "arxiv": "1906.00505",
+      "use": "Shows that SoS intervals can exploit a known selection rule in specialized independent/top-k settings, so universal simultaneous insurance is not claimed to be universally optimal. Those assumptions do not directly match adaptive V3 same-history pair selection."
+    },
+    {
+      "title": "Game-theoretic statistics and safe anytime-valid inference",
+      "authors": "Aaditya Ramdas; Peter Grünwald; Vladimir Vovk; Glenn Shafer",
+      "arxiv": "2210.01948",
+      "use": "Supports optional stopping/continuation through e-processes and confidence sequences; the freeze-and-confirm theorem uses the standard conditional supermartingale/e-process logic after the selection stopping time."
+    }
+  ],
+  "measurement_validity_rules": [
+    "Do not choose a same-history alpha split merely because its two nominal channel alphas sum to .05; this can exceed 5% selected-pair miscoverage.",
+    "FCR, SoS error, and all-candidate simultaneous coverage are different targets. For exactly two selected intervals, FCR q only implies SoS error <=2q without extra structure.",
+    "A predictable pilot-freeze-fresh-confirm architecture gives classical selected-pair SoS without a K-way grid penalty, but pilot evidence must be excluded from the fresh reporting certificate unless separately corrected.",
+    "Selection-rule-aware same-history SoS may exist under additional model/selection structure; the current result does not claim an impossibility theorem."
+  ],
+  "scope_guards": [
+    "The synthetic stress is not production performance and is not needed for the exact counterexample.",
+    "The freeze-and-confirm theorem guarantees coverage for the post-selection fresh evidence process, not for an interval that silently reuses preselection V3 wealth.",
+    "The e-BY equivalence calculation is for the direct 18-interval encoding and the strict two-bound SoS target; it does not deny e-BY's FCR advantages for its intended objective.",
+    "No O, downstream, other-worker or legacy semantic state was used."
+  ]
+}
