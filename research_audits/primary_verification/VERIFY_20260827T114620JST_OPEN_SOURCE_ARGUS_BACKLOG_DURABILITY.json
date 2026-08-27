@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "edb120c502ab3f8a592607a8e9d596196df7d25e",
+    "desired_state_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "desired_control_revision": 11,
+    "downstream_state_blob": "3006c9416c64a704f4ad9e3071b7ee8edc7bf178",
+    "downstream_control_revision": 19,
+    "role_config_revision": 5
+  },
+  "candidate_identity": {
+    "namespace": "open_source",
+    "source_artifact_path": "research_workers_clean_g1/open_source/RUN_20260827_0805_CREATION_STAMP_ROUTE_FINGERPRINT_DURABILITY.md",
+    "source_artifact_blob": "75bae163715373395829732e5de554f39bc748e7",
+    "source_local_candidate_id": "clean-os-g1-005"
+  },
+  "status": "primary_code_verified_with_material_directory_fsync_scope_narrowing",
+  "primary_code": {
+    "repository": "lbx154/Argus",
+    "commit": "33da786bbc6787a2eeb63a5f492498eae87c78c7",
+    "files": [
+      "argus_skill/life/memory.py",
+      "argus_skill/daemon/state.py",
+      "argus_skill/manager/front_door.py",
+      "argus_skill/manager/dispatch.py"
+    ]
+  },
+  "verified_observations": [
+    "memory._atomic_rewrite_jsonl writes backlog JSONL to a unique sibling NamedTemporaryFile and then calls os.replace(tmp_path, path), but performs no explicit flush+os.fsync on that temporary file and no explicit parent-directory fsync inside that helper.",
+    "LifeMemory.open(root) and ProjectMemory.open(...) construct Backlog(root / 'backlog.jsonl'). Manager front_door._life_dir_for(mem) resolves the same per-project project_root/project.root/root used for Manager state; daemon._continuous_config_path(life_dir) is life_dir / 'continuous.json'. Thus the normal project-scoped backlog and continuous config share the same parent directory.",
+    "daemon._atomic_write_bytes, used by continuous-state persistence, writes the temporary file, flushes it, calls os.fsync(file_fd), replaces the target, and then fsyncs path.parent.",
+    "manager_continuous_handoff uses compare_and_swap_continuous_config(..., before_write=_commit). The continuous writer executes its before-replace callback before os.replace of continuous.json, so mission/Manager commit work is ordered before the final continuous-state replace in this path.",
+    "Linux fsync documentation distinguishes persistence of file data from persistence of a containing directory entry: fsync(file) does not necessarily persist the directory entry, for which fsync(directory) is needed."
+  ],
+  "scope_correction": {
+    "confirmed_gap": "The authoritative backlog rewrite does not explicitly fsync the new backlog file's data before it is renamed and before the later continuous-state commit is allowed to become durable. Atomic visibility via os.replace is not by itself proof of power-loss durability of the new file contents.",
+    "narrowed_claim": "A separate backlog-parent-directory fsync is not independently required by the observed same-directory handoff ordering if the later successful continuous.json commit fsyncs that same parent directory after the backlog rename. That later directory fsync can provide the directory-entry metadata barrier for both renames. The clear source-level asymmetry is therefore the missing backlog file-data fsync, not necessarily a missing second directory fsync.",
+    "not_established": "No power-loss/crash-injection test was run. Actual persistence behavior is filesystem/OS/storage dependent, and the proposed creation_stamp, exact-insert API, handoff fence, protected_route_fingerprint_v4 and unified reconcile_or_rearm are adaptation proposals rather than implemented or benchmarked Argus behavior."
+  },
+  "verdict": "source_level_durability_gap_verified_but_parent_directory_requirement_narrowed",
+  "external_reference": {
+    "source": "Linux fsync(2) manual, man-pages 6.18",
+    "url": "https://man7.org/linux/man-pages/man2/fsync.2.html",
+    "relevance": "fsync persists file data/metadata; containing directory entry requires directory fsync"
+  },
+  "unresolved": [
+    "Direct power-loss or fault-injection reproduction across the backlog-insert -> continuous-enable boundary.",
+    "Whether globally hardening every JSONL rewrite has unacceptable latency/throughput cost versus a narrow durable exact-insert writer.",
+    "The worker's proposed creation stamp, v4 route fingerprint, handoff fence and exact-retry regression matrix remain unimplemented designs, so this audit does not attribute measured reliability gains to them."
+  ],
+  "created_at": "2026-08-27T11:46:20.000000+09:00"
+}
