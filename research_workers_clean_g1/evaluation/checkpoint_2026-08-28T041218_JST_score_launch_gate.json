@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T04:12:18.018109+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T040950_JST_file_durable_writer.json",
+  "main_result": {
+    "artifact": "research_workers_clean_g1/evaluation/score_launch_capability_wrapper_2026-08-28.py",
+    "artifact_blob_after_readback": "e610805ab1f495198c1b44ab82f02086233f1eda",
+    "validation": "research_workers_clean_g1/evaluation/validation_score_launch_capability_wrapper_2026-08-28.json",
+    "validation_blob_after_readback": "d161af59c1ff2e63808620e206cf0b153dbd787b",
+    "result": "Moved durable LaunchCapability verification in front of score generation. A score-producing callable receives a deterministic attempt_id bound to capability/block/slot/request-binding, and its ScoreResult is integrity-bound and can enter SLOT preparation only after request/attempt/capability revalidation.",
+    "stress": "Wrong block, wrong slot, tampered capability and stale-after-CLOSE launches were rejected before the scorer was called; scorer-call count was zero for all invalid cases. Tampered results and wrong request bindings were rejected before SLOT preparation. Repeated identical capability/slot/request inputs produced the same attempt_id."
+  },
+  "measurement_validity_rules": [
+    "Authorization must precede score generation, not merely score persistence, or invalid work can reveal an outcome before the scientific gate.",
+    "Attempt identity must bind the exact durable capability, block, slot and immutable request fingerprint.",
+    "A result that was valid at launch can become stale before persistence; SLOT persistence must recheck the live durable capability and fail closed.",
+    "An attempt_id is not sufficient stochastic replay control unless the scorer actually uses it to fix all relevant RNG/runtime inputs or an equivalent canonical-result verification exists.",
+    "Without a durable pre-compute attempt reservation, concurrent duplicate authorized launches for one slot can still create a choose-among-retries channel if their stochastic outputs differ before the first result is durably committed.",
+    "The wrapper is a structural non-adversarial boundary; active runtime wiring is required because historical low-level modules remain importable for reproducibility."
+  ],
+  "frontier": [
+    "Add a durable one-attempt reservation before score generation, bound to capability/block/slot/request digest, so exactly one statistical attempt identity can be active for a slot and duplicate launches fail before scorer work.",
+    "Integrate reservation with the concrete file writer and define recovery after crash between reservation durability, scorer completion and SLOT durability without permitting choose-the-best reruns.",
+    "Byte-execute gate/writer/score wrapper against exact production durable adapter/V3/K-guard siblings in a repository-local runtime.",
+    "For stochastic scorers, verify attempt_id actually determines all sampling/runtime inputs or require canonical-result verification before evidence admission.",
+    "Extend the same durable acknowledgement discipline to CLOSE and reporting exposure."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a durable ATTEMPT reservation ledger keyed by capability_digest + block_id + slot_id + request_binding_digest. Reservation must be append+fsync acknowledged before scorer invocation; duplicate/conflicting reservation attempts fail closed; crash after reservation but before SLOT must recover the same immutable attempt_id and must not authorize a different stochastic attempt unless an explicit fail-closed unresolved policy is chosen."
+}
