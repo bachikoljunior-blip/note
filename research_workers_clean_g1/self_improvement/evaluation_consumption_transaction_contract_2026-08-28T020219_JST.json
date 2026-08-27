@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T02:02:19+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "1eb4f45e28004249d1bd9529a4434f0f1da44d62",
+    "control_revision": 12,
+    "config_revision": 6,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "claim_scope": "Research synthesis and implementation contract. This is not evidence that the composed protocol has been benchmarked end-to-end in a self-improving agent.",
+  "source_bound_observations": [
+    {
+      "source_id": "AGENT_LIBOS_DURABLE_EFFECTS_72366E",
+      "repository": "yingqi-z20/Agent-libOS",
+      "revision": "72366eecc9e04cc7445a5ea51d7b5f236aa4d1e9",
+      "paths": [
+        "benchmarks/durable_task_runs/crash_harness.py",
+        "tests/benchmarks/test_durable_task_run_crash_harness.py",
+        "tests/runtime/test_protected_operation_sdk.py",
+        "docs/durable_task_runs.md",
+        "docs/protected_operation_sdk.md"
+      ],
+      "observed": [
+        "Crash harness brackets six durability barriers: run committed, action committed, effect prepared, provider dispatched, provider result durable and resume point committed.",
+        "The provider-dispatched barrier uses a real SIGKILL when available and compares runtime recovery against an independent fsync provider ledger.",
+        "Provider evidence has durable effect_id and optional idempotency_key identities; unresolved use of an idempotency key refuses redispatch.",
+        "Unknown dispatched effects recover as needs_attention with dispatch_count exactly one instead of being blindly replayed.",
+        "A committed provider effect that lacks a fully paired local result is not replayed; recovery remains blocked/needs_attention rather than manufacturing success.",
+        "Explicit idempotency keys block retained duplicates before another provider call, while certified-not-started paths can release the key and authority for a legitimate later dispatch.",
+        "Protected operations separate prepare, dispatch and settlement, and tie resource reservation/accounting to the durable effect lifecycle."
+      ],
+      "not_observed": [
+        "No self-improvement-specific statistical acceptor or held-out evaluation protocol is established by Agent libOS itself.",
+        "The crash harness does not prove semantic rollback admissibility for an evolving agent's candidate lineage."
+      ]
+    },
+    {
+      "source_id": "REGIMES_EVENT_SOURCED_PROMOTION_7BA11A",
+      "repository": "yoheinakajima/regimes",
+      "revision": "7ba11a9da4d7ebdb77e040b62efe905394d84187",
+      "paths": [
+        "src/regimes/loop/events.py",
+        "src/regimes/loop/behaviors.py",
+        "src/regimes/eval/real.py"
+      ],
+      "paper": "arXiv:2606.10241",
+      "observed": [
+        "The improvement lifecycle is represented as events from baseline.recorded through transform.eval_diff and transform.promoted/discarded; promotion/discard is part of the event history.",
+        "A candidate eligible on the optimization split is installed and then compared on CONFIRM; a confirm regression causes revert and transform.discarded.",
+        "On a successful promotion, per-question CONFIRM outcomes for incumbent and candidate are persisted in the transform.promoted event in addition to aggregate confirm_delta.",
+        "The real evaluation backend writes hypotheses/references, invokes the reader and external LME judge, builds per-question Outcome records, then returns an EvalResult consumed by the loop."
+      ],
+      "gap_observed": [
+        "In the examined real-eval path, there is no durable pre-dispatch evaluation query/effect record or idempotency key before Anthropic reader calls or the LME/OpenAI judge subprocess is invoked.",
+        "The loop emits transform.eval_diff or transform.promoted/discarded only after the evaluation backend has returned. A process death after an external evaluation call but before the event emission can therefore leave evaluation consumption outside the event-sourced decision history.",
+        "On confirm_regression the discard event stores aggregate confirm_delta/threshold but the examined path does not persist the same per-question CONFIRM outcome payload that successful promotion stores.",
+        "No candidate-local anytime-valid statistical state or proposal-crossing statistical-spend ledger is present in this inspected path."
+      ]
+    }
+  ],
+  "derived_evaluation_consumption_transaction": {
+    "status": "hypothesis_from_source_composition",
+    "purpose": "Make evaluation consumption crash-safe and auditable before using its result to alter persistent self-improvement state.",
+    "identity": "eval_query_id = hash(protocol_version, incumbent_artifact_id, candidate_artifact_id, evaluation_snapshot_id, instance_or_batch_id, seed_or_replication_id, evaluator_identity)",
+    "required_durable_transitions": [
+      "evaluation_prepared",
+      "evaluation_dispatched",
+      "evaluation_result_durable_or_unknown",
+      "feedback_release_committed",
+      "candidate_local_statistical_state_committed",
+      "proposal_crossing_spend_committed_if_applicable",
+      "promotion_or_rejection_committed"
+    ],
+    "rules": [
+      "Prepare the evaluation identity and reserve query/statistical/resource budget before external dispatch.",
+      "Reuse the same idempotency key for retry/reconciliation of one logical evaluation; never mint a fresh logical query merely because the process crashed.",
+      "If dispatch may have happened but outcome is unknown, block promotion and blind retry; enter an explicit needs-attention/reconciliation state.",
+      "A certified-not-started evaluation may release its reservation without consuming evidence; a completed or ambiguous dispatch cannot be silently refunded.",
+      "Persist exact score/per-instance outcome lineage before emitting any selection feedback to the proposer or updating persistent candidate state.",
+      "Bind statistical state and spend to the exact settled evaluation IDs; restore them before any later candidate evaluation.",
+      "Promotion must reference immutable candidate/incumbent identities plus the complete set of settled evaluation evidence IDs used by the decision.",
+      "Outer-test evaluation IDs must remain absent from the adaptive-consumption ledger until final evaluation and must never be used for promotion, rollback, routing or stopping."
+    ],
+    "minimum_crash_matrix": [
+      "after evaluation_prepared before dispatch",
+      "after reader/provider dispatch before durable result",
+      "after reader result durable before judge dispatch",
+      "after judge dispatch before durable verdict",
+      "after verdict durable before feedback release",
+      "after feedback release before statistical spend commit",
+      "after statistical spend commit before promotion/rejection commit",
+      "after promotion/rejection commit before next proposal"
+    ],
+    "equivalence_oracles": [
+      "same logical evaluation query IDs as uninterrupted reference",
+      "no duplicate provider dispatch for a settled/idempotent query",
+      "unknown effects never become an uncharged fresh query",
+      "same durable score/outcome lineage",
+      "same feedback payload count and content under the protocol",
+      "same candidate-local evidence state and cross-candidate spend",
+      "same incumbent/candidate lineage and promotion decision",
+      "same resource/query budget charges",
+      "same outer-test non-consumption before final evaluation"
+    ]
+  },
+  "frontier": [
+    "Find a real self-improving agent that already binds evaluation queries, score/feedback lineage and statistical spend with this kind of prepare-dispatch-settle crash protocol.",
+    "Find process-kill tests that interrupt an actual evaluation and compare resumed selection/statistical state with an uninterrupted reference.",
+    "Continue searching for a same-system common-total-budget comparison containing Continue, whole/clean restart, artifact-preserving rewind and strategy redirect under a selection-unused outer test.",
+    "Retain separate requirements for semantic rollback admissibility, candidate-local anytime-valid acceptance, durable proposal-crossing statistical spending, bounded selection-feedback bandwidth, immutable promotion identity and complete proposal/action chronology."
+  ]
+}
