@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T07:08:16+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "862f4f9087304fdb45ad75f6de47a15eda2cbe2a",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T063721_JST_runtime_provenance_fencing.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/stable_sidecar_flocked_cas_writer_2026-08-28.py",
+      "blob_after_readback": "90319fe8beb8d394347d70514bf75a12d6f495f6"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/flock_inode_replacement_race_2026-08-28.py",
+      "blob_after_readback": "49520b4cdd30ff9195441f9cec36bdc0feb6860e"
+    },
+    {
+      "validation": "research_workers_clean_g1/evaluation/validation_flock_inode_replacement_race_2026-08-28.json",
+      "validation_blob": "19b198d6241905cc9cc0266c49beb514b3e40dfe"
+    }
+  ],
+  "public_sources": [
+    {
+      "url": "https://man7.org/linux/man-pages/man2/flock.2.html",
+      "claim_used": "Linux flock locks are associated with an open file description rather than a pathname."
+    },
+    {
+      "url": "https://www.man7.org/linux/man-pages/man2/rename.2.html",
+      "claim_used": "rename atomically replaces the destination pathname while already-open file descriptors for the old pathname remain unaffected."
+    }
+  ],
+  "result": "The previously validated data-file-flock writer has a same-host pathname-replacement hole that same-inode append races do not exercise. The exact current writer source was byte-reconstructed and Git-blob verified as 70843c8011eed717001d31cfe59028beb86739c4. Two deterministic multiprocessing reproductions succeeded: (1) replacement of the pathname while an old-inode writer held flock allowed a second exact writer to lock and append the replacement inode concurrently; (2) more strongly, a cooperative repair that itself flocked the data file could replace the pathname after another writer had opened but before that writer acquired flock, after which the preopened writer locked/appended the now-unlinked old inode while a new writer appended the replacement inode. Both writers reported exact readback success, but only the replacement-inode append remained visible at the pathname. A candidate stable-sidecar lock acquired before opening/replacing the data path eliminated the tested race: 500 randomized append-vs-repair races and 500 duplicate-append races had zero double-success/final-state violations.",
+  "validated_contracts": [
+    "The current PosixFlockedCASAppendWriter source used by the reproduction exactly matched Git blob 70843c8011eed717001d31cfe59028beb86739c4.",
+    "Data-file flock does not serialize operations across pathname replacement because the lock is tied to the open file description/inode while rename can redirect the pathname to a different inode without invalidating existing descriptors.",
+    "The open-before-lock ordering creates a cooperative TOCTOU surface: a writer may open inode A, a repair may lock A and atomically replace the pathname with inode B, then the first writer may later lock and append A while another writer locks/appends B.",
+    "Under the tested single-host cooperative protocol, acquiring one stable non-replaced sidecar lock before opening or replacing the journal pathname serialized both append and repair. In 500 randomized append-vs-repair races exactly one operation won each round; in 500 duplicate-append races exactly one append won each round.",
+    "Directory fsync after repair rename is required by the candidate repair path for rename durability; the stable lock must remain held through replacement and exact readback."
+  ],
+  "measurement_validity_rules": [
+    "Same-inode writer races are insufficient evidence for pathname-based journal serialization when crash repair may truncate by rename/replacement. Concurrency validation must include inode replacement and open-before-lock interleavings.",
+    "A pathname-level CAS plus flock on the data file is not a stable fencing primitive if the pathname can be rebound to a new inode while another process has the old inode open.",
+    "For single-host cooperative repair, use a protocol-stable lock inode acquired before any data-file open/replace, and require every append and repair path to share it. Never rename/unlink/replace the lock inode itself.",
+    "Successful fsync/readback on an open descriptor proves durability for that descriptor's inode, not that the pathname still names that inode. Scientific durability checks must include pathname identity/serialization across repair.",
+    "Do not generalize this sidecar lock to distributed storage; multi-host execution requires storage-enforced monotonic fencing or another distributed serialization primitive."
+  ],
+  "scope_limitations": [
+    "The race was reproduced on the local Linux filesystem/runtime available in this execution. It establishes an existence counterexample for the current single-host data-file-flock design, not a frequency estimate for production deployments.",
+    "The stable-sidecar validation covers cooperative local processes that all use the same sidecar lock and a filesystem where POSIX flock is reliable. It does not cover NFS, object stores, multi-host writers, malicious/uncooperative bypass, or replacement/unlink of the sidecar lock itself.",
+    "The test targets writer/repair serialization. It did not yet run the full ADMIT/RESERVE/SLOT/COMMIT/CLOSE provenance runtime concurrently with repair, so scientific event-level one-launch/one-reservation guarantees remain to be revalidated after writer substitution.",
+    "No claim extends beyond the exact tested race, stable-lock candidate, and stated filesystem/process assumptions."
+  ],
+  "frontier": [
+    "Substitute the stable-sidecar writer into both main-journal and reservation-ledger append paths and make torn-tail truncate/replace recovery acquire the same stable lock before inspecting or replacing the data pathname.",
+    "Run one multiprocessing lifecycle that races duplicate ADMIT, duplicate RESERVE, late SLOT versus deadline CLOSE, and torn-tail repair/replacement while using the stable-sidecar writer; require one durable reservation, one scorer launch, no stale-path success, and exact final compliance replay.",
+    "Add a mechanical invariant that the sidecar lock pathname/inode is protocol-stable and never repaired by rename; test process death while holding the sidecar flock and restart recovery from a torn data tail.",
+    "If deployment can span hosts or storage without reliable flock, replace the local sidecar scheme with a monotonic fencing-token store that rejects stale fence values; do not infer distributed safety from this result."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Build a stable-lock-aware repair facade that acquires the same sidecar lock before decode/truncate-or-replace and expose it as the only allowed repair path. Then inject StableSidecarFlockedCASWriter into the existing provenance runtime and run the combined multiprocessing lifecycle: duplicate ADMITs, duplicate RESERVEs, one scorer-attempt race, SLOT/COMMIT versus deadline CLOSE, and a concurrent torn-tail repair. Reject any execution where a writer reports success on an inode no longer named by the journal path or where final compliance replay differs across restart."
+}
