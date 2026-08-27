@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "certificate_id": "cf-g1-r104-rare-event-and-multilevel-evaluation",
+  "created_at": "2026-08-28T01:13:42+09:00",
+  "semantic_control": {
+    "note_main_sha_frozen": "b1c1aa468b1baf36e19eac766394a50c6ce17ee4",
+    "root_control_revision": 12,
+    "config_revision": 5,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-28T011050+0900-r103.json",
+  "public_sources": [
+    {
+      "title": "Michael B. Giles, Multilevel Monte Carlo Path Simulation, Operations Research 56(3), 2008",
+      "url": "https://doi.org/10.1287/opre.1070.0496",
+      "observed_result": "For a Lipschitz payoff with Euler discretisation, the paper proves that cost for O(epsilon) accuracy falls from O(epsilon^-3) for straightforward Monte Carlo to O(epsilon^-2 (log epsilon)^2) with multilevel Monte Carlo, using coupled coarse/fine corrections. This is a theorem for the stated SDE/discretisation conditions, not a universal factor speedup."
+    },
+    {
+      "title": "Frederic Cerou and Arnaud Guyader, Adaptive Multilevel Splitting for Rare Event Analysis, 2007",
+      "url": "https://doi.org/10.1080/07362990601139628",
+      "observed_result": "The paper motivates splitting because naive Monte Carlo becomes unreasonable for probabilities below about 1e-9, and adapts the intermediate levels automatically. In the one-dimensional setting it proves consistency/asymptotic normality with the same asymptotic variance as fixed-level splitting while adding only small overhead relative to classical splitting."
+    },
+    {
+      "title": "Riccardo Gozzo, Adaptive Multilevel Splitting: First Application to Rare-Event Derivative Pricing, arXiv:2510.23461v3",
+      "url": "https://arxiv.org/abs/2510.23461",
+      "observed_result": "Version 3 was revised 2026-01-08. Across rare digital-option experiments under Black-Scholes/Heston settings, AMS reports gains up to 200-fold over standard Monte Carlo while preserving unbiasedness. The method adaptively kills low-score trajectories, clones better trajectories at their first crossing of the current level, and resimulates forward with fresh randomness. The paper explicitly notes that a score more aligned with the rare set reduces variance."
+    },
+    {
+      "title": "Frederic Cerou, Patrick Heas, Mathias Rousset, Adaptive Reduced Multilevel Splitting, 2023",
+      "url": "https://arxiv.org/abs/2312.15256",
+      "observed_result": "For rare events whose true score is expensive, the method uses an approximate surrogate score with certified error bounds and chooses critical levels adaptively from surrogate cost/error information. Numerical PDE experiments evaluate complexity versus squared error. No numeric speedup is imported here because the abstract-level evidence retrieved did not provide a single matched factor."
+    }
+  ],
+  "candidate_results": [
+    {
+      "id": "cf-g1-r104a-adaptive-rare-event-ladder",
+      "mechanism": "When the quantity of interest is an extremely rare failure event in a restartable stochastic trajectory, stop spending nearly all evaluation budget on independent typical trajectories. Maintain a population, rank partial/complete trajectories by a progress score toward failure, kill the least advanced fraction, clone survivors at a crossed intermediate level, and resimulate only the suffix with fresh randomness. Use the AMS weight correction to estimate the rare-event probability rather than treating the enriched sample frequency as an unbiased raw frequency.",
+      "evidence": "Foundational AMS theory targets regimes where crude MC is computationally unreasonable and gives adaptive-level asymptotic guarantees; a 2025/2026 finance implementation reports up to 200x computational gain over crude MC while retaining unbiasedness in its tested contracts.",
+      "transfer_hypothesis": "For model/system evaluation, use this only for rare trajectory-level regressions or failures where simulator state can be cloned/restarted and a meaningful progress score exists. It could turn 'wait for a catastrophic failure by chance' into guided conditional search while still retaining a corrected probability estimator.",
+      "failure_conditions": [
+        "A poor reaction coordinate/progress score can sharply reduce splitting efficiency even though admissible scoring can preserve unbiasedness.",
+        "The system must support valid branching/restart with fresh conditional randomness; irreversible real-world experiments do not automatically satisfy this.",
+        "Population cloning can reduce diversity if killing/resampling is too aggressive; the cited finance implementation recommends preserving enough survivors and finds runtime sensitive to the killing fraction.",
+        "The 200x figure is contract/model specific and cannot be generalized to AI evaluation without a matched experiment."
+      ],
+      "status": "strong external mechanism; adaptation untested"
+    },
+    {
+      "id": "cf-g1-r104b-telescoping-multilevel-evaluation",
+      "mechanism": "For expectations or average metrics with a hierarchy of coupled evaluator fidelities, estimate the cheapest/coarsest level directly and estimate only adjacent fine-minus-coarse corrections at higher levels. Couple levels with the same underlying randomness so correction variance shrinks, and allocate many samples to cheap levels and progressively fewer to expensive levels.",
+      "evidence": "Giles proves a complexity-order improvement from O(epsilon^-3) to O(epsilon^-2(log epsilon)^2) in the stated Euler/Lipschitz SDE setting.",
+      "transfer_hypothesis": "For expensive research/evaluation loops, pair cheap proxy evaluators and expensive reference evaluators on identical seeds/scenarios, then estimate the expensive metric through telescoping corrections rather than treating proxy outputs as direct substitutes. This differs from transfer learning: the high-fidelity correction remains explicit rather than silently inheriting proxy bias.",
+      "failure_conditions": [
+        "The gain relies on strong coarse/fine coupling and decay of correction variance. If fidelities disagree idiosyncratically, the multilevel advantage can collapse.",
+        "Discontinuous rare-event indicators can have slow correction-variance decay; rare failures may need splitting/importance methods instead of plain MLMC.",
+        "The Giles complexity theorem is scoped to assumptions on bias, variance decay and cost growth; it is not a blanket result for arbitrary evaluator ladders."
+      ],
+      "status": "strong external mechanism; adaptation untested"
+    },
+    {
+      "id": "cf-g1-r104c-regime-router-rare-vs-average",
+      "mechanism": "Do not force one sampling strategy onto all evaluation questions. Route average/continuous metrics toward coupled multilevel corrections, and route ultra-rare trajectory failures toward adaptive splitting. If the rare-event score itself is expensive, investigate certified-surrogate splitting rather than using an uncertified proxy as ground truth.",
+      "status": "derived synthesis; no direct end-to-end test"
+    }
+  ],
+  "negative_or_scope_evidence": [
+    "The AMS and MLMC gains arise in different mathematical regimes and should not be multiplied or presented as a combined speedup.",
+    "A rare-event score is a search/selection device, not automatically a calibrated failure probability; correct splitting weights or a valid estimator are required.",
+    "A low-fidelity evaluator is useful for MLMC only when paired differences are sufficiently low variance; high marginal correlation alone is not the full condition.",
+    "No claim is made that either mechanism improves AGI capability; these are candidate ways to spend evaluation/simulation budget more efficiently."
+  ],
+  "frontier": [
+    "Find a primary AMS/rare-event paper with a matched experiment on software/system failure, robustness, verification, or adversarial trajectory discovery closer to AI evaluation than finance, and extract exact sample/runtime gains plus score-quality failure conditions.",
+    "Find a multifidelity/MLMC study where several learned or physics-based surrogate fidelities are coupled to a high-fidelity reference and report exact cost-normalized variance reduction; prioritize methods that remain unbiased or carry an explicit bias bound.",
+    "Investigate Adaptive Reduced Multilevel Splitting in full detail for a numeric cost-versus-error comparison and determine whether its certified-surrogate mechanism can safely reduce expensive rare-event score evaluations.",
+    "Keep the r103 Gaussian detector result frozen; do not let this new branch erase its exact scope or continuation evidence."
+  ],
+  "exact_next_action": "Prioritize a rare-event evaluation source closer to software/AI/system failures than derivatives, with an explicit crude-MC or baseline comparison. In parallel inspect multifidelity Monte Carlo/control-variate work for cost-normalized variance factors and precise assumptions on correlation/coupling. Promote neither adaptation until a matched local evaluation task exists; preserve the distinction between rare-event splitting and average-metric multilevel estimation."
+}
