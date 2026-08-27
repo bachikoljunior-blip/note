@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T21:03:06+09:00",
+  "role": "continual_learning",
+  "frozen_note_main_sha": "b6c6112c1fa25819363e30285464f6c4947b4f37",
+  "frozen_control_revision": 12,
+  "frozen_role_config_revision": 5,
+  "purpose": "Source-isolated OpenCompass 0.5.1 vs 0.5.2 Track A1 dependency-lock contract. This is a public reconstruction contract, not the DeMix authors' environment.",
+  "python": {
+    "version_line": "3.10",
+    "target_platform": "linux-x86_64",
+    "execution_requirement": "Do not execute Track A1 until a resolver-generated lock contains exact version and artifact hash for every installed distribution."
+  },
+  "opencompass_sources": {
+    "a": "ecc86a2728c06fd2c1ad34f1d0094f42b5243c78",
+    "b": "974179240a1a4e3c0ff14c60621cf1f6c95b287a"
+  },
+  "install_surface": {
+    "rule": "Compile one shared environment from the union needed by OpenCompass [full], not runtime-only. Use the 0.5.2 full dependency surface as the superset and retain the stricter 0.5.1-compatible pandas constraint.",
+    "why": [
+      "OpenCompass 0.5.2 unit-test workflow installs .[full], not runtime-only.",
+      "setup.py defines full as requirements/runtime.txt plus requirements/extra.txt.",
+      "0.5.2 eagerly imports newly added dataset families from opencompass.datasets; several dependencies are declared only in requirements/extra.txt.",
+      "A runtime-only environment can therefore create a false 0.5.1/0.5.2 import difference caused by missing optional dataset dependencies rather than OpenCompass source semantics."
+    ]
+  },
+  "critical_dependency_boundary": {
+    "runtime_difference": {
+      "opencompass_0_5_1": ["pandas<2.0.0", "pyext"],
+      "opencompass_0_5_2": ["pandas", "# pyext in runtime.txt"]
+    },
+    "full_install_correction": "pyext is still present in requirements/extra.txt at both anchors, so pyext is not actually removed from the [full] environment. Under Track A1/full, the direct pyext runtime diff is neutralized; pandas remains the important direct version constraint difference.",
+    "new_0_5_2_extra_surface_examples": [
+      "bert_score (SciReasoner / Mol_Instructions)",
+      "Bio",
+      "emoji (IFBench)",
+      "pint (CMPhysBench)",
+      "rdchiral",
+      "selfies (MolInstructions)",
+      "smact==3.0.2 (SciReasoner)",
+      "syllapy (IFBench)"
+    ],
+    "observed_import_detail": [
+      "biodata.py imports numpy, pandas, torch, scipy.stats and sklearn.metrics at module import time.",
+      "CMPhysBench SEED imports sympy and timeout_decorator at module import time; sympy is not explicitly listed in OpenCompass runtime/extra and must therefore be captured explicitly by the resolved transitive lock rather than left implicit."
+    ]
+  },
+  "shared_constraints": {
+    "pandas": "==1.5.3",
+    "numpy": "==1.26.4",
+    "datasets": "==3.6.0",
+    "mmengine-lite": "==0.10.7",
+    "transformers": "==4.51.3",
+    "scikit-learn": "==1.5.0",
+    "note": "These are reconstruction pins already selected in the role-local Track A planning line. They are not claims about the DeMix author environment. All remaining direct/transitive packages, including torch/sympy/scipy/pyext and the full extra union, must be resolver-pinned and hashed before execution."
+  },
+  "lock_generation_contract": {
+    "input": "OpenCompass 0.5.2 requirements/runtime.txt + requirements/extra.txt, plus the shared constraints above and any stricter requirement needed to satisfy both anchors.",
+    "resolver": "Use one deterministic Python-3.10 resolver invocation for both anchors; persist resolver version, index URLs, selected wheel/sdist filenames and SHA-256 hashes.",
+    "fail_closed": [
+      "No Track A1 import if any installed distribution lacks an artifact hash.",
+      "No source comparison if the two anchors are not executed in byte-identical dependency environments.",
+      "Do not silently drop full/extra dependencies to make one anchor import.",
+      "Record import-time missing dependency as environment-contract evidence, not as an OpenCompass source regression, until the full shared lock has been satisfied."
+    ]
+  },
+  "execution_status": "not_executed_in_this_invocation",
+  "blocker": "Current local execution environment has Python 3.13 and no network/DNS access; Python 3.10 and unresolved package artifacts cannot be downloaded here. This is an execution-environment limitation, not evidence about OpenCompass behavior.",
+  "next_action": "In the next environment with package-index access, resolve and hash the full shared Python-3.10 lock from this contract, then execute Track A1 import phase under both OpenCompass source anchors before any score comparison."
+}
