@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 12,
+  "config_revision": 5,
+  "created_at": "2026-08-28T03:07:40+09:00",
+  "topic": "anytime-certified priority entry plus drift-triggered defensive fallback for adaptive importance sampling",
+  "public_evidence": [
+    {
+      "source": "Howard, Ramdas, McAuliffe, Sekhon, Time-uniform, nonparametric, nonasymptotic confidence sequences",
+      "url": "https://arxiv.org/abs/1810.08240",
+      "date": "2021-04",
+      "result": "Theorem 4 gives an empirical-Bernstein confidence sequence for bounded adapted observations around their average conditional expectation, using predictable variance proxies. It remains valid under predictable/adaptive sampling and arbitrary stopping; the paper explicitly applies the machinery to inverse-probability-weighted sequential estimators with treatment probabilities depending on the past."
+    },
+    {
+      "source": "Waudby-Smith and Ramdas, Estimating means of bounded random variables by betting",
+      "url": "https://academic.oup.com/jrsssb/article/86/1/1/7043257",
+      "date": "2024-02",
+      "result": "Bounded-mean confidence sequences can be built from predictable betting capital processes. Predictable bets preserve test-martingale validity, providing an anytime-valid way to certify a positive mean advantage without fixing the stopping time."
+    },
+    {
+      "source": "Shin, Ramdas, Rinaldo, E-detectors: A Nonparametric Framework for Sequential Change Detection",
+      "url": "https://nejsds.nestat.org/journal/NEJSDS/article/59/read",
+      "date": "2023-12-01",
+      "result": "e-SR/e-CUSUM style detectors built from conditional e-values control average run length nonasymptotically and can detect a later sign change without relying on a single wealth process that may have been depleted by a long pre-change prefix."
+    },
+    {
+      "source": "Ryu and Boyd, Adaptive Importance Sampling via Stochastic Convex Programming",
+      "url": "https://stanford.edu/~boyd/papers/adaMC.html",
+      "date": "2014-11",
+      "result": "Adaptive proposal updates can coexist with an unbiased importance-sampling estimator; under their exponential-family assumptions the adaptive variance converges to the proposal-family optimum."
+    }
+  ],
+  "derived_gate": {
+    "setup": "For base branch distribution W, current predictable proposal q_t, Bernoulli failure label Y, and any candidate q_j, define H_t(q_j)=W_A^2 Y/[q_t(A) q_j(A)]. Then E[H_t(q_j)|F_{t-1}]=S_t(q_j)=sum_i W_i^2 p_{t,i}/q_j(i). Minimizing S_t is equivalent to minimizing per-sample variance because the target mean theta_t is proposal-independent.",
+    "entry_gain": "G_t(j)=H_t(base)-H_t(q_j) has conditional mean S_t(base)-S_t(q_j). A Howard-style empirical-Bernstein CS may be run on G_t(j), or equivalently a bounded betting e-process may test whether the gain is positive. With J fixed candidates, split entry error across candidates; enter only when a candidate's anytime lower bound exceeds a chosen material margin eta.",
+    "exact_predictable_range": "Instead of the loose global 1/epsilon_min^2 bound, use R_t(j)=max_i |W_i^2/q_t(i) * (1/W_i - 1/q_j(i))|, which is known before observing the next label. Then Z_t(j)=G_t(j)/R_t(j) lies in [-1,1]. Under H0: S_t(base)-S_t(q_j)<=0, any predictable lambda_t in [0,1] makes product_t [1+lambda_t Z_t(j)] a nonnegative supermartingale. This materially tightens entry evidence while retaining exact anytime validity.",
+    "drift_failure_of_entry_only": "A confidence sequence accumulated before a distribution shift certifies a historical/average conditional gain, not the current post-shift gain. Its old evidence need not disappear when the proxy becomes harmful. Therefore an entry-only gate is not sufficient for nonstationary proposal quality.",
+    "harm_fallback": "While q_j is active, define D_t(j)=H_t(q_j)-H_t(base) and normalize by its exact predictable range R_t^harm. Under no-harm, E[D_t(j)|F_{t-1}]<=0. Hence L_t=1+lambda D_t/R_t^harm with lambda in [0,1] is a conditional e-value. Feeding L_t into the e-CUSUM recursion M_t=L_t max(M_{t-1},1) gives a change detector with average-run-length protection under the no-harm regime. Alarm reverts immediately to base and clears stale entry evidence.",
+    "error_semantics": "Entry error is a false promotion and should use a strict anytime familywise budget. Harm-detector false alarms only revert to the unbiased base proposal, so their cost is efficiency rather than estimator validity; the ARL threshold can therefore be tuned by the relative cost of slow fallback versus unnecessary fallback."
+  },
+  "synthetic_abrupt_drift_stress": {
+    "scope": "Engineering stress only, not an agent benchmark or theorem. 4096 equiprobable base branches, target base risk 0.002. Pre-drift branch risks are proportional to exp(1.2 z_i); post-drift risks are proportional to exp(-1.2 z_i), keeping the same base mean. Proxy is z_i plus N(0,1) noise. Priority q_priority is proportional to exp(0.6 proxy); candidates are q_epsilon=epsilon W+(1-epsilon)q_priority for epsilon in {0.2,0.4,0.6,0.8,1.0}.",
+    "true_variance_efficiency_vs_base_pre": {"0.2":1.10687,"0.4":1.15630,"0.6":1.15957,"0.8":1.11689,"1.0":1.0},
+    "true_variance_efficiency_vs_base_post": {"0.2":0.45547,"0.4":0.61954,"0.6":0.76125,"0.8":0.88772,"1.0":1.0},
+    "entry_gate": "Start at base. For each non-base candidate maintain an equal mixture of betting capitals with lambda in {0.25,0.5,0.75,1.0} on exact-range-normalized gain. Bonferroni familywise entry delta=0.05 gives threshold 80. Choose the certified candidate with greatest mixture evidence.",
+    "harm_gate": "After promotion run e-CUSUM on exact-range-normalized harm with lambda=1. Primary run used alpha_harm=0.001 (threshold 1000). On alarm return to base and reset entry evidence.",
+    "replicates": 500,
+    "samples_pre_drift": 50000,
+    "samples_post_drift": 50000,
+    "switch_rate": 0.99,
+    "selected_counts": {"0.6":220,"0.8":275,"none":5},
+    "switch_time_samples": {"p10":14382,"median":24082,"p90":37169},
+    "post_drift_fallback_rate": 0.99,
+    "fallback_delay_samples": {"p10":8344.2,"median":12566,"p90":18869.6,"p95":20778.4},
+    "observed_pre_drift_false_fallback_rate": 0.0,
+    "base_total_variance_units": 199.6,
+    "entry_without_harm_fallback_mean_variance_units": 214.25387,
+    "entry_without_harm_fallback_efficiency_vs_base": 0.93161,
+    "entry_plus_harm_fallback_mean_variance_units": 199.45836,
+    "entry_plus_harm_fallback_efficiency_vs_base": 1.00071,
+    "oracle_phasewise_efficiency_vs_base": 1.07389,
+    "interpretation": "The stale entry decision alone lost about 6.8% efficiency after reversal. The harm detector recovered about 14.80 variance units on average and essentially removed the measured drift penalty, but conservative certification/fallback delay also consumed nearly all available pre-drift gain."
+  },
+  "harm_threshold_tradeoff": {
+    "scope": "200 synthetic replicates per threshold; separate engineering sweep.",
+    "rows": [
+      {"alpha_harm":0.01,"q90_fallback_delay":14001.1,"observed_false_fallback_rate":0.0,"efficiency_vs_base":1.00989},
+      {"alpha_harm":0.003,"q90_fallback_delay":17381.6,"observed_false_fallback_rate":0.0,"efficiency_vs_base":1.00465},
+      {"alpha_harm":0.001,"q90_fallback_delay":19195.3,"observed_false_fallback_rate":0.0,"efficiency_vs_base":0.99970},
+      {"alpha_harm":0.0003,"q90_fallback_delay":22040.0,"observed_false_fallback_rate":0.0,"efficiency_vs_base":0.99464},
+      {"alpha_harm":0.0001,"q90_fallback_delay":24352.5,"observed_false_fallback_rate":0.0,"efficiency_vs_base":0.98974}
+    ],
+    "interpretation": "Because a false harm alarm only returns to base, a looser harm threshold can improve robustness to abrupt reversal. The ARL theorem, not the observed zero false-fallback count, is the formal no-harm guarantee."
+  },
+  "gradual_drift_stress": {
+    "scope": "300 synthetic replicates; linear interpolation from pre to reversed risk distribution across 50k samples after a 50k stationary preperiod, alpha_harm=0.001.",
+    "candidate_harm_crossing_fraction_of_drift": {"0.6":0.30496,"0.8":0.45280},
+    "switch_rate":0.99,
+    "observed_pre_drift_false_fallback_rate":0.0,
+    "alarm_by_end_of_drift_rate":0.59,
+    "delay_after_true_harm_crossing_samples": {"p10":19734.1,"median":27063.9,"p90":33355.4},
+    "efficiency_vs_all_base":1.01196,
+    "interpretation": "The same e-CUSUM that works well for abrupt reversal can lag substantially under gradual degradation. This motivates either a mixture/adaptive harm detector, continuous shrinkage of epsilon toward base, or a second detector tuned to small persistent harm."
+  },
+  "negative_or_scope_evidence": [
+    "Entry CS/evidence accumulated before drift does not certify current post-drift second moment; treating it as current is invalid.",
+    "The e-CUSUM guarantee is an average-run-length guarantee, not a small probability of ever falsely falling back.",
+    "The synthetic branch model is deliberately simple and does not establish gains for LLM agents, tool environments, or correlated SMC descendants.",
+    "If environment/tool transitions are also proposed rather than sampled from the base law, separate P/Q trajectory likelihood ratios remain necessary.",
+    "Rare labels make certification slow; in the abrupt stress the robust gate only slightly beat base despite a phasewise oracle offering about 7.4% efficiency gain.",
+    "No AGI capability conclusion follows."
+  ],
+  "next_tests": [
+    "Replace the finite fixed-lambda entry mixture with a Howard/Waudby-Smith variance-adaptive empirical-Bernstein or predictable Kelly confidence gate and compare certification delay at the same anytime error budget.",
+    "Build a harm-detector mixture over betting strengths/effect scales, or an adaptive e-detector, and quantify whether gradual-drift fallback delay shrinks without excessive false fallback.",
+    "Extend the exact-range gate to dependent/systematic sibling resampling and random particle counts using proper weighting.",
+    "Find agent/LLM-specific multifidelity rare-event evaluation where a low-cost judge is proposal-only and sparse high-fidelity labels provide explicit target correction.",
+    "Characterize risk identifiability when base environment likelihood ratios are unavailable."
+  ]
+}
