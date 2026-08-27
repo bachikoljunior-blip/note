@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-28T03:49:05+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "root_control_revision": 12,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "config_revision": 5,
+    "enabled_desired": true,
+    "presemantic_sha_check_1": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "presemantic_sha_check_2": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "semantic_freeze_respected": true
+  },
+  "input": {
+    "wave_id": "clean-g1-wave-c24-20260828T005432JST-e1c4c313",
+    "wave_manifest_blob": "1f0279130a7c2357232f5aeb51683bd7a3b7ec3e",
+    "source_namespace": "continual_learning",
+    "source_path": "research_workers_clean_g1/continual_learning/RUN_20260828T0011_JST.md",
+    "source_blob": "f14cb8dfa65b45c47938aeb40f15a695418d15a0",
+    "candidate": "CPO public-release ZeRO-3 world-size regularizer scaling",
+    "cpo_repository": "MaolinLuo/CPO",
+    "cpo_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "deepspeed_repository": "deepspeedai/DeepSpeed",
+    "deepspeed_tag": "v0.16.4",
+    "deepspeed_commit": "e2dc3eeb1923073e32739596a4fd051417d4ff92"
+  },
+  "primary_sources": [
+    {
+      "source": "MaolinLuo/CPO README.md",
+      "blob": "17178a21b514a99892d8903f15be03682107c9a8",
+      "observed_contract": "Paper training environment states PyTorch 2.8.0, DeepSpeed 0.16.4, eight H100 GPUs for RL; CPO is launched via GSPO-CL 2B/4B/8B scripts and the README presents cross-size CPO scaling results."
+    },
+    {
+      "source": "MaolinLuo/CPO src/trainer/grpo_trainer_cl.py",
+      "blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+      "observed_contract": "For ZeRO-3, each rank computes regularizer gradients only for protected coordinates in that rank's parameter partition, stores those owner-only global indices, and a Tensor.register_hook injects only that rank-local contribution into the full pre-reduce-scatter gradient. The non-ZeRO-3 path injects all protected coordinates. rank-local mask_loss partials are gathered and nanmean'ed."
+    },
+    {
+      "source": "MaolinLuo/CPO src/params.py",
+      "blob": "d8d6211ddff612899e522129629c3015c3be27fb",
+      "observed_contract": "GRPOTrainingArguments.mask_lambda defaults to 1e2."
+    },
+    {
+      "source": "MaolinLuo/CPO scripts/GSPO-CL/gspo.sh",
+      "blob": "ecfa0dafec9bb813646ebef789dddd15e9158fe2",
+      "observed_contract": "2B CPO tasks after task 1 pass mask_path when present and use scripts/zero2.json; script documents eight visible devices."
+    },
+    {
+      "source": "MaolinLuo/CPO scripts/GSPO-CL-4B/gspo.sh",
+      "blob": "155ccbba4034fb34521f8edd0f9b85321cfa3dff",
+      "observed_contract": "4B CPO tasks after task 1 pass mask_path when present and use scripts/zero3_offload.json; script documents eight visible devices."
+    },
+    {
+      "source": "MaolinLuo/CPO scripts/GSPO-CL-8B/gspo.sh",
+      "blob": "54931993f3e98259c8ce89f82999fb552be6568f",
+      "observed_contract": "8B CPO tasks after task 1 pass mask_path when present and use scripts/zero3_offload.json; script documents eight visible devices."
+    },
+    {
+      "source": "MaolinLuo/CPO scripts/zero3_offload.json",
+      "blob": "923b4187a5568a0e741b68248b29d25940f30990",
+      "observed_contract": "ZeRO stage 3 with standard reduce-scatter path, bf16 auto, no alternate all-to-all quantized process group configured."
+    },
+    {
+      "source": "deepspeedai/DeepSpeed v0.16.4 tag",
+      "observed_contract": "v0.16.4 resolves exactly to commit e2dc3eeb1923073e32739596a4fd051417d4ff92."
+    },
+    {
+      "source": "DeepSpeed deepspeed/utils/torch.py",
+      "blob": "1d32775fe64a8e9bf1bff5df6aaa111c2974d53d",
+      "observed_contract": "On torch>=2.1, DeepSpeed register_grad_hook installs a Tensor.register_post_accumulate_grad_hook."
+    },
+    {
+      "source": "DeepSpeed deepspeed/runtime/zero/stage3.py",
+      "blob": "9cc58fdbac010759e5ad1bc4a49827628c098d39",
+      "observed_contract": "ZeRO-3 creates post-accumulate reduction hooks that call reduce_ready_partitions_and_remove_grads; __avg_scatter_grads passes full parameter gradients to reduce_scatter_coalesced over the data-parallel process group."
+    },
+    {
+      "source": "DeepSpeed deepspeed/runtime/comm/coalesced_collectives.py",
+      "blob": "2fadce52222cda680600253ae840f84b89bda7ed",
+      "observed_contract": "reduce_scatter_coalesced divides the flat gradient buffer by world_sz before the reduce-scatter sum."
+    },
+    {
+      "source": "PyTorch 2.8 official Autograd mechanics / Backward Hooks execution documentation",
+      "observed_contract": "Tensor.register_hook executes before leaf grad accumulation; post_accumulate_grad hooks execute after grad accumulation. Therefore CPO's Tensor hook modifies the gradient before DeepSpeed's post-accumulate reduction hook sees it."
+    }
+  ],
+  "status": "primary_verified_source_level_1_over_W_attenuation_under_public_DP_execution_assumptions",
+  "independent_derivation": {
+    "owner_only_injection": "For one protected coordinate j, CPO's ZeRO-3 partition test assigns j to exactly one rank r and only that rank injects regularizer contribution g_j into its full pre-reduction gradient. Other data-parallel ranks inject zero regularizer contribution at j.",
+    "hook_order": "CPO uses Tensor.register_hook; DeepSpeed 0.16.4 uses register_post_accumulate_grad_hook on PyTorch 2.8. Official hook ordering places the Tensor hook before grad accumulation and the DeepSpeed post-accumulate hook after accumulation, so the injected g_j is present before DeepSpeed's reduction path.",
+    "reduction": "DeepSpeed __avg_scatter_grads sends each rank's full grad to reduce_scatter_coalesced, which pre-divides by W and reduce-scatters the sum. The regularizer term at j is therefore (g_j + 0 + ... + 0)/W = g_j/W.",
+    "non_zero3_reference": "In CPO's non-ZeRO-3 path every replica has the full parameter and injects the same deterministic g_j, so ordinary DP averaging gives (W*g_j)/W = g_j.",
+    "public_W": "README and launch scripts specify eight GPUs for RL. Under the public standard eight-rank DP execution, the ZeRO-3 regularizer is therefore attenuated by 1/8 relative to the non-ZeRO-3 replicated semantics. With default mask_lambda=100, the lambda-equivalent coefficient is 12.5 rather than 100, all else equal.",
+    "logging": "Each ZeRO-3 rank computes only its disjoint partition's contribution to the global masked-mean numerator while dividing by the global masked count; gathering these partial scalars and taking nanmean introduces the same 1/W factor. Under the standard one-DP-group execution with finite scalars, this is algebraically 1/W of the global masked-mean sum, not merely a qualitative attenuation."
+  },
+  "material_scope_corrections": [
+    "This is a source-level prediction for the current public release and pinned PyTorch/DeepSpeed semantics, not an executed eight-GPU numerical reproduction. A minimal distributed test remains the strongest falsification check for hidden runtime assumptions.",
+    "The finding does not prove that paper tables were generated by this exact public trainer/config. The README identifies these as the paper environment and launchers, but no immutable paper-run checkpoint/log binds every published number to commit 9429452 and the inspected ZeRO semantics.",
+    "The cross-size 2B versus 4B/8B comparison is therefore not a clean same-effective-lambda test in the current public release. This does not imply the reported empirical retention numbers are false.",
+    "The 1/W statement assumes the public standard data-parallel topology where CPO's global dist.get_world_size partition mapping matches DeepSpeed's DP process group. No tensor/model-parallel topology is configured in the inspected launchers. A materially different hidden topology would require re-derivation.",
+    "Gradient-accumulation normalization is applied by CPO in both paths and does not remove the additional ZeRO-3 data-parallel averaging factor."
+  ],
+  "recommended_falsification": "On identical parameters/masks/reference/base gradients, compare single-rank or non-ZeRO reference, current W-rank owner-only ZeRO-3, and owner-only multiplied by W before reduction. Inspect the post-reduce protected-coordinate gradient and logged-versus-global mask loss before any full model training.",
+  "writes_excluded": [
+    "research_workers_clean_g1/**",
+    "research_feedback_clean_g1/**",
+    "automation_control/DESIRED_STATE.json",
+    "automation_control/DOWNSTREAM_STATE.json",
+    "primary O",
+    "shared automation_control/EXECUTION_LEDGER.json"
+  ],
+  "global_completion": false,
+  "exact_next_action": "Rotate to sealed C24 long_horizon or failure_evidence. Prefer an exact source tuple whose raw artifact can falsify a recovery/reliability claim and has not already been source-bound in C22/C23."
+}
