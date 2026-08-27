@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "role": "continual_learning",
+  "created_at": "2026-08-28T08:07:39+09:00",
+  "frozen_control": {
+    "note_main_sha": "7959a85ae5365d0fedc23d67276859444e81fdb1",
+    "control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "public_source_anchors": {
+    "cpo_release": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+    "mask_builder": "src/compute_importance_mask.py",
+    "trainer": "src/trainer/grpo_trainer_cl.py",
+    "qwen_public_revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "qwen_tied_matrix_shape": [151936, 2560]
+  },
+  "local_execution_environment": {
+    "python": "3.13.5",
+    "torch": "2.10.0+cpu",
+    "transformers_installed": false,
+    "network_package_install_attempt": "failed due DNS/name-resolution; not evidence about CPO or PyTorch"
+  },
+  "executed_tied_fixture": {
+    "description": "Source-equivalent CPO per-tensor mask/ref computation on an nn.Embedding + tied nn.Linear output head.",
+    "state_dict_keys": ["embed.weight", "head.weight"],
+    "canonical_named_parameters": ["embed.weight"],
+    "release_mask_keys": ["embed.weight", "head.weight"],
+    "alias_mask_bitwise_equal_to_canonical": true,
+    "alias_ref_bitwise_equal_to_canonical": true,
+    "alias_mask_storage_shared_with_canonical": false,
+    "alias_ref_storage_shared_with_canonical": false,
+    "small_fixture_torch_save_bytes": {
+      "release_with_alias": 3845,
+      "canonical_only": 2629,
+      "delta": 1216
+    }
+  },
+  "serialization_scaling_test": {
+    "description": "Saved independent bool mask and float32 ref tensors, then added a cloned duplicate alias. torch.save archive delta converges to raw duplicate tensor payload, showing no useful storage sharing/compression for separately allocated alias tensors in this runtime.",
+    "support_fraction": 0.1,
+    "rows": [
+      {"numel":10000,"canonical_bytes":15877,"duplicate_bytes":30341,"delta_bytes":14464,"raw_alias_tensor_bytes":14000,"delta_over_raw":1.0331428571428571},
+      {"numel":100000,"canonical_bytes":141893,"duplicate_bytes":282373,"delta_bytes":140480,"raw_alias_tensor_bytes":140000,"delta_over_raw":1.0034285714285713},
+      {"numel":1000000,"canonical_bytes":1401925,"duplicate_bytes":2802437,"delta_bytes":1400512,"raw_alias_tensor_bytes":1400000,"delta_over_raw":1.0003657142857143},
+      {"numel":5000000,"canonical_bytes":7001925,"duplicate_bytes":14002437,"delta_bytes":7000512,"raw_alias_tensor_bytes":7000000,"delta_over_raw":1.0000731428571428}
+    ]
+  },
+  "qwen3_vl_4b_projection": {
+    "tied_matrix_numel": 388956160,
+    "dense_bool_alias_bytes_if_mask_key_exists": 388956160,
+    "dense_bool_alias_gib": 0.36224365234375,
+    "public_top_percent": 10.0,
+    "max_nonzero_selected_positions_at_10pct": 38895616,
+    "raw_alias_mask_plus_ref_bytes_at_full_10pct": 544538624,
+    "raw_alias_mask_plus_ref_gib_at_full_10pct": 0.50714111328125,
+    "raw_alias_mask_ref_plus_int64_index_bytes_at_full_10pct": 855703552,
+    "raw_alias_mask_ref_plus_int64_index_gib_at_full_10pct": 0.79693603515625,
+    "torch_2_10_serialization_projection_bytes_at_full_10pct": 544539136,
+    "projection_scope": "The +512-byte archive metadata observation is from torch 2.10 synthetic scaling, not a measured public CPO/PyTorch-2.8 task_k.pt file.",
+    "extra_mask_builder_work": {
+      "duplicate_diff_topk_tensor_numel": 388956160,
+      "duplicate_topk_k_at_10pct": 38895616,
+      "interpretation": "Because tied alias and canonical values are identical but processed as separate state_dict keys, the public builder repeats the embedding-sized diff/topk/mask/ref work once for the dead alias."
+    }
+  },
+  "stealth_accounting_result": {
+    "physical_parameter_count_public_qwen4b": 4437815808,
+    "logical_state_dict_scalar_count_if_tied_alias_is_only_extra_float_key": 4826771968,
+    "logical_denominator_inflation_fraction": 0.08764585481417075,
+    "full_10pct_canonical_positions_approx": 443781580,
+    "full_10pct_release_positions_approx": 482677196,
+    "extra_positions_from_dead_alias": 38895616,
+    "key_observation": "If each tensor supplies its full requested 10% nonzero support, the public 'selected %' log can still read approximately 10% because the alias duplicates numerator and denominator together, while absolute n_pos/file/RAM work is inflated by the alias."
+  },
+  "four_task_independent_support_scenario": {
+    "assumption": "Each task selects an independent 10% subset within the tied matrix; this is a scenario, not measured CPO support overlap.",
+    "cumulative_support_fractions": [0.1, 0.19, 0.271, 0.3439],
+    "latest_mask_dead_alias_resident_aux_gib": 1.8571507520973682,
+    "historical_four_mask_dead_alias_raw_disk_gib": 2.7601517333984376
+  },
+  "scope_guards": [
+    "No real Qwen3-VL-4B model or task checkpoint was loaded.",
+    "No PyTorch-2.8 binary execution occurred.",
+    "Actual embedding movement/nonzero support and task-to-task support overlap remain unmeasured.",
+    "The public CPO release may differ from unreleased code used for paper tables.",
+    "The tied-alias defect affects public bookkeeping/storage/build work; the trainer ignores the dead alias for actual regularization hooks."
+  ],
+  "next_actions": [
+    "Measure actual tied-embedding nonzero support and task_k.pt bytes on a real CPO checkpoint when available.",
+    "Re-run canonical namespace and serialization tests under PyTorch 2.8.0.",
+    "Measure real mask-build wall time/RSS before and after canonical trainer-namespace filtering.",
+    "Compare public selected-percentage logs, n_pos logs, and trainer-effective canonical counts on the same mask file.",
+    "Continue the independent ZeRO-3 regularizer scaling test separately from namespace repair."
+  ]
+}
