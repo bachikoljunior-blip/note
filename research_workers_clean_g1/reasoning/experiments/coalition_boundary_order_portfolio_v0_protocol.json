@@ -1,0 +1,59 @@
+{
+  "schema": "coalition_boundary_order_portfolio_v0_protocol",
+  "created_at": "2026-08-28T04:59:59.937419+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Preregister a charged-cost restart/order-portfolio experiment after C576 showed strong start dependence and C577 showed vertex-separation is only a soft pruning feature. This protocol is outcome-aware with respect to prior V1 results but frozen before any portfolio outcomes.",
+  "families": ["path18", "binary_tree15", "grid4x4", "cubic18_s880301", "cubic18_s880319"],
+  "compiler": "Fresh balanced-pairwise ROBDD compiler per candidate. Exact rank vector and full assignment truth bitset are correctness oracles. No candidate-compilation cache may be shared across policy cells.",
+  "local_search": {
+    "neighborhood": "all distinct one-variable remove-and-reinsert orders",
+    "candidate_filter": "compile only candidates with vertex-separation width <= current_width + 1",
+    "selection": "minimum final live ROBDD nodes, then minimum allocated nodes, then lexicographic order",
+    "accept": "strict live-node improvement only",
+    "max_accepted_moves_per_arm": 4
+  },
+  "starts": {
+    "natural": "sorted vertices",
+    "reverse_cuthill_mckee": "networkx reverse_cuthill_mckee_ordering",
+    "seeded_diverse": {
+      "candidate_count": 32,
+      "seed_base": 880611,
+      "eligibility": "vertex-separation width <= min(width(natural), width(reverse_cuthill_mckee)) + 2",
+      "choice": "among eligible random permutations, maximize the minimum normalized inversion/Kendall distance to natural and reverse_cuthill_mckee; ties by lower width then lexicographic order; if none eligible choose the random candidate with minimum width then lexicographic order"
+    }
+  },
+  "policies": {
+    "single_rcm4": "Run reverse_cuthill_mckee arm up to 4 accepted moves; return its endpoint.",
+    "single_natural4": "Run natural arm up to 4 accepted moves; return its endpoint.",
+    "two_arm_one_then_commit": "Run exactly one accepted-move search stage from reverse_cuthill_mckee and natural independently (or stop an arm if no improving move exists). Select the arm with lower live nodes, then lower charged candidate compilations, then fixed arm priority RCM before natural; continue only that arm up to 4 total accepted moves.",
+    "three_arm_one_then_commit": "As two_arm_one_then_commit but include seeded_diverse as a third independent arm; after one stage per arm commit to the best live-node arm, tie by lower charged candidate compilations then fixed priority RCM, natural, seeded_diverse; continue only the winner up to 4 total accepted moves.",
+    "full_two_arm4": "Run RCM and natural independently up to 4 accepted moves each and return the better endpoint. This is a charged-cost portfolio envelope, not a deployable oracle with free restarts."
+  },
+  "cost_accounting": {
+    "primary_cost": "number of candidate ROBDD compilations actually paid by the policy, including losing/restarted arms",
+    "secondary_descriptive_costs": ["Python compilation wall-clock ms", "enumerated candidates", "accepted moves"],
+    "quality": "final live nonterminal ROBDD nodes",
+    "reporting": "Report quality-cost Pareto dominance per family and aggregate normalized live-node regret relative to full_two_arm4. Never hide restart/search overhead in final one-shot compilation cost."
+  },
+  "resource_guard": {
+    "max_candidate_compilations_per_policy_cell": 3500,
+    "max_wall_clock_seconds_per_policy_cell": 45,
+    "on_guard": "mark incomplete and exclude from local-optimum or Pareto claims"
+  },
+  "predeclared_tests": [
+    "All completed policy endpoints must reproduce the same exact rank vector and full truth bitset for a family.",
+    "Compare one-then-commit portfolios to single-start baselines on final live nodes and charged candidate compilations separately.",
+    "Call a portfolio beneficial on a family only if it improves final live nodes at a finite explicitly reported additional candidate-compilation cost, or achieves equal live nodes with fewer candidate compilations.",
+    "Report whether the third seeded-diverse arm changes any selected endpoint; do not infer general value from zero or one wins.",
+    "Report normalized regret=(policy_live-full_two_arm4_live)/full_two_arm4_live and cost ratio=policy_compiles/full_two_arm4_compiles for completed cells.",
+    "Do not use vertex-separation as an authoritative value function; it is only the preregistered seeded-start eligibility and local candidate-pruning feature.",
+    "No endpoint is a global variable-order optimum and no result is a CUDD dynamic-reordering benchmark."
+  ],
+  "scope": "Five previously frozen small positive monotone 2-CNF graph families. Outcome-aware follow-up after local-search start dependence was observed. Results do not generalize to real finite-compute proof utility, which may be nonmonotone."
+}
