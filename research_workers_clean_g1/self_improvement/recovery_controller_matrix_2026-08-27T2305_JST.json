@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-27T23:05:35+09:00",
+  "frozen_control": {
+    "note_main_sha": "d9269d4ba2d663ce357370946af4e5994598433a",
+    "control_revision": 12,
+    "config_revision": 6,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "purpose": "Source-bound comparison of recovery/controller actions relevant to persistent self-improvement. Mechanism evidence from within-task recovery is kept separate from cross-task persistent evolution evidence.",
+  "systems": [
+    {
+      "id": "AR2608_14380_AGENTREWIND",
+      "title": "AgentRewind: Recoverable Execution for Long-Horizon LLM Agents",
+      "primary_source": "https://arxiv.org/abs/2608.14380",
+      "submitted": "2026-08-14",
+      "scope_class": "within-task long-horizon runtime recovery; not persistent cross-task self-improvement",
+      "controller_actions": [
+        "Continue current state",
+        "Restart from root while carrying evaluator-derived failure experience",
+        "Resume ancestor via aligned context+environment rewind while carrying rewind memory"
+      ],
+      "matched_design": "Experiments share agent/tools/environments, greedy decoding and termination conditions; paper also includes paired recovery from identical failed endpoints with rewind availability as the key difference.",
+      "quantitative_evidence": {
+        "mettlebench_gpt54_mini_swe": {
+          "continue_success_pct": 62.2,
+          "agentrewind_success_pct": 87.8
+        },
+        "terminal_bench_2_full_89_tasks": {
+          "continue_success_pct": 78.7,
+          "restart_with_experiences_success_pct": 70.8,
+          "agentrewind_success_pct": 83.1,
+          "continue_avg_criteria_pct": 88.7,
+          "restart_with_experiences_avg_criteria_pct": 79.2,
+          "agentrewind_avg_criteria_pct": 90.2
+        },
+        "gpt54_ablation_success_pct": {
+          "full_agentrewind": 87.8,
+          "no_environment_rewind": 43.9,
+          "no_context_rewind": 65.9,
+          "no_rewind_memory": 51.2
+        }
+      },
+      "inference_within_scope": "When a failure is suffix-local and earlier state remains useful, selective rollback that restores both environment and context while retaining failure knowledge can dominate clean restart and forward-only continuation.",
+      "limits": [
+        "Controlled workspace/environment only; external irreversible side effects are outside the demonstrated rollback scope.",
+        "No official source repository was source-bound in this run, so crash atomicity and checkpoint implementation were not independently audited.",
+        "Do not generalize these task-recovery gains to persistent cross-task self-improvement without a matched persistent experiment."
+      ]
+    },
+    {
+      "id": "FFRS2608_03222",
+      "title": "Fail-Fast, Restart-Smart: Early Failure Prediction and Restart for SWE Agentic Tasks",
+      "primary_source": "https://arxiv.org/abs/2608.03222",
+      "submitted": "2026-08-04",
+      "scope_class": "within-task SWE runtime recovery; not persistent cross-task self-improvement",
+      "controller_actions": [
+        "Continue until sequential failure alarm",
+        "Restart-clean with fresh prompt/history",
+        "Restart-with-artifact by offering interrupted repository diff as optional overlay"
+      ],
+      "quantitative_evidence": {
+        "swe_bench_verified_target_fp_5pct": {
+          "execution_token_saving_range_pct": [14.6, 20.4],
+          "qwen36_27b_agentstop_adaptation_token_saving_pct": 12.5
+        },
+        "qwen36_27b_target_fp_25pct": {
+          "base_resolution_pct": 66.6,
+          "restart_smart_resolution_pct": 71.8,
+          "cold_restart_resolution_pct": 66.8
+        }
+      },
+      "inference_within_scope": "Restarting need not discard all trajectory value; preserving a bounded artifact overlay can outperform cold restart when the interrupted trajectory contains useful code changes.",
+      "limits": [
+        "This is a single-active-trajectory controller, not an evolving long-term agent memory policy.",
+        "False-positive setting changes the compute/success tradeoff; the 25% FP result is not a universal operating point."
+      ]
+    },
+    {
+      "id": "SF2608_14354_SCIENCEFLOW",
+      "title": "ScienceFlow: A long-horizon agent for ML research, scientific discovery and beyond",
+      "primary_source": "https://arxiv.org/abs/2608.14354",
+      "public_code_source": "https://github.com/huawei-noah/noah-research/tree/d38150de76b45a0992bcfe175957d08004b7319a/ScienceFlow",
+      "submitted": "2026-08-14",
+      "scope_class": "persistent long-horizon autoresearch with recoverable executable state",
+      "controller_actions": [
+        "Current anchor + continue",
+        "Archived Stage anchor + continue",
+        "Current anchor + redirect",
+        "Archived Stage anchor + redirect",
+        "Evidence-aware job admit/monitor/timebox/stop",
+        "Process resume from persisted workspace/memory/tool cursor"
+      ],
+      "same_budget_ablation_mle_lite_22_tasks_24h_three_seeds": {
+        "full_any_medal_pct": 80.30,
+        "without_estra_pct": 66.67,
+        "without_execution_control_pct": 69.70
+      },
+      "task_time_examples_hours": {
+        "jigsaw_first_medal_full": 2.12,
+        "jigsaw_first_medal_without_estra": 5.17,
+        "aptos_first_medal_full": 5.18,
+        "aptos_first_medal_without_execution_control": 8.05
+      },
+      "public_resume_contract": {
+        "task_level": "reuse same workspace and account remaining budget from logs/state.json",
+        "agent_memory_level": "reload persisted ScienceAgent history and decide next LLM round versus pending tool execution",
+        "tool_cursor_level": "if exactly one assistant tool call is at the memory tail without a tool result, execute that tool directly, append its result, then continue",
+        "no_prompt_pollution": true,
+        "multiple_pending_tool_calls": "detected/audited but not automatically replayed",
+        "source_files": [
+          "ScienceFlow/scripts/lnr_kill_resume.sh",
+          "ScienceFlow/scienceflow/solver/lnr/resume/README.md",
+          "ScienceFlow/scienceflow/solver/lnr/resume/memory_state.py",
+          "ScienceFlow/scienceflow/solver/lnr/resume/continuation.py",
+          "ScienceFlow/tests/test_lnr_resume.py"
+        ],
+        "tested_behavior": "Public unit tests verify detection of a single pending tool call, direct tool execution without re-logging the assistant message, transition back to continue_llm, resume monitor events, and heartbeat behavior during a resumed bash tool."
+      },
+      "inference_within_scope": "Persistent autoresearch benefits from recoverable archived executable states and separate execution control under the tested 24h MLE-Lite budget. The public code also demonstrates concrete process-resume semantics at workspace, memory and single-tool-cursor levels.",
+      "limits": [
+        "The ablation removes ESTRA as a whole and does not separately compare all four ESTRA action combinations.",
+        "The reported benchmark outcome is not a physically isolated outer lockbox for the adaptive research loop; retrospective test curves in the paper are analysis-only where described.",
+        "The inspected tests do not establish semantic equivalence under arbitrary crash points for every controller/evaluation state transition."
+      ]
+    },
+    {
+      "id": "FORGE2605_16233_PRIOR_LOCAL",
+      "title": "FORGE: Self-Evolving Agent Memory With No Weight Updates via Population Broadcast",
+      "primary_source": "https://arxiv.org/abs/2605.16233",
+      "scope_class": "persistent cross-stage memory evolution",
+      "controller_actions": [
+        "Continue",
+        "Restart-with-artifact after failure-triggered memory edit",
+        "Widen with parallel persistent instances",
+        "Resume-best/broadcast",
+        "Stop/Freeze through graduation"
+      ],
+      "prior_checkpoint": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-27T2232_JST_forge_controller_resume.md",
+      "key_boundary": "Public resume path did not persist graduated_instances, so a process restart could reactivate and overwrite a lineage that uninterrupted execution had frozen.",
+      "use_in_current_matrix": "Contrasts with ScienceFlow's explicit persisted-memory/tool-cursor resume support and motivates separate durable artifact/controller/evaluation-consumption state."
+    }
+  ],
+  "synthesis": {
+    "controller_action_space": [
+      "Continue current",
+      "Restart-clean/root",
+      "Restart-with-artifact",
+      "Resume/re-anchor ancestor",
+      "Redirect/reopen from current",
+      "Redirect/reopen from archived ancestor",
+      "Widen/population",
+      "Resume-best/broadcast",
+      "Stop/freeze"
+    ],
+    "minimal_state_rewind_hypothesis": "Prefer the smallest rollback/re-anchor that removes invalid causal dependencies while preserving independently validated prefix/artifacts and carrying explicit failure evidence. This is a synthesis hypothesis, not a theorem or a single-paper result.",
+    "durability_requirement": [
+      "artifact state",
+      "controller state including frozen/retired/active status, parent identity and budgets",
+      "evaluation-consumption state including evidence already used for selection and outer evidence still untouched",
+      "pending side-effect/tool cursor with replay/idempotency contract"
+    ],
+    "remaining_gap": "No source-bound public real-LLM system found in this continuation directly compares at least three of Stop / Continue / Restart-clean / Restart-with-artifact / Resume-ancestor / Widen / Reopen under matched total proposal/evaluation budget, while also proving crash-equivalent controller state, candidate-local anytime-valid promotion, proposal-crossing durable statistical spending, immutable artifact identity, bounded selection feedback, complete proposal chronology, and a selection-unused outer test."
+  },
+  "exact_next_action": "Audit ScienceFlow's ESTRA Stage/anchor persistence and resume tests for whether archived-anchor identity, resource budgets, and stage/evaluation ledgers are reconstructed equivalently across kill points. Then search for a system with a true matched multi-action controller experiment (at least Continue, clean restart, artifact-preserving restart/rewind, and strategy redirect) under a common budget and unused outer test; prioritize crash-injection/restart-equivalence tests and complete action chronology."
+}
