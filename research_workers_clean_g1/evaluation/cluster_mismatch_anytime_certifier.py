@@ -11,15 +11,21 @@ Each predeclared top-level cluster contributes exactly one bounded score
 Y_t in [0,1]. Examples:
 
 * any-mismatch indicator for a server lifetime/workload (0 or 1);
-* mismatch fraction within a server lifetime, if the target estimand is the
-  equal-cluster mean mismatch fraction.
+* mismatch fraction within a server lifetime, if the target parameter is the
+  stable equal-cluster mean mismatch fraction.
 
-To certify that the equal-cluster conditional mean mismatch burden is below a
-predeclared tolerance m, test the composite null
+The primary mode assumes a stable conditional-mean parameter p inside the
+frozen fingerprint/lease:
 
-    H0: E[Y_t | F_{t-1}] >= m
+    E[Y_t | F_{t-1}] = p  for every admitted top-level cluster t.
 
-with predictable one-step factors
+A weaker sufficient condition for testing the one-sided null p >= m is that the
+next cluster score has conditional mean at least m whenever that null is true.
+If cluster conditional means drift arbitrarily across t, this program must not be
+read as estimating their simple time average; use a confidence sequence designed
+for average conditional means instead.
+
+For a predeclared tolerance m, test H0: p >= m with predictable one-step factors
 
     e_t(lambda, m) = 1 + lambda * (m - Y_t),
 
@@ -28,10 +34,17 @@ expectation at most one and are nonnegative, so their product is an e-process.
 A fixed mixture over several predeclared lambda values is also an e-process and
 therefore supports optional stopping / continuous peeking via Ville's inequality.
 
+The same nested family can be inverted to an anytime-valid upper confidence
+sequence for the stable p. Because the e-value is monotone nondecreasing in m for
+the configured lambda parameterization, the upper endpoint is the first m at
+which the mixture reaches 1/alpha. Importantly, obtaining that endpoint does NOT
+require an additional multiplicity penalty beyond the fixed-tolerance test: at a
+particular tolerance m0, U_t <= m0 exactly when the m0 test crosses.
+
 This absorbs arbitrary within-cluster dependence into Y_t. It does NOT turn
 requests inside a cluster into independent trials, and it does NOT by itself
-justify request-weighted inference, pooling across fingerprints, or a changing
-cluster-score definition.
+justify request-weighted inference, pooling across fingerprints, a changing
+cluster-score definition, or drift in the stable conditional-mean parameter.
 """
 from __future__ import annotations
 
@@ -115,11 +128,65 @@ def load_records(path: str) -> tuple[list[float], dict]:
     return scores, metadata
 
 
+def log_mixture_e(
+    scores: list[float],
+    tolerance: float,
+    bet_fractions: tuple[float, ...],
+) -> float:
+    if not (0.0 <= tolerance < 1.0):
+        raise ValueError("tolerance must lie in [0,1)")
+    component_logs: list[float] = []
+    for g in bet_fractions:
+        lam = g / (1.0 - tolerance)
+        logw = 0.0
+        for y in scores:
+            factor = 1.0 + lam * (tolerance - y)
+            if factor <= 0.0:
+                raise AssertionError("bet construction produced nonpositive factor")
+            logw += math.log(factor)
+        component_logs.append(logw)
+    return logsumexp(component_logs) - math.log(len(component_logs))
+
+
+def anytime_upper_endpoint(
+    scores: list[float],
+    alpha: float,
+    bet_fractions: tuple[float, ...],
+) -> float:
+    """Upper CS endpoint for the stable conditional-mean parameter p.
+
+    The configured mixture e-value is monotone nondecreasing in the tested m.
+    The confidence set is {m: E_t(m) < 1/alpha}; return its upper endpoint.
+    """
+    if not scores:
+        return 1.0
+    threshold_log = math.log(1.0 / alpha)
+
+    # m=0 cannot produce evidence against the universal p>=0 null with Y in [0,1].
+    if log_mixture_e(scores, 0.0, bet_fractions) >= threshold_log:
+        return 0.0
+
+    hi_probe = 1.0 - 1e-12
+    if log_mixture_e(scores, hi_probe, bet_fractions) < threshold_log:
+        return 1.0
+
+    lo = 0.0
+    hi = hi_probe
+    for _ in range(90):
+        mid = (lo + hi) / 2.0
+        if log_mixture_e(scores, mid, bet_fractions) >= threshold_log:
+            hi = mid
+        else:
+            lo = mid
+    return hi
+
+
 def mixture_path(
     scores: list[float],
     tolerance: float,
     alpha: float,
     bet_fractions: tuple[float, ...],
+    emit_prefix_upper: bool = False,
 ) -> dict:
     if not (0.0 < tolerance < 1.0):
         raise ValueError("tolerance must lie strictly in (0,1)")
@@ -135,8 +202,10 @@ def mixture_path(
     final_log_mixture = 0.0
     max_log_mixture = 0.0
     prefix = []
+    prefix_scores: list[float] = []
 
     for t, y in enumerate(scores, start=1):
+        prefix_scores.append(y)
         for j, lam in enumerate(lambdas):
             factor = 1.0 + lam * (tolerance - y)
             if factor <= 0.0:
@@ -147,15 +216,21 @@ def mixture_path(
         max_log_mixture = max(max_log_mixture, final_log_mixture)
         if first_crossing is None and final_log_mixture >= threshold_log:
             first_crossing = t
-        prefix.append({
+        row = {
             "cluster_index": t,
             "score": y,
             "log_mixture_e": final_log_mixture,
             "mixture_e": math.exp(final_log_mixture)
                 if final_log_mixture < 700 else math.inf,
             "crossed": final_log_mixture >= threshold_log,
-        })
+        }
+        if emit_prefix_upper:
+            row["anytime_upper_endpoint"] = anytime_upper_endpoint(
+                prefix_scores, alpha, bet_fractions
+            )
+        prefix.append(row)
 
+    upper = anytime_upper_endpoint(scores, alpha, bet_fractions)
     return {
         "tolerance": tolerance,
         "alpha": alpha,
@@ -169,6 +244,8 @@ def mixture_path(
         "max_mixture_e":
             math.exp(max_log_mixture) if max_log_mixture < 700 else math.inf,
         "empirical_equal_cluster_mean": sum(scores) / len(scores),
+        "anytime_upper_endpoint_stable_p": upper,
+        "upper_endpoint_at_or_below_tolerance": upper <= tolerance + 1e-12,
         "prefix": prefix,
     }
 
@@ -216,6 +293,11 @@ def main() -> None:
         action="store_true",
         help="Include every prefix e-value in output; omitted by default for compact receipts.",
     )
+    ap.add_argument(
+        "--emit-prefix-upper",
+        action="store_true",
+        help="Also invert the nested tests at every prefix; implies --emit-prefix and is computationally heavier.",
+    )
     args = ap.parse_args()
 
     fractions = parse_bet_fractions(args.bet_fractions)
@@ -234,8 +316,14 @@ def main() -> None:
     else:
         scores, meta = load_records(args.records_json)
 
-    result = mixture_path(scores, args.tolerance, args.alpha, fractions)
-    if not args.emit_prefix:
+    result = mixture_path(
+        scores,
+        args.tolerance,
+        args.alpha,
+        fractions,
+        emit_prefix_upper=args.emit_prefix_upper,
+    )
+    if not (args.emit_prefix or args.emit_prefix_upper):
         result.pop("prefix", None)
     n_zero = zero_score_clusters_needed(args.tolerance, args.alpha, fractions)
 
@@ -252,7 +340,7 @@ def main() -> None:
         )
 
     output = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": (
             "certified_below_tolerance"
             if result["certified_below_tolerance"]
@@ -260,26 +348,30 @@ def main() -> None:
         ),
         "fingerprint": args.fingerprint,
         "cluster_score_contract": args.cluster_score_contract,
-        "estimand": (
-            "equal-cluster conditional mean of the predeclared bounded mismatch score"
+        "parameter_contract": (
+            "stable conditional-mean parameter p within the frozen fingerprint/lease: "
+            "E[Y_t|F_{t-1}]=p; one-sided threshold validity only needs conditional mean >= tolerance under H0"
         ),
         "cluster_metadata": meta,
         "inference": result,
         "zero_score_planning": {
-            "clusters_needed_with_current_fixed_mixture":
-                n_zero,
+            "clusters_needed_with_current_fixed_mixture": n_zero,
+            "same_count_for_upper_endpoint_to_reach_tolerance": True,
             "note": (
                 "Planning assumes every future cluster score is exactly zero and "
-                "uses the configured mixture; it is not a claim about nonzero paths."
+                "uses the configured nested mixture. Inverting the same tests into "
+                "an upper CS adds no alpha penalty at the specified tolerance."
             ),
         },
         "lower_level_record_warning": lower_level_warning,
         "validity_notes": [
             "Each declared top-level cluster contributes exactly one score in [0,1].",
             "Within-cluster dependence may be arbitrary because only the final bounded cluster score enters the e-process.",
-            "Across clusters, validity requires the composite null conditional-mean contract E[Y_t | F_{t-1}] >= tolerance whenever certification would be false.",
+            "The upper endpoint estimates a stable conditional-mean parameter p inside the frozen fingerprint/lease; arbitrary cross-cluster drift requires a different average-conditional-mean CS or explicit lease invalidation.",
+            "For the fixed-tolerance test, validity only needs E[Y_t|past] >= tolerance whenever H0 is true.",
             "Bet fractions and the cluster-score definition must be fixed before each score is revealed; changing them after seeing the current cluster outcome invalidates the guarantee.",
             "Optional stopping/continuous peeking is allowed because the reported mixture is an e-process under the stated contract.",
+            "The nested-test inversion creates an anytime upper CS without an extra multiplicity penalty; U_t <= m iff the m test crosses for this monotone family.",
             "Equal-cluster mismatch fraction is not request-weighted mismatch when cluster sizes differ.",
             "Do not pool fingerprints or redefine cluster boundaries after seeing mismatch outcomes without a separate justified contract.",
             "All-pairs comparisons within a repeated workload are diagnostic edges, not additional top-level cluster trials.",
