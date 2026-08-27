@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T04:19:25.066617+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T041611_JST_attempt_reservation.json",
+  "main_result": {
+    "artifact": "research_workers_clean_g1/evaluation/reserved_score_pipeline_2026-08-28.py",
+    "artifact_blob_after_readback": "811bee4ddac614cd1ebd517a465cfb978006e91a",
+    "validation": "research_workers_clean_g1/evaluation/validation_reserved_score_pipeline_2026-08-28.json",
+    "validation_blob_after_readback": "849811360e4a5ae4f9b29d4d8c6b9d9581559f44",
+    "result": "Integrated durable attempt reservation into score launch and SLOT persistence. The main SLOT frame now carries an immutable attempt binding. A crash after bound SLOT durability but before sidecar COMMIT can be recovered by reconciling COMMIT from the exact main SLOT without re-running the scorer; a reservation with no bound SLOT remains fail-closed unresolved/no-relaunch.",
+    "stress": "One valid reserved attempt produced one scorer call and a bound SLOT whose event digest matched the later recovery COMMIT. Simulated restart reconciled committed_no_relaunch without old permit reuse. Missing main SLOT, tampered attempt binding (even with inner and outer digests recomputed), and legacy/unbound SLOT were all rejected for reconciliation."
+  },
+  "measurement_validity_rules": [
+    "The safe crash order is RESERVE durable -> score -> bound SLOT durable -> sidecar COMMIT durable. Only the main bound SLOT is scientific score evidence; COMMIT is recoverable launch-control bookkeeping.",
+    "A crash after RESERVE but before bound SLOT cannot trigger a stochastic retry under the default policy; the slot stays unresolved and the block-level fail-closed missing-slot rule must absorb it.",
+    "A crash after bound SLOT but before COMMIT must reconcile from that exact SLOT binding, never re-run scoring.",
+    "Attempt binding must be inside the scientific SLOT frame/event digest, otherwise post-crash reconciliation cannot distinguish the reserved attempt from a bypass/alternate result.",
+    "An unbound lower-level SLOT cannot satisfy the reservation-aware contract even though the historical base journal may still accept it structurally; active-runtime CLOSE/replay needs an auditor/gate to prevent such bypass evidence from being treated as compliant.",
+    "Cross-file atomicity is not required for safety if ordering and fail-closed reconciliation are enforced; it is required only for avoiding incomplete bookkeeping/availability loss."
+  ],
+  "frontier": [
+    "Add a reservation-aware CLOSE/replay compliance auditor: for every durably reserved slot, require a valid bound SLOT and matching/reconcilable COMMIT; otherwise force that slot to the fail-closed missing/failure path rather than trusting an unbound accepted SLOT.",
+    "Crash-inject the entire RESERVE -> scorer -> bound SLOT -> COMMIT sequence at each writer sub-boundary and verify the only terminal scientific outcomes are exact committed attempt or unresolved/missing=1.",
+    "Add writer fencing/flock if actual launchers can race across OS processes, then test simultaneous same-slot reservation/launch attempts.",
+    "Byte-execute all persisted artifacts against exact production durable adapter/V3/K-guard sibling files in a repository-local runtime.",
+    "Verify real stochastic scorer determinism under attempt_id before enabling deterministic replay; keep fail-closed as default meanwhile."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a reservation-aware CLOSE/replay auditor over main journal + attempt ledger. Before CLOSE/reporting, reconcile any durable bound SLOT missing COMMIT, reject any reserved slot whose accepted SLOT lacks/mismatches attempt binding, and compute the block score with such noncompliant slots forced to failure=1; then crash-stress this audit so lower-level bypass SLOTs can never enter compliant numerical evidence."
+}
