@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T08:09:38+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "3dff64912d405392d25f0ca51ed3bcb9275c51d1",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T070816_JST_flock_inode_replacement_fencing.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/stable_sidecar_journal_io_2026_08_28.py",
+      "blob_after_readback": "a7fc9e82ccb636e0aaa55bf1793a28dac8ac58fc"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/validation_stable_sidecar_full_lifecycle_race_2026-08-28.py",
+      "blob_after_readback": "50eed9465d554e8d97b485efc6583834d71f7454"
+    },
+    {
+      "validation": "research_workers_clean_g1/evaluation/validation_stable_sidecar_full_lifecycle_race_2026-08-28.json",
+      "validation_blob": "2ed8881cd7638a88d614b03f08368045a624c28a"
+    }
+  ],
+  "result": "The stable sidecar lock is now exposed as one append/repair facade: both append and torn-tail truncate/replace acquire the non-replaced sidecar flock before opening or replacing the data pathname, hold it through fsync/readback, and verify that both the lock pathname and the data pathname still name the locked/open inodes before reporting success. A 400-campaign multiprocessing lifecycle then combined process death during a torn append, valid-prefix repair, duplicate ADMIT, duplicate RESERVE, exactly-one scorer launch, SLOT/COMMIT versus deadline CLOSE, and restart replay. All 400 campaigns had exactly one durable ADMIT, one RESERVE, one scorer launch, one CLOSE, and clean deterministic replay; 251 campaigns committed SLOT+COMMIT before CLOSE while 149 had CLOSE win and remained fail-closed. No stale-path success or duplicate scorer launch was observed in the tested single-host cooperative model.",
+  "validated_contracts": [
+    "A process can die while holding the stable sidecar flock after fsyncing only a frame prefix; the OS releases the flock on process exit and the next compliant repair removes only bytes after the decoder-valid prefix.",
+    "Duplicate ADMIT writers racing from the same expected main prefix produced exactly one durable CAS winner in every tested campaign.",
+    "Duplicate RESERVE writers racing from the same expected ledger prefix produced exactly one durable CAS winner in every tested campaign, and only that winner launched the scorer; scorer launch count was exactly one in 400/400 campaigns.",
+    "SLOT and deadline CLOSE may race from the same main prefix. If CLOSE wins, late SLOT cannot become durable evidence and the slot remains fail-closed. If SLOT wins, its matching COMMIT must be durable before CLOSE is retried from the new exact prefix.",
+    "The main and reservation sidecar lock inode identities remained stable across each full lifecycle, and final replay from durable bytes matched on restart in 400/400 campaigns.",
+    "The repair facade checks lock-path identity at lock entry and exit and checks data-path identity before append success, preventing a compliant operation from reporting success after pathname rebinding observed while the stable lock is held."
+  ],
+  "measurement_validity_rules": [
+    "Repair is part of the writer protocol, not a separate maintenance exception: append and truncate/replace must acquire the same stable sidecar lock before touching the data pathname.",
+    "A durable reservation, not a process-local attempt to reserve, is the authorization boundary for launching a stochastic scorer. Duplicate reservation contenders must not each launch.",
+    "Deadline CLOSE racing with SLOT must be fail-closed: once CLOSE is durable from the older prefix, a late score cannot be selected by retrying on a new stochastic attempt.",
+    "SLOT-before-CLOSE is valid only when the same attempt's COMMIT is durable before the final CLOSE; otherwise recovery must not convert a score-only crash into a second scorer launch.",
+    "Single-host flock evidence does not imply distributed safety. Multi-host or storage systems without reliable flock require storage-enforced monotonic fencing or another distributed serialization primitive."
+  ],
+  "scope_limitations": [
+    "The 400-campaign lifecycle uses the exact framed event shape and ordering contract at the durability/concurrency layer, but it is a contract-faithful harness rather than byte-execution of every historical reporting/e-process sibling in one checkout.",
+    "The result is limited to cooperative processes on a local POSIX filesystem with reliable flock semantics. It does not cover NFS, object stores, multi-host writers, malicious lock-file replacement, or callers that bypass the facade.",
+    "The harness uses one planned slot per block to isolate duplicate reservation and SLOT/CLOSE ordering. Multi-slot interleavings and cross-slot scorer scheduling remain untested in this combined campaign.",
+    "The facade mechanically detects sidecar-path rebinding at operation boundaries but cannot make an uncooperative external rename safe; protocol safety still requires compliant callers never rename/unlink/replace the sidecar lock path."
+  ],
+  "frontier": [
+    "Inject StableSidecarJournalIO into the exact blob-pinned provenance runtime sibling graph and byte-execute ADMIT/RESERVE/SLOT/COMMIT/CLOSE plus compliance replay without the contract-faithful harness substitution.",
+    "Extend the multiprocessing lifecycle to two or more slots and race independent slot reservations, scorer completion, COMMIT recovery and deadline CLOSE while preserving one launch per reserved attempt and exact compliance block score.",
+    "Add an explicit lock-file tamper test: replace/unlink the sidecar pathname while an operation holds the old lock and require the operation to fail before reporting success; keep this as detection only, not a claim of safety against uncooperative mutation.",
+    "For any deployment that can span hosts, design a monotonic fencing-token backend whose storage write condition rejects stale fence values, then compare its event semantics against the local sidecar contract."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Build a two-slot exact-runtime adapter that uses StableSidecarJournalIO for both main and reservation files, loads the blob-pinned provenance runtime modules, and runs one multiprocessing campaign where two processes race the same slot reservation while another slot completes normally and deadline CLOSE competes with recovery COMMIT. Require one scorer launch per durable reservation, no duplicate attempt identity, exact compliance block score after restart, and byte-equal replay state before considering the single-slot contract integrated."
+}
