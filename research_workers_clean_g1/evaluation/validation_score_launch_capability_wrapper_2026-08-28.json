@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_at": "2026-08-28T04:11:57.561722+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifact": "research_workers_clean_g1/evaluation/score_launch_capability_wrapper_2026-08-28.py",
+  "artifact_blob_after_readback": "e610805ab1f495198c1b44ab82f02086233f1eda",
+  "bound_gate": {
+    "filename": "durable_launch_capability_gate_2026-08-28.py",
+    "blob": "e06dc0550f65182d31b96e6b841d680b487f3b41"
+  },
+  "result": {
+    "valid_launch_scorer_calls": 1,
+    "valid_result_persisted_through_capability_gate": true,
+    "wrong_block_rejected_before_scorer_call": true,
+    "wrong_slot_rejected_before_scorer_call": true,
+    "tampered_capability_rejected_before_scorer_call": true,
+    "stale_after_close_rejected_before_scorer_call": true,
+    "invalid_launch_cases_scorer_calls": 0,
+    "tampered_result_rejected_before_slot_preparation": true,
+    "wrong_request_binding_rejected_before_slot_preparation": true,
+    "deterministic_attempt_id_stable_for_same_capability_slot_and_request_binding": true
+  },
+  "validated_properties": [
+    "Capability validation now occurs before invoking the score-producing callable, so invalid/stale/wrong-scope launch attempts perform zero scorer work in the contract harness.",
+    "The scorer receives an attempt_id deterministically bound to capability digest, block, slot and request-binding digest.",
+    "A ScoreResult is digest-bound to capability, request binding, attempt identity, score and observation time; tampering or rebinding is rejected before SLOT preparation.",
+    "SLOT persistence still revalidates the live durable capability through prepare_slot_authorized, so a result that was valid at launch can become stale before persistence and will then fail closed."
+  ],
+  "scope": [
+    "Validation used the same injected deterministic adapter substrate as the launch-gate contract tests; exact production sibling byte-execution remains pending.",
+    "Python object opacity is not a security boundary. The wrapper prevents accidental/structural misuse only when the active runtime routes score work through it; a malicious caller can still inspect objects or import historical lower-level modules.",
+    "Stable attempt_id is only an identity contract. A stochastic scorer must actually use that attempt_id as its immutable sampling key, or otherwise provide equivalent deterministic attempt semantics, before duplicate/retry execution can be treated as the same statistical attempt.",
+    "This wrapper does not durably reserve a score attempt before compute. Concurrent duplicate authorized launches for one slot remain a potential measurement-validity problem if stochastic outputs can differ and a caller can select among them before first durable SLOT persistence."
+  ],
+  "frontier": [
+    "Add a durable LAUNCH/attempt-reservation record or equivalent one-attempt lease before score generation so concurrent duplicate authorized launches cannot create a choose-the-best retry channel.",
+    "Run the score-launch wrapper against exact production gate/adapter/V3/K-guard sibling files in a repository-local runtime and verify zero scorer calls for every invalid capability case.",
+    "Integrate the concrete durable writer so launch reservation, score result and SLOT persistence have explicit crash/retry semantics; test crash after scorer completion but before SLOT durability.",
+    "If production scorers are stochastic, verify that attempt_id deterministically fixes all relevant RNG/runtime inputs or introduce canonical-result verification before evidence admission."
+  ],
+  "frontier_nonempty": true
+}
