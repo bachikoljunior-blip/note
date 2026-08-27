@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-27T22:14:03+09:00",
+  "frozen_control": {
+    "note_main_sha": "5c2d85296bce985c3a36625d9e6565d43a6c7903",
+    "control_revision": 10,
+    "config_revision": 6,
+    "root_blob": "43ef381340473246474437a060d7eec1cc8b6584",
+    "role_blob": "665072c7548cec13131446ff1885326b6cd9582d"
+  },
+  "source": {
+    "title": "ADIAS: Automated Design of Interactive Agentic Systems",
+    "arxiv": "2608.06410",
+    "version": "v1",
+    "submitted": "2026-08-03T22:50:49Z",
+    "primary_url": "https://arxiv.org/abs/2608.06410",
+    "public_repository": "scylj1/adias",
+    "repository_status": "initial code release; current public scripts do not yet source-bind the paper's exact main 10-iteration experiment configuration"
+  },
+  "paper_protocol": {
+    "optimization_rounds": 10,
+    "training_episodes_per_round": 15,
+    "same_iteration_and_rollout_budgets_across_automated_methods": true,
+    "selection": "after T rounds select candidate with highest validation performance",
+    "outer_evaluation": "evaluate selected candidate on held-out test",
+    "test_tasks_exposed_during_optimization": false,
+    "validation_trajectory_feedback_exposed_during_optimization": false,
+    "same_task_splits_interfaces_and_evaluators_across_methods": true
+  },
+  "mechanism": {
+    "persistent_issue_state_fields": ["stable issue identity", "priority", "lifecycle status", "supporting evidence", "intervention-outcome history"],
+    "lifecycle": ["active", "tentatively-fixed", "confirmed-fixed", "regressed"],
+    "confirmed_fixed_rule": "issue remains absent for at least 2 consecutive evaluations in reported experiments",
+    "issue_guided_control": "jointly selects target issues, parent agent and revision direction from current issue state",
+    "focused_revision": "applies a full-code patch to the selected parent while encouraging a small number of changed files"
+  },
+  "controlled_ablation_test_scores": {
+    "benchmarks": ["Tau-Bench", "ALFWorld", "TextCraft"],
+    "full_adias": {"scores": [81.3, 94.0, 91.0], "average": 88.8},
+    "without_external_prior": {"scores": [75.0, 82.8, 61.0], "average": 72.9, "delta_average_vs_full": -15.9},
+    "without_round_level_diagnosis": {"scores": [78.1, 63.4, 76.0], "average": 72.5, "delta_average_vs_full": -16.3},
+    "archive_wide_synthesis": {"scores": [65.6, 60.4, 32.0], "average": 52.7, "delta_average_vs_full": -36.1},
+    "best_candidate_revision": {"scores": [71.9, 75.4, 74.0], "average": 73.8, "delta_average_vs_full": -15.0},
+    "latest_candidate_continuation": {"scores": [62.5, 41.0, 60.0], "average": 54.5, "delta_average_vs_full": -34.3}
+  },
+  "causal_interpretation": {
+    "strongest_supported": "Under the paper's matched 10-round/rollout protocol and held-out-test evaluation, using explicit issue state to actively control where to resume and how to revise materially outperforms candidate-centric parent policies that choose the best candidate or latest candidate while retaining candidate history and issue-profile context.",
+    "best_candidate_difference": 15.0,
+    "latest_candidate_difference": 34.3,
+    "not_equivalent_to": [
+      "a literal Stop vs Continue-fixed vs Widen vs Reopen four-way comparison",
+      "a candidate-local statistical promotion certificate",
+      "proof that diagnostic labels are correct",
+      "proof that all performance differences come only from parent selection; full issue-guided planning jointly changes target issue and revision direction",
+      "proof of generalization beyond the tested benchmarks/backbones"
+    ]
+  },
+  "public_code_audit": {
+    "readme": "initial code release; formal run scripts exist under scripts/",
+    "parent_selection_profile": "current src/utils/gl_utils.py reads revision_plan.next_parent_genid from latest profile.json; if valid, uses that parent; otherwise falls back to latest",
+    "best_parent": "current select_parent(method='best') selects highest available val score, else train when no val split",
+    "latest_parent": "current select_parent(method='latest') returns newest archive candidate",
+    "hard_collapse_guard": "current code can override selection when newest train score is zero across all domains and revert to a prior nonzero ancestor",
+    "current_script_gap": [
+      "scripts/run_taubench_return.sh defaults MAX_GENERATION=3 rather than paper main budget 10",
+      "scripts/run_alfworld.sh defaults MAX_GENERATION=1 and FINAL_TEST=0 rather than paper main 10-round held-out-test protocol"
+    ],
+    "provenance_status": "mechanism implementation is publicly auditable, but current default scripts are not a paper-bound reproduction of the headline Table-3 protocol"
+  },
+  "frontier_update": {
+    "new_question": "Can repair-state control be separated into Stop / Continue-fixed / Widen / Reopen decisions under equal proposal/evaluation budget and untouched outer test?",
+    "why": "ADIAS provides strong matched evidence that explicit repair-state control of parent+revision matters, but its ablations couple parent selection with issue-guided revision direction and do not isolate strategy reopening cadence or statistical promotion safety.",
+    "exact_next_action": "Audit the public ADIAS release for a paper-bound commit/config, formal ablation launchers, test isolation, output/proposal chronology and result artifacts. If exact paper-run binding is absent, freeze the provenance gap. Then search for a same-system equal-budget Stop/Continue-fixed/Widen/Reopen experiment with a selection-unused outer test and audit candidate-local anytime-valid acceptance, restart-durable cross-proposal spending, immutable promotion identity, feedback bandwidth and complete chronology."
+  }
+}
