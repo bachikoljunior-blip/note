@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 12,
+  "config_revision": 5,
+  "created_at": "2026-08-28T04:17:21+09:00",
+  "topic": "bounded event-time Fixed Share for adaptive importance-sampling proposal control",
+  "public_evidence": [
+    {
+      "source": "Herbster and Warmuth, Tracking the Best Expert",
+      "url": "https://mlanthology.org/mlj/1998/herbster1998mlj-tracking/",
+      "date": "1998",
+      "result": "Fixed Share tracks a sequence of best experts under bounded per-trial loss, with excess loss controlled by the number of expert switches and the expert set size; this is the appropriate online-learning template for proposal families whose best member changes under drift."
+    },
+    {
+      "source": "Adamskiy, Koolen, Chernov, Vovk, A Closer Look at Adaptive Regret",
+      "url": "https://www.jmlr.org/papers/v17/13-533.html",
+      "date": "2016",
+      "result": "Fixed Share also has strong adaptive-regret properties, clarifying why weight sharing can track locally best experts rather than only one global expert."
+    },
+    {
+      "source": "Borsos, Curi, Levy, Krause, Online Variance Reduction with Mixtures",
+      "url": "https://proceedings.mlr.press/v97/borsos19a.html",
+      "date": "2019",
+      "result": "Adaptive mixture weights over predefined sampling distributions are a direct variance-reduction mechanism in stochastic optimization."
+    }
+  ],
+  "derived_theorem_candidate": {
+    "setup": "Let W be the base branch law, Y in {0,1} the high-fidelity failure label, q_t the predictable sampling proposal, and q_j a fixed candidate proposal. Define H_t(j)=W_A^2 Y/[q_t(A) q_j(A)]. Then E[H_t(j)|F_{t-1}]=S_t(q_j)=sum_i W_i^2 p_{t,i}/q_j(i), the candidate's second moment.",
+    "bounded_loss": "If every candidate satisfies q_j(i)>=epsilon_min W_i and q_t is a convex mixture of those candidates, then q_t(i)>=epsilon_min W_i and H_t(j)<=1/epsilon_min^2. For epsilon_min=0.6, B=25/9. Thus l_t(j)=H_t(j)/B lies in [0,1], exactly the bounded-loss regime needed by Fixed Share.",
+    "mixture_variance_convexity": "For q_t=sum_j w_t(j)q_j, S_t(q_t)=sum_i W_i^2 p_i/q_t(i) <= sum_j w_t(j) S_t(q_j) by convexity of x->1/x. Therefore an online-learning bound on the weighted expert second moments upper-bounds the actual mixture proposal's second moment; subtracting the proposal-independent target mean squared translates it to variance.",
+    "event_time_compression": "When Y=0, every H_t(j)=0, so the entire expert-loss vector is zero. Exponential-weight loss updates can therefore be skipped exactly on those trials. Running sharing/update only on nonzero-loss failure events is Fixed Share on the compressed nonzero-loss sequence; any comparator switch inside a zero-loss stretch can be moved to the next nonzero event without changing realized comparator loss. The resulting tracking guarantee is naturally indexed by informative failure events rather than wall-clock samples.",
+    "scope": "This gives a proof route, not a completed numerical regret constant for the engineering eta/share values below. A formal bound still needs the chosen Fixed Share parameterization and its regret expression to be instantiated on the event-time loss sequence."
+  },
+  "engineering_validation": {
+    "model": "Same r112 4096-branch gradual-drift rare-event abstraction, proposal candidates epsilon={0.6,0.8,1.0}, base risk 0.002, 50k stationary samples followed by 50k linear drift.",
+    "algorithm": "Maintain Fixed-Share-style exponential weights over the three proposal candidates. Sample from the convex proposal mixture. Only when Y=1, compute all bounded losses l_t(j)=H_t(j)/(25/9), exponentiate by eta, then share mass across experts. Nonfailure trials leave weights unchanged. Engineering choice after separate small discovery sweep: eta=16, share=0.01 per failure event. These values are performance-tuned and are not claimed to be theorem-optimal.",
+    "validation_replicates_per_start": 150,
+    "start_epsilon_0.6": {
+      "event_fixed_share_mean_variance_units": 182.87964437968176,
+      "fixed_mean_variance_units": 192.45553155772384,
+      "all_base_mean_variance_units": 199.59999999982034,
+      "oracle_grid_mean_variance_units": 181.4711773982715,
+      "variance_reduction_vs_fixed_pct": 4.9756362420635085,
+      "gap_vs_oracle_pct": 0.7761381182418425,
+      "mean_base_mixture_weight": 0.26083227822563715,
+      "mean_failure_updates": 251.38
+    },
+    "start_epsilon_0.8": {
+      "event_fixed_share_mean_variance_units": 183.39025007261853,
+      "fixed_mean_variance_units": 188.7606317929596,
+      "all_base_mean_variance_units": 199.59999999982034,
+      "oracle_grid_mean_variance_units": 181.4711773982715,
+      "variance_reduction_vs_fixed_pct": 2.845075092899417,
+      "gap_vs_oracle_pct": 1.0575082510955847,
+      "mean_base_mixture_weight": 0.25595392724214505,
+      "mean_failure_updates": 247.72
+    },
+    "interpretation": "The event-time mixture nearly matches r112's rolling hard selector while replacing a heuristic hard switch with a bounded-loss online-mixture structure that admits a standard tracking-regret proof route. It also retains a continuous defensive base component rather than waiting for a binary harm alarm."
+  },
+  "negative_or_scope_evidence": [
+    "The engineering eta=16 is aggressive and was selected for performance, not from the conservative worst-case Fixed Share tuning; no formal numeric regret guarantee is attached to that setting yet.",
+    "The event-time tracking guarantee is indexed by nonzero observed loss events. It does not create information during long no-failure intervals and cannot react to drift before informative labels arrive.",
+    "The synthetic proposal family is small and has a strong epsilon_min=0.6 defensive support floor. Larger or more aggressive families make the common loss bound B larger and can weaken regret-to-variance constants.",
+    "Dependent descendants, random particle counts, biased environment transition proposals, and real agent trajectories remain untested.",
+    "No AGI capability conclusion follows."
+  ],
+  "next_tests": [
+    "Instantiate the exact Fixed Share tracking-regret inequality on the event-time loss sequence and choose eta/share from a stated switch budget; compare its formal bound with the aggressive engineering parameters.",
+    "Test event-time Fixed Share under recurring drift and abrupt reversals, not only one monotone drift, and compare against r112 rolling hard selection on common-random held-out paths.",
+    "Investigate adaptive/share schedules that keep worst-case regret interpretable while approaching the aggressive eta=16 empirical performance.",
+    "Extend the convex-mixture second-moment argument to dependent/systematic resampling and random particle counts under proper weighting.",
+    "Use the same defensive-mixture mathematics for judge-guided agent evaluation: cheap judge/state signals define proposal experts; sparse high-fidelity labels update the mixture and estimate true failure."
+  ]
+}
