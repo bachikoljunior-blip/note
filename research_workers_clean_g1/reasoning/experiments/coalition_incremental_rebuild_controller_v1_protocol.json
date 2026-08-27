@@ -1,0 +1,42 @@
+{
+  "schema": "coalition_incremental_rebuild_controller_v1_protocol",
+  "created_at": "2026-08-28T05:13:11.183775+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "reason_for_v1": "V0 was preregistered with n up to 22 and an independent fresh exact oracle after every effective update, but the current Python runtime hit its hard execution timeout before completing the n=18 cells. No V0 performance output is reused. V1 is a new, outcome-aware follow-up that preserves the exact per-update oracle and strategy definitions while limiting the holdout to sizes that fit the observed runtime envelope.",
+  "holdout": {
+    "n_values": [10,12,14],
+    "seeds": [741011,741037,741073,741101],
+    "observation_budgets": {"10":350,"12":500,"14":700},
+    "game": "generated monotone simple game from subset-minimal random supports using the same generator family as prior incremental holdout",
+    "player": "seed mod n",
+    "observation_stream": "seeded sample without replacement from all coalitions"
+  },
+  "strategies": {
+    "always_incremental": "Conjoin only newly strengthening boundary clauses into one persistent ROBDD; never rebuild.",
+    "always_rebuild": "After every effective boundary update, fresh-rebuild from the current reduced boundary before rank evaluation.",
+    "periodic_32": "Incremental updates with fresh rebuild after every 32 effective boundary changes since last rebuild.",
+    "ratio_4": "Incremental updates; rebuild when allocated_nonterminal_nodes / max(1, reachable_live_nonterminal_nodes) >= 4 after an effective update.",
+    "hybrid_ratio4_or_64": "Incremental updates; rebuild when allocation/live >=4 or 64 effective updates since last rebuild."
+  },
+  "correctness_oracle": "At every effective boundary update, independently fresh-rebuild from the reduced boundary and require exact equality of the full rank-count vector for every strategy. Oracle time excluded from strategy runtime.",
+  "cost_accounting": {
+    "primary": ["strategy update+optional rebuild+rank wall time", "nonterminal node allocations created by strategy managers", "rebuild count"],
+    "memory_proxy": ["maximum allocated/live ratio observed before optional rebuild", "maximum allocated nonterminals in current manager", "final allocated nodes", "final reachable live nodes"],
+    "reporting": "Runtime and memory proxies remain separate; no after-the-fact scalarization."
+  },
+  "resource_guard": {"hard_external_runtime_limit":"current Python tool limit","on_limit":"no partial result may be treated as a completed cell or reused as performance evidence"},
+  "predeclared_tests": [
+    "Zero exact-rank mismatches are required for every completed strategy cell.",
+    "Compare trigger strategies with always_incremental and always_rebuild on both runtime and max allocated/live ratio.",
+    "Call a trigger useful only when it reduces a memory proxy relative to always_incremental at finite explicitly reported runtime overhead, or reduces runtime at no worse memory proxy.",
+    "Report if ratio_4 never fires on this size range; absence of firing is evidence only for these streams.",
+    "Do not infer asymptotic complexity or applicability to nonmonotone real proof utility."
+  ],
+  "scope": "Twelve newly seeded small monotone-game streams chosen after V0 timed out; V1 conclusions cannot be back-projected onto the unfinished V0 larger sizes."
+}
