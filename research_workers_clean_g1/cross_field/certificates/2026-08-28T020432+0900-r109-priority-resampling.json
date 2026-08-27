@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 12,
+  "config_revision": 5,
+  "created_at": "2026-08-28T02:04:32+09:00",
+  "topic": "probability-valid adaptive priority resampling for stochastic multi-turn rare-event search",
+  "public_evidence": [
+    {
+      "source": "Finke, Johansen, Lee, Murray, Resampling in conditional SMC algorithms",
+      "url": "https://arxiv.org/abs/2606.25603",
+      "date": "2026-06-24",
+      "use": "General properly-weighted resampling framework. Adaptive and dependent resampling schemes can remain valid when the actual resampling law and index distribution are accounted for in post-resampling weights; properly weighted persistent SMC retains an unbiased normalizing-constant estimator. The paper also gives counterexamples showing unbiasedness alone does not imply acceptable variance."
+    },
+    {
+      "source": "Paige, Wood, Doucet, Teh, Asynchronous Anytime Sequential Monte Carlo",
+      "url": "https://arxiv.org/abs/1407.2864",
+      "date": "2014-07-10",
+      "use": "Particle Cascade precedent: asynchronous local offspring decisions and bounded live memory can retain unbiased marginal-likelihood estimation. Its theorem uses randomized particle ordering/arrival assumptions and does not by itself license deterministic semantic best-first priority expansion."
+    },
+    {
+      "source": "Owen and Zhou, Safe and Effective Importance Sampling",
+      "url": "https://doi.org/10.1080/01621459.2000.10473909",
+      "date": "2000",
+      "use": "Defensive mixture/control-variate precedent for protecting importance sampling against severe variance increases. Its specific variance guarantee depends on the control-variate construction and is not automatically inherited by the simple defensive mixture derived here."
+    },
+    {
+      "source": "Angell et al., Estimating Tail Risks in Language Model Output Distributions",
+      "url": "https://arxiv.org/abs/2604.22167",
+      "date": "2026-04-24",
+      "use": "LLM-specific importance-sampling evidence: unsafe proposal models match brute-force tail-risk estimates with roughly 10-20x fewer samples; harmful-output probabilities around 1e-4 can be estimated with about 500 samples. This is proposal-based rare-event estimation, not sparse high-fidelity evaluator correction."
+    }
+  ],
+  "derived_design": {
+    "name": "randomized_priority_resampling_with_defensive_floor",
+    "current_normalized_weights": "W_i",
+    "positive_priority_factor": "a_i > 0",
+    "priority_proposal": "q0_i = W_i a_i / sum_j(W_j a_j)",
+    "defensive_proposal": "q_i = (1-epsilon) q0_i + epsilon W_i, 0 < epsilon <= 1",
+    "iid_descendant_correction": "for M iid descendant slots with ancestor A_m ~ q, assign post-resampling weight W_{A_m}/(M q_{A_m}) before subsequent transition/likelihood factors",
+    "support_guard": "q_i >= epsilon W_i whenever W_i>0",
+    "weight_ratio_bound": "W_i/q_i <= 1/epsilon",
+    "transition_guard": "if the environment/tool transition is itself proposed from Q rather than the base transition P, multiply the separate transition likelihood ratio P/Q; resampling correction alone is insufficient"
+  },
+  "toy_variance_stress": {
+    "seed": 20260828,
+    "branches": 4096,
+    "base_branch_weights": "normalized exp(0.5 * Normal(0,1))",
+    "latent": "z_i ~ Normal(0,1)",
+    "true_failure_probability_by_branch": "p_i = logistic(-8 + 2 z_i)",
+    "base_risk": 0.0020685641055523995,
+    "ordinary_multinomial_single_draw_variance": 0.0020642851480936197,
+    "priority_factor": "a_i = sqrt(logistic(-8 + 2 s_i)), s_i=z_i+Normal(0,noise^2)",
+    "epsilon": 0.2,
+    "analytic_variance_formula": "Var[(W_A/q_A)Y] = sum_i W_i^2 p_i/q_i - theta^2",
+    "results": [
+      {"proxy_noise_sd":0.0,"priority_variance":0.0008837730000776758,"variance_efficiency_vs_base":2.33576,"same_variance_sample_saving_fraction":0.5719,"max_weight_ratio":4.882},
+      {"proxy_noise_sd":0.5,"priority_variance":0.0010479312976805048,"variance_efficiency_vs_base":1.96987,"same_variance_sample_saving_fraction":0.4924,"max_weight_ratio":4.919},
+      {"proxy_noise_sd":1.0,"priority_variance":0.0015727698623249544,"variance_efficiency_vs_base":1.31252,"same_variance_sample_saving_fraction":0.2381,"max_weight_ratio":4.940},
+      {"proxy_noise_sd":1.5,"priority_variance":0.0023580137243286,"variance_efficiency_vs_base":0.87543,"same_variance_sample_change_fraction":0.1423,"direction":"more samples required","max_weight_ratio":4.993},
+      {"proxy_noise_sd":2.0,"priority_variance":0.0029442970283110395,"variance_efficiency_vs_base":0.70111,"same_variance_sample_change_fraction":0.4263,"direction":"more samples required","max_weight_ratio":4.999}
+    ],
+    "interpretation": "Proper weighting preserves expectation, but a poor priority score can increase variance despite the defensive support floor. Proposal-quality/second-moment monitoring and fallback toward epsilon=1 are therefore efficiency guards distinct from correctness."
+  },
+  "deterministic_pruning_stress": {
+    "meaning": "If a deterministic top-score rule gives proposal probability zero to excluded branches and the estimator only reweights retained support, target failure mass on excluded branches is irrecoverable.",
+    "proxy_noise_sd_0_5_missing_target_mass_fraction": {"top_5_percent":0.5178,"top_10_percent":0.3472,"top_20_percent":0.1916,"top_50_percent":0.0457},
+    "proxy_noise_sd_1_0_missing_target_mass_fraction": {"top_5_percent":0.6621,"top_10_percent":0.5170,"top_20_percent":0.3326,"top_50_percent":0.0884},
+    "scope": "Toy support-loss diagnostic, not a universal bias formula for every estimator or recovery scheme."
+  },
+  "scope_and_negative_evidence": [
+    "Finke et al. validates properly weighted adaptive/complex resampling, but does not imply that an arbitrary deterministic score-priority queue is unbiased without explicit selection probabilities and correction weights.",
+    "Particle Cascade proves an asynchronous anytime construction under its own randomized-order assumptions; its scheduling mechanism is not evidence for deterministic BOA-style semantic best-first selection.",
+    "The defensive floor is a support and weight-ratio guard, not a guarantee of variance improvement. In the toy, sufficiently noisy priority scores are worse than base multinomial sampling.",
+    "If tool/environment dynamics are biased or replayed from a law different from the deployment/base law, exact transition likelihood ratios may be unavailable; in that case an unrestricted base-risk claim is not justified by branch-resampling weights alone.",
+    "The LLM tail-risk paper demonstrates proposal-model importance sampling, but this pass did not find an agent/LLM-specific method with explicit sparse higher-fidelity evaluator correction and measured high-fidelity-call savings.",
+    "No AGI capability conclusion follows."
+  ],
+  "next_tests": [
+    "Find a sequentially valid method to adapt epsilon and/or the priority proposal from past particles while preserving proper weighting, then add a variance/second-moment gate that falls back toward base resampling when measured gain disappears.",
+    "Map dependent sibling selection and random particle counts into the general properly-weighted framework; separate what is proved from the paper's statement that random particle counts can be handled by state-space extension.",
+    "Test whether Owen-Zhou-style mixture control variates can give a sequential analogue of a best-component variance guard for base-plus-priority proposals.",
+    "Continue searching for agent/LLM multifidelity rare-event evaluation with sparse high-fidelity target correction, not merely proposal enrichment."
+  ]
+}
