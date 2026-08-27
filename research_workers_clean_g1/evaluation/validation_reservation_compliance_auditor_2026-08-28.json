@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "artifact": "reservation_compliance_auditor_2026-08-28.py",
+  "artifact_sha256_local": "1a19f8e4cefaa0399856dd4193652d9e95482114a77b0ab331e542cc841568e2",
+  "semantic_freeze": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "validation": {
+    "mixed_block": {
+      "planned_slots": 7,
+      "expected_statuses": [
+        "compliant",
+        "bound_slot_missing_commit_reconcilable",
+        "reserved_slot_missing_attempt_binding",
+        "bypass_slot_without_reservation",
+        "reserved_missing_slot",
+        "attempt_binding_reservation_mismatch",
+        "commit_slot_event_digest_mismatch"
+      ],
+      "pre_recovery_block_score": 0.8571428571428571,
+      "recovery_commits_required": ["2"],
+      "post_one_recovery_statuses": [
+        "compliant",
+        "compliant",
+        "reserved_slot_missing_attempt_binding",
+        "bypass_slot_without_reservation",
+        "reserved_missing_slot",
+        "attempt_binding_reservation_mismatch",
+        "commit_slot_event_digest_mismatch"
+      ],
+      "post_one_recovery_block_score": 0.7428571428571429,
+      "assertion": "Only the fully bound+committed slot used its durable score before reconciliation; the bound-but-uncommitted slot became usable only after exact COMMIT."
+    },
+    "torn_commit_frame": {
+      "frame_bytes": 358,
+      "nonempty_partial_cuts_tested": 357,
+      "partial_cuts_rejected": 357,
+      "assertion": "No torn COMMIT prefix entered scientific evidence."
+    },
+    "random_fuzz": {
+      "campaigns": 5000,
+      "status_counts": {
+        "commit_slot_event_digest_mismatch": 3144,
+        "compliant": 3172,
+        "reserved_missing_slot": 3166,
+        "bypass_slot_without_reservation": 3128,
+        "bound_slot_missing_commit_reconcilable": 3198,
+        "reserved_slot_missing_attempt_binding": 3187,
+        "attempt_binding_reservation_mismatch": 3063
+      },
+      "optimism_violations": 0,
+      "assertion": "Across all generated mixtures, every noncompliant planned slot scored exactly 1 and audited block_score was never more optimistic (lower) than the legacy SLOT-accepting view."
+    }
+  },
+  "measurement_validity_rules": [
+    "A lower-level SLOT event is not scientific evidence under the reservation-aware contract merely because the historical atomic journal accepted it.",
+    "A planned slot is score-bearing only after durable RESERVE, exact attempt binding inside the canonical SLOT event, and durable COMMIT referencing that exact SLOT event digest.",
+    "Bound SLOT without COMMIT is recoverable bookkeeping, not yet compliant scientific evidence; before reconciliation it remains failure=1.",
+    "Missing reservation with no SLOT is an ordinary never-launched failure=1, while a SLOT without reservation is a bypass and is also failure=1.",
+    "Dirty/torn main or reservation-ledger tails must be repaired/quarantined before audit; the auditor never reasons past a torn prefix.",
+    "The auditor is active-block only and does not reinterpret already closed historical blocks."
+  ],
+  "known_limitations": [
+    "This validation used contract-faithful injected atomic/reservation codecs because the repository sibling files are not mounted in the local Python runtime.",
+    "The auditor computes the compliant row but does not yet replace the historical CLOSE/replay semantics; a next-version CLOSE wrapper must persist the compliance row/digest so future replay cannot re-admit bypass SLOTs.",
+    "Multi-process writer fencing is not addressed here."
+  ],
+  "next_action": "Integrate the auditor into a new compliance-aware CLOSE/replay wrapper that persists compliance_digest + compliant closed row and rebuilds reporter state from that row, then crash-inject CLOSE persistence so unbound/bypass SLOTs can never reappear after restart."
+}
