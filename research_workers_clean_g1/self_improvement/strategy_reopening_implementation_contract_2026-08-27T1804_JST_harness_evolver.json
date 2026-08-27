@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "self_improvement",
+  "created_at": "2026-08-27T18:04:04+09:00",
+  "source_system": "raphaelchristi/harness-evolver",
+  "source_revision": "87fa7612358acccb01d34abf72426a7e47329642",
+  "observations": {
+    "explicit_strategy_reopening": {
+      "present": true,
+      "trigger": "auto-trigger architect if 3 consecutive iterations are within 1% or score dropped",
+      "architect_role": "classify topology and recommend one-iteration migration steps such as single-call->RAG/tools, chain->parallel, ReAct->better stopping/hierarchical routing, hierarchical->router changes, accuracy ceiling->ensemble/verification",
+      "source_paths": [
+        "skills/evolve/SKILL.md",
+        "agents/harness-architect.md"
+      ]
+    },
+    "plateau_stop_competes_with_reopen": {
+      "present": true,
+      "rules": [
+        "3 scores within 2% => consider architect or stop",
+        "average improvement <0.5% over 5 iterations => stop",
+        "target reached => stop"
+      ],
+      "interpretation": "strategy reopening is implemented as a heuristic branch, not as a mandatory evidence-triggered control transition"
+    },
+    "selection_surface": {
+      "dataset_split": "single random 70% train / 30% held_out assignment at setup",
+      "winner_selection": "each iteration compares candidates on held_out and chooses the highest held_out score; pairwise comparison also honors held_out",
+      "outer_test": "no distinct third untouched split is created by setup.py",
+      "interpretation": "the score trajectory used to detect plateau/regression is adaptively reused selection feedback, not untouched generalization evidence"
+    },
+    "regression_boundary": {
+      "guard_source": "train failures only",
+      "held_out_guard_contamination_fix": "changelog v5.1.2 states held_out failures no longer contaminate train",
+      "remaining_issue": "keeping held_out out of regression guards does not prevent repeated adaptive use of held_out for candidate selection and strategy-control triggers"
+    },
+    "causal_evidence": {
+      "strategy_reopening_ablation_found": false,
+      "note": "the repository documents real evolution runs and score improvements, but this audit found no matched experiment isolating the architect/reopening trigger from ordinary proposer search, extra compute, or repeated held_out adaptation"
+    }
+  },
+  "recommended_matched_test": {
+    "fixed": [
+      "base model",
+      "candidate/proposer budget",
+      "candidate-local promotion rule",
+      "selection data budget",
+      "untouched outer test",
+      "initial harness and random seeds"
+    ],
+    "arms": [
+      "local-search only with plateau stop",
+      "heuristic architect reopening on reused selection score",
+      "scheduled architect reopening at matched compute",
+      "evidence-triggered reopening using a separately budgeted diagnostic stream while preserving the same promotion rule"
+    ],
+    "measure": [
+      "strategy-change rate",
+      "accepted-edit yield",
+      "selection-score gain",
+      "untouched outer-test gain",
+      "regression rate",
+      "additional compute",
+      "reopening false-positive rate: strategy changes followed by no outer improvement"
+    ]
+  },
+  "scope": [
+    "This is an implementation audit of the cited public revision, not a causal validation of strategy reopening.",
+    "Do not treat the repository's held_out split as a final lockbox because it is queried every evolution iteration.",
+    "Do not infer that stopping on plateau is inferior to reopening; the matched intervention remains untested."
+  ]
+}
