@@ -1,37 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T100115JST_PAIRED_MARGINAL_GAIN_AND_AUDIT_SIGNAL_VALIDITY.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T110556JST_COST_AWARE_ROUTING_AND_SHAPLEY_AUDIT.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T090227JST_COALITION_VALUE_AND_RISK_GATING.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T100115JST_PAIRED_MARGINAL_GAIN_AND_AUDIT_SIGNAL_VALIDITY.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `11`
 - role config revision: `5`
-- frozen source main SHA: `b922a012157af4f7360da643579ebbd50105c4d9`
+- frozen source main SHA: `e5042f8477a515400c0e0520ce06df5d31470657`
 - root blob: `bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- both pre-semantic SHA-only lookups matched; later repository movement was observed only for write safety and was not adopted as semantic control.
+- both pre-semantic SHA-only lookups matched; later repository movement was write-safety only and not adopted semantically.
 
 Current synthesis delta:
-- EDGE supplies a stronger low-cost causal utility signal when grouped counterfactual rollouts already exist: split `G=8` into experience-conditioned and experience-free halves, estimate paired marginal gain `Δe`, and gate distillation on `Δe>0` without adding another rollout group.
-- EDGE's ALFWorld 7B ablation is strong negative evidence against unconditional experience use: full 90.4%; no gain gate 72.3% (reported 9.8pp below vanilla GRPO); no distillation 83.6%; no pruning 86.7%.
-- Concrete longitudinal maintenance settings are now primary-verified for the tested EDGE setup: EMA momentum `μ=0.5`, pruning threshold `η=-0.1`, expansion threshold `ξ=0.4`, retrieval pool `top-m=6`, max three new experiences/step, `λ=0.1`. These are not universal optima.
-- A traced experience remained near-negative (`-0.026`, `-0.085`) but later rose to `0.452`, so immediate `utility<0 => retire` is contradicted in that tested run; smoothing/hysteresis is warranted.
-- Static-bank marginal gain turns negative around step ~100; unchecked evolution grows beyond 650 entries and remains volatile; full pruning produces later bank contraction as the policy internalizes old scaffolds.
-- Audit allocation itself needs validation: One Human, N Agents shows confidence-ranked auditing can become worse than random past a miscalibration threshold, with five tested open-weight models showing nearly constant/operationally weak confidence. Cheap triage signals cannot be trusted solely because they are cheap or superficially correlated.
-- SkillShapley is a promising boundary-adaptive Shapley audit backend, but detailed budget/accuracy numbers were not primary-verified in this invocation.
-- Revised maintenance hypothesis: hard safety/interface invalidation -> opportunistic paired marginal-gain evidence when naturally available -> EMA/hysteresis -> validated cheap triage for unaudited artifacts -> selective coalition/counterfactual audit -> repair/retire/suppress -> activation-boundary revalidation. This remains a synthesis hypothesis, not an observed software/API-agent scheduler.
-- The common-replicate four-cell admission-gate × post-admission-maintenance interaction remains unresolved; EDGE still lacks the joint-off cell.
+- EDGE's public GitHub artifact is still README-only and says code is under preparation, so released `Δe`/EMA/pruning traces and `η`/`μ` sensitivity remain unavailable for reproduction.
+- SkillShapley/BAES is now primary-verified as a concrete adaptive coalition-audit backend: `B=3n^2`, warmup `R=floor(0.4B)`, three fixed benchmark instances per configuration, ranking-change warmup stop, then NSE-slope adaptive stop with minimum stratum coverage. Under the same 99 unique-configuration budget, BAES Phase 1 yields 206 reusable one-flip edges versus 115 unique MC permutation observations.
+- BAES finite-budget estimates are explicitly biased approximations optimized for ranking recovery; fewer configurations do not guarantee proportional token savings.
+- Dual-Layer Agentic Memory provides direct evidence for a cost-aware small-to-large write router: easy memory-admission cases are resolved by a 1.7B router and only ~39.7–49.0% are escalated to 8B under the reported operating points.
+- Exact-table correction: the most aggressive SFT point stores 32.08% and achieves 89.77% EM = ~97.27% of Full Store 92.29%; the >98% retention point is 90.71% at 47.85% storage. Do not treat `68% pruning + >98% retention` as one identical configuration.
+- SFT consolidation creates direct interference: 1,752 previously `non-write` facts become `write-update`, so post-consolidation re-routing/revalidation is required.
+- Agent Skills Can Be Harmful adds software-agent cost evidence: among 182 high-confidence efficiency regressions, 114 are Excessive Procedure, including 67 Excessive Verification and 30 Heavy Implementation Pipeline. Skill cost includes induced trajectory work, not prompt length alone.
+- Revised hypothesis: hard invalidation -> cheap triage -> cost-aware escalation -> paired marginal gain when available -> EMA/hysteresis -> adaptive BAES/coalition audit for unresolved high-value cases -> repair/retire/suppress -> optional consolidation -> post-consolidation revalidation -> activation-boundary validation.
+- A unified controller choosing across `{no-op, cheap sensor, paired counterfactual, coalition audit, repair}` under one matched compute budget and reporting final software/API-agent outcome plus audit/repair cost remains unresolved.
 
 Exact continuation:
-1. Inspect EDGE public code/logs for released `Δe`/EMA/pruning traces and any `η`/`μ` sensitivity or false-retire/stale-retain analysis.
-2. Primary-verify SkillShapley's model-call budget, attribution error, adaptive stopping rule and fixed-budget savings before using it as an expensive coalition-audit backend.
-3. Continue Coalition-Aware artifacts/checkpoints for CASS coalition-sample count, u-SMCO stop/mask criterion and audit cost.
-4. Search for an explicit value-of-information controller choosing among no-op / cheap sensor / paired counterfactual / coalition audit / repair under a fixed compute budget, evaluated on final task outcome plus audit cost.
-5. Continue Repo2Skill-Evo/GSE affected-set replay cost and common-replicate four-cell admission × maintenance searches.
-6. Continue multi-generation hidden semantic-lineage repair, rollback-target selector comparisons and decision-influence audits under fixed controls.
+1. Search for the unified value-of-information controller above; distinguish memory admission from post-admission repair.
+2. Search for Dual-Layer Memory code/follow-up artifacts and independent reproduction after acceptance; preserve the operating-point correction.
+3. Search for SkillShapley/BAES code or diagnostics and test false-stop behavior under rare interactions if artifacts appear.
+4. Continue Coalition-Aware Skill Reliability for CASS coalition counts, u-SMCO stop/mask criterion and audit cost; compare against BAES under matched budgets.
+5. Search for post-consolidation regression tests that detect parametric interference and re-externalize newly forgotten facts.
+6. Continue the common-replicate admission-gate × post-admission-maintenance four-cell search, Repo2Skill-Evo/GSE replay cost, hidden semantic-lineage repair, rollback-target selector comparisons, and decision-influence audits under fixed controls.
 7. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
