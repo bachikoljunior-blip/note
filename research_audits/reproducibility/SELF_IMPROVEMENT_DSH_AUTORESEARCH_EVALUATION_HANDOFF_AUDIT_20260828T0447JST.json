@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T04:47:31+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "52c2166813eef4dd538dd165d1b495ac6ca5fcc6",
+    "root_control_revision": 12,
+    "root_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_control_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "role_config_revision": 2,
+    "presemantic_head_1": "52c2166813eef4dd538dd165d1b495ac6ca5fcc6",
+    "presemantic_head_2": "52c2166813eef4dd538dd165d1b495ac6ca5fcc6",
+    "semantic_freeze_respected": true
+  },
+  "active_wave_binding": {
+    "wave_id": "clean-g1-wave-c25-20260828T035824JST-59aa28b1",
+    "active_wave_blob": "06d906a7be3e4af8824e6825e44e2fd762495e53",
+    "selection_snapshot_note_main_sha": "5954bafd04ada75313b65300ac5b5c848883f8bc",
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T030311_JST_dsh_autoresearch_eval_transaction.md",
+    "source_artifact_blob": "48ab7d31b3b39073b68632769821547e69429905",
+    "source_contract_path": "research_workers_clean_g1/self_improvement/evaluation_consumption_implementation_contract_2026-08-28T030311_JST_dsh_autoresearch.json",
+    "source_contract_blob": "d8bfb513646a3da0b5c3d91968b70f51c1905eb3",
+    "source_local_candidate_id": null,
+    "identity_join_status": "Do not join this audit to a candidate by title, label, semantic similarity or guessed id. It is bound only to the exact source artifact/path/blob above unless a later persisted schema-3 manifest supplies an exact source_local_candidate_id for the same source blob."
+  },
+  "candidate": "dsh-autoresearch durable evaluator attempt handoff / crash recovery substrate",
+  "external_source": {
+    "repository": "EveGoodEvening/dsh-autoresearch",
+    "audited_revision": "ab7882ee75eed454d311ddd16fd81902aeb3cd61",
+    "public_master_at_audit": "ab7882ee75eed454d311ddd16fd81902aeb3cd61",
+    "package_version": "0.1.4",
+    "environment_lock": {
+      "node_engine": "^22.19.0 || >=24.0.0",
+      "package_manager": "pnpm@11.7.0",
+      "pnpm_lock_present": true,
+      "deepseek_harness_dev_version": "0.1.1-rc.2"
+    }
+  },
+  "grade": {
+    "overall": "B+",
+    "official_current_source_support": "A",
+    "dependency_environment_replay_support": "A-",
+    "independent_structural_reproduction": "A-",
+    "real_controller_process_death_equivalence": "C",
+    "logical_evaluation_exactly_once": "C",
+    "independent_protocol_matched_third_party_reproduction": "C"
+  },
+  "verified_positive_evidence": [
+    {
+      "claim": "Stable physical attempt identity is created before evaluator dispatch.",
+      "status": "verified_in_current_source",
+      "evidence": "controller.ts derives attemptId as <experimentId>-attempt-<attemptOrdinal>; runEvaluator persists spawn intent before artifact writer minting and before subprocess.spawn. evaluator.spec.ts explicitly requires failed persistSpawnIntent to prevent artifact capability minting and spawn."
+    },
+    {
+      "claim": "Attempt outcome and evaluator artifacts are recorded transactionally and immutable once set.",
+      "status": "verified_in_current_source",
+      "evidence": "tracker.ts schema version 6 uses WAL plus BEGIN IMMEDIATE transactions; recordAttemptOutcome rejects a second durable outcome, merges process observations, writes outcome_json and inserts attempt-scoped artifacts within one transaction."
+    },
+    {
+      "claim": "Recovery fails closed when whole-process-tree quiescence is not durably proven.",
+      "status": "verified_in_current_source",
+      "evidence": "recovery.ts blocks with attempt-uncertain whenever process_tree_quiescent != 1 and retains the lock. A proven-quiescent attempt lacking durable outcome/artifacts may be rerun under the next attempt ordinal; the controller stops after the bounded recovery rerun budget."
+    },
+    {
+      "claim": "The audited source is still the current public master.",
+      "status": "verified",
+      "evidence": "A SHA-only Git ref read during this audit resolved refs/heads/master to ab7882ee75eed454d311ddd16fd81902aeb3cd61."
+    }
+  ],
+  "new_structural_reproduction": {
+    "finding": "There is an unavoidable prepare-to-observe ambiguity window in the current local-subprocess handoff.",
+    "proof": [
+      "History A: createAttemptIntent commits durable spawn intent, then the controller process dies before subprocess.spawn executes.",
+      "History B: createAttemptIntent commits durable spawn intent, subprocess.spawn succeeds, then the controller process dies before persistSpawnObserved commits providerPid/spawnedAt.",
+      "At the recovery boundary both histories can present the same durable attempt row: spawn intent exists; providerPid/spawnedAt/process_tree_quiescent/outcome are unset.",
+      "recovery.ts therefore cannot distinguish A from B from its own durable state. It correctly chooses fail-closed attempt-uncertain rather than rerunning and risking a duplicate evaluator in B."
+    ],
+    "consequence": "The current mechanism strongly supports at-most-one-concurrent-attempt safety, but not strong exactly-once completion. A harmless pre-spawn controller death can be permanently indistinguishable from a spawned-but-unobserved evaluator. Progress across this window needs an external supervisor/receipt, provider idempotency, or an atomic dispatch primitive whose durable identity can be reconciled independently of the controller process.",
+    "scope": "This is a source-level state-machine result for the audited local subprocess boundary. It does not show a production incident and does not imply duplicate evaluation occurs under normal operation."
+  },
+  "important_scope_corrections": [
+    {
+      "correction": "Physical-attempt durability should not be described as fully exactly-once.",
+      "reason": "Safety is fail-closed across ambiguous handoff, but liveness/settlement is not guaranteed. The source proves a conservative at-most-once/unknown state, not a two-sided exactly-once protocol."
+    },
+    {
+      "correction": "Logical held-out evaluation consumption is still a separate missing layer.",
+      "reason": "A proven-quiescent attempt with no durable outcome may be rerun with a new physical attempt ordinal. No stable logical query id, monotone held-out-query charge, alpha/e-value state, cross-candidate spending ledger or selection-unused outer-test channel was found in the audited paths."
+    },
+    {
+      "correction": "Current recovery correctness is stronger than an older public bug report, but that report is not independent replication.",
+      "reason": "Repository issue #7 documented that an older revision reparsed redacted stdout on recovery. The current audited revision stores the parsed attempt result in outcome_json and reconstructs from durable outcome data, so that exact defect is repaired; the report and fix are first-party."
+    },
+    {
+      "correction": "README schema text is stale.",
+      "reason": "README still says DurableTracker schema v5 while audited tracker.ts exports TRACKER_SCHEMA_VERSION = 6. This is documentation drift, not evidence of a runtime schema defect."
+    }
+  ],
+  "independent_reproduction_search": {
+    "searched_at": "2026-08-28T04:47:31+09:00",
+    "result": "No protocol-matched third-party reproduction or failure report for the current dsh-autoresearch crash-recovery contract was found in the public web/GitHub search used in this audit. Public search mainly returned the official repository and mirrors/listings. GitHub showed zero forks in the surfaced repository metadata.",
+    "grade": "C"
+  },
+  "execution_constraint": {
+    "full_official_test_run": "not_executed",
+    "reason": "The local container could not resolve github.com, so the exact repository could not be cloned/install dependencies in this environment. This does not affect the source-level handoff ambiguity proof; it prevents claiming an independent full vitest execution."
+  },
+  "reproducibility_assessment": {
+    "what_is_strong": "Exact current source, current master identity, lockfile, schema, transaction ordering, fail-closed recovery and official integration/unit tests are all publicly inspectable and source-bound.",
+    "what_remains_missing": "Real controller SIGKILL injection at each prepare/spawn/observed/outcome boundary; independently observed provider/OS receipt that resolves the prepare-to-observe ambiguity; stable logical evaluation identity above attempts; monotone statistical/query consumption; protocol-matched third-party rerun.",
+    "promotion_recommendation": "Use dsh-autoresearch as a concrete durability substrate, but do not cite it as evidence of logical-query exactly-once or statistically safe repeated adaptive evaluation."
+  },
+  "reopen_conditions": [
+    "A new public revision adds an independently reconcilable dispatch/provider receipt or idempotency key that distinguishes prepared-not-spawned from spawned-unobserved attempts.",
+    "A real controller-process SIGKILL matrix covers the pre-spawn, post-spawn/pre-observed, observed, quiescent, outcome, feedback and decision boundaries.",
+    "A stable logical evaluation/query id and monotone query/statistical charge are added above physical attempts.",
+    "A protocol-matched independent reproduction or failure report appears."
+  ],
+  "scope_guard": "This audit evaluates the exact public implementation/recovery contract at ab7882ee75eed454d311ddd16fd81902aeb3cd61. It does not claim these mechanisms improve benchmark performance, provide anytime-valid selection, control cross-candidate error, or establish an untouched outer test.",
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next valid invocation, audit a different exact C25 source member with a runnable numerical artifact or raw output if available. Do not repeat this dsh-autoresearch source unless a reopen condition fires. Prefer candidates whose headline values can be independently reconstructed rather than another purely structural inspection."
+}
