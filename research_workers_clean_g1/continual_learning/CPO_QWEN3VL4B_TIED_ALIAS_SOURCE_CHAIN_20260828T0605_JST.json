@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-28T06:04:57+09:00",
+  "frozen_control": {
+    "note_main_sha": "76324edcba319024c8f771d29eea41a7d81d0e9f",
+    "control_revision": 12,
+    "control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role": "continual_learning",
+    "role_config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "claim_scope": "First-party public-source chain for the exact public CPO software stack. This establishes structural tied-alias dead bookkeeping on the public 4B path without loading the full 4B model locally. It is not a PyTorch-2.8 runtime execution, not a full-Qwen RSS/file measurement, and not evidence about unreleased paper-table code.",
+  "public_cpo": {
+    "repo": "MaolinLuo/CPO",
+    "release_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "release_date_utc": "2026-07-29T06:57:01Z",
+    "base_model_placeholder": "/your_model_path/Qwen/Qwen3-VL-4B-Instruct",
+    "mask_top_percent": 10.0,
+    "mask_builder_behavior": "Loads Transformers models with from_pretrained, materializes model.state_dict(), and computes per-tensor top-percent masks with no global threshold.",
+    "trainer_behavior": "Consumes masks by model.named_parameters(); mask entries not exposed by duplicate-free parameter iteration cannot receive hooks or regularization.",
+    "release_environment": {
+      "python": "3.12",
+      "torch": "2.8.0",
+      "cuda": "12.8",
+      "transformers": "4.57.3",
+      "deepspeed": "0.16.4",
+      "rl_gpus": 8
+    },
+    "public_history": "src/compute_importance_mask.py has only the public release commit in its file history; the parent public tree contains only LICENSE and a tiny README, so this repository exposes no earlier public mask implementation from which paper-table semantics can be recovered."
+  },
+  "pytorch_2_8_source": {
+    "module_source": "https://raw.githubusercontent.com/pytorch/pytorch/v2.8.0/torch/nn/modules/module.py",
+    "named_parameters_semantics": "named_parameters defaults remove_duplicate=True and _named_members suppresses repeated member objects via a memo set.",
+    "state_dict_semantics": "_save_to_state_dict writes every registered parameter name and persistent buffer name; it does not apply duplicate-member filtering.",
+    "comparison_to_2_10": "The relevant duplicate-filter and state_dict-save bodies are structurally/textually equivalent in PyTorch v2.8.0 and v2.10.0 for the operations used by the prior synthetic harness. This narrows version risk but does not replace a direct 2.8 runtime run."
+  },
+  "transformers_4_57_3_source": {
+    "modeling_utils": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/modeling_utils.py",
+    "qwen3_vl_modeling": "https://raw.githubusercontent.com/huggingface/transformers/v4.57.3/src/transformers/models/qwen3_vl/modeling_qwen3_vl.py",
+    "from_pretrained_tie_behavior": "from_pretrained calls model.tie_weights() after construction and again after loading; tie_embeddings_and_encoder_decoder checks tie_word_embeddings and _tie_or_clone_weights assigns output_embeddings.weight = input_embeddings.weight when not torchscript.",
+    "qwen_structure": "Qwen3VLForConditionalGeneration contains lm_head and wraps Qwen3VLModel; Qwen3VLModel registers visual then language_model; Qwen3VLTextModel registers embed_tokens. Public Qwen3-VL-4B-Instruct config has tie_word_embeddings=true, hidden_size=2560, vocab_size=151936.",
+    "implication": "On the public 4B path, lm_head.weight and the input embedding weight are the same Parameter object after from_pretrained tying. PyTorch state_dict preserves both registered names, whereas duplicate-free named_parameters exposes only one canonical Parameter path. Therefore the release mask builder can save an lm_head alias mask/reference that the trainer cannot consume."
+  },
+  "conditional_payload_arithmetic": {
+    "vocab_size": 151936,
+    "hidden_size": 2560,
+    "embedding_scalars": 388956160,
+    "top_percent": 10.0,
+    "topk_floor_scalars_if_all_selected_values_nonzero": 38895616,
+    "dead_alias_dense_bool_mask_bytes": 388956160,
+    "dead_alias_float32_reference_bytes": 155582464,
+    "dead_alias_int64_index_bytes": 311164928,
+    "mask_file_logical_payload_mask_plus_ref_bytes": 544538624,
+    "mask_file_logical_payload_mask_plus_ref_gib": 0.50714111328125,
+    "trainer_aux_logical_payload_mask_plus_ref_plus_idx_bytes": 855703552,
+    "trainer_aux_logical_payload_mask_plus_ref_plus_idx_gib": 0.79693603515625,
+    "scope": "Upper conditional logical-tensor arithmetic for this alias at 10% if all top-k movement values are nonzero. Public code drops zero-valued selected positions, so actual support can be smaller. These are not serialized-file or RSS measurements."
+  },
+  "new_conclusions": [
+    "The previous tied-alias synthetic finding is now supported by a complete first-party source chain across the public CPO release, pinned Transformers 4.57.3 tying logic, PyTorch 2.8 state_dict semantics, and PyTorch 2.8 duplicate-free named_parameters semantics.",
+    "The canonical trainer-namespace repair is specifically aligned with the public trainer's observable Parameter namespace and removes this dead alias without relying on storage identity.",
+    "Direct PyTorch-2.8 execution and real Qwen3-VL-4B file/RSS/runtime measurements remain required before claiming empirical overhead reduction on the full model."
+  ],
+  "exact_next_actions": [
+    "Obtain a PyTorch 2.8 runtime and re-run the existing canonical-namespace harness, preserving output/runtime hashes.",
+    "Run a smallest loadable real Transformers tied-weight model under Transformers 4.57.3 and compare state_dict keys, duplicate-free named_parameters keys, release-style mask keys and repaired keys.",
+    "When resources permit, load Qwen3-VL-4B-Instruct and directly measure canonical versus dead alias/buffer scalar counts, task mask file bytes, support overlap, build RSS/time and per-step auxiliary copy cost.",
+    "Keep the separate ZeRO-3 1/world_size scaling issue as an independent factorial axis."
+  ]
+}
