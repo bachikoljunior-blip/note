@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T17:11:35+09:00",
+  "result": "Prospective equal-size exposure blocks are anytime-valid under adaptive between-block continuation only when block inclusion/completion is predictable with respect to the block outcome; outcome-dependent realized block/process size changes the estimand or creates selection bias.",
+  "formal_contract": {
+    "block_score": "For block j, X_j=(1/B) sum_{b=1}^B Y_{j,b} in [0,1].",
+    "filtration": "The decision to start block j may depend arbitrarily on all previously completed blocks and other pre-block information.",
+    "completion_requirement": "Once block j is admitted, all B constituent exposure scores must be collected under a predeclared mechanism that does not selectively drop the block based on Y_{j,1:B}; otherwise the completed-block sequence is selected on current outcomes.",
+    "target": "mu_bar_J=(1/J) sum_{j<=J} E[X_j | F_{j-1}] over actually admitted complete blocks.",
+    "dependence": "No cross-block or cross-process independence is required for an average-conditional-mean e-process/CS; dependence is absorbed into the conditional means.",
+    "adaptive_between_blocks": "After a complete block is revealed, the system may stop the process, switch fingerprints, or decide whether to start another block using that past information. This changes which future blocks exist but does not retroactively invalidate already admitted blocks."
+  },
+  "counterexamples_and_estimand_separation": [
+    {
+      "name": "outcome-dependent completion",
+      "construction": "B=1, latent Y~Bernoulli(0.5), retain the block only when Y=0.",
+      "underlying_mean": 0.5,
+      "observed_completed_block_mean": 0.0,
+      "lesson": "A block cannot be declared valid merely because its final score is bounded; inclusion/completion must not depend on that current score unless a separate missingness/selection correction is proved."
+    },
+    {
+      "name": "cluster-average versus exposure-average",
+      "construction": "One process has size 1 and mismatch score 1; another has size 9 and mismatch score 0.",
+      "equal_process_average": 0.5,
+      "equal_exposure_average": 0.1,
+      "lesson": "Neither estimand is automatically the other. Variable/informative process size can make process reliability and exposure-weighted reliability materially different."
+    }
+  ],
+  "safe_design_routes": [
+    {
+      "route": "prospective fixed-B blocks",
+      "when": "A test harness can guarantee B evaluation exposures after block admission regardless of within-block outcomes.",
+      "benefit": "Uses the simpler equal-weight block CS and gives an exposure-average interpretation over admitted complete blocks."
+    },
+    {
+      "route": "request-level sequential stream",
+      "when": "Every actual request is observed and the decision that a next request exists is made from past information before that request's score.",
+      "benefit": "Can target the average conditional mismatch probability over actual-policy exposures without retrospectively weighting by realized process size.",
+      "warning": "This is an actual-exposure estimand; early termination of bad processes may legitimately lower exposure-weighted harm while leaving per-process robustness poor. Report process-weighted reliability separately when that distinction matters."
+    },
+    {
+      "route": "fail-closed incomplete block",
+      "when": "A block was admitted but cannot be completed for a reason not covered by the predeclared completion contract.",
+      "benefit": "Do not silently drop it. Mark the statistical generation unresolved or use a separately proved conservative missingness rule; never condition analysis on successful completion."
+    }
+  ],
+  "public_alignment": [
+    {
+      "source": "Kahan et al., Informative cluster size in cluster-randomised trials: A case study from the TRIGGER trial, 2023",
+      "finding_used": "Participant/exposure-average and cluster-average estimands differ by weighting and can diverge under informative cluster size.",
+      "doi": "10.1177/17407745231186094"
+    },
+    {
+      "source": "Williamson et al., Modeling survival data with informative cluster size, 2008",
+      "finding_used": "Outcome-related cluster size makes marginal inference problematic and motivates cluster-aware weighting/estimand specification.",
+      "doi": "10.1002/sim.3003"
+    },
+    {
+      "source": "Chugg & Ramdas, Closed-form empirical Bernstein confidence sequences for scalars and matrices, 2025",
+      "finding_used": "Average conditional means of bounded nonstationary sequences are legitimate anytime-valid targets; independence is not the required contract.",
+      "arxiv": "2512.21300"
+    }
+  ],
+  "measurement_validity_rules": [
+    "Name whether the reliability target is equal-process, equal-block, or equal-exposure/request weighted.",
+    "Do not use final realized process size as a statistical weight if that size can react to current outcomes.",
+    "Between-block adaptive continuation is compatible with the average-conditional-mean target; within-block outcome-dependent completion is not automatically compatible.",
+    "A valid actual-policy exposure estimate does not identify a counterfactual forced-continuation exposure population.",
+    "If counterfactual post-termination requests are the target, they require an explicit intervention/model or a harness that actually generates them; they are not recovered by reweighting observed traffic alone."
+  ],
+  "next_actions": [
+    "Derive a missingness-safe block score for infrastructure failures that are predictable/exogenous versus failures that may be outcome-related.",
+    "Compare equal-process and actual-exposure reliability jointly in a synthetic informative-size stress test to quantify how large the estimand gap can become while both confidence sequences remain individually valid.",
+    "Compare the exact weighted envelope to public importance-weighted/time-uniform methods under an identical predictable-weight target."
+  ]
+}
