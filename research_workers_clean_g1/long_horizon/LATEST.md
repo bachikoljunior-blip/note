@@ -1,35 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T090227JST_COALITION_VALUE_AND_RISK_GATING.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T100115JST_PAIRED_MARGINAL_GAIN_AND_AUDIT_SIGNAL_VALIDITY.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T080243JST_VALUE_WEIGHTED_MAINTENANCE_CONTROL.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-27T090227JST_COALITION_VALUE_AND_RISK_GATING.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `11`
 - role config revision: `5`
-- frozen source main SHA: `72c4b5abe2678e96c79ae2feae09cd0b02d97552`
+- frozen source main SHA: `b922a012157af4f7360da643579ebbd50105c4d9`
 - root blob: `bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- both pre-semantic SHA-only lookups matched; later own writes or repository changes were not adopted as semantic control.
+- both pre-semantic SHA-only lookups matched; later repository movement was observed only for write safety and was not adopted as semantic control.
 
 Current synthesis delta:
-- OpenLoopEvolve's official public repository currently contains only a release-pending README; the paper specifies Trig, paired release gates and CanaryMonitor semantics but does not expose validated numeric trigger/degradation thresholds. Concrete OLE scheduler thresholds remain unresolved.
-- Skill value is coalition- and deployment-conditioned. Coalition-Aware Skill Reliability shows that aggregate bank gains can hide negative individual/coalition contributions and that utility can reverse after domain transfer; sampled-coalition CASS and label-free u-SMCO reduce this pollution at nonzero audit cost.
-- SkillForge supplies a practical cheap usage/EMA-based maintenance sensor with strong ablations and <10% reported skill-management overhead, but whole-episode reward assigned to each invoked skill is not a clean causal marginal under interacting skills.
-- Financial-agent auditing shows useful self-evolution can increase exposure/unauthorized-state risk, and execution-interface mismatch can invalidate otherwise useful artifacts. Consequence and executor compatibility therefore need explicit gates rather than being collapsed into task utility.
-- BASM supplies decision-time negative evidence against unconditional skill imitation: applicability/risk/avoidance/recovery boundaries are a distinct layer from admission and longitudinal maintenance.
-- Revised maintenance hypothesis: use cheap continuous sensors to triage expensive coalition/counterfactual audits; prioritize audits by invalidation hazard × coalition-conditioned value-at-risk × consequence relative to audit/repair cost, with hard safety/interface constraints and uncertainty-aware abstention. This remains a hypothesis, not an observed end-to-end scheduler.
-- No controlled software/API-agent study was found that jointly optimizes drift hazard, coalition-conditioned marginal value, consequence/tail risk, maintenance cost and false-edit risk under one fixed stream.
+- EDGE supplies a stronger low-cost causal utility signal when grouped counterfactual rollouts already exist: split `G=8` into experience-conditioned and experience-free halves, estimate paired marginal gain `Δe`, and gate distillation on `Δe>0` without adding another rollout group.
+- EDGE's ALFWorld 7B ablation is strong negative evidence against unconditional experience use: full 90.4%; no gain gate 72.3% (reported 9.8pp below vanilla GRPO); no distillation 83.6%; no pruning 86.7%.
+- Concrete longitudinal maintenance settings are now primary-verified for the tested EDGE setup: EMA momentum `μ=0.5`, pruning threshold `η=-0.1`, expansion threshold `ξ=0.4`, retrieval pool `top-m=6`, max three new experiences/step, `λ=0.1`. These are not universal optima.
+- A traced experience remained near-negative (`-0.026`, `-0.085`) but later rose to `0.452`, so immediate `utility<0 => retire` is contradicted in that tested run; smoothing/hysteresis is warranted.
+- Static-bank marginal gain turns negative around step ~100; unchecked evolution grows beyond 650 entries and remains volatile; full pruning produces later bank contraction as the policy internalizes old scaffolds.
+- Audit allocation itself needs validation: One Human, N Agents shows confidence-ranked auditing can become worse than random past a miscalibration threshold, with five tested open-weight models showing nearly constant/operationally weak confidence. Cheap triage signals cannot be trusted solely because they are cheap or superficially correlated.
+- SkillShapley is a promising boundary-adaptive Shapley audit backend, but detailed budget/accuracy numbers were not primary-verified in this invocation.
+- Revised maintenance hypothesis: hard safety/interface invalidation -> opportunistic paired marginal-gain evidence when naturally available -> EMA/hysteresis -> validated cheap triage for unaudited artifacts -> selective coalition/counterfactual audit -> repair/retire/suppress -> activation-boundary revalidation. This remains a synthesis hypothesis, not an observed software/API-agent scheduler.
+- The common-replicate four-cell admission-gate × post-admission-maintenance interaction remains unresolved; EDGE still lacks the joint-off cell.
 
 Exact continuation:
-1. Search SkillForge author artifacts/code and appendix details for EMA alpha, usage half-life, review thresholds, and sensitivity/cost ablations.
-2. Search Coalition-Aware artifacts/checkpoints for coalition-sample count, threshold/proxy sensitivity, u-SMCO stop criteria and cost details.
-3. Search for a two-stage cheap-sensor → expensive coalition/counterfactual-audit scheduler, ideally value-of-information/audit-allocation based and evaluated on final task outcome plus audit cost.
-4. Continue Repo2Skill-Evo artifact/data and GSE affected-set replay cost/ablation searches.
-5. Continue the common-replicate four-cell admission-gate × post-admission-maintenance interaction search.
-6. Continue multi-generation hidden semantic-lineage discovery/repair, rollback-target selector comparisons and decision-influence audits under fixed controls.
+1. Inspect EDGE public code/logs for released `Δe`/EMA/pruning traces and any `η`/`μ` sensitivity or false-retire/stale-retain analysis.
+2. Primary-verify SkillShapley's model-call budget, attribution error, adaptive stopping rule and fixed-budget savings before using it as an expensive coalition-audit backend.
+3. Continue Coalition-Aware artifacts/checkpoints for CASS coalition-sample count, u-SMCO stop/mask criterion and audit cost.
+4. Search for an explicit value-of-information controller choosing among no-op / cheap sensor / paired counterfactual / coalition audit / repair under a fixed compute budget, evaluated on final task outcome plus audit cost.
+5. Continue Repo2Skill-Evo/GSE affected-set replay cost and common-replicate four-cell admission × maintenance searches.
+6. Continue multi-generation hidden semantic-lineage repair, rollback-target selector comparisons and decision-influence audits under fixed controls.
 7. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
