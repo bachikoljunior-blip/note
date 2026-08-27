@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "artifact_under_test": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_2026-08-27.py",
+  "reference_artifact": "research_workers_clean_g1/evaluation/weighted_average_exact_endpoint_2026-08-27.py",
+  "validated_at": "2026-08-27T18:07:59+09:00",
+  "contract": {
+    "scores": "Y_i in [0,1]",
+    "weights": "0 < w_i <= 1 and predictable before current Y_i",
+    "target": "predictable-weight average conditional mean",
+    "streaming_structure": "binary-counter immutable sorted runs; equal-sized runs merge on append",
+    "claim_scope": "same water-filling denominator as frozen batch solver, up to explicit floating-point and root/endpoint bisection tolerance"
+  },
+  "randomized_pathwise_comparison": {
+    "seed": 20260827,
+    "datasets": 40,
+    "prefix_comparisons": 361,
+    "fractional_scores_included": true,
+    "max_abs_log_e_difference": 6.650680006714538e-12,
+    "max_abs_upper_endpoint_difference": 1.4290790772975015e-12,
+    "binary_counter_invariant_failures": 0
+  },
+  "local_microbenchmark": {
+    "environment": "current research Python runtime; synthetic weights/scores; not production timing",
+    "n": 2000,
+    "root_iterations": 40,
+    "endpoint_iterations": 50,
+    "cadence_results": [
+      {
+        "endpoint_every_n_appends": 16,
+        "endpoint_queries": 125,
+        "streaming_total_seconds": 5.479307812999991,
+        "rebuild_reference_total_seconds": 8.558316113000046,
+        "reference_over_streaming_ratio": 1.5619338071671973,
+        "max_abs_endpoint_difference": 2.815525590449397e-13
+      },
+      {
+        "endpoint_every_n_appends": 64,
+        "endpoint_queries": 32,
+        "streaming_total_seconds": 1.4707327849999956,
+        "rebuild_reference_total_seconds": 2.533939544999953,
+        "reference_over_streaming_ratio": 1.7229095392743017,
+        "max_abs_endpoint_difference": 2.815525590449397e-13
+      },
+      {
+        "endpoint_every_n_appends": 256,
+        "endpoint_queries": 8,
+        "streaming_total_seconds": 0.5750694690000273,
+        "rebuild_reference_total_seconds": 0.6904888830000573,
+        "reference_over_streaming_ratio": 1.2007051673265312,
+        "max_abs_endpoint_difference": 1.1812772982011666e-13
+      }
+    ],
+    "interpretation": "The append-oriented structure already beats repeated full rebuilds in this synthetic n=2000 monitor at cadences 16/64/256. This does not imply the prototype is globally faster: a single isolated query after a long quiet period can still favor one batch rebuild, and Python object overhead/memory are not optimized."
+  },
+  "complexity_accounting": {
+    "append": "Each observation participates in at most one merge per binary level, giving O(log n) amortized merge participation per observation for each lambda component.",
+    "suffix_stats_query": "O(log n) live runs, each queried by binary search; O(log^2 n) comparison work per hinge-stat query before fixed numerical-iteration factors.",
+    "endpoint": "Fixed outer endpoint bisection times fixed water-filling root bisection times the live-run suffix query. The current prototype favors update amortization over minimum single-query latency.",
+    "memory": "Research prototype stores immutable run payloads plus suffix aggregates and therefore is not memory-minimal. Productionization should compact per-item payload representation before deployment."
+  },
+  "public_data_structure_alignment": {
+    "source": "O'Neil, Cheng, Gawlick, O'Neil, The Log-Structured Merge-Tree, Acta Informatica 1996",
+    "use": "Only the immutable sorted-run plus geometric merge architecture is borrowed as a data-structure pattern; statistical validity comes from the existing role-local water-filling/e-process derivation, not from LSM literature."
+  },
+  "measurement_validity_guards": [
+    "Do not call the incremental implementation statistically stronger than the batch reference; it is a computational refactoring under the same contract.",
+    "Do not infer production speedup from the local Python microbenchmark.",
+    "Do not use outcome-dependent current weights or realized process sizes as predictable weights.",
+    "Root/endpoint iteration tolerances are part of numerical implementation validation and must fail closed if the water-filling residual exceeds tolerance."
+  ]
+}
