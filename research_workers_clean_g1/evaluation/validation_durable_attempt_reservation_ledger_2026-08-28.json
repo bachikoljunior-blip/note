@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_at": "2026-08-28T04:15:46.098481+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifact": "research_workers_clean_g1/evaluation/durable_attempt_reservation_ledger_2026-08-28.py",
+  "artifact_blob_after_readback": "f51cc37e5897d8dc0f395da95c1f6dd1c12da791",
+  "bindings": {
+    "launch_gate": {"filename": "durable_launch_capability_gate_2026-08-28.py", "blob": "e06dc0550f65182d31b96e6b841d680b487f3b41"},
+    "score_wrapper": {"filename": "score_launch_capability_wrapper_2026-08-28.py", "blob": "e610805ab1f495198c1b44ab82f02086233f1eda"}
+  },
+  "result": {
+    "reservation_frame_bytes_in_contract_harness": 901,
+    "partial_reservation_ack_cuts_rejected": 901,
+    "partial_ack_unexpected_successes": 0,
+    "exact_reservation_ack_permit_valid": true,
+    "duplicate_same_slot_reservation_rejected": true,
+    "conflicting_request_binding_same_slot_rejected": true,
+    "fail_closed_uncommitted_recovery_disposition": "fail_closed_unresolved_no_relaunch",
+    "fail_closed_explicit_replay_rejected": true,
+    "old_process_permit_rejected_after_simulated_restart": true,
+    "deterministic_replay_old_permit_rejected_after_restart": true,
+    "deterministic_replay_explicit_new_process_permit_reissued_for_same_attempt_id": true,
+    "commit_marks_attempt_no_relaunch": true,
+    "permit_rejected_after_commit": true
+  },
+  "validated_properties": [
+    "One durable RESERVE record exists per block/slot key. A second same-slot reservation is rejected even if the request is identical; a conflicting request binding is also rejected.",
+    "The default retry policy is fail-closed unresolved: an uncommitted reservation survives recovery but cannot be converted into a new launch permit.",
+    "Launch permits are MAC-bound to a process-epoch secret, so a permit from a crashed/restarted process cannot be reused after module reinitialization.",
+    "Deterministic replay is a separate explicit policy. Recovery may reissue a new process-epoch permit only for the exact same durable capability/request/attempt identity and only while no COMMIT exists.",
+    "A COMMIT record binds the durable reservation to a slot-event digest and makes all later launch permits invalid for that slot."
+  ],
+  "scope": [
+    "The process-restart check was simulated by importing the module under a fresh module instance, producing a new boot secret; this validates permit-epoch binding but is not an OS-level crash test of secret lifecycle.",
+    "The sidecar reservation ledger is launch-control state, while the original ADMIT/SLOT/CLOSE journal remains scientific score truth. Atomicity between the two files is not assumed; disagreement fails closed and can reduce coverage/throughput rather than silently admitting a different score.",
+    "The ledger still relies on its DurableAppendWriter for writer serialization. Whole-file CAS without flock/lease/fencing is insufficient if multiple OS processes can reserve concurrently.",
+    "Deterministic replay is valid only if the scorer actually maps attempt_id to the same statistical attempt under all relevant RNG/runtime settings. Otherwise the safe policy is fail-closed unresolved.",
+    "Exact production sibling byte-execution remains pending in a repository-local runtime."
+  ],
+  "frontier": [
+    "Integrate AttemptLaunchPermit validation into the score-launch wrapper so score generation requires both the durable ADMIT capability and the durable one-attempt permit.",
+    "Add a cooperating multi-process writer fence/flock around reservation CAS+append+fsync if the actual launcher can have concurrent processes, then stress simultaneous same-slot reservations.",
+    "Define crash recovery after RESERVE but before score/SLOT for the fail-closed policy as an explicit missing/failure score path at block close, and verify no hidden retry selection channel remains.",
+    "For deterministic replay mode, test real scorer/runtime reproducibility under fixed attempt_id before enabling that mode outside synthetic harnesses.",
+    "Byte-execute reservation/gate/writer/score wrapper with exact production durable adapter/V3/K-guard siblings."
+  ],
+  "frontier_nonempty": true
+}
