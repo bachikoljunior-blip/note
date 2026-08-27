@@ -1,0 +1,70 @@
+{
+  "schema": "coalition_boundary_order_hillclimb_v0_protocol",
+  "created_at": "2026-08-28T04:10:00+09:00",
+  "frozen_control": {
+    "note_main_sha": "5954bafd04ada75313b65300ac5b5c848883f8bc",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "predecessor_protocol": "research_workers_clean_g1/reasoning/experiments/coalition_boundary_width_pathology_v0_protocol.json",
+  "goal": "Measure whether a charged offline one-variable-relocation order search can materially improve the exact final ROBDD over the frozen v0 fixed heuristics, and whether cheap vertex-separation width can safely prune relocation candidates without losing the best found ROBDD order. This is an offline order-search baseline, not CUDD dynamic sifting.",
+  "families": [
+    {"id": "path18", "kind": "path_graph", "n": 18},
+    {"id": "binary_tree15", "kind": "balanced_binary_tree", "n": 15},
+    {"id": "grid4x4", "kind": "grid_2d", "rows": 4, "cols": 4, "n": 16},
+    {"id": "cubic18_s880301", "kind": "random_3_regular", "n": 18, "seed": 880301},
+    {"id": "cubic18_s880319", "kind": "random_3_regular", "n": 18, "seed": 880319}
+  ],
+  "starts": ["natural", "reverse_cuthill_mckee"],
+  "search_variants": {
+    "full_relocation": {
+      "candidate_rule": "At each iteration enumerate every distinct order obtainable by removing one variable from the current order and reinserting it at every position. Compile each candidate with the frozen balanced-pairwise ROBDD compiler. Pick the candidate with minimum final live nodes; ties by lower allocated nodes, then lexicographic order. Accept only a strict final-live-node improvement.",
+      "max_accepted_moves": 4
+    },
+    "width_pruned_relocation": {
+      "candidate_rule": "Enumerate the same relocation neighborhood, compute exact vertex-separation width cheaply, retain every candidate whose width is at most current_width + 1, and compile only retained candidates. Same selection/tie-break/strict-improvement rule.",
+      "max_accepted_moves": 4
+    }
+  },
+  "compiler": {
+    "schedule": "balanced_pairwise",
+    "semantics": "same positive monotone graph-2-CNF and exact ROBDD/rank compiler as coalition_boundary_width_pathology_v0",
+    "correctness": "Every accepted final order must exactly reproduce the predecessor family rank vector and exhaustive truth function."
+  },
+  "charged_metrics": [
+    "candidate_orders_enumerated",
+    "candidate_orders_compiled",
+    "search_compile_wall_clock_ms",
+    "accepted_moves",
+    "start_final_live_nodes",
+    "final_live_nodes",
+    "start_vertex_separation_width",
+    "final_vertex_separation_width",
+    "final_allocated_nodes",
+    "final_apply_calls",
+    "rank_vector_exact_match"
+  ],
+  "comparators": {
+    "v0_best_fixed_final_live_nodes": {
+      "path18": 34,
+      "binary_tree15": 24,
+      "grid4x4": 78,
+      "cubic18_s880301": 131,
+      "cubic18_s880319": 142
+    }
+  },
+  "predeclared_interpretation": [
+    "Improvement over the start order shows local relocation can recover value missed by the named fixed heuristic; improvement over the v0 best-fixed comparator shows the fixed heuristic panel itself missed a better tested order.",
+    "Search overhead is part of the cost and must not be hidden when comparing order control against no-search baselines.",
+    "If width-pruned search reaches the same final live-node count as full relocation with fewer compiled candidates, width is useful as a pruning feature on these cells. If it misses a better order, width-only pruning is falsified for that cell.",
+    "No result is evidence that this local search matches CUDD sifting/window/group-sifting or that it is globally optimal.",
+    "The graph-CNF rank-count experiment remains unrelated to global lemma-library promotion/demotion authority."
+  ],
+  "resource_guard": {
+    "max_candidate_compilations_per_run": 3000,
+    "max_total_search_seconds": 180,
+    "on_guard": "retain partial exact results and label guarded_out; never infer local optimum from a guarded run"
+  }
+}
