@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 73,
+  "updated_at": "2026-08-27T22:32:12.257357+09:00",
+  "frozen_control": {
+    "note_main_sha": "9de2c6535c6e1b3851a65cc1ce396b1a9c6ae64e",
+    "control_revision": 12,
+    "config_revision": 6,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "candidate_system": {
+    "name": "FORGE: Failure-Optimized Reflective Graduation and Evolution",
+    "paper": "arXiv:2605.16233",
+    "paper_url": "https://arxiv.org/abs/2605.16233",
+    "public_repo": "isbogdanov/forge-protocol",
+    "public_repo_main_sha_observed": "6d3f46a3dca2ec20574d77185a19d01062005177",
+    "tested_scope": "CybORG CAGE-2 B_line, 30-step horizon; four LLM families; three memory representations"
+  },
+  "controller_actions": [
+    {
+      "action": "Continue",
+      "mechanism": "continue failure-triggered Reflexion attempts/stages with current persistent memory",
+      "directly_exercised": true
+    },
+    {
+      "action": "Restart-with-artifact",
+      "mechanism": "on a failure trigger, abort the episode, synthesize/apply a memory update from the failed trajectory, then restart from step 0 with the updated memory",
+      "directly_exercised": true
+    },
+    {
+      "action": "Widen",
+      "mechanism": "run N=10 parallel instances with independent within-stage experience",
+      "directly_exercised": true
+    },
+    {
+      "action": "Resume-best/broadcast",
+      "mechanism": "after a frozen stage checkpoint, copy the active champion's complete memory to every other active instance for the next stage",
+      "directly_exercised": true
+    },
+    {
+      "action": "Stop/Freeze",
+      "mechanism": "graduate instances whose frozen checkpoint return exceeds theta=-15; freeze their memory and exclude them from later stages",
+      "directly_exercised": true
+    }
+  ],
+  "matched_or_near_matched_ablation": {
+    "broadcast": {
+      "comparison": "FORGE vs parallel isolated Reflexion",
+      "paper_claimed_matching": "same model, memory representation and training budget; only cross-instance champion broadcast is removed",
+      "result": "FORGE improves post-session evaluation by 29-72% over Reflexion in all 12 model-representation conditions",
+      "interpretation_scope": "supports population transfer/broadcast under this benchmark; does not isolate every implementation detail"
+    },
+    "stop_freeze": {
+      "comparison": "FORGE vs FORGE without graduation",
+      "equal_budget": false,
+      "result": "no-graduation keeps all 10 instances active for all 6 stages, consumes roughly twice the adaptation tokens per active instance by S6, and can outperform full FORGE for Grok/Qwen by up to 67%; Gemini/Llama favor graduation in 2 of 3 representations",
+      "interpretation_scope": "graduation primarily saves compute but can terminate learning prematurely; this directly exposes false-stop cost, but is not an equal-total-compute comparison"
+    },
+    "restart": {
+      "comparison": "no matched cold-restart vs restart-with-artifact ablation found",
+      "equal_budget": null
+    }
+  },
+  "outer_evaluation": {
+    "paper_protocol": "Checkpoint probes are used during training for champion selection/graduation; Post-Session Evaluation is a separate frozen measurement after the session, with learning disabled.",
+    "selection_unused_for_that_session": true,
+    "physically_hidden_lockbox": false,
+    "distinct_task_distribution": false,
+    "scope_note": "separate stochastic evaluation episodes on the same CAGE-2 B_line environment are stronger than reporting checkpoint scores but are not an untouched external benchmark split"
+  },
+  "public_code_audit": {
+    "stage_checkpoint_path": "run_cyborg_coordinator.py ends each continual-learning session with a new-agent final evaluation episode under is_learning_mode=False; run_experiment.py selects/broadcasts using Final Evaluation Reward parsed from the learning-session logs.",
+    "post_session_eval_path": "run_experiment.py creates final_evaluation workspaces, disables continual_learning, and runs the frozen definitions for num_evaluation_runs.",
+    "resume_reconciliation_defect": "run_experiment.py resume path initializes graduated_instances={} and explicitly says prior graduation is not persisted/rechecked. Resumed stages therefore treat previously graduated instances as active, and final evaluation cannot recover their frozen graduation memories from earlier stages.",
+    "risk": "a crash/restart can violate the intended Stop/Freeze semantics by reactivating and overwriting solutions that the uninterrupted controller would have frozen"
+  },
+  "evidence_scope": {
+    "positive": "FORGE is the first candidate in this continuation that places at least five relevant controller actions in one persistent self-improvement system and provides same-system ablations for broadcast and graduation plus a separate frozen post-session evaluation.",
+    "not_shown": [
+      "equal-total-budget Stop vs Continue vs Restart-with-artifact comparison",
+      "cold restart vs artifact-carrying restart ablation",
+      "candidate-local anytime-valid promotion evidence",
+      "cross-proposal durable statistical risk spending",
+      "feedback-channel bandwidth control",
+      "restart-durable preservation of controller state in current public resume code",
+      "physically isolated untouched outer benchmark split"
+    ]
+  },
+  "exact_next_action": "Search for a persistent self-improving agent that directly compares Stop/Continue/Restart or Widen/Reopen under matched total proposal/evaluation budget and a selection-unused outer test. Prefer systems with explicit crash-resume tests proving preservation of frozen/retired controller state. Separately audit candidate-local anytime-valid promotion, cross-proposal durable statistical spending, immutable artifact identity, feedback bandwidth and complete proposal chronology."
+}
