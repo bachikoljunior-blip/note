@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T03:03:11+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "7bd855f2e72225664982072ba66e6c4da36e8034",
+    "desired_state_control_revision": 12,
+    "self_improvement_config_revision": 6,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "source": {
+    "repository": "EveGoodEvening/dsh-autoresearch",
+    "revision": "ab7882ee75eed454d311ddd16fd81902aeb3cd61",
+    "paths": [
+      "src/controller.ts",
+      "src/evaluator.ts",
+      "src/tracker.ts",
+      "src/recovery.ts",
+      "tests/evaluator.spec.ts",
+      "tests/recovery.spec.ts",
+      "tests/restart.integration.spec.ts"
+    ]
+  },
+  "classification": "near-complete_evaluation_consumption_durability_substrate_not_statistically_complete_self_improvement_gate",
+  "observed_contract": {
+    "stable_attempt_identity_before_dispatch": {
+      "status": "observed",
+      "evidence": "Controller derives attemptId from experiment identity plus attempt ordinal and passes it into the frozen evaluator boundary."
+    },
+    "durable_prepare_before_spawn": {
+      "status": "observed_and_tested",
+      "evidence": "runEvaluator persists immutable spawn intent before artifact capability minting and before subprocess.spawn; test asserts failed intent persistence prevents spawn."
+    },
+    "immutable_evaluator_and_candidate_identity": {
+      "status": "observed",
+      "evidence": "Policy/evaluator provenance hashes, immutable experiment lineage, candidate commit and exact worktree verification bind the evaluated object and evaluator configuration."
+    },
+    "provider_dispatch_observation": {
+      "status": "observed",
+      "evidence": "After spawn returns, providerPid and spawnedAt are durably recorded."
+    },
+    "durable_outcome_lineage": {
+      "status": "observed_and_transactional",
+      "evidence": "recordAttemptOutcome atomically stores exit/quiescence facts, immutable measured/failed result JSON, evaluator artifacts and transition evidence in SQLite."
+    },
+    "ambiguous_attempt_recovery": {
+      "status": "fail_closed",
+      "evidence": "Recovery refuses to rerun an attempt whose whole-process-tree quiescence is not durably proven; it records attempt-uncertain and retains the lock."
+    },
+    "quiescent_missing_outcome_recovery": {
+      "status": "rerun_with_new_attempt_identity",
+      "evidence": "If an attempt is proven quiescent but lacks a durable outcome and artifacts, recovery starts the same experiment again under the next attempt ordinal. Integration test demonstrates two such attempts and eventual recovery-rerun exhaustion."
+    },
+    "candidate_decision_and_git_reconciliation": {
+      "status": "durable",
+      "evidence": "Metric is durably checkpointed before decision reconciliation; accepted/rejected experiment state and candidate/accepted Git refs are reconciled to immutable commits."
+    },
+    "real_process_tree_kill": {
+      "status": "observed_for_evaluator_descendants",
+      "evidence": "Evaluator integration test uses descendants that ignore SIGTERM and escalates to SIGKILL before persisting quiescent timeout/cancel outcome."
+    },
+    "real_controller_process_kill_matrix": {
+      "status": "not_found_in_audited_tests",
+      "scope": "The restart integration suite uses injected exceptions, controller disposal/cancellation, and real evaluator process-tree termination; no source-bound test was found that SIGKILLs the controller process after each prepare/spawn/observed/outcome boundary."
+    },
+    "provider_side_idempotency_or_receipt_reconciliation": {
+      "status": "not_observed",
+      "scope": "The audited evaluator is a local subprocess. Ambiguous attempts fail closed rather than consulting an independent provider ledger/idempotency receipt as Agent libOS does for external effects."
+    },
+    "logical_evaluation_exactly_once": {
+      "status": "not_guaranteed",
+      "evidence": "A proven-quiescent attempt whose durable outcome is missing may be rerun under a new attempt ID. This is safe from concurrent duplicate execution but can consume the same logical evaluation surface more than once."
+    },
+    "evaluation_query_or_statistical_budget_accounting": {
+      "status": "not_observed",
+      "scope": "Attempts are counted durably, but no candidate-local anytime-valid evidence state, holdout-query budget, alpha/e-value state, or cross-candidate statistical spending contract was found."
+    },
+    "selection_unused_outer_test": {
+      "status": "not_intrinsic",
+      "scope": "The system exposes one configured evaluator in the adaptive loop; a separate untouched outer-test channel is not a first-class part of the audited controller contract."
+    }
+  },
+  "key_distinction": "dsh-autoresearch materially closes the pre-dispatch identity and durable evaluation-attempt lineage gap, but attempt-level crash safety is not yet logical-query exactly-once safety. If a quiescent attempt loses its outcome, a new physical evaluation may be issued. For scarce/adaptive held-out evaluation, consumption must therefore be charged to a stable logical query identity above attemptId and survive reruns.",
+  "minimal_extension": {
+    "logical_evaluation_id": "H(protocol_version, incumbent_commit, candidate_commit, evaluator_provenance, evaluation_snapshot, instance_or_batch, seed_or_replication)",
+    "required_state": [
+      "logical evaluation prepared and query/statistical budget reserved before attempt 1",
+      "all physical attempt IDs linked to the same logical evaluation ID",
+      "consumption marked monotonically once any attempt may have reached the evaluator",
+      "provider receipt/idempotency reconciliation for remote evaluators, or explicit fail-closed unknown state",
+      "feedback-release transition distinct from outcome persistence",
+      "candidate-local statistical update from settled logical evaluations only",
+      "proposal-crossing statistical spend committed before promotion",
+      "outer-test ledger with zero adaptive-consumption transitions"
+    ],
+    "falsification": "Run matched uninterrupted vs real-controller-SIGKILL executions after durable prepare, immediately after OS spawn, after provider observation, after quiescence, after outcome, after feedback, after statistical spend and after promotion. Require identical logical query-consumption count, physical dispatch accounting, feedback, statistical state, lineage and outer-test non-consumption."
+  },
+  "scope_guard": "This contract is an implementation audit of the cited public revision. It does not claim that dsh-autoresearch statistically validates repeated self-improvement, provides an untouched outer test, or improves task performance because of these durability mechanisms.",
+  "frontier_nonempty": true,
+  "exact_next_action": "Search for a self-improving agent that adds a stable logical evaluation/query ID and durable query/statistical consumption above physical evaluator attempts, preferably with an independent provider receipt/idempotency ledger and real controller SIGKILL injection. If absent, use dsh-autoresearch as the concrete minimal seam: add a logical_evaluations table above attempts, monotone consumption/spend states and crash tests, then compare uninterrupted versus kill-resume runs. Continue separately searching for candidate-local anytime-valid promotion, cross-candidate durable spending, bounded feedback and a selection-unused outer test."
+}
