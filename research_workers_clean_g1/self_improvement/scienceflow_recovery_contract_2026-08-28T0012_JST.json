@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T00:12:28+09:00",
+  "frozen_control": {
+    "note_main_sha": "a172e224148342f8ce29fae7e4eae5b1a7c1c950",
+    "control_revision": 12,
+    "config_revision": 6,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "public_source": {
+    "repository": "huawei-noah/noah-research",
+    "commit": "d38150de76b45a0992bcfe175957d08004b7319a",
+    "scope": "ScienceFlow public source only",
+    "paths": [
+      "ScienceFlow/README.md",
+      "ScienceFlow/scripts/lnr_kill_resume.sh",
+      "ScienceFlow/scienceflow/solver/lnr/solver.py",
+      "ScienceFlow/scienceflow/solver/lnr/snapshot_store.py",
+      "ScienceFlow/scienceflow/solver/lnr/workspace_snapshot.py",
+      "ScienceFlow/scienceflow/solver/lnr/stage/stage_ledger.py",
+      "ScienceFlow/scienceflow/solver/lnr/state_machine.py",
+      "ScienceFlow/scienceflow/solver/lnr/resource_runtime/unified_store.py",
+      "ScienceFlow/scienceflow/core/parallel_runner.py",
+      "ScienceFlow/tests/test_long_horizon_repl.py",
+      "ScienceFlow/tests/test_lnr_resume.py"
+    ]
+  },
+  "findings": {
+    "archived_anchor_identity": {
+      "status": "strong_within_process_and_rehydration_support",
+      "evidence": [
+        "StageSnapshot persists stage_id, snapshot_id, node_uid, lineage_id, metric facts and source_event.",
+        "Workspace snapshots use SHA-256 content-addressed objects and manifests; restore preflights every referenced object before target mutation.",
+        "discover_all keeps snapshots addressable by stable node_uid instead of collapsing same visible stage IDs.",
+        "resume rehydrates active stage snapshots from the atomic stage map and falls back to discovered snapshots; lineage is reconstructed from loaded snapshot lineage IDs.",
+        "A public test creates two archived S01 snapshots from different lineage node_uids and verifies pending ESTRA restores the explicitly requested old node_uid while keeping both in archive."
+      ],
+      "scope_limit": "This establishes identity selection when a pending ESTRA transaction already exists in memory and establishes snapshot rehydration after restart; it does not establish persistence of the pending ESTRA decision itself across process death."
+    },
+    "workspace_restore_transaction": {
+      "status": "exception_safe_but_not_kill_atomic",
+      "evidence": [
+        "Before restoring an archived Stage, SnapshotStore captures a terminal archive of the live workspace.",
+        "On ordinary exceptions during SnapshotStore.restore, it attempts terminal-archive rollback and raises if both restore and rollback fail.",
+        "Public tests exercise restore failure and a post-restore failure and verify rollback behavior.",
+        "Per-file restore uses atomic copies and CAS object digest verification."
+      ],
+      "hard_kill_gap": [
+        "pending_estra is an in-memory solver attribute; no durable pending-ESTRA journal/replay path was found in the public source.",
+        "The terminal archive is durable, but no startup reconciler was found that scans an incomplete ESTRA transaction and automatically rolls it back or forward after SIGKILL/process death.",
+        "A hard kill between workspace clearing and complete restore can therefore leave a partially restored live workspace even though the terminal archive exists.",
+        "The provided lnr_kill_resume.sh escalates a still-running matching process to SIGKILL after one second, so hard-kill recovery is an operationally relevant boundary."
+      ]
+    },
+    "stage_and_evaluation_observability": {
+      "status": "partly_durable_not_end_to_end_transactional",
+      "evidence": [
+        "lhr_stage_map.json is written using an atomic write helper.",
+        "stage ledger validation enforces append-only stage ordering and one next-stage append at a time.",
+        "lhr_stage_performance.csv is appended with csv.DictWriter rather than a transaction journal.",
+        "LHR state events are appended to JSONL and compact lhr_state.json is then atomically replaced; a crash between these operations can leave the compact state behind the event stream until a rebuild/aggregation path runs."
+      ],
+      "scope_limit": "No public crash-injection test was found that kills the process at each ESTRA phase and asserts equality of stage map, stage ledger, performance ledger and evaluation-consumption state against an uninterrupted reference."
+    },
+    "budget_and_resource_state": {
+      "status": "mixed_durability",
+      "evidence": [
+        "Parallel-run resume budget accounting persists charged_elapsed_sec, resume_prior_charged_elapsed_sec and resume_total_budget_sec in logs/state.json; remaining-policy resumes spend logical budget minus charged elapsed, while fresh-policy grants the configured segment budget.",
+        "External-LLM failure classes can be explicitly uncharged.",
+        "UnifiedResourceStore protects resource_state.json with an exclusive file lock and atomic os.replace, and appends resource events under a separate lock."
+      ],
+      "gap": [
+        "Parallel runner task state uses direct state_file.write_text in observed running/finalization paths rather than the atomic resource-state helper; malformed JSON is read as an empty state. A parent/controller crash during that write can therefore lose charged-budget/controller metadata.",
+        "This write-risk is scoped to the parallel-run task state path; it does not negate the stronger atomic resource_state.json implementation."
+      ]
+    },
+    "existing_resume_tests": {
+      "covered": [
+        "single pending tool-call detection and direct execution",
+        "continuation after a persisted tool result",
+        "resource resume events and resumed-bash heartbeat",
+        "stage snapshot rehydration",
+        "exact archived-node restore when pending_estra is already present",
+        "ordinary-exception rollback during or after archived-stage restore"
+      ],
+      "not_observed": [
+        "process kill immediately after ESTRA decision but before restore",
+        "process kill after terminal archive creation but before workspace restore completes",
+        "process kill after workspace restore but before memory/stage-map/lineage commit completes",
+        "restart-equivalence assertion for charged budget plus evaluation-consumption cursor",
+        "kill-point matrix asserting exact action chronology equivalence"
+      ]
+    }
+  },
+  "design_hypothesis": {
+    "name": "proof-carrying recovery transaction",
+    "required_durable_fields": [
+      "transaction_id",
+      "action and target node_uid/snapshot_id/manifest digest",
+      "pre-restore terminal-archive manifest digest",
+      "source lineage and intended successor lineage",
+      "phase marker",
+      "charged-budget cursor",
+      "evaluation-consumption/query cursor",
+      "stage-ledger/performance-ledger cursor",
+      "resource lease/proposal cursor",
+      "pending side-effect/tool cursor"
+    ],
+    "phase_model": [
+      "decision_committed",
+      "terminal_archive_committed",
+      "workspace_restore_started",
+      "workspace_restored",
+      "memory_rebuilt",
+      "stage_map_and_lineage_committed",
+      "evaluation_and_budget_cursors_committed",
+      "done"
+    ],
+    "recovery_rule": "At startup, reconcile any non-done transaction by idempotent roll-forward only when all phase preconditions and content digests match; otherwise restore the pre-transaction terminal archive and controller/evaluation/budget cursors. Never infer completion from workspace contents alone.",
+    "matched_test": "Run an uninterrupted reference and inject SIGKILL at every durable phase boundary and selected interior points. After resume, compare workspace manifest hash, active node_uid, lineage, stage map, ledger rows, evaluator query IDs, charged budget, resource state, pending tool cursor and final outer result. Require semantic equivalence before claiming crash-safe recovery."
+  },
+  "conclusion": "ScienceFlow currently provides substantially stronger recovery than a context-only restart: immutable-ish content-addressed Stage snapshots, exact archived-node identity, terminal-archive rollback on ordinary exceptions, tool-call resume and durable resource state. The missing piece is a single durable ESTRA recovery transaction binding action intent, workspace restore, lineage/controller state, budget and evaluation-consumption state across hard process death. Therefore its recovery evidence supports selective artifact-preserving restart, but not arbitrary-kill semantic equivalence of the whole self-improvement controller.",
+  "frontier": [
+    "Search for explicit crash-injection/restart-equivalence tests in another persistent self-improving agent that bind controller action, artifact identity, budget and evaluation-consumption state.",
+    "Find a matched multi-action controller experiment comparing at least Continue, clean restart, artifact-preserving restart/rewind and strategy redirect under equal proposal/evaluation budget and a selection-unused outer test.",
+    "Retain separate unresolved requirements: candidate-local anytime-valid promotion, proposal-crossing durable statistical spending, bounded selection-feedback bandwidth, immutable artifact identity and complete action/proposal chronology."
+  ]
+}
