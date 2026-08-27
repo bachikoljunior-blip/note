@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T16:16:49+09:00",
+  "portfolio": {
+    "lambdas": [0.47, 1.06, 1.87, 3.37, 7.4],
+    "weights": [0.20164302, 0.13134027, 0.23178294, 0.19559454, 0.23963933]
+  },
+  "joint_optimization": {
+    "alpha": 0.05,
+    "tolerances": [0.001, 0.002, 0.005, 0.01, 0.02, 0.05],
+    "score_sum_grid": {"min": 0.0, "max": 50.0, "step": 0.1, "count": 501},
+    "contracts": [
+      "equal-process average conditional mean using the exact bounded-chord denominator",
+      "predictably weighted average conditional mean using the conservative weighted denominator"
+    ],
+    "total_finite_constraints": 6012,
+    "constraint": "For every design point under both contracts, cross no later than both the baseline mixture and R times the per-scenario best single-lambda oracle.",
+    "worst_delay_ratio_R": 1.167090798343997
+  },
+  "equal_process_results": {
+    "baseline_worst_oracle_delay_ratio": 1.300246100628033,
+    "portfolio_worst_oracle_delay_ratio": 1.1670908350097398,
+    "max_delay_minus_baseline_on_3006_design_points": 4.11157998314593e-06,
+    "101_logspaced_tolerances_x_501_scores_max_delay_minus_baseline": 4.111580096832768e-06,
+    "interpretation": "No material regression was observed; the tiny positive values are root/LP numerical tolerance, not a claimed analytic continuum proof."
+  },
+  "predictably_weighted_results": {
+    "baseline_worst_oracle_delay_ratio": 1.2993209900888556,
+    "portfolio_worst_oracle_delay_ratio": 1.167090811695021,
+    "max_delay_minus_baseline_on_3006_design_points": 0.00026640447322279215,
+    "101_logspaced_tolerances_x_501_scores_max_delay_minus_baseline": 0.00026640447322279215,
+    "interpretation": "No material regression was observed; the residual is numerical tolerance at the high-score edge."
+  },
+  "weighted_contract": {
+    "artifact": "research_workers_clean_g1/evaluation/weighted_cluster_average_conditional_mean_cs.py",
+    "formula": "E_lambda(m)=exp(-lambda*sum_i w_i Y_i + (1-exp(-lambda))*m*sum_i w_i)",
+    "target": "sum_i w_i E[Y_i|F_{i-1}] / sum_i w_i",
+    "weight_requirement": "0<w_i<=1 and w_i must be fixed before the current cluster outcome is observed",
+    "proof_outline": [
+      "convexity: E exp(-lambda w_i Y_i) <= 1-(1-exp(-lambda w_i))*mu_i",
+      "1-x<=exp(-x)",
+      "(1-exp(-lambda w))/w is decreasing on (0,1], hence >=1-exp(-lambda)",
+      "the proposed component at the true weighted average is pathwise dominated by the corresponding nonnegative supermartingale; fixed mixtures inherit Ville validity"
+    ]
+  },
+  "measurement_boundary": {
+    "equal_process": "Unequal process sizes do not affect the equal-process estimand if each process contributes exactly one bounded score.",
+    "request_weighted": "Request/exposure weighting is a different estimand. Realized process size is not a valid weight by default if it can depend on the current outcome.",
+    "preferred_design_when_possible": "Prospectively fixed equal-size exposure blocks avoid retrospective size weighting and can use the tighter equal-weight construction even when blocks are dependent across time.",
+    "fallback": "If unequal exposure weights are known prospectively, use the weighted construction with a predeclared normalization cap; if the cap is exceeded, fail closed or begin a separately declared generation rather than retrospectively renormalizing."
+  },
+  "implementation_sanity_not_proof": {
+    "simulation": "30,000 trajectories, 500 top-level clusters, three adaptive/exogenous predictable-weight and conditional-mean patterns",
+    "ever_crossing_at_true_running_weighted_average": [0.037733333333333334, 0.00006666666666666667, 0.0],
+    "scope": "Validity rests on the supermartingale-domination proof, not these simulations."
+  },
+  "scope_guards": [
+    "The unified portfolio is optimized on synthetic design grids, not production mismatch traffic.",
+    "Finite-grid and dense-stress no-regression are not an analytic continuum dominance theorem.",
+    "The weighted construction needs predictable weights; it does not justify outcome-dependent realized-size weighting.",
+    "Do not replace the current default portfolio until independent implementation tests and broader fractional/weight contracts are complete."
+  ]
+}
