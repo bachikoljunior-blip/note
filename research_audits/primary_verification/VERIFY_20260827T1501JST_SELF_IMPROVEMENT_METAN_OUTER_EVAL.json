@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "audit_kind": "primary_source_verification",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "5cece1501eb21bfe9e463b27871020bc0fe2bfdb",
+    "root_control_revision": 11,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "downstream_control_revision": 19,
+    "downstream_state_blob": "3006c9416c64a704f4ad9e3071b7ee8edc7bf178",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5,
+    "semantic_freeze_completed_before_first_clean_or_public_semantic_read": true
+  },
+  "candidate": {
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-27T1204_JST_metan_historical_outer_eval_matrix.md",
+    "source_artifact_blob": "1cb181bb29bd17a49ef6a313f3fb892da5eeca91",
+    "source_local_candidate_id": "SIG-METAN-HISTORICAL-RUN-MATRIX",
+    "paper": "arXiv:2608.24735v1",
+    "paper_submitted_at": "2026-08-25T15:44:25Z",
+    "public_repo": "minnesotanlp/meta-n",
+    "repo_pin": "b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8"
+  },
+  "status": "primary_verified_with_material_outer_evaluation_identity_clarification",
+  "findings": [
+    {
+      "claim": "Recovered Stage 1/2/3a/3b/4 agentic runner proxies bypass the current default benchmark-feature profile.",
+      "verdict": "verified_at_pinned_public_repo",
+      "evidence": {
+        "scripts": [
+          "scripts/run_agentic_stage1_classification.sh",
+          "scripts/run_agentic_stage2_cobench.sh",
+          "scripts/run_agentic_stage3a_math_algotune.sh",
+          "scripts/run_agentic_stage3b_sr.sh",
+          "scripts/run_tb2_agentic_all.sh"
+        ],
+        "all_explicitly_pass": "--benchmark-config none",
+        "current_default_profile_path": "meta_n/configs/benchmark_features.yaml",
+        "current_default_profile_enables": [
+          "use_archive",
+          "consolidate",
+          "regression_guard",
+          "within_task_recursion",
+          "focus_current_headroom",
+          "symmetric_trace_sampling",
+          "classification eval_repeats=3",
+          "OpenEvolve-family foster_adoption"
+        ]
+      },
+      "scope": "The public pin is post-paper and the scripts are historical-run proxies. This does not cryptographically prove that unreleased paper-run source bytes were identical."
+    },
+    {
+      "claim": "AlphaEvolve Math, Symbolic Regression and AlgoTune have no distinct outer held-out test surface in the pinned public adapter.",
+      "verdict": "verified",
+      "evidence": {
+        "adapter": "meta_n/integrations/openevolve.py",
+        "split_type": "dev_equals_test",
+        "evaluate_test_behavior": "delegates directly to evaluate(task, solution)",
+        "paper_appendix_test_split": {
+          "AlphaEvolve Math": "no",
+          "Symbolic Regression": "no",
+          "AlgoTune": "no"
+        }
+      },
+      "scope": "The reported benchmark score may still be valid as a same-surface benchmark result; it is not a post-selection held-out generalization result."
+    },
+    {
+      "claim": "TerminalBench Stage 4 has no adapter-level held-out final-test path.",
+      "verdict": "verified",
+      "evidence": {
+        "base_contract": "BenchmarkAdapter intentionally leaves evaluate_test absent on terminal_bench and swe_bench",
+        "terminal_adapter": "meta_n/integrations/terminal_bench/adapter.py",
+        "terminal_adapter_evaluate_test_definition_found": false,
+        "paper_appendix_test_split": "no"
+      },
+      "scope": "This says no separate adapter-level test pass exists; it does not say TerminalBench task verification is absent."
+    },
+    {
+      "claim": "CO-Bench, Symptom2Disease and LawBench have structurally distinct held-out test surfaces.",
+      "verdict": "verified",
+      "evidence": {
+        "paper_table1": "reports held-out test for CO-Bench, S2D and LawBench",
+        "paper_appendix_test_split": {
+          "CO-Bench": "yes",
+          "Symptom2Disease": "yes",
+          "LawBench": "yes"
+        },
+        "co_bench_code": "dev uses get_dev-selected indices; test uses the non-dev complement",
+        "classification_code": "S2D uses dataset train-derived validation versus original dataset test; LawBench uses first 200 train, next max_val validation, remaining examples test",
+        "classification_split_type": "held_out"
+      }
+    },
+    {
+      "claim": "Held-out reporting is post-search, but archive-best held-out identity is not one universal frozen chain on multi-task benchmarks.",
+      "verdict": "verified_and_materially_clarified",
+      "evidence": {
+        "orchestrator_oracle_test": "After evolution, _run_test_evaluation(tasks) takes archive.per_task_best_traces() and re-executes each stored winning script on held-out test cases.",
+        "orchestrator_single_chain_test": "A separate post-search _run_chain_test_evaluation(tasks) evaluates archive.best_candidate as one candidate across all tasks.",
+        "paper_table1_reports_both": "Meta^n archive-best and Meta^n best chain are separate estimators."
+      },
+      "material_clarification": "For a multi-task benchmark such as 36-task CO-Bench, archive-best held-out is a dev-selected per-task portfolio mapping task->winning candidate, then one held-out re-evaluation of those stored scripts. It is not a single chain/router identity. Best-chain held-out is the single-candidate estimator. Reproducibility records should bind the full task->candidate source map for archive-best, not only one candidate id.",
+      "scope": "The test pass is still post-search in the inspected orchestrator path. This audit did not obtain the unpublished original paper-run summary/archive files, so exact historical task->candidate identities remain unbound."
+    }
+  ],
+  "paper_cross_check": {
+    "table5_test_split_matrix_matches_public_adapter_classification": true,
+    "table1_archive_best_vs_best_chain_distinction_matches_orchestrator_estimators": true,
+    "paper_reports_archive_best_test_for_cobench_s2d_lawbench": true
+  },
+  "unresolved": [
+    "Obtain the exact paper-run archive/summary artifacts and bind every CO-Bench archive-best held-out task to its selected candidate id/script digest before test evaluation.",
+    "Bind S2D/LawBench paper-run selected candidate identity and confirm exact historical test invocation count from immutable run artifacts rather than current code only.",
+    "Recover pre-public executable/result bundles if available; current public historical scripts are strong proxies but not proof of unreleased paper-run bytes.",
+    "Extend the same identity-binding audit to ARC-AGI-2 once its exact historical runner/config surface is source-bound."
+  ],
+  "primary_sources": [
+    "https://arxiv.org/html/2608.24735v1",
+    "https://github.com/minnesotanlp/meta-n/tree/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8",
+    "https://github.com/minnesotanlp/meta-n/blob/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8/meta_n/core/evolutionary_orchestrator.py",
+    "https://github.com/minnesotanlp/meta-n/blob/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8/meta_n/integrations/openevolve.py",
+    "https://github.com/minnesotanlp/meta-n/blob/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8/meta_n/integrations/co_bench.py",
+    "https://github.com/minnesotanlp/meta-n/blob/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8/meta_n/integrations/text_classification.py",
+    "https://github.com/minnesotanlp/meta-n/blob/b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8/meta_n/integrations/terminal_bench/adapter.py"
+  ],
+  "verified_at": "2026-08-27T15:01:36+09:00"
+}
