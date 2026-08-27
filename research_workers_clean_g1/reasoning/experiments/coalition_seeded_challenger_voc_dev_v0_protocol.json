@@ -1,0 +1,55 @@
+{
+  "schema": "coalition_seeded_challenger_voc_dev_v0_protocol",
+  "created_at": "2026-08-28T08:29:30+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "bacec85e03c37c8d4ed3944e1f5214f2fb3e26a8",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Development-only reformulation of optional seeded diversity as an incumbent-preserving interruptible challenger. The completed two-arm endpoint remains available at all times; seeded search is never allowed to worsen final quality. Measure where challenger benefits become certifiable and the quality/compute Pareto frontier of bounded challenger evaluation before any new confirmation split is selected.",
+  "scope": "Synthetic positive-monotone graph 2-CNF ROBDD ordering only. Development evidence only; no C589/C590/C591 holdout case may be used for fitting or threshold selection.",
+  "development_cases": {
+    "n": 12,
+    "families": {
+      "cubic": {"generator": "random_regular_graph", "degree": 3, "seeds": [886000,886001,886002,886003,886004,886005,886006,886007,886008,886009,886010,886011,886012,886013,886014,886015,886016,886017,886018,886019]},
+      "quartic": {"generator": "random_regular_graph", "degree": 4, "seeds": [886100,886101,886102,886103,886104,886105,886106,886107,886108,886109,886110,886111,886112,886113,886114,886115,886116,886117,886118,886119]},
+      "watts": {"generator": "watts_strogatz_graph", "k": 4, "p": 0.2, "seeds": [886200,886201,886202,886203,886204,886205,886206,886207,886208,886209,886210,886211,886212,886213,886214,886215,886216,886217,886218,886219]},
+      "erdos": {"generator": "erdos_renyi_graph", "p": 0.25, "seeds": [886300,886301,886302,886303,886304,886305,886306,886307,886308,886309,886310,886311,886312,886313,886314,886315,886316,886317,886318,886319]}
+    }
+  },
+  "search_contract": {
+    "natural": "sorted node order",
+    "rcm": "networkx reverse_cuthill_mckee_ordering",
+    "seeded_start": "16 random permutations from RNG graph_seed+100000; eligible width <= min(natural_width,rcm_width)+2; among eligible maximize minimum normalized Kendall distance to natural and RCM, ties lower width then lexicographic; if none eligible choose minimum width then lexicographic",
+    "neighborhood": "all distinct one-variable remove-and-reinsert orders in deterministic existing i-then-j enumeration",
+    "candidate_filter": "vertex-separation width <= current_width+1",
+    "accept": "after a complete local stage, accept the globally best candidate only if live nonterminal ROBDD nodes strictly improve; ties by allocated nodes then lexicographic order",
+    "max_accepted_moves_per_arm": 2,
+    "oracle": "cross-order exact Hamming-rank equality plus direct exhaustive truth comparison in each endpoint's own relabeled coordinates"
+  },
+  "controller_architecture": {
+    "incumbent": "first complete the existing two-arm natural+RCM policy and retain its final endpoint permanently",
+    "challenger": "evaluate the seeded arm independently; every challenger candidate compilation is charged",
+    "quality_rule": "final output is always the best already verified endpoint among the two-arm incumbent and evaluated seeded orders; therefore optional challenger evaluation cannot cause positive quality regret versus two-arm",
+    "positive_certificate": "as soon as any evaluated seeded order has live_nodes < incumbent_two_live, a verified quality improvement exists and the controller may stop immediately with that order without finishing the local stage",
+    "negative_stop": "no finite unevaluated prefix is treated as a proof of no future benefit; any early negative stop is a value-of-computation decision and must report missed-benefit regret versus exhaustive challenger"
+  },
+  "offline_development_collection": {
+    "continue_full_challenger_after_certificate": true,
+    "reason": "collect complete trajectories for development analysis only; deployment policies may stop earlier",
+    "record_per_candidate": ["global_challenger_compile_index","stage_index","candidate_index_within_stage","candidate_live","best_seen_live","incumbent_gap","current_order_live","current_width","candidate_width","remaining_candidates_in_stage"],
+    "record_per_case": ["two_arm_live","two_arm_compiles","exhaustive_challenger_best_live","challenger_compiles","first_certificate_compile_index","maximum_quality_gain_vs_two","stage_boundaries"]
+  },
+  "predeclared_prefix_policies": [0,16,32,64,128],
+  "prefix_policy_semantics": "Starting after the seeded initial-order compile, evaluate at most B additional challenger candidate compilations. If a positive certificate occurs by B, return the best verified challenger endpoint observed; otherwise return the two-arm incumbent. B=0 still charges the seeded initial-order compile if the challenger is opened; a separate pure two-arm baseline opens no challenger and pays zero challenger compiles.",
+  "primary_reports": [
+    "Prevalence and magnitude of exhaustive seeded challenger benefit over two-arm.",
+    "Distribution of first positive-certificate compile index among beneficial cases, including stage and candidate position.",
+    "For every fixed prefix B, total extra challenger compiles, recovered quality gain, missed-benefit regret versus exhaustive challenger, and zero-harm verification versus two-arm.",
+    "Pareto frontier of extra candidate compilations versus missed-benefit live-node regret, with pure two-arm and exhaustive challenger included.",
+    "No classifier, threshold, or adaptive policy is confirmation evidence on this development set. Any learned/sequential policy derived here requires a new untouched preregistered split."
+  ],
+  "frozen_holdout_exclusion": ["C589","C590","C591"]
+}
