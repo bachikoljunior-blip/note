@@ -1,6 +1,6 @@
 # Continual Learning — clean_g1 latest
 
-Latest checkpoint: `RUN_20260827T2013_JST.md`
+Latest checkpoint: `RUN_20260827T2103_JST.md`
 
 Base state: `STATE.md`
 
@@ -14,14 +14,15 @@ Current deterministic reconstruction tools:
 - `OPENCOMPASS_051_052_PAIRED_ENV_CONTRACT_20260827.json`
 - `OPENCOMPASS_051_052_TRACK_A_DEPENDENCY_BOUNDARY_20260827.json`
 - `OPENCOMPASS_TRACK_A1_HF_FIXTURE_CONTRACT_20260827.json`
+- `OPENCOMPASS_TRACK_A1_SHARED_LOCK_SPEC_20260827.json`
 
 Current corrected public reconstruction anchors:
 - OpenCompass 0.5.1 first-party publication source anchor: tag `0.5.1.post1` at `ecc86a2728c06fd2c1ad34f1d0094f42b5243c78`.
 - OpenCompass 0.5.2 sensitivity anchor: `974179240a1a4e3c0ff14c60621cf1f6c95b287a`.
 
-Current key refinement: Track A1 now fixes `HuggingFaceCausalLM` on a source file that is byte-identical across the two OpenCompass anchors and fixes a tiny public model revision plus all nine DeMix benchmark config blobs. The visible `openicl_eval.py` changes are unreachable or neutral for this fixture (ordinary HF outputs do not enter the new rollout branch; GSM8K is the only frozen dataset with a dataset postprocessor and supplies no extra kwargs). The largest remaining source-level confounder before scores is the expanded 0.5.2 eager dataset-registry/import surface plus dependency resolution, not a changed HF wrapper or changed nine-benchmark definition.
+Current key refinement: Track A1's shared dependency environment must model OpenCompass's `.[full]` import surface, not runtime-only. OpenCompass 0.5.2's own unit-test installs `.[full]`, and `setup.py` defines that as runtime + extra. Newly eager-imported 0.5.2 dataset families have dependencies declared only in extra. Under `full`, `pyext` is present at both anchors because both extra manifests include it, so the prior runtime-level pyext difference is neutralized; pandas remains the important direct constraint difference. The shared-lock contract now fail-closes until every installed direct/transitive distribution, including implicit imports such as sympy, has an exact artifact hash.
 
-Exact next action: finish the import-time registry/dependency audit just enough to pin one explicit shared Python 3.10 lock, then execute Track A1 phase 1 under both anchors with identical wrapper/model/tokenizer/dependencies and persist import/package/file hashes. If both imports succeed, compare raw nine-benchmark inference hashes before evaluating scores; run MBPP/HumanEval evaluators only in an isolated code-execution sandbox.
+Exact next action: in a networked Linux/Python-3.10 environment, resolve and hash the complete shared full-surface dependency lock from `OPENCOMPASS_TRACK_A1_SHARED_LOCK_SPEC_20260827.json`, then execute Track A1 phase 1 under both source anchors with byte-identical dependencies and persist import/package/file hashes. If imports match, compare raw nine-benchmark inference hashes before any score aggregation.
 
 Nonempty frontier after Track A1:
 1. complete remaining DeMix checkpoint metadata byte-identity classes;
