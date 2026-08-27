@@ -1,0 +1,65 @@
+{
+  "schema_version":1,
+  "worker":"cross_field",
+  "generation":"clean_g1",
+  "control_revision":12,
+  "config_revision":5,
+  "semantic_tuple":{"note_main_sha_frozen":"3dff64912d405392d25f0ca51ed3bcb9275c51d1","desired_state_blob":"5c91671e1470d0fa4e2a53f918493004dd3750c3","role_config_blob":"a28a0cef2712c1561973bde4c83cea6e14a4c024"},
+  "title":"Multi-generation defensive-priority SMC: ordering aliasing survives recursion; square-root particle allocation reduces variance at fixed budget",
+  "public_sources":[
+    {"title":"Comparison of Resampling Schemes for Particle Filtering","authors":"Randal Douc, Olivier Cappe, Eric Moulines","url":"https://arxiv.org/abs/cs/0507025","date":"2005-07-08","used_for":"Published counterexample that systematic resampling lacks uniform variance dominance; stratified/residual improve over multinomial in the analyzed one-step setting."},
+    {"title":"Stratification and Optimal Resampling for Sequential Monte Carlo","authors":"Yichao Li, Wenshuo Wang, Ke Deng, Jun S. Liu","url":"https://arxiv.org/abs/2004.01975","date":"2020-04-04","used_for":"Ordered stratification can reduce resampling variance and is optimal in the stated one-dimensional setting."},
+    {"title":"Variance estimation in the particle filter","authors":"Anthony Lee, Nick Whiteley","url":"https://arxiv.org/abs/1509.00394","date":"2015-09-01","used_for":"Particle-filter asymptotic variance decomposes into time-step contributions; varying particle counts permits approximate asymptotically optimal allocation, with genealogy-based variance estimation from a single run."}
+  ],
+  "synthetic_model":{
+    "state_space":[0,1],
+    "initial_distribution":[0.8,0.2],
+    "transition_matrix":[[0.94,0.06],[0.25,0.75]],
+    "post_transition_potential":[0.35,2.8],
+    "initial_particles":64,
+    "initial_representation":"32 particles per state with weights 0.8/32 and 0.2/32, so the initial measure is exact rather than Monte Carlo sampled.",
+    "priority_score":"one-step continuation value h=P*G=[0.497,2.1875]",
+    "defensive_priority":"q_i = 0.35*(W_i/sum W) + 0.65*(W_i h(x_i)/sum_j W_j h(x_j))",
+    "post_resampling_weight":"W_i/(M_out q_i)",
+    "transition":"base P only; no transition-proposal likelihood ratio needed in this experiment",
+    "exact_normalizing_constants":{"T1":0.8351,"T2":1.3522579,"T3":2.7199398191,"T4":5.692337028613899,"T5":11.987463336827743}
+  },
+  "resampling_validation":{
+    "design":"At each generation compute q from the pre-resampling weighted system, reorder particles as score-sorted, alternating low/high priority, or fresh random permutation, resample with iid multinomial, independent stratified uniforms, or one shared-offset systematic uniform, then propagate through base P and G. Correctness follows conditionally from expected offspring counts Mq plus W/(Mq); Monte Carlo means are a numerical check only.",
+    "main_repetitions":8000,
+    "focused_T5_repetitions":30000,
+    "T5_focused_results":[
+      {"order":"alternating","method":"iid","mean_Zhat":11.977335,"mc_se":0.017078,"z_from_exact":-0.593057,"variance":8.749875,"mean_final_ESS":51.194651,"mean_unique_initial_ancestors":11.176967,"mean_max_family_fraction":0.239695},
+      {"order":"alternating","method":"stratified","mean_Zhat":12.004297,"mc_se":0.016317,"z_from_exact":1.031627,"variance":7.987554,"mean_final_ESS":51.186118,"mean_unique_initial_ancestors":17.954333,"mean_max_family_fraction":0.146186},
+      {"order":"alternating","method":"systematic","mean_Zhat":11.996135,"mc_se":0.023624,"z_from_exact":0.367086,"variance":16.742768,"mean_final_ESS":51.193348,"mean_unique_initial_ancestors":18.323300,"mean_max_family_fraction":0.162982},
+      {"order":"sorted","method":"systematic","mean_Zhat":11.987534,"mc_se":0.015617,"z_from_exact":0.004551,"variance":7.316595,"mean_final_ESS":51.201575,"mean_unique_initial_ancestors":18.965267,"mean_max_family_fraction":0.131817},
+      {"order":"random","method":"systematic","mean_Zhat":11.971510,"mc_se":0.016132,"z_from_exact":-0.988939,"variance":7.807425,"mean_final_ESS":51.174772,"mean_unique_initial_ancestors":18.817167,"mean_max_family_fraction":0.141289}
+    ],
+    "derived_ratios_T5":{"systematic_alternating_over_stratified_alternating_variance":2.0961069855,"systematic_alternating_over_iid_alternating_variance":1.9134866644,"stratified_alternating_over_iid_alternating_variance":0.9128764312,"systematic_alternating_over_systematic_sorted_variance":2.2883278615,"systematic_alternating_over_systematic_random_variance":2.1444674366},
+    "across_generations":{"systematic_alternating_over_stratified_alternating_variance":{"T2":2.5441,"T3":2.4613,"T4":2.3055,"T5":2.1429},"interpretation":"The shared-offset ordering penalty survives 2-5 recursive generations in this finite-state model. The exact factor is model/order-specific and is not a universal lower bound."}
+  },
+  "particle_allocation":{
+    "theorem_level_derivation":"If asymptotic variance is approximated by sum_t A_t/N_t and per-particle cost at step t is k_t, minimizing variance subject to sum_t k_t N_t=C yields N_t = C*sqrt(A_t/k_t)/sum_s sqrt(A_s k_s). With equal per-particle costs, N_t is proportional to sqrt(A_t). Predictable N_t chosen before current-generation offspring preserves the conditional unbiasedness argument; outcome-dependent current-generation stopping is not covered.",
+    "pilot":"Using independent 6000-repetition finite differences around N_t=64 (one generation changed to 32 or 128 while the others stayed 64) gave engineering A_t estimates [245.2047,81.6926,43.1701,54.8012,44.2172]. These are finite-model pilot estimates, not a single-run theorem-level variance estimator.",
+    "fixed_budget":320,
+    "equal_schedule":[64,64,64,64,64],
+    "sqrt_schedule":[111,64,46,52,47],
+    "reverse_control_schedule":[47,52,46,64,111],
+    "independent_validation_repetitions":30000,
+    "validation":[
+      {"schedule":"equal","mean_Zhat":11.979372,"variance":7.3185774131},
+      {"schedule":"sqrt","mean_Zhat":11.998495,"variance":6.2845445599},
+      {"schedule":"reverse_control","mean_Zhat":11.969888,"variance":9.2858385520}
+    ],
+    "derived":{"sqrt_vs_equal_variance_reduction":0.1412887771,"reverse_vs_equal_variance_increase":0.2688037617},
+    "interpretation":"At identical total descendant budget, pilot-estimated square-root allocation reduced normalizing-constant variance by about 14.1% in an independent synthetic validation, while reversing the allocation increased variance by about 26.9%. The result supports online generation-wise allocation from genealogy/asymptotic-variance estimates rather than uniform particle counts, but it is not a real-agent benchmark."
+  },
+  "negative_scope":[
+    "Systematic resampling remains unbiased here under the proper expected-count correction; the result concerns variance and ordering sensitivity, not correctness.",
+    "The adversarial alternating order is deliberately constructed and does not imply systematic resampling is usually poor.",
+    "Stratified ordering is also algorithmic state; its variance is robustly bounded in the one-step theorem but multi-generation total-variance dominance is not claimed.",
+    "The square-root schedule used pilot estimates from repeated synthetic runs. Production use should estimate generation-wise variance contributions online, e.g. from genealogy-based estimators, and choose counts predictably from past information.",
+    "No claim about AGI capability, real multi-turn agents, human labels, or tool/environment likelihoods follows from this finite-state experiment."
+  ],
+  "next_action":"Replace repeated-run pilot A_t estimates with a role-local single-run/past-only genealogy variance proxy inspired by Lee-Whiteley/ALVar, then choose predictable N_t by the square-root rule and validate under abrupt changes in which the high-variance generation moves over time. Keep independent stratified resampling as the robust default; retain systematic only behind an explicit ordering-randomization/variance test if there is a compelling implementation reason. After this, map the same construction to a finite multi-turn agent trajectory only when base/proposal transition likelihood semantics are explicit."
+}
