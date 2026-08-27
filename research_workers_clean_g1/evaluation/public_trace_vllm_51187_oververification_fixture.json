@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "purpose": "Machine-checkable aggregate fixture for the public vLLM #51187 response-object-vs-token mismatch observation. This is not an independent reproduction.",
+  "source": {
+    "url": "https://github.com/vllm-project/vllm/issues/51187",
+    "opened": "2026-08-05",
+    "runtime": {
+      "vllm": "0.26.0",
+      "torch": "2.11.0+cu130",
+      "gpu": "NVIDIA GeForce RTX 4060 Laptop sm_89 8GB",
+      "model": "Qwen3-0.6B float16",
+      "batch_invariant": true,
+      "sampling": {"temperature": 0, "seed": 0, "max_tokens": 24, "logprobs": 5}
+    },
+    "comparison": "all unordered repeat pairs across five byte-identical repeats"
+  },
+  "workloads": [
+    {
+      "name": "31_requests_plus_13_fillers",
+      "co_resident_sequences": 44,
+      "repeats": 5,
+      "repeat_pairs_per_request": 10,
+      "total_request_repeat_pair_observations": 440,
+      "reported_diverging_response_logprob_observations": 188,
+      "derived_response_object_mismatch_rate": 0.42727272727272725,
+      "reported_token_divergences": 0,
+      "reported_max_logprob_delta": 0.04685,
+      "distinct_response_objects_over_five_repeats": 3
+    },
+    {
+      "name": "32_requests_plus_13_fillers",
+      "co_resident_sequences": 45,
+      "repeats": 5,
+      "repeat_pairs_per_request": 10,
+      "total_request_repeat_pair_observations": 450,
+      "reported_diverging_response_logprob_observations": 128,
+      "derived_response_object_mismatch_rate": 0.28444444444444444,
+      "reported_token_divergences": 0,
+      "reported_max_logprob_delta": 0.03906,
+      "distinct_response_objects_over_five_repeats": 2
+    }
+  ],
+  "invariants_to_check": [
+    "repeat_pairs_per_request == repeats*(repeats-1)/2",
+    "total_request_repeat_pair_observations == co_resident_sequences*repeat_pairs_per_request",
+    "derived_response_object_mismatch_rate == reported_diverging_response_logprob_observations/total_request_repeat_pair_observations",
+    "reported_token_divergences == 0"
+  ],
+  "decision_relevance": {
+    "safe_inference": "For any frozen deterministic scorer that consumes only the emitted token/text sequence, the reported trace has zero scorer-input mismatch despite nonzero response-object/logprob mismatch. Thus full response-object equality would reject differences that are irrelevant to that scorer in this exact trace.",
+    "not_safe_to_infer": "This fixture does not establish token stability in other fingerprints or server lifetimes. The source itself reports a second server lifetime that was fully reproducible and does not identify a universal threshold."
+  },
+  "contrast_source": {
+    "url": "https://github.com/vllm-project/vllm/pull/51292",
+    "merged_at": "2026-08-25T19:16:10Z",
+    "observation": "The merged fix for #51290 reports TP=4 produced 8 distinct bit-exact outputs over 8 identical runs before the fix and 1 after; mnnvl showed token flips and trtllm showed 8 distinct logprob groups with zero token flips in one reported run. This contrast is why the fixture must remain fingerprint-scoped."
+  }
+}
