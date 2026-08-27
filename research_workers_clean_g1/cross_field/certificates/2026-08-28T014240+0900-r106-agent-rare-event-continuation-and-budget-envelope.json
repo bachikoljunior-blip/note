@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "certificate_id": "cf-g1-r106-agent-rare-event-continuation-and-budget-envelope",
+  "created_at": "2026-08-28T01:42:40+09:00",
+  "semantic_control": {
+    "note_main_sha_frozen": "b1c1aa468b1baf36e19eac766394a50c6ce17ee4",
+    "root_control_revision": 12,
+    "config_revision": 5,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_control_semantics_adopted": false
+  },
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-28T013415+0900-r105.json",
+  "public_sources": [
+    {
+      "title": "Uesato et al., Rigorous Agent Evaluation: An Adversarial Approach to Uncover Catastrophic Failures",
+      "url": "https://arxiv.org/abs/1812.01647",
+      "date": "2018-12-04",
+      "observed_results": [
+        "The method learns an adversarial value/failure predictor by continuation from weaker or noisier agents, then uses it to choose evaluation initial conditions and importance-correct failure-probability estimates.",
+        "Failure search median sample acceleration versus random testing is 198x in simulated Driving and 3100x in Humanoid. Median expected wall-clock failure search is 2.7 hours random versus 1.1 minutes AVF on Driving; including 5 minutes AVF training gives 27x total speedup. Humanoid is 77 hours random versus 6 minutes AVF search; including 70 minutes AVF training gives 61x total speedup.",
+        "At 95% confidence for a 3-approximation of failure probability, AVF uses 750 vs 11,000 experiments on Driving (14x fewer) and 15,000 vs 510,000 on Humanoid (34x fewer).",
+        "A simpler prioritized-replay baseline can fail to discover existing failures; the paper explicitly falls back to vanilla Monte Carlo after exhausting known training failures. The authors also argue binary rare failures make direct cross-entropy/subset methods hard on the final robust agent and use continuation from weaker agents to create learning signal."
+      ]
+    },
+    {
+      "title": "Liu et al., Adaptive Multilevel Twisted Sequential Monte Carlo for Rare Events Estimation in Language Models",
+      "url": "https://arxiv.org/abs/2608.21736",
+      "date": "2026-08-22",
+      "observed_ablation_results": [
+        "At toxic-story gamma*=7 with p_MC=3.81e-6, samples per adaptation level have a strong non-linear effect: 256 gives 93.1% error, 512 gives 36.4%, 1024 gives 28.3%, 1536 gives 22.3%, and 2048 gives 12.8%, while runtime increases from 2.35 to 8.82 minutes.",
+        "The retained-level fraction rho is also non-monotone in finite samples: rho=0.30 gives 28.3% error, 0.45 gives 43.0%, 0.52 gives 70.3%, 0.58 gives 37.0%, and 0.65 gives 42.3%. Higher rho does not automatically improve estimation despite changing hit rate/ESS.",
+        "The appendix explicitly notes that on a less-rare threshold gamma*=4, the proposed method can have higher relative error than both baselines despite higher hit rate and ESS. Hit rate/ESS therefore cannot be treated as direct probability-accuracy metrics.",
+        "Under an imperfect score, proposal learning cannot remove score-induced bias; the paper separates score mismatch from proposal-dependent sampling error."
+      ]
+    }
+  ],
+  "derived_results": [
+    {
+      "id": "cf-g1-r106a-agent-continuation-adversary",
+      "claim": "For rare agent failures with weak binary signal, a continuation curriculum over related weaker/noisier policies is a quantitatively strong alternative to learning the rare-event proposal only on the final robust agent. Historical training trajectories become labeled continuation data for a failure predictor; importance sampling then focuses evaluation on high predicted failure regions while retaining probability correction. External evidence shows 198x/3100x median failure-search episode reduction and 14x/34x fewer experiments for risk estimation in Driving/Humanoid."
+    },
+    {
+      "id": "cf-g1-r106b-three-object-separation",
+      "claim": "The combined Uesato/Liu evidence supports an explicit three-object interface for rare evaluation: (1) score or failure predictor used to rank/select scenarios, (2) proposal/adversary used to concentrate samples, and (3) importance-corrected estimator used for probability. Search success, hit rate, ESS and prediction quality are diagnostics for objects 1/2, not substitutes for object 3."
+    },
+    {
+      "id": "cf-g1-r106c-budget-controller-for-levels",
+      "claim": "Multilevel rarity controls should be treated as a tunable budget controller rather than a fixed 'more intermediate levels is safer' heuristic. The recent LLM ablation shows both samples-per-level and retained fraction rho have finite-budget failure regimes. Therefore a robust adaptation should optimize rho/level count jointly with per-level sample allocation under held-out probability error or a certified variance target, not hit rate alone."
+    }
+  ],
+  "negative_or_scope_evidence": [
+    "Uesato et al. evaluate simulated Driving and Humanoid, not modern LLM agents. Their failure predictor uses initial-condition distributions and historical weaker-agent data; direct transfer to tool-using multi-turn LLM agents remains an untested hypothesis.",
+    "The AVF proposal can under-sample unknown failure regions; the paper notes coverage is essential because importance weights can otherwise explode. Prioritized replay alone may miss failures entirely.",
+    "Continuation assumes weaker/noisier agents reveal failure geometry relevant to the final agent. If capability improvements qualitatively create new failure modes, historical continuation data can be misleading.",
+    "The 2026 LLM rho ablation contradicts any simple monotonic rule that larger retained fraction or larger hit rate guarantees lower probability-estimation error.",
+    "No local AGI/system claim follows from the external agent-evaluation speedups."
+  ],
+  "candidate_update": {
+    "rare_event_agent_evaluation": "new strong candidate: continuation-trained adversarial failure predictor + importance-corrected risk estimator, with explicit coverage fallback",
+    "adaptive_multilevel_llm": "failure envelope strengthened: sample budget and rho must be optimized against estimator accuracy/variance, not hit rate or ESS alone"
+  },
+  "frontier": [
+    "Search for post-2024 rare-event evaluation of tool-using or multi-turn LLM agents with trajectory-level failures and unbiased/importance-corrected risk estimates. Prefer methods with replayable simulator state and explicit coverage diagnostics.",
+    "Investigate whether SCARCE (2026) or related learned-embedding subset simulation yields a probability-valid trajectory-evaluation mechanism rather than only failure discovery; extract exact guarantee and matched baselines before promotion.",
+    "Develop a testable adaptation schema: continuation source set, coverage floor/fallback to base sampling, proposal ESS/weight-tail alarm, and held-out probability-error evaluation. Keep failure search and risk estimation as separate endpoints.",
+    "For the recent multilevel LLM method, derive a budget-aware policy over rho and samples per level from the reported ablation; do not overfit a single rho=0.3 setting."
+  ],
+  "exact_next_action": "Investigate 2026 learned-embedding/subset-simulation rare-event work and recent multi-turn LLM/agent safety evaluation. Require a probability-valid estimator, not just adversarial discovery. Compare its coverage mechanism to AVF importance sampling and progressive twisted SMC. In parallel formalize a fallback condition: if proposal ESS/importance-weight tail or held-out coverage degrades, route a fixed fraction of budget back to base-distribution sampling."
+}
