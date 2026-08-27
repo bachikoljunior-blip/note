@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T17:00:33+09:00",
+  "frozen_note_main_sha": "0a0f35d1d75ea94efe83793c385daf88301d45a3",
+  "frozen_control_revision": 11,
+  "frozen_config_revision": 5,
+  "role": "continual_learning",
+  "question": "Does the DeMix/OpenCompass evaluation contract change between the public OpenCompass 0.5.1 publication line and 0.5.2 because of OpenCompass source changes, dependency-resolution changes, or both?",
+  "anchors": {
+    "opencompass_0_5_1": "ecc86a2728c06fd2c1ad34f1d0094f42b5243c78",
+    "opencompass_0_5_2": "974179240a1a4e3c0ff14c60621cf1f6c95b287a"
+  },
+  "observed_source_delta": {
+    "commit_distance": 65,
+    "runtime_requirements": {
+      "0_5_1": {"pandas": "<2.0.0", "pyext": "required"},
+      "0_5_2": {"pandas": "unbounded", "pyext": "commented_out"}
+    },
+    "setup_py_changed_between_anchors": false,
+    "implication": "Because setup.py derives install_requires from requirements/runtime.txt with version specifiers preserved, the pandas/pyext delta is part of the install contract, not merely a development-file difference.",
+    "generation_path": "0.5.2 adds optional dump_res_length instrumentation to GenInferencer and optional res_length/input_length fields to GenInferencerOutputHandler. The option defaults false, so this observed change alone is not evidence that default benchmark predictions or scores change."
+  },
+  "paired_test_design": {
+    "track_A_code_isolation": {
+      "purpose": "isolate OpenCompass source-version effects",
+      "rule": "Use one shared, explicit dependency lock that satisfies both source trees, including pandas<2.0.0 and identical Python/Torch/Transformers/datasets/mmengine/tokenizer/runtime packages. Use the same model bytes, dataset bytes/configs, seeds, backend, batch size, prompt hashes, and evaluator settings.",
+      "compare": ["raw inference output hashes", "raw result JSON hashes", "summary CSV hash", "schema fingerprint", "v3 name+metric+mode parser output hash", "nine benchmark score deltas"]
+    },
+    "track_B_package_native": {
+      "purpose": "measure deployment/package-resolution sensitivity",
+      "rule": "Install each public package/source line according to its own declared runtime constraints in separately locked fresh environments, then freeze the fully resolved lock before evaluation. Do not call any difference a source-code effect because 0.5.2 permits dependency states, including pandas>=2, that 0.5.1 forbids.",
+      "compare": ["resolved dependency lock diff", "raw output hashes", "summary schema/hash", "nine benchmark score deltas"]
+    },
+    "interpretation": {
+      "A_diff_B_diff": "source and/or shared dependency runtime effects exist; localize with file/path ablations",
+      "A_same_B_diff": "package dependency-resolution sensitivity dominates observed version difference",
+      "A_diff_B_same": "unlikely but possible cancellation under native environments; investigate exact resolved locks",
+      "A_same_B_same": "public 0.5.1->0.5.2 version change is behaviorally neutral for this exact fixture within measured precision"
+    }
+  },
+  "scope_guards": [
+    "This does not prove which OpenCompass environment DeMix authors actually used.",
+    "The observed optional result-length instrumentation is not evidence of score change under default settings.",
+    "A package-native comparison is not a code-only comparison unless dependency locks are identical.",
+    "Any conclusions apply only to the exact nine-benchmark fixture, model/backend/data/config versions, seeds and dependency locks tested."
+  ],
+  "exact_next_action": "Build Track A first with a common lock satisfying both anchors; then run Track B with independently resolved public package constraints. Persist locks and all raw/hash/schema artifacts before interpreting score deltas."
+}
