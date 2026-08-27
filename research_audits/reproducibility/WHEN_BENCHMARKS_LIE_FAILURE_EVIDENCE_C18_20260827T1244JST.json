@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "audit_role": "reproducibility_auditor",
+  "generation": "clean_g1",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "26c0fd167eb9b31738484b1af8529bd9d60f3a22",
+    "root_control_revision": 11,
+    "root_control_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "downstream_control_revision": 19,
+    "downstream_control_blob": "3006c9416c64a704f4ad9e3071b7ee8edc7bf178",
+    "role_config_revision": 2,
+    "presemantic_head_checks": [
+      "26c0fd167eb9b31738484b1af8529bd9d60f3a22",
+      "26c0fd167eb9b31738484b1af8529bd9d60f3a22"
+    ],
+    "semantic_freeze_respected": true
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c18-20260827T0900JST-259c0e15",
+    "active_wave_blob": "bca558a1cbb9bc95a2d76d80ced986ba3c6a9dd3",
+    "source_set_digest": "259c0e1525397a80dc7cd3aabb28a9d09fc65ef8bbe706f8927fd7b09cef51fc"
+  },
+  "candidate_identity": {
+    "namespace": "failure_evidence",
+    "source_artifact_path": "research_workers_clean_g1/failure_evidence/2026-08-27T080041+0900.md",
+    "source_artifact_blob": "db360bfa92ad49a372a6b4501dbd4b4114a3339e",
+    "source_local_candidate_id": "FE-168",
+    "candidate": "When Benchmarks Lie: Evaluating Malicious Prompt Classifiers Under True Distribution Shift"
+  },
+  "primary_source": {
+    "paper": "arXiv:2602.14161v2",
+    "paper_date": "2026-07-19",
+    "paper_url": "https://arxiv.org/html/2602.14161v2",
+    "official_repository": "https://github.com/maxf-zn/prompt-mining",
+    "official_repository_head_observed": "2aadf4e6fe0dc47c6558e13ba8bdcc2c19141819"
+  },
+  "published_claims_checked": {
+    "multi_model_cv_lodo_gap": {
+      "reported": {
+        "Llama-3.1-8B": {"cv_auc": 0.996, "lodo_auc": 0.912, "gap_pp": 8.4},
+        "Gemma-3-27B": {"cv_auc": 0.999, "lodo_auc": 0.920, "gap_pp": 8.0},
+        "Qwen-3.5-4B": {"cv_auc": 0.998, "lodo_auc": 0.845, "gap_pp": 15.4},
+        "Qwen-3.5-2B": {"cv_auc": 0.998, "lodo_auc": 0.829, "gap_pp": 16.5}
+      },
+      "scope": "Same-author primary-study replication across four backbones; not independent reproduction."
+    },
+    "llama_table4": {
+      "reported_weighted_accuracy_percent": 81.8,
+      "reported_macro_accuracy_percent": 80.6,
+      "reported_pooled_auc": 0.912,
+      "independent_arithmetic_reconstruction": {
+        "sample_count_from_17_published_rows": 105034,
+        "weighted_accuracy_percent_from_published_N_and_rounded_accuracy": 81.84123902736258,
+        "macro_accuracy_percent_from_published_rounded_accuracy": 80.5764705882353,
+        "assessment": "Matches 81.8% weighted and 80.6% macro after rounding. This validates table arithmetic only, not model execution."
+      }
+    }
+  },
+  "official_artifact_support": {
+    "strengths": [
+      "The public repository implements dataset ingestion, raw/SAE activation loading, logistic/MLP classifiers, and Leave-One-Dataset-Out evaluation.",
+      "The published demo notebook contains preserved execution outputs for all 105,034 examples and reproduces the paper's Llama-3.1-8B threshold-0.5 per-dataset accuracies and 81.8% weighted accuracy.",
+      "The ingestion configuration records seed=42, the Llama-3.1-8B-Instruct model name, activation layers/positions, and the SAE identifier.",
+      "The paper specifies StratifiedKFold(5, shuffle=True, random_state=42) for CV and deterministic lbfgs logistic regression under fixed settings."
+    ],
+    "reproducibility_defects": [
+      {
+        "id": "paper_notebook_regularization_mismatch",
+        "finding": "Paper v2 specifies logistic regression C=1.0, while the official demo LODO cell that preserves the paper-matching 81.8% per-dataset output constructs LinearConfig(..., normalize='standard', C=0.1). The current classifier implementation passes C directly to sklearn LogisticRegression, so this is a real configuration mismatch rather than dead metadata.",
+        "impact": "Exact headline replay cannot assume the paper text and public demo are the same run contract. The qualitative LODO conclusion may remain robust, but exact numerical provenance is ambiguous until the authors identify the run-defining C or provide a locked result bundle."
+      },
+      {
+        "id": "pooled_auc_not_reconstructible_via_public_lodo_api",
+        "finding": "Paper v2 reports pooled AUC across all held-out LODO predictions (0.912 for Llama). Public lodo_evaluate computes per-dataset metrics and then sample-weighted averages of metric scalars; it does not return the concatenated held-out scores needed for pooled ROC-AUC. Multiple held-out datasets are single-class, so per-dataset ROC-AUC is undefined there, as the official notebook warnings demonstrate.",
+        "impact": "The paper's central 0.912 pooled AUC is not reproduced by the public lodo_evaluate API alone; a separate prediction-aggregation path or raw held-out prediction bundle is required."
+      },
+      {
+        "id": "missing_activation_cache_and_raw_prediction_bundle",
+        "finding": "The official notebook loads raw_layer31_pos-5.npz and sae_layer27_pos-5_sparse.npz from a placeholder /path/to/activations, but the public repository tree contains no .npz activation cache and no paper-run raw held-out prediction bundle located in this audit.",
+        "impact": "The preserved notebook outputs are useful official result evidence, but third parties cannot replay them without re-extracting activations from upstream models/datasets."
+      },
+      {
+        "id": "environment_and_upstream_revision_not_hermetic",
+        "finding": "pyproject.toml uses lower-bound dependencies rather than an exact lock; the ingestion config names Hugging Face models/datasets without immutable model/data revision hashes, and BIPIA/InjecAgent are external clones referenced by path.",
+        "impact": "A fresh run can drift as libraries, dataset snapshots, external repositories, or gated model revisions change even with seed=42."
+      }
+    ]
+  },
+  "independent_reproduction": {
+    "protocol_matched_numeric_reproduction_located": false,
+    "search_date": "2026-08-27",
+    "note": "Search located the paper, official repository, reviews/discussion, and downstream artifacts citing the work, but no third-party rerun matching the 18-dataset activation-extraction and four-model CV-versus-LODO protocol. Absence from this search is not proof none exists."
+  },
+  "grade": {
+    "overall": "B",
+    "primary_study_evidence": "A-",
+    "official_framework_artifact": "A-",
+    "official_numeric_result_artifact": "B",
+    "exact_replay_readiness": "C",
+    "independent_protocol_matched_reproduction": "C/not located",
+    "independent_table_arithmetic_consistency": "A"
+  },
+  "scope_conclusion": "FE-168's bounded claim is supported: same-source evaluation can substantially overstate static source-shift generalization for the tested prompt-attack classifier benchmark, and the official notebook strongly supports the Llama per-dataset accuracy pattern. However, the exact 8.0-16.5pp multi-model AUC gaps remain primary-study numbers rather than independently reproduced results. In particular, paper-vs-notebook C mismatch, missing raw activation/prediction artifacts, a non-hermetic environment, and the public LODO API's lack of pooled-prediction aggregation prevent exact third-party replay of the headline pooled AUC. This does not imply the reported gaps are false, and LODO is not evidence of adaptive adversarial robustness.",
+  "reopen_conditions": [
+    "Paper-authored immutable activation and held-out prediction bundle with model/data/library revisions and exact classifier hyperparameters.",
+    "Author clarification or code revision resolving C=1.0 in paper versus C=0.1 in the official paper-matching notebook.",
+    "Public pooled-LODO prediction aggregation path that reproduces 0.912 from released artifacts.",
+    "Protocol-matched independent rerun across at least one reported backbone and the same source-qualified dataset composition."
+  ],
+  "exact_next_action": "Do not re-audit unchanged FE-168. On the next bootstrap-valid invocation, select a different source-qualified non-evaluation candidate from the then-exact sealed ACTIVE_WAVE, preferring an official executable artifact or raw result bundle whose uncertainty can be materially reduced. Reopen FE-168 only on one of the recorded conditions.",
+  "checkpointed_at": "2026-08-27T12:43:59.015636+09:00",
+  "chronology_valid": true
+}
