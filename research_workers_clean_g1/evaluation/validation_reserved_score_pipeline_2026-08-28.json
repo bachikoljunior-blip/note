@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_at": "2026-08-28T04:18:56.208834+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifact": "research_workers_clean_g1/evaluation/reserved_score_pipeline_2026-08-28.py",
+  "artifact_blob_after_readback": "811bee4ddac614cd1ebd517a465cfb978006e91a",
+  "bindings": {
+    "launch_gate_blob": "e06dc0550f65182d31b96e6b841d680b487f3b41",
+    "score_wrapper_blob": "e610805ab1f495198c1b44ab82f02086233f1eda",
+    "attempt_ledger_blob": "f51cc37e5897d8dc0f395da95c1f6dd1c12da791"
+  },
+  "result": {
+    "valid_reserved_pipeline_scorer_calls": 1,
+    "score_result_attempt_matches_durable_reservation": true,
+    "bound_slot_persisted_with_attempt_binding": true,
+    "crash_after_bound_slot_before_attempt_commit_reconciled_without_scorer_rerun": true,
+    "reconciled_slot_event_digest_matches_persisted_bound_slot_digest": true,
+    "post_reconciliation_disposition": "committed_no_relaunch",
+    "reservation_without_durable_slot_recovery_commit_rejected": true,
+    "reservation_without_durable_slot_remains_fail_closed_unresolved": true,
+    "tampered_attempt_binding_rejected_even_after_binding_digest_and_outer_frame_recomputed": true,
+    "legacy_or_bypass_slot_without_attempt_binding_rejected_for_recovery_commit": true
+  },
+  "validated_properties": [
+    "Score generation requires the same-process durable attempt permit plus the durable ADMIT launch capability; the result attempt_id must equal the durable reservation.",
+    "Before main-journal persistence, the SLOT event is enriched with reservation digest, attempt_id, capability digest, request-binding digest and score-result digest. These fields are inside the scientific SLOT frame checksum/event digest while remaining semantically ignorable to the historical base journal state machine.",
+    "If the bound SLOT is durable but the sidecar COMMIT is missing after crash, recovery can derive and append COMMIT from the exact bound main SLOT without invoking the scorer again.",
+    "If no bound SLOT is durable, recovery cannot manufacture COMMIT and the default reservation remains unresolved/no-relaunch.",
+    "An unbound SLOT created through a lower-level bypass cannot be reconciled to the reservation ledger and therefore cannot satisfy the reservation-aware pipeline contract."
+  ],
+  "scope": [
+    "Validation used the deterministic injected adapter substrate plus real local file writer control-flow tests; exact production sibling byte-execution remains pending.",
+    "The historical base journal still accepts extra attempt-binding fields without interpreting them. Therefore active-runtime CLOSE/replay must eventually enforce that reserved slots lacking a valid binding are not treated as compliant reservation-aware evidence; this artifact only guarantees compliance for writes routed through the pipeline.",
+    "The sidecar COMMIT is not an atomic cross-file transaction with main SLOT. Safety comes from ordering and fail-closed reconciliation: main bound SLOT first, sidecar COMMIT second; a crash can leave incomplete bookkeeping but should not authorize a different stochastic result.",
+    "The pipeline does not solve concurrent multi-process reservation races; writer fencing remains required if launchers are concurrent processes."
+  ],
+  "frontier": [
+    "Add a reservation-aware CLOSE/replay auditor that rejects or marks fail-closed any scientifically accepted SLOT for a durably reserved slot unless its attempt binding validates and a matching sidecar COMMIT exists or can be deterministically reconciled.",
+    "Crash-inject every boundary across RESERVE ack, scorer completion, bound SLOT append/fsync/readback and sidecar COMMIT append/fsync/readback; verify the only recovery outcomes are committed exact attempt or unresolved/no-relaunch.",
+    "Add flock/lease/fencing if actual reservation writers can be concurrent OS processes, then race simultaneous same-slot reservations.",
+    "Byte-execute the full pipeline with exact production durable adapter/V3/K-guard sibling files.",
+    "Test real stochastic scorer determinism under attempt_id before enabling deterministic-replay reservations."
+  ],
+  "frontier_nonempty": true
+}
