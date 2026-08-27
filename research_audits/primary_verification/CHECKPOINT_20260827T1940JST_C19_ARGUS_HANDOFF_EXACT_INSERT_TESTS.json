@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "checkpointed_at": "2026-08-27T19:40:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "c7f8790baf255de02ae8c559dea11b2012dd8ba2",
+    "control_revision": 12,
+    "downstream_control_revision": 20,
+    "role": "primary_source_verifier",
+    "role_config_revision": 5
+  },
+  "completed_audit": "research_audits/primary_verification/VERIFY_20260827T1940JST_OPEN_SOURCE_ARGUS_HANDOFF_RETRY_IDEMPOTENCY.md",
+  "verified_result": "At lbx154/Argus@33da786bbc6787a2eeb63a5f492498eae87c78c7, Manager continuous handoff does not currently provide exact-once backlog-mission plus creation-event semantics across precommit/final-write ambiguity. The before_write callback can persist the mission before final continuous replacement; single-item Backlog.add blindly appends and lacks existing-ID conflict semantics; task_added is independently append-only; fresh Web/TUI retries allocate fresh root_task_id; storage tests prove both callback-committed/final-replace-failed and replace-landed/post-replace-durability-failed ambiguity classes.",
+  "scope_guard": "Source-level reachability plus existing pinned storage-unit-test evidence only. No live Argus fault injection, no production duplicate observation, no mutation of Argus or exploration state, and no claim that proposed fence/receipt machinery is already implemented or validated.",
+  "exact_next_verification": {
+    "repository": "lbx154/Argus",
+    "commit": "33da786bbc6787a2eeb63a5f492498eae87c78c7",
+    "target": "minimal exact-insert and immutable creation-receipt primitives for Manager continuous handoff recovery",
+    "questions": [
+      "Do any pinned tests explicitly characterize duplicate IDs through single-item Backlog.add, and can existing add_many([item]) semantics safely provide exact-ID conflict detection for this path without changing unrelated behavior?",
+      "Does Argus already have an immutable/idempotent event or operator-message persistence primitive with stable message/event identity that can be reused as the handoff creation receipt?",
+      "What exact recovery behavior should be specified for precommit-success/final-replace-fail, post-replace durability ambiguity, repeated recovery with the same reserved mission ID, and task_added append failure after backlog insert?",
+      "Can current primitives distinguish already-exists-and-identical from same-ID-different-payload, or is a dedicated add_exact result/receipt required?"
+    ],
+    "required_regression_matrix": [
+      "precommit mission+event succeeds, continuous replace fails, recovery executes twice with same reserved ID => one physical mission and one creation event",
+      "continuous replace lands but post-replace durability fails => readback plus creation receipt finalizes without reinsertion",
+      "backlog insert succeeds but task_added append fails => recovery adds only missing event and never a second backlog row",
+      "same reserved ID with different mission payload => fail closed as identity conflict"
+    ]
+  }
+}
