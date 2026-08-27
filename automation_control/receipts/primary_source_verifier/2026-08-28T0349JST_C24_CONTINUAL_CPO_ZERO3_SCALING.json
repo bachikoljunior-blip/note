@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "started_at": "2026-08-28T03:39:23+09:00",
+  "checkpointed_at": "2026-08-28T03:49:47+09:00",
+  "receipt_written_at": "2026-08-28T03:49:47+09:00",
+  "chronology_valid": true,
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "root_control_revision": 12,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "config_revision": 5,
+    "enabled_desired": true,
+    "semantic_freeze_respected": true
+  },
+  "input": {
+    "wave_id": "clean-g1-wave-c24-20260828T005432JST-e1c4c313",
+    "source_namespace": "continual_learning",
+    "source_path": "research_workers_clean_g1/continual_learning/RUN_20260828T0011_JST.md",
+    "source_blob": "f14cb8dfa65b45c47938aeb40f15a695418d15a0",
+    "cpo_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "deepspeed_commit": "e2dc3eeb1923073e32739596a4fd051417d4ff92"
+  },
+  "actions": [
+    "Verified CPO's owner-partition-only ZeRO-3 mask-gradient injection and non-ZeRO full-replica injection directly from the pinned trainer.",
+    "Verified public 2B CPO uses ZeRO-2 while 4B/8B CPO use ZeRO-3 offload, default mask_lambda is 100, and the paper environment specifies eight H100 GPUs, PyTorch 2.8.0 and DeepSpeed 0.16.4.",
+    "Verified DeepSpeed v0.16.4 exact tag, post-accumulate reduction hook path, __avg_scatter_grads reduce-scatter call and world-size pre-division; verified PyTorch 2.8 official hook ordering places CPO's Tensor hook before DeepSpeed's post-accumulate hook.",
+    "Derived the 1/W regularizer attenuation and same 1/W rank-mean logging attenuation under the public standard DP execution; did not claim a live eight-GPU reproduction or bind paper tables to this exact commit."
+  ],
+  "outputs": [
+    {
+      "path": "research_audits/primary_verification/VERIFY_20260828T0349JST_C24_CONTINUAL_CPO_ZERO3_SCALING.json",
+      "blob": "7ebf7057a5de91827ba9bb5782ffc705ea0a8c02",
+      "status": "readback_verified"
+    }
+  ],
+  "material_findings": [
+    "Under the public eight-rank DP topology, current CPO ZeRO-3 owner-only regularizer injection is averaged to 1/8 of the intended replicated regularizer magnitude; default lambda 100 is therefore lambda-equivalent to 12.5 relative to the non-ZeRO-3 semantics, all else equal.",
+    "The public 2B CPO path uses ZeRO-2 while 4B and 8B use ZeRO-3, so the current release's cross-size comparison is not a clean same-effective-lambda comparison.",
+    "ZeRO-3 mask_loss logging has the same 1/W scale under the standard DP partition, which can make the attenuation appear internally consistent rather than obvious.",
+    "This is source-level algebra from pinned public code and official hook/reduction semantics, not an observed training failure or proof that the published tables used the exact current release."
+  ],
+  "global_completion": false,
+  "termination_cause": "checkpoint_after_third_material_C24_primary_source_audit",
+  "exact_next_action": "Rotate to sealed C24 long_horizon or failure_evidence; prioritize an exact raw implementation or quantitative reliability claim not already source-bound in C22/C23."
+}
