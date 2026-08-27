@@ -4,44 +4,49 @@
   "control_revision": 12,
   "config_revision": 5,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0307_SHARED_CURSOR_IDENTITY_BOUNDARY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0200_CONTIGUOUS_PROJECTION_CURSOR_PRECEDENT.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0410_CURSOR_STATE_ATOMICITY_DURABILITY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0307_SHARED_CURSOR_IDENTITY_BOUNDARY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
-      "commit": "93a01f185f3c4800f127feca0739dbe7331c1950",
+      "commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
       "verified_current_main": true,
-      "predecessor_observed": "6953a117d102fc038035bbe654ae55f676b435e6"
+      "predecessor_observed": "93a01f185f3c4800f127feca0739dbe7331c1950",
+      "ahead_by_observed": 4
+    },
+    {
+      "repository": "apache/kafka",
+      "commit": "db8a0925513a76d1a4f13df00867c7491a4b3ce7",
+      "verified_current_trunk": true,
+      "source_scope": "StateStore managed changelog offsets / RocksDB offsets column family / atomic flush precedent"
     },
     {
       "repository": "JasperFx/marten",
       "commit": "fce5ceb7c63635ebbc027b659759b966e744fdf3",
-      "verified_current_main": false,
-      "source_scope": "prior exact public-source precedent retained from own clean state; not re-read this invocation"
+      "verified_current_master": true,
+      "source_scope": "contiguous high-water / outstanding-sequence gap regression precedent"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Turn the fresh-sink A/E1-projection-fails -> fresh-sink B/E2-succeeds sequence into a literal regression around real JsonlEventSink and load_mission_view. Replace sink-local projection-gap safety with shared reconciliation under events.lock so each projected append advances only one contiguous persisted prefix or leaves the cursor unchanged. Refactor canonical identity around one _prepare_persisted_event + _append_prepared path because current handle_event normalizes before _append, _append normalizes again, and production Manager front-door uses direct .append(); prove caller event_log_id cannot override and canonical/projection/downstream see the same sink-generated ID. Keep opaque-ID/all-generation scan first, add rollover/no-deadlock coverage, retain legacy full-rebuild fallback, and defer power-loss durability plus optional Manager transition_id provenance to separate branches.",
+  "exact_continuation": "Turn the fresh-sink A/E1-projection-fails -> fresh-sink B/E2-succeeds sequence into a literal regression around current JsonlEventSink + load_mission_view semantics. Put the authoritative projected cursor inside the same Mission View object/replacement as the state it describes, and reconcile a contiguous canonical prefix under events.lock before advancing it. Refactor persistence through one _prepare_persisted_event + _append_prepared path so normalization/redaction and sink-owned canonical identity occur exactly once for both handle_event and direct append. Add deep-generation stable replay under events.lock -> mission-view.lock. Separately build candidate-008 fault injection for canonical-log durable-before-view ordering and benchmark realistic per-event fsync versus small group commits; do not claim power-loss safety until that boundary is tested. Re-read current Argus main next invocation and keep optional Manager transition_id provenance separate.",
   "run_findings": {
-    "current_public_argus_main": "93a01f185f3c4800f127feca0739dbe7331c1950",
-    "public_main_changed_since_prior_checkpoint": true,
-    "public_main_advance_count_observed": 15,
-    "candidate_007_status": "materially strengthened and corrected: contiguous projection safety cannot rely on sink/process-local latch state",
-    "candidate_007_shared_boundary": "JsonlEventSink uses a POSIX events.lock across components/processes and Manager front-door constructs a fresh JsonlEventSink(...).append(event) per emitted Manager event, so per-sink projection_contiguous state can disappear between projected events even in one process",
-    "candidate_007_required_invariant": "under shared events.lock, each projected append must reconcile from the persisted cursor through the current canonical event and persist view+cursor atomically, or leave the prior cursor unchanged",
-    "candidate_007_fresh_sink_regression": "sink A canonical-appends projected E1 with forced projection failure; discard A; fresh sink B appends projected E2; fixed result must reduce E1 then E2 exactly once and advance cursor only to the contiguous E2 prefix",
-    "candidate_007_cross_process_regression": "two sink/process instances sharing life_dir must satisfy the same invariant; process-local boolean is not authority",
-    "candidate_007_identity_trap": "handle_event normalizes to safe_event, then _append normalizes again; projection uses second payload while downstream receives first safe_event. Manager front-door also bypasses handle_event via direct .append()",
-    "candidate_007_identity_correction": "introduce one explicit persisted-event preparation step that normalizes/redacts once for persistence, unconditionally replaces any caller event_log_id with one sink-owned opaque ID, and passes the exact prepared mapping unchanged to canonical serialization/projection and downstream delivery; direct .append uses the same preparation path",
-    "candidate_007_identity_regressions": "caller override rejected; direct append gets authoritative ID; handle_event generator called exactly once; canonical/projection/downstream IDs identical",
-    "candidate_007_non_idempotent_guard": "round.review.completed status continue/blocked increments review.rejected_attempts, so overlap replay of later already-applied events is unsafe",
-    "candidate_006_status": "maintained: stable all-generation replay remains shared cold-bootstrap/cursor-recovery primitive",
-    "candidate_006_all_generations": "current _bootstrap_view still reads only events.jsonl.1 and live events.jsonl tails while event_log_paths retains .2/.3/.../.1/current",
-    "candidate_006_writer_lock_order": "events.lock -> mission-view.lock",
-    "canonical_log_power_loss_scope": "events.jsonl append/rotation still lacks explicit observed file/directory fsync ordering; current claims remain process/daemon restart and projection-exception consistency only",
-    "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains a provenance-only branch",
-    "candidate_005_lineage_scope": "provenance only; not authorization, authentication, capability, fencing or CAS"
+    "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+    "public_main_advance_count_observed": 4,
+    "candidate_007_status": "maintained and strengthened by current Kafka state-store offset co-location precedent",
+    "candidate_007_required_invariant": "under shared events.lock, each projected append reconciles one contiguous canonical prefix and persists Mission View state plus canonical cursor atomically, or leaves the prior view/cursor authoritative",
+    "candidate_007_cursor_location": "inside the same persisted Mission View object, not a sidecar or sink-local/process-local latch",
+    "candidate_007_identity_boundary": "one persisted-event preparation step must normalize/redact once, overwrite caller canonical identity with one sink-owned opaque ID, and feed the identical mapping to canonical storage/projection/downstream; direct .append uses the same path",
+    "candidate_007_current_argus_conditions": "projection exception still swallowed after canonical append; _bootstrap_view still reads only .1+live tails; handle_event still normalizes before _append and _append normalizes again; Manager front-door still uses fresh-sink direct append per event; round.review.completed can increment rejected_attempts",
+    "kafka_43_precedent": "StateStore-managed changelog offsets are co-located with state; current RocksDBStore uses an offsets column family, atomicFlush=true, writes offsets+position before commitStagedWrites, and the public contract says offsets should be atomic with represented records when possible",
+    "kafka_atomicity_durability_scope": "Kafka 4.3 documentation explicitly distinguishes state/offset atomicity from when low-traffic RocksDB memtables become durable, reinforcing that projection consistency and power-loss durability are separate claims",
+    "marten_contiguous_precedent": "current master retains regressions that hold projection/high-water progress below in-flight sequence gaps until the gap is proven dead",
+    "candidate_008_status": "new source-shaped durability-ordering candidate; no live power-loss incident claimed",
+    "candidate_008_observation": "current Argus canonical events.jsonl append/rotation has no observed explicit file/directory fsync ordering, while Mission View temp writes fsync the temp file before replace; canonical-durable-before-derived-view is therefore not established for power loss",
+    "candidate_008_desired_asymmetry": "canonical log may be durable while Mission View lags, but derived view/cursor should never be durably ahead of recoverable canonical log",
+    "candidate_008_local_probe": "local synthetic event-fsync + Mission-View file+directory-fsync medians: ~2.28 ms at 4 KiB view, 2.67 ms at 64 KiB, 2.96 ms at 256 KiB, 4.83 ms at 1 MiB; environment-specific feasibility only",
+    "candidate_006_status": "maintained: stable all-generation replay remains the shared cold-bootstrap/cursor-recovery primitive",
+    "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate"
   },
   "independence": {
     "clean_exploration": true,
