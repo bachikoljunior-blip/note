@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_artifact": "research_workers_clean_g1/evaluation/atomic_dual_channel_journal_2026-08-27T2107_JST.py",
+  "validation_time": "2026-08-27T21:07:18+09:00",
+  "frozen_control": {
+    "main_sha": "35a4dcbd641d1faa3587fd53240a5b8863b6c7d1",
+    "root_control_revision": 12,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "protocol": {
+    "admission_rule": "ADMIT frame must be fully durable and read-back-valid before any slot work is launched.",
+    "slot_rule": "A canonical slot result becomes scientific state only after its complete checksummed SLOT frame is durable. The first durable payload for the deterministic slot event id wins; exact retries are idempotent and conflicting retries are quarantined.",
+    "close_rule": "CLOSE is the sole durable block commit marker. The closed row is derived from the admitted plan plus accepted durable slots; absent slots contribute fail-closed score 1. Numerical process/exposure caches are reconstructed from the one deduplicated closed row and are never independent durable truth.",
+    "torn_tail_rule": "Recovery accepts only the complete checksummed prefix. A torn final append is ignored. If a durable ADMIT remains active past its deadline, recovery can append a deterministic CLOSE marker; torn slot writes remain missing/fail-closed.",
+    "late_result_rule": "A SLOT arriving after CLOSE or after the frozen deadline is ignored and cannot overwrite an earlier accepted result.",
+    "storage_scope": "The model covers a single-writer ordered append stream with durable-prefix semantics. It detects a torn/corrupt tail frame but does not claim recovery from arbitrary mutation of earlier already-durable bytes, broken fsync semantics, or reordering by a storage substrate that violates the assumed append contract."
+  },
+  "validation": {
+    "seed": 8272026,
+    "reference_case": {
+      "planned_slots": 3,
+      "accepted_slots": 2,
+      "missing_slots_fail_closed": 1,
+      "block_score": 0.5,
+      "exposure_weight": 0.375,
+      "process_replay_rows": 1,
+      "exposure_replay_rows": 1
+    },
+    "exhaustive_partial_frame_cut_checks": 781,
+    "exhaustive_partial_frame_failures": 0,
+    "random_campaigns": 1000,
+    "random_blocks": 3087,
+    "random_campaign_failures": 0,
+    "partial_tail_recoveries": 4573,
+    "duplicate_retries": 2071,
+    "conflicting_overwrite_rejections_exercised": 738,
+    "properties_checked": [
+      "partial ADMIT never creates a planned block; protocol forbids outcome launch until full admission durability",
+      "partial SLOT never becomes accepted scientific evidence and therefore remains fail-closed if never retried",
+      "partial CLOSE leaves the block active; deterministic recovery CLOSE yields exactly one closed row",
+      "exact ADMIT/SLOT/CLOSE retries are idempotent",
+      "conflicting retry for the same deterministic slot event id cannot overwrite the first durable payload",
+      "post-close late slot cannot change the closed row",
+      "each closed block replays exactly once into the equal-process channel and exactly once into the planned-exposure channel"
+    ]
+  },
+  "public_systems_precedent": [
+    {
+      "source": "SQLite Atomic Commit",
+      "url": "https://www.sqlite.org/atomiccommit.html",
+      "observed_relevance": "SQLite explicitly treats crash consistency as an atomic-commit problem and tests simulated incomplete writes/out-of-order damage. This supports using crash injection as a first-class validation method, but does not prove this role-local protocol under arbitrary filesystems."
+    },
+    {
+      "source": "SQLite WAL format",
+      "url": "https://sqlite.org/fileformat.html#the_write_ahead_log",
+      "observed_relevance": "WAL commits are represented by a commit-marked frame, providing a systems precedent for separating durable append records from reconstructed database/cache state."
+    }
+  ],
+  "conclusion": "Within the tested single-writer durable-prefix model, admission/slot/close write ordering plus deterministic event identities is sufficient to prevent a planned slot from silently disappearing after durable admission, prevent late/conflicting overwrite, and prevent a closed block from being counted twice across the two replay channels under the injected partial-write and retry cases.",
+  "not_established": [
+    "correctness on a storage substrate that can corrupt or reorder already-durable earlier records",
+    "multi-writer concurrency without an external serialization/CAS layer",
+    "optimality of the framing format or of fsync/checkpoint frequency",
+    "production failure probabilities or latency overhead",
+    "statistical optimality of the dual-channel tolerances or block-size policy"
+  ]
+}
