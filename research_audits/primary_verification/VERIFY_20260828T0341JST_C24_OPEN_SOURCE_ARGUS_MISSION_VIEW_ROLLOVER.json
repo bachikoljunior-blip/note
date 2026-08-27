@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-28T03:41:16+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "root_control_revision": 12,
+    "root_manifest_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 23,
+    "downstream_blob": "8b9c35f168ed3904abe9328a5123818016f94bca",
+    "config_revision": 5,
+    "enabled_desired": true,
+    "presemantic_sha_check_1": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "presemantic_sha_check_2": "f07be4caba1b3511207cd31629a2d7f09008a167",
+    "semantic_freeze_respected": true
+  },
+  "input": {
+    "wave_id": "clean-g1-wave-c24-20260828T005432JST-e1c4c313",
+    "wave_manifest_blob": "1f0279130a7c2357232f5aeb51683bd7a3b7ec3e",
+    "source_namespace": "open_source",
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_0000_MISSION_VIEW_ROLLOVER_SNAPSHOT_TRANSITION_TESTMAP.md",
+    "source_blob": "6408429436087a103373faaa941069fb972cfad0",
+    "candidate": "clean-os-g1-006",
+    "public_repository": "lbx154/Argus",
+    "public_commit": "6953a117d102fc038035bbe654ae55f676b435e6"
+  },
+  "primary_sources": [
+    {
+      "path": "argus_skill/core/mission_view/_snapshot.py",
+      "blob": "unknown-from-connector-truncated-read",
+      "observed_contract": "_bootstrap_view replays only events.jsonl.1 and live events.jsonl; snapshot_mission_view performs bootstrap while holding the Mission View lock."
+    },
+    {
+      "path": "argus_skill/core/mission_view/_view_state.py",
+      "blob": "c104695447f580764a3199caa0a523927ce5eb4c",
+      "observed_contract": "MISSION_BOOTSTRAP_MAX_BYTES is 8 MiB; _tail_jsonl reads only the final max_bytes and filters to projected canonical event types; _locked is the Mission View process/file lock."
+    },
+    {
+      "path": "argus_skill/life/event_log.py",
+      "blob": "ccf38f1d197ec30493fff550c6f5487b047901f8",
+      "observed_contract": "rotation retains every generation as .2, .3, ... plus .1 and live; event_log_paths enumerates retained generations oldest-to-newest; _append holds events.lock through _maybe_roll, append, and Mission View projection."
+    },
+    {
+      "path": "argus_skill/core/mission_view/_dispatch.py",
+      "blob": "7c7403d2d9b9d5d6d053538a29cef544f0db1aff",
+      "observed_contract": "update_mission_view_event acquires the Mission View lock before reducing and persisting a projected event."
+    }
+  ],
+  "status": "primary_verified_with_current_under_replay_and_naive_remediation_concurrency_scope",
+  "material_findings": [
+    {
+      "finding": "Current cold bootstrap is not a full retained-history replay.",
+      "assessment": "verified",
+      "basis": "The pinned _bootstrap_view reads only events.jsonl.1 and events.jsonl, while the event logger intentionally retains older .2/.3/... generations. Each selected file is additionally truncated to the final 8 MiB by _tail_jsonl. Therefore projected events can remain durable in the canonical event log yet be absent from a cold Mission View bootstrap.",
+      "scope": "Source-level correctness gap in cold bootstrap/recovery only; no claim that normal online projection is dropping events and no production incident was observed."
+    },
+    {
+      "finding": "Enumerating all generation path names and opening them later is not a stable rollover snapshot.",
+      "assessment": "verified_as_source_reachable_TOCTOU_for_a_naive_fix",
+      "basis": "Rotation occurs under events.lock by renaming old .1 to the next free .N and live to .1. A reader that records [.2,.1,live] names without holding/pinning the event-log snapshot can have .1 and live rebound before open, omitting the former .1 even though it remains durable under a new .N name.",
+      "scope": "This is a defect in a naive proposed all-generation remediation, not an additional currently executed Mission View path: current code does not yet use event_log_paths for bootstrap. No production omission from this TOCTOU was observed."
+    },
+    {
+      "finding": "Naively acquiring events.lock inside the existing Mission View bootstrap critical section would invert the writer lock order.",
+      "assessment": "verified_deadlock_risk",
+      "basis": "JsonlEventSink._append holds events.lock and then calls update_mission_view_event, which acquires the Mission View lock. snapshot_mission_view currently acquires the Mission View lock first. Adding events.lock acquisition inside that section would create mission->events versus writer events->mission ordering.",
+      "scope": "Lock-order risk of a proposed patch shape; no deadlock incident was observed. A safe implementation must preserve one global order or use a snapshot primitive that avoids inversion."
+    },
+    {
+      "finding": "Opening/pinning retained files and capturing end offsets under events.lock is a plausible POSIX snapshot primitive, but not an implemented or validated Argus guarantee.",
+      "assessment": "supported_design_direction_not_verified_patch",
+      "basis": "The repository explicitly targets POSIX flock in production paths, and rotation uses rename/replace under the event lock. The worker's pinned-descriptor idea is consistent with this structure, but no pinned Argus implementation or regression test was present in the inspected commit.",
+      "scope": "Do not promote this design direction to a completed fix or cross-platform guarantee."
+    }
+  ],
+  "downstream_implication": {
+    "candidate_effect": "clean-os-g1-006 is strengthened as a concrete recovery-observability defect with a sharper concurrency requirement. The proposed solution should be evaluated as two separable claims: lossless all-generation replay and a stable rollover snapshot with non-inverted locks.",
+    "evidence_scope": "pinned public source inspection only; no patch execution, production filesystem benchmark, or fault-injection reproduction was performed"
+  },
+  "writes_excluded": [
+    "research_workers_clean_g1/**",
+    "research_feedback_clean_g1/**",
+    "automation_control/DESIRED_STATE.json",
+    "automation_control/DOWNSTREAM_STATE.json",
+    "primary O",
+    "shared automation_control/EXECUTION_LEDGER.json"
+  ],
+  "global_completion": false,
+  "exact_next_action": "Rotate within sealed C24 to evaluation source blob 7bb6ffd55aba8007b6e12dbb71f3e4fe51c7546c. Verify the claimed exact nine-split target-null minimax bound (5 delta/9), its no-independence step, and the distinction between target-null decision safety and off-target numerical coverage from the persisted theorem/validation artifacts before any broader claim."
+}
