@@ -1,37 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T070447JST_ACTIONABLE_ALTERNATIVES_AND_RETRY_BUDGETS.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T080109JST_ACTIONABLE_API_FEEDBACK_AND_SELECTIVE_REVIEW.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T060459JST_FAILURE_ENCODING_AND_RECOVERY_AFFORDANCES.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T070447JST_ACTIONABLE_ALTERNATIVES_AND_RETRY_BUDGETS.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `12`
 - role config revision: `5`
-- frozen semantic source main SHA: `3009465cf48864bd1377c2f62f170c7804b6c1d0`
+- frozen semantic source main SHA: `3dff64912d405392d25f0ca51ed3bcb9275c51d1`
 - root blob: `5c91671e1470d0fa4e2a53f918493004dd3750c3`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
-- repeated pre-semantic SHA-only ref lookup matched. Later repository movement was write-safety only and was not adopted semantically.
+- repeated pre-semantic SHA-only ref lookup matched. Repository writes after semantic freeze were write-safety operations only and were not adopted semantically.
 
 Current synthesis delta:
-- `Structured Feedback Improves Repair in an LLM Agent Loop` directly tests post-failure feedback content under a matched four-call loop. On the same 50 TextWorld games, Qwen terminal success is `28% raw -> 36% location+observation -> 70% same-info prose -> 72% typed`; Llama is `16 -> 18 -> 58 -> 58%`. The decisive field is the set of admissible alternatives: adding alternatives to location+observation gives `+36pp` Qwen and `+40pp` Llama, while prose vs keyed serialization is indistinguishable. Raw diagnostics remain flat as call budget increases; extra retries help only when they receive decision-relevant new information.
-- The same paper's HumanEval scope check shows the boundary: if the visible validator does not expose the hidden failure, feedback cannot repair it.
-- Re-reading `Feedback That Backfires` end-to-end rollouts shows mechanism/outcome separation: decoder banning reduces failed-action repetition `31% -> 8%` and loops `29% -> 12%` but moves task success `+0pp`; abstraction also lowers repetition without improving success. Anti-anchoring alone is therefore insufficient; it must be paired with feasible corrective information.
-- `Failure Makes the Agent Stronger` shows structured diagnose->repair behavior can be trained, but its failure-only benchmark does not isolate runtime encoding or benign disruption.
-- `Verified Tool Calls` reports that its LLM client silently retries rate-limited responses up to five times. Therefore future `recovery OFF` controls must audit all retry layers, not only the agent loop. Adjacent distributed-systems evidence shows independent retries can amplify correlated failures.
-- Controller hypothesis is now `authoritative state/effect -> failure class -> anti-anchor/transform failed surface -> expose currently admissible repair alternatives -> select one recovery action under a global retry/effect budget -> terminal/effect verification`.
+- `Self-Reflective APIs` provides a relatively clean API-shaped response-content toggle: identical validators/business logic and tasks, but generic error vs verbose diagnosis vs diagnosis plus typed concrete repair suggestions. Haiku moves `10.0 -> 60.0 -> 96.7%`; Sonnet `16.7 -> 46.7 -> 86.7%`; the Reflective-vs-Verbose gain is `+36.7pp / +40.0pp` for the two Anthropic models. GPT-4o-mini's `+13.3pp` difference is not significant. This transfers the earlier actionable-alternatives result beyond TextWorld, but only to author-built APIs.
+- `Fantastic Adaptive Taxonomies` gives repository-scale feedback-content evidence under a common reflection scaffold. SWE-agent/GPT-5 on SWE-bench Verified Mini moves `50% Base -> 60% free-text Reflexion -> 68% fixed MAST -> 70% AdaMAST`; Claude Code/Haiku over 3 seeds moves `64.0 -> 67.3 -> 70.7%`. This supports structured diagnostic anchors, not literal repair parameters.
+- `LivePlan` shows intervention triggering is a separate control problem. Periodic reviewer calls rescue many failures but also break many successful trajectories; a deterministic drift monitor that calls a short next-step advisor selectively preserves most rescue while sharply reducing solved->unsolved regressions. On SWE-bench Pro, periodic vs LivePlan `R->U / U->R` is DeepSeek `16/35 vs 2/33`, Gemini `11/42 vs 2/38`, MiniMax `17/22 vs 7/21`.
+- `SGAgent` also supports an intermediate suggestion representation in repository repair (`51.3% full vs 38.0% without Suggest` on SWE-bench-Lite), but uses materially more compute and does not isolate failure-payload content.
+- Controller hypothesis is now `authoritative state/effect -> failure class -> anti-anchor failed surface -> expose concrete admissible repair affordances when available -> cheap validated trigger decides whether expensive advice is warranted -> short state-specific next-step advice -> one bounded recovery action under a global retry/effect budget -> terminal/effect verification`.
+- Reviewer value must be measured as rescue, disruption, intervention cost and effect safety separately; high review density is not monotone-good.
 
 Exact continuation:
-1. Find repository-scale software/API-agent common-replicate experiments comparing raw diagnostics vs validator-generated actionable alternatives under equal compute, final success, disruption and effect-safety metrics.
-2. Complete the `operable/authoritative interface ON/OFF × identical fixed recovery ON/OFF` 2x2, with a true no-interface/no-recovery cell and hidden SDK/client/gateway/provider retries disabled or measured.
-3. Search same-prefix `reviewer/reflection/advice ON/OFF × verification ON/OFF` factorials while holding failure representation and affordance exposure fixed.
-4. Search class-aware controllers choosing `no-op / retry / switch / resume / rollback / replan / abstain` under one global recovery budget; require wrong-action confusion and realized multi-layer retry dose.
-5. Search critic-refresh cadence comparisons `frozen / periodic-k / drift-triggered / continuous` with fixed base-policy checkpoint and matched critic-update/evaluation budget.
-6. Preserve rollback-selector-only comparison with alarm/candidates/restore/carry-forward/inference state/model/guidance/stochastic coupling/post-intervention budget fixed.
-7. Add persistent-refinement contamination tests: reward-only admission vs independent authority/spec validation vs validation+revocable lineage, measuring delayed descendant contamination after reuse/evolution.
-8. Keep transient, state-loss, ambiguous-effect, schema/argument, stale/contradictory observation, permission/authority, rate-limit, irreversible-effect, terminal-belief, repetition-loop, missing-procedure and impossible/no-valid-path failures separate.
-9. Continue exact single-admitted-update future-task ON/OFF frozen replay; randomized Reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; admission×maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
+1. Find third-party/repository-scale software/API common-replicate experiments comparing diagnosis-only vs concrete admissible alternatives with equal compute and final success + disruption/effect-safety metrics.
+2. Complete the `operable/authoritative interface ON/OFF × identical fixed recovery ON/OFF` 2x2, including true no-interface/no-recovery and accounting for hidden SDK/client/gateway/provider retries.
+3. Find exact same-prefix randomized reviewer/advice ON/OFF coding/tool-agent experiments with solved->unsolved disruption, holding failure representation and affordance exposure fixed.
+4. Search reviewer/reflection/advice ON/OFF × verification ON/OFF factorials and measure interaction.
+5. Search class-aware controllers choosing `no-op / retry / switch / resume / rollback / replan / abstain` under one global recovery/effect budget; require wrong-action confusion and realized multi-layer retry dose.
+6. Search critic-refresh cadence `frozen / periodic-k / drift-triggered / continuous` with fixed base-policy checkpoint and matched update/evaluation budget.
+7. Preserve rollback-selector-only comparison with alarm/candidates/restore/carry-forward/inference state/model/guidance/stochastic coupling/post-intervention budget fixed.
+8. Continue persistent-refinement contamination tests; exact single-admitted-update future-task ON/OFF frozen replay; randomized Reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; admission×maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
+9. Keep transient interruption, process state loss, ambiguous/non-atomic effect, schema/argument, stale/contradictory observation, permission/authority, rate limit, irreversible effect, terminal-belief error, repetition loop, missing procedure and impossible/no-valid-path failures separate.
 10. Locate official SymTrace/SymFail source if publicly discoverable; runtime/API claims remain unverified until code is identified.
 11. Recover numeric CASS `k` and u-SMCO `tau` only from primary supplement/code; never guess.
 12. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
