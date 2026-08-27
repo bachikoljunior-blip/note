@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "audit_id": "METAN_SELF_IMPROVEMENT_C18_20260827T0941JST",
+  "created_at": "2026-08-27T09:45:43+09:00",
+  "bootstrap_valid": true,
+  "semantic_freeze_respected": true,
+  "frozen_control_tuple": {
+    "note_main_sha": "8aa1d0cb1cd0c0cb9889ede434c9cde0963bea14",
+    "root_control_revision": 11,
+    "root_control_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "downstream_control_revision": 18,
+    "downstream_control_blob": "55b2dacea589ce57f1d1ff04ef4f728c0c17f711",
+    "role_config_revision": 2
+  },
+  "source_candidate": {
+    "namespace": "self_improvement",
+    "wave_id": "clean-g1-wave-c18-20260827T0900JST-259c0e15",
+    "wave_manifest_blob": "700229ed5467e61c3ace840184aa3ee762846020",
+    "source_artifact": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-27T0802_JST_metan_recursive_conditioning_and_recuris_campaign_provenance.md",
+    "source_artifact_blob": "535e2f9d065672069dc0066ef6e9374808c2d4ea",
+    "source_local_candidate_id": null,
+    "identity_note": "The sealed worker checkpoint is a prose continuation and does not expose a stable local C-id for the Meta^n subject. This audit is therefore bound to namespace + exact source artifact blob + subject, not a guessed short id.",
+    "subject": "Meta^n: Recursive Self-Improvement through Emergent Depth"
+  },
+  "public_primary_sources": {
+    "paper": {
+      "arxiv_id": "2608.24735",
+      "version": "v1",
+      "submitted_at_utc": "2026-08-25T15:44:25Z",
+      "url": "https://arxiv.org/html/2608.24735v1"
+    },
+    "official_repository": {
+      "repository": "minnesotanlp/meta-n",
+      "initial_public_release_commit": "b0861e62245ba30bfe3e751f1094a9918785e911",
+      "initial_public_release_commit_time_utc": "2026-08-26T16:30:14Z",
+      "audited_head": "b7081843d3c7b0e0f418ca10aaf2ccbff856e7f8",
+      "audited_head_time_utc": "2026-08-26T17:00:50Z",
+      "release_to_audited_head_delta": "one commit, only meta_n/core/omega.py changed (display-precision normalization); all selection, archive, persistence, adapters and consolidation files inspected here are byte-identical to the initial public release."
+    }
+  },
+  "grades": {
+    "overall": "B+",
+    "official_artifact_support": "A-",
+    "implementation_wiring_reproducibility": "A-",
+    "paper_headline_exact_replay_readiness": "C+",
+    "independent_protocol_matched_reproduction": "C",
+    "consolidation_mechanism_reproducibility": "A-",
+    "consolidation_mean_lift_independent_replication": "C",
+    "heldout_reporting_separation": "B+",
+    "arc_proxy_selection_robustness": "C+",
+    "proposal_lineage_persistence": "A-",
+    "environment_and_dataset_locking": "C+"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "finding": "The public repository is substantial and source-bound closely enough to the paper release for implementation auditing.",
+      "evidence": [
+        "Git history contains an explicit 'Initial public release of Meta^n' commit b0861e6, followed by one commit b708184 that changes only omega.py display normalization.",
+        "The repo persists archive candidates, parent_id, iteration, depth, injected code, traces, checkpoint state, config snapshots, summaries and lineage-oriented artifacts."
+      ],
+      "scope": "Supports mechanism/provenance inspection, not the paper's numerical headline reproduction by itself."
+    },
+    {
+      "id": "F2",
+      "finding": "The paper's archive-best estimator is genuinely a per-task routed portfolio; it is not the same object as a single deployable lineage.",
+      "evidence": [
+        "archive.py tracks the best trace/source separately for each task and uses those winners in parent selection.",
+        "The paper explicitly reports archive-best and best-single-chain separately and describes the gap as the value of letting different tasks be won by different chains."
+      ],
+      "scope_correction": "Do not interpret archive-best as one single improved solver. For benchmarks where task identity is available at deployment, it can correspond to a task-conditioned routed portfolio; otherwise it is an oracle-style upper estimator unless the router is part of the deployment contract."
+    },
+    {
+      "id": "F3",
+      "finding": "For adapters with a real test split, held-out test scoring occurs after search and re-executes the selected stored solution on test data; this is materially stronger than using test data inside archive selection.",
+      "evidence": [
+        "EvolutionaryOrchestrator performs a final 'Test Set Evaluation' after search.",
+        "_run_test_evaluation chooses per-task dev/archive winners and calls adapter.evaluate_test on their stored scripts.",
+        "The paper labels CO-Bench/S2D/LawBench table values as held-out test and plots search curves as validation with test stars after search."
+      ],
+      "scope_correction": "The routed portfolio is selected on development scores, then evaluated on held-out data; this is not direct held-out leakage. It still measures a routed portfolio rather than one lineage."
+    },
+    {
+      "id": "F4",
+      "finding": "ARC-AGI-2 has an explicit unresolved proxy-overfit weakness in the released implementation.",
+      "evidence": [
+        "arc_agi.py states evaluate() scores demonstration TRAIN pairs shown to the model, while evaluate_test() scores hidden TEST pairs only at end.",
+        "ARCAGI2Adapter.split_type() returns 'proxy' and comments that split-aware overfit protection is not yet consumed: per-task-best still ranks raw dev scores.",
+        "EvolutionaryOrchestrator emits a warning that proxy-stable demotion is deferred and raw dev still drives archive selection."
+      ],
+      "scope_correction": "The final ARC test number can remain honest because test outputs are withheld, but candidate selection is especially prone to demonstration overfit. The 0.331 dev/archive-best and held-out result should not be conflated."
+    },
+    {
+      "id": "F5",
+      "finding": "The consolidation zero-regression property is primarily a construction invariant, and the public tests strongly support that exact mechanism.",
+      "evidence": [
+        "In consolidate mode each candidate solves one target and deep-copies inherited per-task-best traces for every other task; inherited traces are not re-solved.",
+        "tests/test_consolidation.py deliberately injects noisy target regressions and asserts per-task-best/oracle history never decreases.",
+        "The forced merged candidate assembles per-task winners and is not a fresh end-to-end re-evaluation."
+      ],
+      "scope_correction": "Zero regression refers to the stored per-task-best trajectory on the selection/evaluation task set under frozen inheritance. It is not an independent held-out no-regression theorem for a newly executed merged system."
+    },
+    {
+      "id": "F6",
+      "finding": "The paper's +0.10 consolidation mean-lift result remains primary-study evidence despite strong mechanism tests.",
+      "evidence": [
+        "Paper Appendix G reports 8-task CO-Bench, 3 seeds, 0.502 -> 0.71±0.02, best-of-4 control 0.61±0.03, +0.10 CI [+0.04,+0.16], zero regressions 8/8.",
+        "The public repo contains mechanism-level unit/integration tests but no source-matched raw three-seed experiment bundle identified in this audit.",
+        "No protocol-matched independent reproduction was found in fresh public search two days after the paper release."
+      ],
+      "scope": "Mechanism A-, numerical experiment exact replay/independent replication C."
+    },
+    {
+      "id": "F7",
+      "finding": "The repository preserves candidate chronology well enough for structural replay, but the public release does not by itself provide the paper's full run corpus.",
+      "evidence": [
+        "Candidate summaries persist candidate_id, parent_id, iteration, depth, per-task scores, traces and injected code.",
+        "checkpoint.json persists RNG state, token counters, run config snapshot, archive-related control state, and supports resume/rebuild.",
+        "README documents candidate directories, logs and summaries as run outputs."
+      ],
+      "scope_correction": "This is good prospective provenance. It does not prove that the exact paper-producing archives/raw LLM I/O for all reported seeds are publicly included."
+    },
+    {
+      "id": "F8",
+      "finding": "Exact replay is weakened by environment and dataset immutability gaps.",
+      "evidence": [
+        "pyproject.toml uses broad lower-bound versions for core dependencies such as pydantic>=2.0, openai>=1.0, httpx>=0.25, numpy>=1.24 and pyyaml>=6.0.",
+        "data/README states datasets are not bundled; only some upstream sources are commit-pinned, while Hugging Face datasets auto-download without source snapshot hashes documented there.",
+        "Paper-scale runs require external models/APIs and benchmark environments not captured as a single immutable public replay bundle."
+      ],
+      "scope": "These gaps do not negate published results; they reduce exact replay readiness."
+    },
+    {
+      "id": "F9",
+      "finding": "The file named adoption.py is not the candidate acceptance/selection gate.",
+      "evidence": [
+        "adoption.py implements helper-usage/adoption attribution and failure classification.",
+        "Candidate ranking, per-task-best updates, elites and parent selection live in archive.py; gating/search logic lives in evolutionary_orchestrator.py."
+      ],
+      "scope_correction": "Future audits should not infer candidate acceptance policy from adoption.py."
+    }
+  ],
+  "published_claims_checked": {
+    "recursion_ablation": "Paper v1 states CO-Bench archive-best validation falls 0.845 -> 0.714 when recursion is removed; this remains primary-study numerical evidence.",
+    "archive_vs_chain": "Paper v1 reports GPT-5.2 CO-Bench 0.870 archive-best vs 0.806 best chain and ARC-AGI-2 dev 0.331 vs 0.123 (one-seed best chain). Implementation semantics support the estimator distinction.",
+    "consolidation": "Paper v1 reports 8-task/3-seed 0.502 -> 0.71±0.02 and +0.10 vs compute-matched best-of-4 with CI [+0.04,+0.16]. Mechanism is strongly supported; numeric replay remains unverified.",
+    "heldout": "Paper v1 labels CO-Bench/S2D/LawBench table values as held-out tests, while benchmarks without held-out splits report benchmark scores; source implements an end-of-run test pass where adapter support exists."
+  },
+  "independent_reproduction_search": {
+    "searched_at": "2026-08-27",
+    "result": "No protocol-matched independent reproduction of Meta^n headline benchmark or consolidation results was established in fresh web/GitHub search. This is unsurprising given the paper/public release is about two days old.",
+    "not_counted_as_reproduction": [
+      "paper mirrors/summaries",
+      "the official repository's own tests",
+      "paper-linked official code"
+    ]
+  },
+  "reproduction_blockers": [
+    "No identified public raw run bundle binding every headline cell to exact candidate archive, LLM I/O, seed, model endpoint/version, benchmark snapshot and final test outputs.",
+    "Core dependency versions are not fully locked.",
+    "Several benchmark datasets/environments are downloaded externally and are not all bound to immutable snapshot hashes in the public data guide.",
+    "The current public code is source-near to release, but no explicit repository tag/manifest binding paper tables to a specific commit/run bundle was found in this audit.",
+    "ARC archive selection currently consumes a leaky proxy dev signal by design."
+  ],
+  "reopen_conditions": [
+    "A paper-authored raw run/archive bundle is published with source commit, dataset/container snapshots and exact per-seed outputs.",
+    "An independent group publishes protocol-matched reruns of headline or consolidation results.",
+    "ARC split-aware proxy overfit protection becomes active and is evaluated without hidden-test selection feedback.",
+    "A deployable merged/router artifact is rerun end-to-end on an outer test set rather than inheriting stored per-task traces."
+  ],
+  "exact_next_action": "On the next valid invocation, resolve the then-current sealed ACTIVE_WAVE and audit a different source-qualified non-evaluation candidate. Prefer a candidate with an executable official artifact or raw result bundle that can materially improve independent-reproduction confidence; do not repeat Meta^n unless a reopen condition occurs.",
+  "frontier_nonempty": true
+}
