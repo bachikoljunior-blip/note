@@ -1,0 +1,116 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T15:05:25+09:00",
+  "invocation_started_at": "2026-08-27T14:57:24+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T140811_JST_anytime_mismatch_certification_guard.json",
+  "control": {
+    "frozen_main_sha": "f8c877d2451933876ac5128b33c9070f60605511",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false
+  },
+  "main_result": {
+    "title": "Rare-mismatch certification should move from request-pair counts to predeclared process/workload clusters; a new public gfx1100 trace also shows warmed same-process token divergence and a separate case where output divergence does not change a frozen binary scorer.",
+    "public_token_divergence_evidence": {
+      "upstream_issue": "https://github.com/vllm-project/vllm/issues/50603",
+      "upstream_gist": "https://gist.github.com/AIwork4me/030fc6a872de36197178c9e8217949d1",
+      "second_machine_artifact": "https://github.com/cadamcat/dual-radeon-vllm/blob/main/benchmarks/gfx1100-greedy-nondeterminism.json",
+      "second_machine_blob": "8424abf5eaea65f3bb0dcc42defad67f97e985be",
+      "second_machine_measurement_date": "2026-08-24",
+      "second_machine_issue_post_date": "2026-08-26",
+      "observations": [
+        "The original gfx1100 issue/gist reports vLLM 0.25.1 on one W7900D, greedy HunyuanOCR, where run 0 differs from runs 1 and 2 and a warmup makes the three measured outputs byte-identical on that stack.",
+        "A second public machine/stack (2x RX 7900 XT, TP=2, vLLM 0.23.1.dev on ROCm 7.14) measured warmed repeated greedy inference and found persistent nondeterminism. Across the cross-process grid, 10 of 36 cells had more than one output over three runs; first divergence was usually index 0-9 of 64 generated tokens.",
+        "Within one warmed process, gemma-3-27b at depth 8192 produced 2-3 distinct outputs of 8 across four process/kernel-state cells. Muse-Glimmer at depth 512 produced 5,5,7,8 distinct outputs of 8 and at 8192 produced 2 outputs of 8 in all four cells. The committed artifact contains per-process first-divergence indices.",
+        "The second-machine report separately tested 15 fixed-input kernel cases in two processes and found bitwise-identical kernel outputs, so for that tested stack the variation entered above the isolated kernel. This narrows mechanism scope but does not establish the engine-level cause.",
+        "The second-machine artifact explicitly does not establish that varying outputs are incorrect; it establishes non-reproducibility only. TP=1 was not tested there."
+      ],
+      "score_propagation_example": {
+        "source": "original vllm#50603 gist",
+        "full_resolution_hashes": ["ba29b5a1", "fd0cc624", "fd0cc624"],
+        "frozen_binary_scorer": "whether generated OCR text contains 'Quarterly Financial Summary'",
+        "reported_scorer_result": "false for any of the three measured runs",
+        "interpretation": "The first run's raw generated text differs, but all three runs share score=0 under this exact title-presence scorer. Thus a raw-output mismatch did not propagate to this protected binary statistic in this one public case. This does not imply other scorers, tasks, or paired oriented signs are unchanged."
+      }
+    },
+    "cluster_anytime_artifact": {
+      "path": "research_workers_clean_g1/evaluation/cluster_mismatch_anytime_certifier.py",
+      "blob": "d27f9f99b0c174a44a9c622c94081308b2536a57",
+      "creation_commit": "3ce970dbcc09b82e7ebb32818dd5efc2156001e7",
+      "reference": "Waudby-Smith and Ramdas, Estimating means of bounded random variables by betting, JRSS B 2024",
+      "reference_url": "https://doi.org/10.1093/jrsssb/qkad009",
+      "construction": "Each predeclared top-level cluster emits one Y_t in [0,1]. To certify mean mismatch burden below tolerance m, test H0: E[Y_t | F_{t-1}] >= m with factors 1 + lambda*(m-Y_t), 0<=lambda<=1/(1-m). A fixed mixture over predictable lambda values is a nonnegative supermartingale under H0 and supports optional stopping via Ville.",
+      "target": "equal-cluster conditional mean of the predeclared bounded score",
+      "within_cluster_dependence": "arbitrary; lower-level request dependence is absorbed into the single bounded cluster score",
+      "cross_cluster_contract": "when certification would be false, conditional mean of the next predeclared cluster score given past must remain at least the tolerance",
+      "default_bet_fractions": [0.25, 0.5, 0.75, 0.9, 0.99],
+      "zero_score_clusters_needed_alpha_0_05": [
+        {"tolerance": 0.05, "clusters": 74},
+        {"tolerance": 0.02, "clusters": 188},
+        {"tolerance": 0.01, "clusters": 378},
+        {"tolerance": 0.005, "clusters": 758},
+        {"tolerance": 0.001, "clusters": 3797}
+      ],
+      "important_efficiency_scope": "These counts are for a threshold-specific e-test at a predeclared tolerance. They are not a full upper confidence-sequence endpoint. That narrower decision question can be materially cheaper than inverting a general Bernoulli confidence sequence, so 'need an anytime bound' should be separated from 'need an anytime full interval'.",
+      "implementation_sanity_not_proof": "In 100,000 worker-local Bernoulli boundary trajectories of length 1000, empirical ever-crossing was 3.036% at m=0.01 and 4.179% at m=0.05, both below alpha=5%; validity rests on the supermartingale derivation, not this simulation."
+    },
+    "pseudoreplication_example": {
+      "setup": "10 predeclared server-lifetime clusters, 100 lower-level requests each, zero observed mismatches",
+      "wrong_request_independent_fixed_upper_alpha_0_05": 0.0029912495450953314,
+      "cluster_any_mismatch_fixed_upper_alpha_0_05": 0.2588655508930523,
+      "cluster_mixture_e_after_10_zero_clusters_at_tolerance_0_01": 1.0709889682847202,
+      "cluster_threshold": 20.0,
+      "interpretation": "Counting 1000 nested requests as independent would claim a sub-0.3% upper rate, while ten independent top-level clusters cannot support even a 1% anytime certification. The gap is pseudoreplication, not merely a choice of interval formula."
+    }
+  },
+  "measurement_validity_rules": [
+    "For repeated-inference determinism, declare the top-level process/workload/server-lifetime cluster before seeing mismatches; multiple calls inside that cluster do not become independent trials by repetition or all-pairs comparison.",
+    "Choose the cluster score to match the operational estimand: any-mismatch indicator estimates cluster failure burden; per-cluster mismatch fraction estimates an equal-cluster mean and is not request-weighted when cluster sizes differ.",
+    "A threshold-specific anytime e-test and a full confidence sequence answer different decision questions; use the cheaper threshold test only when the tolerance was fixed before outcomes and only a pass/fail certification is required.",
+    "Warmup is not a portable determinism guarantee: the original 0.25.1 W7900D report found a warmup remedy for its first-call effect, while the independent 0.23.1.dev dual-RX7900XT campaign observed persistent warmed within-process divergence.",
+    "Raw output or token divergence must not be treated as decision-statistic divergence by proxy. The public HunyuanOCR example has different output hashes but unchanged title-presence score across the three measured runs.",
+    "Do not pool model/runtime/hardware/depth/kernel-state fingerprints into one rare-mismatch parameter merely because they were measured in one campaign."
+  ],
+  "scope_guards": [
+    "The cluster e-process does not justify request-weighted inference or arbitrary changing cluster definitions.",
+    "The conditional-mean contract across clusters is an assumption to be designed/defended; the construction does not repair adversarial post-outcome cluster selection.",
+    "The cadamcat public artifact provides divergence indices/counts but not the full per-run token-id arrays, so decision_stat_first_divergence_analyzer.py cannot yet reconstruct exact token-to-score propagation for that fingerprint.",
+    "The title-presence scorer example is from the separate original vllm#50603 HunyuanOCR fingerprint and must not be cross-attached to the cadamcat text-model measurements.",
+    "No live GPU/vLLM execution was performed in this run.",
+    "No forbidden semantic inputs were read."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Search the public cadamcat campaign/repository for per-run token-id arrays or deterministic scorer labels tied to the exact warmed process fingerprints; if unavailable, add a summary-record adapter that preserves 'protected score unknown' rather than inferring it from token divergence."
+    },
+    {
+      "priority": 2,
+      "action": "Extend cluster_mismatch_anytime_certifier.py with a confidence-sequence inversion mode and compare its zero/nonzero-cluster efficiency to the current threshold-specific mixture, preserving the distinction between certification and estimation."
+    },
+    {
+      "priority": 3,
+      "action": "Design a fingerprint lease/drift protocol whose statistical unit is independent process or server lifetime rather than request, and quantify sample cost for rare fingerprints under process-level clustering."
+    },
+    {
+      "priority": 4,
+      "action": "Extend deterministic prefix certificates to JSON/schema/tool-call scorers and measure when the protected statistic is fixed relative to first token divergence."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Inspect the public dual-radeon-vllm raw benchmark artifacts for per-run token ids or score labels; otherwise implement a summary-only divergence adapter that never converts token mismatch into score/sign mismatch without an explicit frozen scorer result."
+}
