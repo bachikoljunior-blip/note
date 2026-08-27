@@ -1,0 +1,131 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T13:12:09+09:00",
+  "invocation_started_at": "2026-08-27T13:02:33+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T130816_JST_response_object_oververification_microbenchmark.json",
+  "control": {
+    "frozen_main_sha": "23764927a1067af99b7e17f407584c2429660389",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true,
+    "later_repository_advances_not_adopted_semantically": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false,
+    "feedback_path_missing_404": true
+  },
+  "public_sources": [
+    {
+      "title": "vLLM issue #51187: batch-invariant concurrent workload has non-identical logprobs with identical emitted tokens",
+      "date": "2026-08-05",
+      "url": "https://github.com/vllm-project/vllm/issues/51187",
+      "role": "response-object/logprob -> emitted-token boundary",
+      "observations": "For two reported five-repeat workloads, response/logprob objects differed in 188/440=42.73% and 128/450=28.44% of request-repeat-pair observations while emitted token sequences never diverged. A second server lifetime was reproducible, so the frequency is explicitly fingerprint/lifetime scoped."
+    },
+    {
+      "title": "Understanding and Mitigating Numerical Sources of Nondeterminism in LLM Inference",
+      "venue": "NeurIPS 2025",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/f80094a824ba5912d4a2de169c404a40-Abstract-Conference.html",
+      "pdf": "https://proceedings.neurips.cc/paper_files/paper/2025/file/f80094a824ba5912d4a2de169c404a40-Paper-Conference.pdf",
+      "code": "https://github.com/nanomaoli/llm_reproducibility",
+      "role": "emitted-token/numerical divergence -> final-answer/accuracy boundary",
+      "observations": "The paper varies two GPU types, two GPU counts and batch sizes 8/16/32. Its headline result reports up to 9% accuracy variation and about 9,000-token output-length variation from runtime configuration alone. A visible example keeps prompt, greedy decoding and seed fixed while batch size 32 versus 8 yields different final numeric answers. Table 3 reports DeepSeek-R1-Distill-Qwen-7B AIME'24 Std@Acc 9.15% in BF16, 5.74% in FP16 and 0 in FP32; Table 9 reports very high output divergence for several BF16 reasoning/code settings."
+    },
+    {
+      "title": "vLLM PR #51292: disable fused all-reduce + RMSNorm under batch invariance",
+      "date": "merged 2026-08-25",
+      "url": "https://github.com/vllm-project/vllm/pull/51292",
+      "role": "runtime-fingerprint contrast and mitigation evidence",
+      "observations": "The merged PR reports Qwen2.5-7B-Instruct/H100/vLLM 0.25.1: TP=1 produced 1 distinct bit-exact output over 8 identical runs, TP=4 before fix produced 8, and TP=4 after disabling the fused kernel produced 1. The PR also reports backend-specific cases with token flips versus logprob-only divergence."
+    }
+  ],
+  "main_result": {
+    "title": "Two public empirical sources now populate distinct boundaries of the verifier mismatch hierarchy: response metadata can diverge without tokens changing, while runtime-induced token/numerical divergence can cross the final-answer and benchmark-accuracy boundary.",
+    "hierarchy": [
+      "response object / exact logprobs / metadata",
+      "emitted token sequence / decoded text",
+      "deterministic per-side score",
+      "paired score pair",
+      "oriented ternary sign Z",
+      "final evidence / commit decision"
+    ],
+    "boundary_A_response_to_token": {
+      "source": "vLLM #51187",
+      "result": "28.44%-42.73% response-object/logprob mismatch with zero emitted-token divergence in the two reported workloads.",
+      "measurement_validity_implication": "A verifier that insists on exact response-object/logprob equality can trigger large numbers of rollbacks even when a downstream text-only deterministic scorer would receive an identical input. Therefore exact equality must be defined on the protected decision transcript, not whatever runtime object happens to be easiest to hash.",
+      "scope": "one public issue, specific model/runtime/GPU/concurrency and intermittent across engine lifetimes"
+    },
+    "boundary_B_token_to_score": {
+      "source": "Yuan et al., NeurIPS 2025",
+      "result": "Runtime configuration changes can alter generated reasoning/output enough to change final answers and aggregate accuracy under greedy decoding. The paper reports up to 9% accuracy variation; for DeepSeek-R1-Distill-Qwen-7B on AIME'24 Table 3 gives Std@Acc 9.15% BF16 versus 0 FP32. Its figure gives an explicit same-prompt/seed example with different final numeric answers under batch sizes 32 and 8.",
+      "measurement_validity_implication": "Token/text stability cannot be assumed once runtime fingerprint changes. Where numerical nondeterminism crosses the scorer boundary, sign-only verification still needs an exact canonical sign or a sound verifier; merely observing that some other fingerprint had logprob-only mismatch is not transferable evidence.",
+      "scope": "tested models/tasks/runtime configurations in the paper; no claim that every divergence flips a score or paired sign"
+    },
+    "combined_rule": "The empirical gaps can exist at more than one layer simultaneously. Measure every relevant projection under the exact same fingerprint and scorer: response/logprob mismatch, token/text mismatch, per-side score mismatch, score-pair mismatch and oriented-sign mismatch. Never substitute a mismatch rate from a different layer or runtime fingerprint.",
+    "artifact_status": {
+      "microbenchmark": {
+        "path": "research_workers_clean_g1/evaluation/decision_stat_mismatch_microbenchmark.py",
+        "blob": "0c124b891301d7d06d807bf2bef666677287035a",
+        "status": "ready for GPU/vLLM collection; compare/selftest are stdlib-only"
+      },
+      "public_trace_fixture": {
+        "path": "research_workers_clean_g1/evaluation/public_trace_vllm_51187_oververification_fixture.json",
+        "blob": "91ea51c05b59c16dd6c14354b9c88243a7b8ff29",
+        "status": "machine-checkable aggregate fixture; not an independent reproduction"
+      }
+    },
+    "early_decision_certificate_connection": {
+      "result": "The prior exact first-match <answer>[A-D]</answer> prefix certificate remains useful: if token divergence occurs only after both canonical score bits are already irreversibly fixed, it is decision-irrelevant for the paired sign; if it occurs before the certificate, canonical verification must continue until the protected statistic is fixed.",
+      "new_measurement": "Record the first differing token index and compare it with the canonical certificate token. This directly measures whether numerical divergence precedes or follows decision fixation, rather than using total text mismatch as a proxy."
+    }
+  },
+  "new_measurement_validity_rules": [
+    "Hashing the entire response object is not a neutral definition of reproducibility. Exactness must be specified at each observer layer, including whether logprobs/metadata are decision-relevant.",
+    "A zero token-mismatch observation in one runtime fingerprint cannot certify another fingerprint; TP, fusion kernel, GPU type/count, batch size and engine lifetime can change the mismatch mechanism.",
+    "When output divergence exists, locate its first occurrence relative to the scorer's irreversible decision certificate. Divergence after certificate may be safe for that scorer; divergence before certificate requires further canonical verification.",
+    "Report score/sign mismatch directly rather than inferring it from token divergence percentage or benchmark accuracy variance.",
+    "For paired evaluation, the final safety target remains equality of the protected oriented sign plus any state transition consumed downstream; intermediate response/token equality are diagnostic layers, not automatically the contract."
+  ],
+  "scope_guards": [
+    "No GPU execution was available in this automation environment, so the repository microbenchmark still lacks a local repeated-inference dataset.",
+    "The vLLM issue frequencies are scoped public observations and may be intermittent; they are not prevalence estimates.",
+    "The NeurIPS paper's Std@Acc and output-divergence measurements demonstrate runtime-sensitive evaluation outcomes but do not directly measure the paired Z mismatch rate of this worker's benchmark.",
+    "The paper's figure/table divergence percentages should be cited from their exact locations and not merged when definitions/sampling may differ.",
+    "No downstream, O, other-worker or legacy semantics were read."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Extend the public microbenchmark compare output with first-differing-token-index versus certificate-token diagnostics and runtime-stratified confidence intervals. Then execute it on GPU-enabled vLLM fingerprints when a compatible runtime is available."
+    },
+    {
+      "priority": 2,
+      "action": "Use a public token-divergent trace or reproduced vLLM setup to directly measure token->deterministic-score and score-pair->oriented-sign mismatch gaps under a frozen scorer. Do not infer either gap from accuracy variance alone."
+    },
+    {
+      "priority": 3,
+      "action": "Add structured JSON/schema tasks whose score is prefix-certifiable and compare decision-certificate latency with full canonical completion latency."
+    },
+    {
+      "priority": 4,
+      "action": "For stateful agent trajectories, extend the protected transcript from Z to (Z,next-state-hash) and test whether suffix/token differences after current-task score fixation can still change future environment/evaluator state."
+    },
+    {
+      "priority": 5,
+      "action": "Separate canonical-path determinism from fast-path equivalence: measure whether deterministic-by-construction runtimes eliminate canonical instability and whether decision-statistic verification recovers enough performance to justify a fast speculative path."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Extend decision_stat_mismatch_microbenchmark.py to report first token divergence relative to the exact score-certificate position, then obtain a public or executable token-divergent repeated-inference trace and directly measure whether those divergences cross the deterministic score and paired-sign boundaries."
+}
