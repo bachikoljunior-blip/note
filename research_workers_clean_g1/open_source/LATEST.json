@@ -4,48 +4,46 @@
   "control_revision": 12,
   "config_revision": 5,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0410_CURSOR_STATE_ATOMICITY_DURABILITY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0307_SHARED_CURSOR_IDENTITY_BOUNDARY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0505_FRESH_SINK_CURSOR_REGRESSION.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0410_CURSOR_STATE_ATOMICITY_DURABILITY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
       "commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
       "verified_current_main": true,
-      "predecessor_observed": "93a01f185f3c4800f127feca0739dbe7331c1950",
-      "ahead_by_observed": 4
+      "predecessor_observed": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+      "ahead_by_observed": 0
     },
     {
       "repository": "apache/kafka",
       "commit": "db8a0925513a76d1a4f13df00867c7491a4b3ce7",
       "verified_current_trunk": true,
-      "source_scope": "StateStore managed changelog offsets / RocksDB offsets column family / atomic flush precedent"
+      "source_scope": "StateStore managed changelog offsets / RocksDB offsets column family / atomic flush precedent from preceding role-local run"
     },
     {
       "repository": "JasperFx/marten",
       "commit": "fce5ceb7c63635ebbc027b659759b966e744fdf3",
       "verified_current_master": true,
-      "source_scope": "contiguous high-water / outstanding-sequence gap regression precedent"
+      "source_scope": "contiguous high-water / outstanding-sequence gap regression precedent from preceding role-local run"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Turn the fresh-sink A/E1-projection-fails -> fresh-sink B/E2-succeeds sequence into a literal regression around current JsonlEventSink + load_mission_view semantics. Put the authoritative projected cursor inside the same Mission View object/replacement as the state it describes, and reconcile a contiguous canonical prefix under events.lock before advancing it. Refactor persistence through one _prepare_persisted_event + _append_prepared path so normalization/redaction and sink-owned canonical identity occur exactly once for both handle_event and direct append. Add deep-generation stable replay under events.lock -> mission-view.lock. Separately build candidate-008 fault injection for canonical-log durable-before-view ordering and benchmark realistic per-event fsync versus small group commits; do not claim power-loss safety until that boundary is tested. Re-read current Argus main next invocation and keep optional Manager transition_id provenance separate.",
+  "exact_continuation": "Turn the current source-shaped fresh-sink E1 projection-write failure -> fresh-sink E2 success witness into two exact failure variants and finalize a schema-7 contiguous-prefix reconciliation API. Use distinct sink-owned event_log_id, not caller event_id, and embed the authoritative projection cursor in the same mission-view.json replacement. For cold migration, avoid mission-view-lock -> events-lock inversion by a double-checked events.lock -> mission-view.lock rebuild; schema<=6 has no trustworthy cursor and must full-rebuild once rather than infer from timestamps/caller IDs. Benchmark recent-first opaque-cursor location against authoritative all-generation fallback. Keep candidate-008 power-loss durability separate and unclaimed until canonical-fsync-before-view fault injection exists. Re-read current Argus main next invocation and keep optional Manager transition_id provenance separate.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "public_main_advance_count_observed": 4,
-    "candidate_007_status": "maintained and strengthened by current Kafka state-store offset co-location precedent",
-    "candidate_007_required_invariant": "under shared events.lock, each projected append reconciles one contiguous canonical prefix and persists Mission View state plus canonical cursor atomically, or leaves the prior view/cursor authoritative",
-    "candidate_007_cursor_location": "inside the same persisted Mission View object, not a sidecar or sink-local/process-local latch",
-    "candidate_007_identity_boundary": "one persisted-event preparation step must normalize/redact once, overwrite caller canonical identity with one sink-owned opaque ID, and feed the identical mapping to canonical storage/projection/downstream; direct .append uses the same path",
-    "candidate_007_current_argus_conditions": "projection exception still swallowed after canonical append; _bootstrap_view still reads only .1+live tails; handle_event still normalizes before _append and _append normalizes again; Manager front-door still uses fresh-sink direct append per event; round.review.completed can increment rejected_attempts",
-    "kafka_43_precedent": "StateStore-managed changelog offsets are co-located with state; current RocksDBStore uses an offsets column family, atomicFlush=true, writes offsets+position before commitStagedWrites, and the public contract says offsets should be atomic with represented records when possible",
-    "kafka_atomicity_durability_scope": "Kafka 4.3 documentation explicitly distinguishes state/offset atomicity from when low-traffic RocksDB memtables become durable, reinforcing that projection consistency and power-loss durability are separate claims",
-    "marten_contiguous_precedent": "current master retains regressions that hold projection/high-water progress below in-flight sequence gaps until the gap is proven dead",
-    "candidate_008_status": "new source-shaped durability-ordering candidate; no live power-loss incident claimed",
-    "candidate_008_observation": "current Argus canonical events.jsonl append/rotation has no observed explicit file/directory fsync ordering, while Mission View temp writes fsync the temp file before replace; canonical-durable-before-derived-view is therefore not established for power loss",
-    "candidate_008_desired_asymmetry": "canonical log may be durable while Mission View lags, but derived view/cursor should never be durably ahead of recoverable canonical log",
-    "candidate_008_local_probe": "local synthetic event-fsync + Mission-View file+directory-fsync medians: ~2.28 ms at 4 KiB view, 2.67 ms at 64 KiB, 2.96 ms at 256 KiB, 4.83 ms at 1 MiB; environment-specific feasibility only",
-    "candidate_006_status": "maintained: stable all-generation replay remains the shared cold-bootstrap/cursor-recovery primitive",
+    "public_main_advance_count_observed": 0,
+    "candidate_007_status": "strengthened with a deterministic source-shaped fresh-sink semantic-divergence regression and a concrete schema-7 migration/lock-order design",
+    "candidate_007_literal_witness": "force the first Mission View _write_unlocked call to fail for round.review.completed status=continue, discard that sink, append a second status=blocked event from a fresh sink; canonical log contains both while current single-event projection yields rejected_attempts=1 versus canonical replay=2",
+    "candidate_007_witness_scope": "the full Argus test was not executed locally; a minimal source-shaped simulation reproduced the exact 1-vs-2 reducer arithmetic and current source makes the persistence/projection order deterministic",
+    "candidate_007_identity_refinement": "use a distinct sink-owned event_log_id that overwrites caller input; do not overload existing caller event_id/id identity fields; persisted handle_event and direct append share one prepared mapping and one normalization path",
+    "candidate_007_cursor_location": "Mission View schema 7 embeds the last contiguously projected event_log_id in the same mission-view.json atomic replacement as the derived state",
+    "candidate_007_reconcile_contract": "under events.lock -> mission-view.lock, locate current cursor across stable retained generations and reduce every projected canonical event through the newly appended target; absent/unlocatable cursor triggers authoritative all-generation rebuild; write failure leaves prior view/cursor authoritative",
+    "candidate_007_legacy_migration": "schema<=6 has no trustworthy cursor; force one all-generation rebuild rather than infer from last_event_ts or caller IDs. Legacy-only history may remain cursorless after rebuild until the first new sink-owned projected event performs one further full rebuild and establishes a trustworthy cursor",
+    "candidate_007_lock_order": "current snapshot_mission_view holds mission-view.lock before _bootstrap_view; new canonical rebuild must not acquire events.lock from there. Use a double-check: read/release mission lock, then acquire events.lock -> mission-view.lock, re-read, rebuild only if still needed",
+    "candidate_007_event_key_scope": "Python _event_id and frontend eventKey should prefer event_log_id for replay-cardinality stability, but this does not make non-idempotent reducers globally replay-safe; contiguous-prefix reconciliation remains the correctness mechanism",
+    "candidate_006_status": "maintained and promoted to shared correctness fallback for schema migration/cursor recovery; stable all-generation replay is required, not just a reporting improvement",
+    "candidate_008_status": "maintained separately; current source still does not establish canonical-log durable-before-derived-view ordering for power loss and no power-loss incident was reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate"
   },
   "independence": {
