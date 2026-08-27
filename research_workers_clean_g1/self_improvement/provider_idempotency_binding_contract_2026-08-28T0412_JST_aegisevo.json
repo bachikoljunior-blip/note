@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T04:12:04+09:00",
+  "frozen_control": {
+    "note_main_sha": "ab7d475334153c77932b30e91f2324a0abd17ac1",
+    "control_revision": 12,
+    "config_revision": 6
+  },
+  "source": {
+    "repository": "ETOLucy/AegisEvo",
+    "revision": "2c5b9ee788629c4c7704f435ae9a3e81151a9fac",
+    "files": [
+      "crates/aegisevo-worker/src/harness.rs",
+      "crates/aegisevo-worker/src/openai_gateway.rs",
+      "crates/aegisevo-worker/tests/openai_gateway.rs",
+      "crates/aegisevo-storage/src/job.rs"
+    ]
+  },
+  "observed": {
+    "internal_correlation_id": {
+      "status": "present",
+      "construction": "HarnessRunner builds ModelRequest.correlation_id deterministically from task_digest prefix and call index; ModelResponse copies it back"
+    },
+    "provider_request_binding": {
+      "status": "absent_in_inspected_openai_gateway",
+      "evidence": "OpenAiModelGateway serializes model/instructions/input/max_output_tokens/store only; HTTP headers are bearer auth and content-type; ModelRequest.correlation_id is not serialized into the request body or provider idempotency/request header"
+    },
+    "gateway_test_scope": {
+      "status": "no provider idempotency assertion",
+      "evidence": "tests construct correlation_id but exercise response parsing, error mapping, model identity and budget behavior; no server assertion binds the provider request to correlation_id/idempotency"
+    },
+    "crash_retry_consequence": "The stable AegisEvo logical evaluation job can be reclaimed after lease expiry, but a remote model call has no inspected provider-visible idempotency key tied to that logical job/call. A successful provider call followed by worker death before durable observation completion can therefore be physically repeated.",
+    "scope_guard": "This is an exact finding for the inspected OpenAiModelGateway revision. It does not prove every possible custom ModelGateway lacks provider idempotency."
+  },
+  "design_rule": "An internal correlation_id that survives in local response metadata is observability, not exactly-once semantics, unless it is durably bound to the logical evaluation and transmitted/validated as provider idempotency or reconciled against an independent provider receipt.",
+  "minimum_provider_binding": [
+    "derive stable provider_call_id from logical_evaluation_id + immutable call index/input digest",
+    "persist PREPARED provider effect before network dispatch",
+    "send provider-supported idempotency key/request identity when semantics support it",
+    "bind returned provider request/response receipt to provider_call_id and input digest",
+    "on timeout/crash, reconcile receipt/request identity before any retry",
+    "if provider cannot establish happened/not-happened, retain UNKNOWN and fail closed rather than issuing a fresh uncharged logical call",
+    "keep query/statistical consumption charged to the logical evaluation regardless of physical retry outcome"
+  ],
+  "falsification_test": "Wrap the gateway with a test provider that durably counts distinct provider-side executions. SIGKILL the worker after provider success but before complete_job, expire/reclaim the job, and resume. Current inspected path predicts >1 provider execution for one logical job. A repaired path must show exactly one provider-side effect or an UNKNOWN fail-closed state, never an uncharged duplicate."
+}
