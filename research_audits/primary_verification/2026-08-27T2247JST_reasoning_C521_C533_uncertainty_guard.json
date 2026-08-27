@@ -1,0 +1,69 @@
+{
+  "schema_version": "PrimaryVerificationAuditV1",
+  "created_at": "2026-08-27T22:47:00+09:00",
+  "role": "primary_source_verifier",
+  "frozen_control": {
+    "note_main_sha": "59648af88c303b75e030007c15a3540cee18c1fa",
+    "desired_state_control_revision": 12,
+    "downstream_control_revision": 20,
+    "role_config_revision": 5
+  },
+  "source_qualification": {
+    "c521_checkpoint_path": "research_workers_clean_g1/reasoning/2026-08-27T2010JST.md",
+    "c521_checkpoint_blob": "b3b12176d6917054035c3f8c33e62accc1ee15c8",
+    "zero_guard_path": "research_workers_clean_g1/reasoning/fixtures/support_family_v0.zero_guard.json",
+    "zero_guard_blob": "b5a09a90477a2065cb3daa6cabb888d9caa96da3",
+    "adaptive_script_path": "research_workers_clean_g1/reasoning/fixtures/support_family_v0.adaptive_stratified_cp.py",
+    "adaptive_script_blob": "6402f7130a4602c2ed7a31a85ed20844751388ed",
+    "adaptive_result_path": "research_workers_clean_g1/reasoning/fixtures/support_family_v0.adaptive_stratified_cp.json",
+    "adaptive_result_blob": "59bff03d9ddfe43475a6b0be684f924be04ccf5f"
+  },
+  "c521_independent_recalculation": {
+    "model": "iid Bernoulli marginal indicators from uniform random permutations; zero successes in n samples",
+    "confidence": 0.95,
+    "formula": "p_upper(n)=1-0.05^(1/n)",
+    "upper_bounds_recomputed": {
+      "4":0.5271291954984121,
+      "8":0.31234397806636793,
+      "16":0.17074972298248092,
+      "32":0.0893681989862648,
+      "64":0.045729702330762456,
+      "128":0.023132405251746757,
+      "256":0.011633876163163248,
+      "512":0.005833955600556329
+    },
+    "minimum_n_for_strict_upper_bound_below_materiality": {
+      "0.10":29,
+      "0.05":59,
+      "1/30":89,
+      "0.02":149,
+      "0.01":299,
+      "0.005":598
+    },
+    "boundary_checks": {
+      "n88_upper_for_1_over_30":0.03346948891663748,
+      "n89_upper_for_1_over_30":0.03309972123627414,
+      "n298_upper_for_0_01":0.010002432437677733,
+      "n299_upper_for_0_01":0.009969146792899286
+    },
+    "verdict": "VERIFIED_EXACT_ANALYTIC_RECALCULATION"
+  },
+  "c533_confidence_construction_review": {
+    "code_observation": "The adaptive sampler stratifies by 5 players x 5 predecessor coalition sizes. Each selected stratum samples a coalition uniformly with replacement using a predictable choice based only on prior observations. For local stratum sample count m it constructs a two-sided Clopper-Pearson interval with alpha_m = 0.05*6/(pi^2*25*m^2).",
+    "alpha_accounting": "25 * sum_{m>=1} [0.05*6/(pi^2*25*m^2)] = 0.05, so a union bound gives simultaneous coverage over every stratum and every local sample count covered by the construction. The executed implementation precomputes tables only through m=640 because that is its maximum run budget.",
+    "adaptive_validity": "Adaptive stratum selection does not by itself invalidate this bound: within each stratum, observations are fresh uniform-with-replacement Bernoulli draws; the confidence event is union-bounded over all local sample counts, so the data-dependent calendar times at which a stratum is revisited are already covered.",
+    "shapley_interval_mapping": "For a uniform random permutation, predecessor coalition size is uniform over k=0..4. Therefore each player's exact Shapley value is the equal-weight mean of the five stratum means. If all five stratum means lie in their simultaneous intervals, averaging their lower/upper endpoints yields a valid player-level interval.",
+    "scope_corrections": [
+      "The 100% empirical simultaneous coverage reported over 1,000 deterministic seeds is a diagnostic, not proof of a 100% coverage guarantee; the designed guarantee is at least 95% under the stated Bernoulli/with-replacement model and exact CP arithmetic.",
+      "The Clopper-Pearson construction is specific to binary marginal contributions in this monotone synthetic game. It does not automatically transfer to negative or non-binary Shapley marginals.",
+      "The adaptive point estimator may have data-dependent local sample counts; no unbiasedness claim should be inferred from the confidence-sequence validity.",
+      "The code's time-uniform implementation is operationally bounded to the precomputed local sample counts used by the run; extending beyond that requires extending the CP tables under the same alpha schedule."
+    ],
+    "verdict": "CONFIDENCE_ACCOUNTING_SUPPORTED_WITH_SCOPE_LIMITS"
+  },
+  "overall": {
+    "status": "SUPPORTED",
+    "decision_relevance": "C521's 89-zero and 299-zero thresholds are exact under iid permutation sampling. C533 correctly avoids reusing the iid zero-count interval for its adaptive/dependent allocation and instead supplies an estimator-specific simultaneous construction, but that construction is intentionally extremely conservative and synthetic-game-specific.",
+    "next_verification": "Audit the current rare-effect-aware estimator frontier (C532-C534) for whether any proposed tighter stopping rule preserves valid anytime coverage while adding an exploration floor; if none is implemented, keep sampled zero non-authoritative and rotate to the next source-qualified high-value claim."
+  }
+}
