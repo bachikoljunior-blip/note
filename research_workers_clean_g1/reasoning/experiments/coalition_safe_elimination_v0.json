@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "protocol_id": "coalition_safe_elimination_v0",
+  "created_at": "2026-08-28T00:00:30+09:00",
+  "status": "preregistered_before_outcomes",
+  "purpose": "Compare Shapley coalition-credit estimators under matched new unique value-oracle cost while separating aggregate estimation from rare-positive-safe elimination and explicitly pricing exact completion.",
+  "frozen_semantic_control": {
+    "note_main_sha": "3b4965ab49c0c848983ee9d13c2e05fcd80a0b5e",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "game": {
+    "n_players": 10,
+    "player_ids": [0,1,2,3,4,5,6,7,8,9],
+    "value_range": [0,1],
+    "monotone_binary": true,
+    "definition": "v(S)=1 iff S contains at least one minimal_support; otherwise 0",
+    "minimal_supports": [[0,1],[2,3],[4,5],[6,7],[0,2,4,6,8,9]],
+    "rare_interaction_players": [8,9],
+    "coalition_universe_size": 1024,
+    "outcomes_not_computed_at_preregistration": true
+  },
+  "cost_accounting": {
+    "primary_unit": "new_unique_coalition_value_oracle_calls",
+    "global_value_cache": true,
+    "cached_value_lookup_cost": 0,
+    "bookkeeping_reported_separately": true,
+    "exact_completion_cost": "1024 - unique_cached_coalitions",
+    "no_posthoc_free_completion": true
+  },
+  "budgets_unique_calls": [128,256,384,512,640,768,896,1024],
+  "estimators": [
+    {
+      "id": "iid_permutation_cached",
+      "description": "iid random permutations; evaluate missing coalition vertices through a global cache; estimate Shapley from observed permutation marginals"
+    },
+    {
+      "id": "reverse_antithetic_permutation_cached",
+      "description": "random permutation plus reverse; global coalition cache; estimate from observed permutation marginals"
+    },
+    {
+      "id": "vertex_srswor_ht_edges",
+      "description": "sample coalition vertices uniformly without replacement; use Horvitz-Thompson weighting for marginal edges whose two endpoints were sampled; point estimator only unless a valid dependent-edge bound is supplied"
+    },
+    {
+      "id": "size_stratified_marginal_srswor",
+      "description": "for each player i and coalition size k, sample S uniformly without replacement from {S subset N\\{i}: |S|=k}; observe delta_i(S)=v(S union {i})-v(S); aggregate equally across k because phi_i=(1/n) sum_k mean_k delta_i",
+      "uncertainty": "pre-specified-checkpoint finite-population one-sided bounds per player/size stratum, combined by union bound; time-uniform WoR confidence sequences may replace checkpoint bounds only if implemented from a cited valid construction without outcome-dependent tuning"
+    },
+    {
+      "id": "exact_completion",
+      "description": "separate sequential action that evaluates every remaining coalition value and computes exact Shapley; its remaining oracle calls are charged explicitly"
+    }
+  ],
+  "decision_checkpoints": [128,256,384,512,640,768,896,1024],
+  "confidence": {
+    "familywise_alpha": 0.05,
+    "checkpointing_rule": "Any fixed-time bound used for optional stopping across the listed checkpoints must receive explicit alpha allocation across checkpoints, players and size strata before outcomes. A time-uniform WoR confidence sequence may instead use its own simultaneous guarantee.",
+    "bounded_marginal_range": [0,1],
+    "source_family": [
+      "Waudby-Smith and Ramdas, Confidence Sequences for Sampling Without Replacement, NeurIPS 2020",
+      "Bardenet and Maillard, Concentration inequalities for sampling without replacement, Bernoulli 2015"
+    ]
+  },
+  "safe_elimination": {
+    "thresholds": [0.0,0.001,0.005],
+    "certification_rule": "At threshold epsilon, certify phi_i <= epsilon only when a valid one-sided upper bound is <= epsilon, or by exact completion.",
+    "false_elimination": "exact_phi_i > epsilon but method certifies phi_i <= epsilon",
+    "sampled_zero_is_never_authoritative": true,
+    "strict_zero_note": "Without additional structural assumptions, incomplete sampling generally cannot certify exact phi_i=0 when unobserved positive marginals remain possible; exact-zero demotion therefore defaults to exact completion. Statistical stopping is primarily for epsilon-negligibility, not exact logical zero."
+  },
+  "metrics": {
+    "aggregate": ["per-player RMSE","median RMSE","max absolute error"],
+    "rare_positive": ["sampled_zero_rate","false_elimination_rate_by_threshold","time_or_cost_to_first_positive_evidence"],
+    "uncertainty": ["coverage_by_threshold","upper-bound width","cost_to_certification"],
+    "cost": ["new_unique_oracle_calls","cache_hits","bookkeeping_time","exact_completion_remaining_calls"]
+  },
+  "comparison_rules": {
+    "same_seed_set": "0..999 unless runtime/tool limits force a smaller preregistered pilot before any outcome is inspected",
+    "no_outcome_dependent_estimator_changes": true,
+    "unsupported_uncertainty": "If vertex_srswor_ht_edges lacks a defensible bound, report point-estimation metrics only and do not allow it to certify elimination.",
+    "exact_truth": "Exact Shapley and false-elimination labels are computed only from the full 1024-coalition game after this protocol is durable."
+  },
+  "next_action": "Implement the game and estimators exactly as frozen, first validate deterministic exact-enumeration identities, then run the fixed budget grid without changing supports, thresholds, estimator definitions or cost accounting after observing outcomes."
+}
