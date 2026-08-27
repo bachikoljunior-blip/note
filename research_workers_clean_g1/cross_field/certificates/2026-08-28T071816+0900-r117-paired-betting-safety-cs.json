@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 12,
+  "config_revision": 5,
+  "created_at": "2026-08-28T07:18:16+09:00",
+  "topic": "theorem-exact raw-time paired betting confidence sequence against the predictable defensive base",
+  "control_snapshot": {
+    "note_main_sha_frozen": "3e9914a229f5e9fc134460dac9c8a5cb158637c9",
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_control_semantics_adopted": false
+  },
+  "public_evidence": [
+    {
+      "source": "Paul Mineiro, A lower confidence sequence for the changing mean of non-negative right heavy-tailed observations with bounded mean",
+      "url": "https://arxiv.org/abs/2210.11133",
+      "date": "2022-10-20",
+      "result": "For adapted nonnegative X_t with conditional mean bounded by one, predictable hatX_t in [0,1], and fixed lambda in [0,1), the Heavy NSM is a nonnegative supermartingale and yields a time-uniform lower confidence sequence for the running average conditional mean. The paper explicitly connects the construction to gated deployment and shows it dominates the corresponding empirical-Bernstein supermartingale for the same lambda/predictor."
+    },
+    {
+      "source": "Waudby-Smith, Wu, Ramdas, Karampatziakis, Mineiro, Anytime-valid off-policy inference for contextual bandits",
+      "url": "https://arxiv.org/abs/2210.10768",
+      "date": "2022-10-19",
+      "result": "Anytime-valid off-policy inference remains valid under adaptively changing logging policies, dependent/drifting contexts and arbitrary stopping, supporting the adaptive-proposal interpretation of the paired martingale layer."
+    }
+  ],
+  "derived_theorem": {
+    "setup": "From r116, for epsilon in {0.6,0.8,1.0}, B=25/9 and every predictable mixture of the candidate proposals, the normalized raw-time paired observation d_t=h_t-l_base,t lies deterministically in [a,b]=[-0.09,0.4]. Nonfailure trials have d_t=0. Let w=b-a=0.49 and X_t=(b-d_t)/w in [0,1].",
+    "predictor": "Use the fixed predictable predictor hatX=b/w=40/49. For a fixed lambda in [0,1), Mineiro's Heavy NSM gives a simultaneous lower confidence sequence for the running average conditional mean of X_t.",
+    "upper_cs": "Transforming back gives the theorem-exact anytime upper confidence sequence U_t^d = (w/(lambda*t)) * [log(1/alpha) - sum_{s<=t} log(1 - lambda*d_s/w)]. With probability at least 1-alpha, for every raw time t, (1/t) sum_{s<=t} E[d_s|F_{s-1}] <= U_t^d. Raw-time zero observations contribute zero to the log-wealth but remain in t, so the estimand is not changed to failure-event time.",
+    "gate": "Certify weighted-candidate noninferiority against the base as soon as U_t^d<0, equivalently when sum log(1-lambda*d_s/w)>log(1/alpha). Since S(q_mix)<=sum_j w_j S(q_j) by the convexity argument from r113, U_t^d<0 also certifies that the actual convex proposal mixture's cumulative second-moment excess versus the base is negative, within the same theorem scope.",
+    "fixed_parameter": "lambda=0.95 and alpha=0.05. Lambda was frozen using already-consumed r116/discovery lineage before the independent validation below; lambda<1 satisfies the theorem condition. A later predeclared mixture over lambda can improve robustness without changing the target, but is not needed for validity here."
+  },
+  "matched_separate_cs": {
+    "construction": "For comparison only, use the same Heavy-NSM idea separately on h_t and l_base,t in [0,1], with alpha/2 for each side and lambda=0.95. Lower-bound the base with predictor 0 and upper-bound h via the transform 1-h with predictor 1; union-bound the two sequences. This is a clean direct two-CS baseline, not a claim that every possible separate-OPE construction is this weak.",
+    "reason_paired_can_win": "The paired d_t uses common-random cancellation and the exact width 0.49, while separate h/base sequences pay two error budgets and retain their individual sparse-failure variability."
+  },
+  "engineering_validation": {
+    "model": "Fresh independent reimplementation of the synthetic model stated in own r112-r116: 4096 equiprobable base branches; pre/post branch risks normalized from exp(+/-1.2 z) to base risk 0.002; fixed noisy proxy z+N(0,proxy_noise); priority proportional to exp(0.6 proxy); q_epsilon=epsilon*base+(1-epsilon)*priority for epsilon={0.6,0.8,1.0}; eta=16, Fixed Share alpha=0.01; recurring regime is four 25k pre/post/pre/post phases. This reimplementation is not asserted bit-identical to the prior r116 RNG implementation, and the results below are new engineering validation rather than a reanalysis of hidden raw r116 paths.",
+    "discovery_lineage": {
+      "seeds": "60000..60049, overlapping already-used prior/discovery lineage rather than validation lineage",
+      "lambda_grid": [0.1,0.2,0.4,0.6,0.8,0.95],
+      "paired_lambda_0.95": {"certification_rate_by_100k":1.0,"median_raw_time":15986.5},
+      "paired_lambda_0.8": {"certification_rate_by_100k":1.0,"median_raw_time":18483.0},
+      "selection": "freeze lambda=0.95 before new validation"
+    },
+    "independent_recurring_validation": {
+      "seeds": "61000..61299",
+      "replicates": 300,
+      "paired_cs": {
+        "certified_by_100k": 298,
+        "certification_rate": 0.9933333333333333,
+        "median_certification_raw_time": 17347.5,
+        "q90_certification_raw_time": 61351.7,
+        "mean_final_U_d": -0.000015105048000182859,
+        "median_final_U_d": -0.000014335252842031879,
+        "mean_B_times_t_times_U_d_variance_units": -4.19584666671746
+      },
+      "matched_separate_two_cs": {
+        "certified_by_100k": 0,
+        "certification_rate": 0.0,
+        "mean_final_upper_gap": 0.00030255744239981053,
+        "mean_B_times_t_times_upper_gap_variance_units": 84.04373399994736
+      },
+      "regime_diagnostics": {
+        "mean_true_weighted_minus_base_normalized_cumulative_gap": -3.9023990720528174,
+        "mean_actual_mixture_minus_base_variance_units": -11.606983690790617,
+        "mean_failures": 235.30333333333334
+      }
+    },
+    "null_and_degradation_sanity_checks": {
+      "branch_independent_failure_null": {
+        "seeds": "62000..62499",
+        "replicates": 500,
+        "paired_false_gate_count": 0,
+        "observed_false_gate_rate": 0.0,
+        "one_sided_95pct_binomial_upper_if_zero_of_500": 0.005973551516349596,
+        "mean_true_weighted_gap": 0.8794631034112085,
+        "note": "The theorem already supplies the 5% anytime bound; this is only a finite simulation sanity check."
+      },
+      "static_post_harmful_regime": {
+        "replicates": 300,
+        "paired_certification_rate": 0.0,
+        "mean_true_weighted_gap": 0.3405318548569157,
+        "mean_actual_mixture_minus_base_variance_units": 0.7306202386570326
+      },
+      "recurring_proxy_noise_2": {
+        "replicates": 200,
+        "paired_certification_rate": 0.02,
+        "mean_true_weighted_gap": 0.008841628061128926,
+        "mean_actual_mixture_minus_base_variance_units": -1.4792743600276759,
+        "note": "The weighted upper comparator is essentially null/slightly harmful while the actual convex mixture remains slightly better; 2% certification is within the 5% anytime error budget and illustrates conservatism plus allowed type-I error rather than a deterministic no-false-gate property."
+      },
+      "recurring_proxy_noise_3": {"replicates":200,"paired_certification_rate":0.0,"mean_true_weighted_gap":1.2545640967421958,"mean_actual_mixture_minus_base_variance_units":1.7441779868259903},
+      "recurring_proxy_noise_4": {"replicates":200,"paired_certification_rate":0.0,"mean_true_weighted_gap":1.183779408225472,"mean_actual_mixture_minus_base_variance_units":1.8738858720846423}
+    },
+    "additional_regimes": {
+      "abrupt_pre_then_post_200": {"certification_rate":0.995,"median_raw_time":17336.0,"q90_raw_time":27663.4,"mean_true_weighted_gap":-4.566480404413096,"mean_actual_minus_base_variance_units":-13.289687402118183},
+      "static_pre_200": {"certification_rate":1.0,"median_raw_time":16681.5,"q90_raw_time":25611.9,"mean_true_weighted_gap":-10.157766607765803,"mean_actual_minus_base_variance_units":-29.05700737934383}
+    }
+  },
+  "new_design_consequence": {
+    "claim": "The r116 base-comparator feasibility diagnostic can be upgraded to an actual theorem-exact anytime safety gate with O(1) state for one fixed lambda: keep only raw t and cumulative log-wealth. In the fresh recurring validation it certified the adaptive weighted proposal against base in 298/300 runs, whereas a matched direct pair of separate Heavy-NSM confidence sequences certified 0/300 by 100k.",
+    "scope": "This certifies cumulative average conditional second-moment noninferiority against a predictable comparator. It does not certify instantaneous post-drift performance, a hindsight switching oracle, or real-agent capability."
+  },
+  "negative_or_scope_evidence": [
+    "All numerical validation is synthetic. No real-agent or AGI performance conclusion follows.",
+    "The fixed-lambda CS is theorem-valid but not power-optimal for every regime; lambda was frozen from prior/discovery evidence and should not be retuned on the same validation path without multiplicity accounting.",
+    "The paired guarantee is against the weighted-candidate second-moment upper bound. Convexity transfers a negative upper gap to the actual mixture, but a nonnegative weighted gap does not prove the actual mixture is harmful.",
+    "The CS is cumulative-average in raw time. It can retain historical benefit after a later drift; instantaneous/current-regime certification requires a separately valid change/restart/local-history construction with explicit error accounting.",
+    "The direct separate-CS baseline is only one matched construction and is not an impossibility result for all separate off-policy confidence sequences.",
+    "Dependent/systematic resampling, random particle counts and environment/tool transition proposal bias remain outside the theorem instantiated here."
+  ],
+  "next_tests": [
+    "Build a local/current-regime companion gate without reusing the same 5% error budget after arbitrary restarts; compare e-detector-triggered reset, preallocated alpha epochs and rolling/predictable local comparators.",
+    "Replace single lambda with a predeclared discrete/continuous mixture or DDRM-style construction and quantify whether q90 certification delay falls without weakening O(1)-ish implementation practicality.",
+    "Run an exact linear-gradual-drift validation and record when the cumulative gate becomes stale relative to current proposal harm; do not reinterpret cumulative U_t as instantaneous safety.",
+    "Extend the exact paired-range derivation to larger epsilon grids and then to dependent/systematic sibling resampling with proper weighting.",
+    "Only after the inference layer is theorem-clean under the intended trajectory semantics, instantiate the cheap-judge proposal plus sparse high-fidelity truth agent-evaluation proof-of-concept."
+  ]
+}
