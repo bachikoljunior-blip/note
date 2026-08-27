@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T16:20:33+09:00",
+  "result": "The conservative predictable-weight CS can be tightened by replacing the minimum-slope denominator bound with the exact worst-case denominator over all conditional-mean vectors having the candidate weighted average.",
+  "setup": {
+    "score": "Y_i in [0,1]",
+    "predictable_weight": "0<w_i<=1, fixed before Y_i is observed",
+    "conditional_mean": "mu_i=E[Y_i|F_{i-1}]",
+    "target": "m = sum_i w_i mu_i / W, W=sum_i w_i",
+    "lambda_component_supermartingale_denominator": "D(mu)=prod_i [1-a_i mu_i], a_i=1-exp(-lambda w_i)"
+  },
+  "exact_envelope": {
+    "definition": "D_max(m)=max prod_i(1-a_i mu_i) subject to 0<=mu_i<=1 and sum_i w_i mu_i=W*m",
+    "e_component": "E_lambda(m)=exp(-lambda*sum_i w_i Y_i)/D_max(m)",
+    "validity": "For the true weighted mean, the actual denominator D(mu) is <=D_max, so E_lambda is pathwise <= the corresponding nonnegative supermartingale. Fixed convex mixtures remain dominated and Ville-valid.",
+    "equal_weight_recovery": "If all w_i=1 then all a_i are equal; concavity/Jensen gives mu_i=m at the maximum and D_max=(1-(1-exp(-lambda))*m)^t, exactly recovering the original equal-process construction."
+  },
+  "water_filling_solution": {
+    "objective": "maximize sum_i log(1-a_i mu_i) under the weighted-mean equality",
+    "KKT": "Interior coordinates satisfy mu_i=1/a_i-c/w_i for one scalar c; clip each coordinate to [0,1].",
+    "solve": "Choose c so sum_i w_i*clip(1/a_i-c/w_i,0,1)=W*m. The left side is monotone in c, enabling one-dimensional bisection or an exact breakpoint/water-filling implementation.",
+    "breakpoints": "mu_i switches 0/interior at c=w_i/a_i and interior/1 at c=w_i(1-a_i)/a_i."
+  },
+  "comparison_to_conservative_weighted_bound": {
+    "conservative_component": "exp(-lambda*S_w + (1-exp(-lambda))*W*m)",
+    "relation": "The exact envelope is always at least as powerful because the conservative proof upper-bounds D_max further using 1-x<=exp(-x) and the minimum ratio (1-exp(-lambda w))/w.",
+    "zero_mismatch_1pct_examples_using_unified_portfolio": [
+      {"prospective_weight_pattern":"all 1","exact_processes":348,"conservative_processes":350,"exact_weight_sum":348.0,"conservative_weight_sum":350.0},
+      {"prospective_weight_pattern":"0.25,1 alternating","exact_processes":556,"conservative_processes":560,"exact_weight_sum":347.5,"conservative_weight_sum":350.0},
+      {"prospective_weight_pattern":"1/16,2/16,4/16,8/16,1 repeating","exact_processes":895,"conservative_processes":903,"exact_weight_sum":346.8125,"conservative_weight_sum":349.1875},
+      {"prospective_weight_pattern":"nine 0.1 then one 1 repeating","exact_processes":1822,"conservative_processes":1840,"exact_weight_sum":346.0,"conservative_weight_sum":349.6}
+    ],
+    "sparse_examples_alternating_0_25_1_at_1pct": [
+      {"mismatch_process_indices":[1],"weighted_mismatch_score":0.25,"exact_processes":724,"conservative_processes":728},
+      {"mismatch_process_indices":[2],"weighted_mismatch_score":1.0,"exact_processes":1068,"conservative_processes":1073},
+      {"mismatch_process_indices":[1,2],"weighted_mismatch_score":1.25,"exact_processes":1163,"conservative_processes":1169},
+      {"mismatch_process_indices":[2,4],"weighted_mismatch_score":2.0,"exact_processes":1428,"conservative_processes":1436}
+    ],
+    "interpretation": "The exact envelope gives modest but consistent finite-sample savings in these synthetic patterns and, more importantly, recovers the original tight construction when weights are equal."
+  },
+  "measurement_rules": [
+    "Weights must be predictable. Realized cluster size that can depend on the current outcome is not licensed by this derivation.",
+    "If request weighting is desired and exposure can be prospectively blockized into equal-size units, the equal-weight construction is simpler and tighter than retrospective unequal-size weighting.",
+    "The exact envelope target is a time-varying weighted average conditional mean; do not running-intersect endpoints across times without a separate constant-target theorem.",
+    "Numerical water-filling implementation must preserve monotonicity and fail closed on cap/weight-contract violations."
+  ],
+  "scope": [
+    "The process-count benchmarks are synthetic deterministic weight patterns, not measured production latency or mismatch traffic.",
+    "No claim is made that the modest savings shown here dominate alternative importance-weighted CS constructions outside this bounded conditional-mean contract.",
+    "No forbidden semantic inputs were read."
+  ]
+}
