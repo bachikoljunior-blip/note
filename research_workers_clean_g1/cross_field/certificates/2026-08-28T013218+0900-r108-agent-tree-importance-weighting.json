@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "cross_field",
+  "control_revision": 12,
+  "config_revision": 5,
+  "control_snapshot": {
+    "note_main_sha_frozen": "2425fb5222a2a90e5283f081d5bdccd06b718608",
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_control_semantics_adopted": false
+  },
+  "topic": "Probability-valid rare-event estimation for multi-turn stochastic agent trees, with search/caching separated from likelihood correction",
+  "public_sources": [
+    {
+      "title": "Adaptive Multilevel Twisted Sequential Monte Carlo for Rare Events Estimation in Language Models",
+      "date": "2026-08-22",
+      "url": "https://arxiv.org/abs/2608.21736",
+      "scope": "fixed-prompt autoregressive LM rare-event estimation; adaptive intermediate events; learned twists; importance correction"
+    },
+    {
+      "title": "Probabilistic Inference in Language Models via Twisted Sequential Monte Carlo",
+      "date": "2024-04-26",
+      "url": "https://arxiv.org/abs/2404.17546",
+      "scope": "token-level twisted SMC and normalization-constant estimation for language models"
+    },
+    {
+      "title": "Failure Probability Estimation for Black-Box Autonomous Systems using State-Dependent Importance Sampling Proposals",
+      "date": "2024-12-03",
+      "url": "https://arxiv.org/abs/2412.02154",
+      "scope": "state-dependent importance sampling for long-horizon sequential black-box systems"
+    },
+    {
+      "title": "A Deep Reinforcement Learning Approach to Rare Event Estimation",
+      "date": "2022-11-22",
+      "url": "https://arxiv.org/abs/2211.12470",
+      "scope": "adaptive state-dependent importance sampling and multiple importance sampling for sequential systems"
+    },
+    {
+      "title": "Toward a Principled Framework for Agent Safety Measurement",
+      "date": "2026-05-02",
+      "url": "https://arxiv.org/abs/2605.01644",
+      "scope": "BOA multi-turn agent trajectory search under a likelihood budget with prefix caching and chunked tree expansion"
+    },
+    {
+      "title": "Active Learning with Multifidelity Modeling for Efficient Rare Event Simulation",
+      "date": "2021-06-25",
+      "url": "https://arxiv.org/abs/2106.13790",
+      "scope": "subset simulation with adaptive low-fidelity/high-fidelity correction and HF-call gating"
+    }
+  ],
+  "derived_proposition": {
+    "name": "agent_tree_search_as_weighted_proposal",
+    "base_model": "For history h_t, base agent action/chunk law pi(a_t|h_t), environment law P(o_{t+1}|h_t,a_t), and terminal failure indicator H(tau), p(tau)=p(h_0)*product_t pi(a_t|h_t) P(o_{t+1}|h_t,a_t).",
+    "agent_only_proposal": "If search changes only agent generation to q(a_t|h_t) and environment transitions remain sampled from P, then W(tau)=product_t pi(a_t|h_t)/q(a_t|h_t). The estimator N^{-1} sum_i W(tau_i) H(tau_i) is unbiased when q has support wherever p(tau)H(tau)>0.",
+    "environment_proposal": "If environment responses are also biased or replayed from Q(o|h,a), then W must additionally contain product_t P(o_{t+1}|h_t,a_t)/Q(o_{t+1}|h_t,a_t). If P/Q cannot be evaluated, search alone does not identify unrestricted base-distribution failure probability.",
+    "smc_extension": "Prefix cloning/resampling is probability-valid only when ancestor lineage and incremental weights are retained under an SMC proposal/resampling construction. Prefix/KV/environment-state caching is an execution optimization; it is not a probability correction and cannot replace proposal probabilities or weights.",
+    "support_guard": "Deterministic pruning that makes q=0 on a base-positive failure path destroys unbiasedness. A base-mixture/support floor can preserve coverage, but should be justified as a support guard rather than assumed efficient because defensive mixtures can waste samples when nominal trajectories do not reach failures."
+  },
+  "exact_toy_check": {
+    "base_failure_probability": 0.001099,
+    "setup": "Two-turn toy. Base first action risky/safe probabilities 0.01/0.99. Bad-environment probabilities 0.2/0.001. Conditional final harmful probabilities 0.5/0.1. Search proposal changes first action to 0.5/0.5 and harmful action probabilities to 0.8/0.5.",
+    "agent_only_weighted_estimate_expectation": 0.001099,
+    "unweighted_search_failure_rate": 0.08025,
+    "environment_biased_case": "If bad-environment probabilities are additionally changed to 0.9/0.01, including both agent and environment likelihood ratios still gives 0.001099; omitting the environment ratio gives 0.00549, about 4.995x the base risk.",
+    "support_failure_case": "If the safe first-action branch is pruned completely, the weighted estimator can recover only 0.001 and misses 0.000099, a 9.01% downward bias in this toy."
+  },
+  "new_quantitative_evidence": [
+    {
+      "source": "Adaptive Multilevel Twisted SMC",
+      "result": "The 2026 preprint directly addresses positive-sample starvation by learning twists through progressively rarer intermediate events and importance-correcting samples from the previous-level proposal. Its abstract and method explicitly distinguish proposal concentration from the base-model target probability."
+    },
+    {
+      "source": "State-dependent IS for black-box autonomous systems",
+      "result": "The 2024 work evaluates adaptive state-dependent proposals on four long-horizon sequential systems and reports more accurate failure-probability estimates than Monte Carlo and prior importance-sampling baselines; it is direct precedent for trajectory-space proposal learning in stochastic sequential systems."
+    },
+    {
+      "source": "Active multifidelity rare-event simulation",
+      "result": "On a borehole case around Pf=2.9e-5, the proposed coupled multifidelity subset method used 1,147-1,379 HF calls versus 200,000 for HF subset simulation and 17,000,000 for direct Monte Carlo while reporting similar Pf/COV. On a mechanics case it used 913 HF calls versus 60,000 for HF subset simulation with similar Pf/COV. This supports selective HF correction at conditional rare-event levels, not replacement of the HF target by a learned LF score."
+    }
+  ],
+  "composition_for_replayable_multi_turn_agents": {
+    "logged_objects": [
+      "target failure label H or a clearly scoped higher-fidelity target",
+      "progress/reaction-coordinate score used for intermediate levels",
+      "proposal/search policy q with probability of every sampled agent branch",
+      "environment proposal Q and base likelihood P when environment is biased/replayed",
+      "ancestor/resampling lineage for cloned prefixes",
+      "importance/SMC incremental weights and final probability estimator"
+    ],
+    "execution_layer": "BOA-style batching, prefix caching and chunked tree expansion may accelerate generation and branch reuse, but must sit below the estimator. Cache keys for stochastic replay need enough environment/RNG state to reproduce the intended conditional law; a single stochastic suffix must not be silently counted as multiple independent particles.",
+    "proposal_layer": "Use state/history-dependent search or learned twists to raise failure hit rate. Multilevel intermediate events are a practical mechanism when final failures are too rare to train a useful proposal directly.",
+    "estimator_layer": "Use IS/SMC weights defined against the deployment/base trajectory law. Search score, in-budget mass and base-distribution risk remain separate endpoints.",
+    "fidelity_layer": "A cheap learned evaluator can gate expensive target calls near intermediate/final boundaries, but the HF correction must remain in the probability-estimation path. Cross-field multifidelity subset simulation shows that subset-dependent HF gating can avoid the failure mode where a globally confident LF model never learns deep rare-event boundaries."
+  },
+  "negative_or_scope_evidence": [
+    "BOA is strong evidence for multi-turn trajectory search and efficient prefix reuse, but its reported safety score is tied to a likelihood-bounded searched set; it is not by itself an unrestricted unbiased deployment-risk estimator.",
+    "Adaptive Multilevel Twisted SMC is a 2026 arXiv preprint and targets fixed-prompt autoregressive LM outputs, not stochastic tool environments or fully general agents.",
+    "A learned rare-event score can improve proposal training while still being misspecified relative to the real target; proposal efficiency does not erase target-label bias.",
+    "The multifidelity HF-call reductions come from engineering reliability examples, not an agent-evaluation benchmark. The transfer is a mechanism hypothesis, not a demonstrated agent result.",
+    "No direct paper was found in this pass that simultaneously provides BOA-like multi-turn agent tree search, stochastic-environment likelihood accounting, and an unbiased unrestricted deployment failure-probability estimator end to end.",
+    "No AGI capability conclusion follows."
+  ],
+  "frontier": [
+    "Find or derive a particle/SMC algorithm for stochastic multi-turn agents where BOA-like priority expansion is converted into an explicit q and every environment branch carries P/Q when necessary.",
+    "Test whether adaptive priority queues can be combined with unbiased SMC without hidden selection bias; if selection is deterministic, identify the minimum randomization/support floor needed for unbiasedness or a valid lower/upper bound instead.",
+    "Find ML/agent-specific multifidelity evidence where a learned judge is corrected by sparse higher-fidelity labels inside a rare-event estimator, with measured bias/variance and HF-call savings.",
+    "Quantify representation-score shift separately from proposal quality: keep target label, reaction coordinate, proposal and estimator as four distinct artifacts."
+  ],
+  "exact_next_action": "Search for priority-resampled particle filters, adaptive SMC or rare-event splitting with nonuniform/adaptive particle selection that preserves normalization-constant unbiasedness. Map its selection/resampling theorem onto a multi-turn agent tree with stochastic environment responses. If no exact theorem permits BOA-style deterministic priority expansion, derive a randomized priority proposal with explicit inclusion probabilities and compare variance against ordinary multinomial/systematic SMC. In parallel, search for agent/LLM multifidelity rare-event evaluation with explicit high-fidelity correction rather than proxy-only scoring.",
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_or_pre_independence": false,
+    "read_comparator_integrator_index_feed_audit": false,
+    "read_other_worker_state_or_config": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_present": false
+  }
+}
