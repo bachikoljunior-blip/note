@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "protocol_id": "permutation_wor_safe_elimination_v0",
+  "created_at": "2026-08-28T00:05:41+09:00",
+  "status": "preregistered_before_outcomes",
+  "purpose": "Test a simpler statistically valid Shapley safe-elimination route: sample complete player permutations uniformly without replacement, treat each player's permutation marginal as a finite-population observation, and use a time-uniform WoR confidence sequence while accounting cost in unique coalition-value evaluations.",
+  "frozen_semantic_control": {
+    "note_main_sha": "3b4965ab49c0c848983ee9d13c2e05fcd80a0b5e",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "game_ref": "coalition_safe_elimination_v0.json",
+  "game": {
+    "n_players": 10,
+    "minimal_supports": [[0,1],[2,3],[4,5],[6,7],[0,2,4,6,8,9]],
+    "monotone_binary": true,
+    "coalition_universe_size": 1024,
+    "permutation_population_size": 3628800,
+    "rare_interaction_players": [8,9],
+    "outcomes_not_computed_at_preregistration": true
+  },
+  "sampling_design": {
+    "unit": "complete permutation of all 10 players",
+    "draw": "uniform without replacement from the 10! permutation population",
+    "observation_per_player": "binary marginal x_i(pi)=v(prefix_i(pi) union {i})-v(prefix_i(pi))",
+    "identity": "Shapley phi_i equals the finite-population mean of x_i(pi) over all 10! permutations",
+    "cache": "coalition values on each permutation path are globally cached across permutations",
+    "budget_snapshot_rule": "Before each new permutation draw, store the current estimate/CS snapshot and current unique-coalition-call count. Draw and fully evaluate the next permutation. For a budget B, report the latest pre-draw snapshot whose cost is <=B; never peek at a newly drawn permutation and reject it because of its prospective cache cost.",
+    "duplicate_permutations": "forbidden; maintain a set of sampled permutation ranks/tuples"
+  },
+  "confidence": {
+    "familywise_alpha": 0.05,
+    "per_player_alpha": 0.005,
+    "method": "Waudby-Smith and Ramdas 2020 binary hypergeometric prior-posterior-ratio confidence sequence",
+    "working_prior": {"family":"beta-binomial","a":1.0,"b":1.0,"interpretation":"uniform prior over total successes"},
+    "running_intersection": true,
+    "simultaneity": "Each player CS is time-uniform; Bonferroni over 10 players gives familywise <=0.05 for all reported stopping times.",
+    "source": "Waudby-Smith & Ramdas, Confidence Sequences for Sampling Without Replacement, NeurIPS 2020, Theorem 2.1"
+  },
+  "safe_elimination": {
+    "thresholds": [0.0,0.001,0.005],
+    "rule": "certify phi_i <= epsilon only when the player's time-uniform upper CS endpoint <= epsilon, or after exact coalition completion",
+    "sampled_zero_is_never_authoritative": true,
+    "exact_zero": "By default requires exact coalition completion or a structural proof; statistical CS is primarily an epsilon-negligibility certificate."
+  },
+  "cost_accounting": {
+    "primary": "new_unique_coalition_value_oracle_calls",
+    "permutation_draw_count_reported": true,
+    "cache_hits_reported": true,
+    "exact_completion": "separate action costing 1024 - unique_cached_coalitions",
+    "confidence_update_bookkeeping_reported_separately": true
+  },
+  "budgets_unique_calls": [128,256,384,512,640,768,896,1024],
+  "seed_set": "0..999",
+  "metrics": [
+    "per-player point-estimate error",
+    "median RMSE",
+    "rare-positive sampled-zero rate",
+    "false-elimination rate by epsilon",
+    "CS coverage",
+    "upper-CS width",
+    "unique-oracle cost to certification",
+    "permutation draws to certification",
+    "remaining exact-completion cost at each snapshot"
+  ],
+  "comparison": {
+    "reference_protocol": "coalition_safe_elimination_v0.json",
+    "primary_question": "Does direct permutation-WoR inference achieve safer or cheaper certification than vertex-WoR HT and coalition-size marginal-stratified WoR under the same deterministic game and unique coalition-value cost accounting?",
+    "no_outcome_dependent_changes": true
+  },
+  "next_action": "Implement exact permutation ranking/sampling and the binary PPR confidence sequence; validate the PPR CS on tiny exhaustively enumerable finite populations before running the frozen 10-player budget grid."
+}
