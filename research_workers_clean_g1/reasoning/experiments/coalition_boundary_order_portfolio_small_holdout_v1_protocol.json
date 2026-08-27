@@ -1,0 +1,65 @@
+{
+  "schema": "coalition_boundary_order_portfolio_small_holdout_v1_protocol",
+  "created_at": "2026-08-28T05:27:03+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "6a906fa3157e8a1d92f2d3dde0eeeef786b9fbbf",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Preregister a smaller untouched-family transfer experiment after the frozen n=20 portfolio holdout exceeded the current Python hard timeout. This is a new protocol with new graph instances; it does not alter or reinterpret the incomplete n=20 holdout.",
+  "families": {
+    "cycle16": {"generator": "networkx.cycle_graph", "n": 16},
+    "wheel16": {"generator": "networkx.wheel_graph", "n": 16},
+    "grid3x5": {"generator": "networkx.grid_2d_graph relabeled row-major", "rows": 3, "cols": 5, "n": 15},
+    "cubic16_s881101": {"generator": "networkx.random_regular_graph", "degree": 3, "n": 16, "seed": 881101},
+    "cubic16_s881117": {"generator": "networkx.random_regular_graph", "degree": 3, "n": 16, "seed": 881117}
+  },
+  "formula": "Positive monotone graph 2-CNF: conjunction over edges (x_u OR x_v).",
+  "compiler": "Fresh reduced ordered BDD compiler per candidate using exact Shannon restriction of the monotone CNF. Correctness oracle is exhaustive full assignment truth bitset plus Hamming-weight rank vector for each family. No candidate-compilation cache may be shared across policy cells.",
+  "local_search": {
+    "neighborhood": "all distinct one-variable remove-and-reinsert orders",
+    "candidate_filter": "compile only candidates with vertex-separation width <= current_width + 1",
+    "selection": "minimum final live ROBDD nodes, then minimum allocated nodes, then lexicographic order",
+    "accept": "strict live-node improvement only",
+    "max_accepted_moves_per_arm": 3
+  },
+  "starts": {
+    "natural": "sorted integer vertex labels",
+    "reverse_cuthill_mckee": "networkx reverse_cuthill_mckee_ordering",
+    "seeded_diverse": {
+      "candidate_count": 24,
+      "seed_base": 881311,
+      "eligibility": "vertex-separation width <= min(width(natural), width(reverse_cuthill_mckee)) + 2",
+      "choice": "among eligible random permutations, maximize the minimum normalized inversion/Kendall distance to natural and reverse_cuthill_mckee; ties by lower width then lexicographic order; if none eligible choose the random candidate with minimum width then lexicographic order"
+    }
+  },
+  "policies": {
+    "single_rcm3": "Run reverse_cuthill_mckee arm up to 3 accepted moves; return its endpoint.",
+    "single_natural3": "Run natural arm up to 3 accepted moves; return its endpoint.",
+    "two_arm_one_then_commit": "Run one accepted-move search stage from reverse_cuthill_mckee and natural independently, select lower live-node arm with ties by lower charged candidate compilations then RCM priority, then continue only winner to at most 3 accepted moves total.",
+    "three_arm_one_then_commit": "As two-arm one-then-commit but include seeded_diverse, with fixed tie priority RCM, natural, seeded_diverse.",
+    "full_two_arm3": "Run RCM and natural independently up to 3 accepted moves each and return the better endpoint; pay both arms."
+  },
+  "cost_accounting": {
+    "primary_cost": "candidate ROBDD compilations actually paid, including losing arms",
+    "quality": "final live nonterminal ROBDD nodes",
+    "secondary": ["enumerated candidates", "accepted moves", "Python wall-clock ms"],
+    "reporting": "Report per-family quality/cost, normalized live regret to full_two_arm3, and cost ratio. A portfolio is beneficial only if it improves live nodes at explicit finite extra cost or matches live nodes with fewer compilations."
+  },
+  "resource_guard": {
+    "max_candidate_compilations_per_policy_cell": 2200,
+    "max_wall_clock_seconds_per_policy_cell": 30,
+    "on_guard": "mark incomplete and exclude that cell from Pareto/transfer claims"
+  },
+  "predeclared_tests": [
+    "All completed policy endpoints must reproduce the same exhaustive truth bitset and Hamming-weight rank vector for the family.",
+    "Primary transfer comparison is three_arm_one_then_commit versus full_two_arm3; two_arm_one_then_commit is a secondary ablation.",
+    "Report whether seeded_diverse changes any committed arm or endpoint, including losses.",
+    "Do not treat vertex-separation width as an authoritative value function.",
+    "Do not combine this smaller holdout with the incomplete n=20 holdout as if they were one preregistered test.",
+    "No endpoint is a global variable-order optimum and no result is a CUDD dynamic-reordering benchmark."
+  ],
+  "scope": "Five new small graph families/instances selected before outcomes to test transfer of the charged start-portfolio controller under the current runtime budget. Synthetic monotone simple-game certifier only; no claim about nonmonotone finite-compute proof utility."
+}
