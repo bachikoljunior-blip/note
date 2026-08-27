@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T02:04:12+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "1eb4f45e28004249d1bd9529a4434f0f1da44d62",
+    "control_revision": 12,
+    "role_config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "rule": "first own/public semantic read froze this tuple for this physical invocation; later control changes were not adopted semantically"
+  },
+  "predecessor": {
+    "path": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T0116_JST_selector_distortion_running_mean_guard.json",
+    "blob": "3f337ea29837d9b2898cc297608f447edfd4b7aa"
+  },
+  "finding": {
+    "name": "predictable-weight K guard plus lifetime-safe fresh-confirm handoff",
+    "problem": "same-history minimax alpha selection can be numerically safe while selector distortion remains bounded, but once the predictable-weight distortion guard fails a fresh-confirm phase must not reset the reporting error budget",
+    "phase1_bound": {
+      "formula": "phase1_lifetime_error <= m(K_cap) * delta_same",
+      "m_definition": "m(K)=2/c(K)",
+      "c_definition": "c(K)=min_{i=1..9} (10/i) * (1 + (i-1)/((10-i)*K))",
+      "requirements": ["K_cap is predeclared","before every same-history numeric report, predictable-weight K_t <= K_cap","true running channel means lie in declared safe domain [0, mu0]","weights are finite, strictly positive, and predictable before the current score"]
+    },
+    "handoff_bound": {
+      "formula": "m(K_cap)*delta_same + delta_fresh <= delta_global",
+      "interpretation": "fresh confirmation spends only the lifetime reporting-risk budget left after the same-history phase; alpha is not reset at handoff",
+      "requirements": ["first K-guard failure irreversibly latches FRESH_CONFIRM","no same-history numerical report is emitted at or after the failing prefix","selector/state is frozen at handoff","current conservative prototype uses only post-handoff rows in fresh confirmation","fresh phase is conditionally anytime-valid given handoff history"]
+    },
+    "guard_input": "predictable weights only; no outcome score enters the K guard",
+    "non_reentry": "even if K later decreases, same-history numerical reporting does not resume in the same reporting lifetime",
+    "scope_separation": "this guard concerns numerical reporting; target-null decision gating is a separate, stronger contract already established in the predecessor line"
+  },
+  "validated_artifacts": {
+    "implementation": "research_workers_clean_g1/evaluation/v3_same_history_K_guard_2026-08-28.py",
+    "validation": "research_workers_clean_g1/evaluation/validation_v3_same_history_K_guard_2026-08-28.json"
+  },
+  "validation_summary": {
+    "random_denominator_cases": 500,
+    "max_log_denominator_difference_expanded_vs_grouped": 1.5987211554602254e-14,
+    "max_U_difference_expanded_vs_grouped": 4.796163466380676e-14,
+    "known_prefix_K": {"31":4.899312234305986,"32":5.157004865929278,"40":7.771358189622185,"80":60.39400811140732},
+    "max_known_prefix_K_abs_error": 3.197442310920451e-13,
+    "Kcap5_latch": {"prefix31_K":4.899312234305986,"prefix31_mode":"SAME_HISTORY","prefix32_K":5.157004865929278,"prefix32_mode":"FRESH_CONFIRM","prefix33_mode":"FRESH_CONFIRM"},
+    "invalid_weight_cases_rejected": 4,
+    "overspend_rejected": true,
+    "risk_table": [
+      {"K_cap":1,"equal_nominal_alpha":0.03214285714285715,"fresh_alpha":0.03214285714285714,"m":0.5555555555555556},
+      {"K_cap":1.5,"equal_nominal_alpha":0.03021978021978022,"fresh_alpha":0.030219780219780223,"m":0.6545454545454545},
+      {"K_cap":2,"equal_nominal_alpha":0.028761061946902654,"fresh_alpha":0.02876106194690266,"m":0.7384615384615384},
+      {"K_cap":2.5,"equal_nominal_alpha":0.02777777777777778,"fresh_alpha":0.027777777777777776,"m":0.8},
+      {"K_cap":3,"equal_nominal_alpha":0.027070063694267517,"fresh_alpha":0.027070063694267517,"m":0.8470588235294118},
+      {"K_cap":4,"equal_nominal_alpha":0.02586206896551724,"fresh_alpha":0.025862068965517244,"m":0.9333333333333333},
+      {"K_cap":5,"equal_nominal_alpha":0.025,"fresh_alpha":0.025,"m":1.0}
+    ]
+  },
+  "decision_relevant_example": {
+    "mu0": 0.05,
+    "weights_channel_1": "all 1",
+    "weights_channel_2": "alternating 0.25,1",
+    "K_cap": 5,
+    "joint_lifetime_reporting_budget": 0.05,
+    "same_history_nominal_alpha": 0.025,
+    "fresh_confirm_alpha": 0.025,
+    "result": "prefix31 is same-history eligible (K≈4.8993); prefix32 fails (K≈5.1570), so handoff occurs before any prefix32 same-history numerical report and fresh confirmation begins on later rows"
+  },
+  "tradeoff": {
+    "note": "for equal nominal alpha in the two phases, smaller predeclared K_cap can exploit the stronger selector geometry and allocate more than 0.025 to both phases while keeping global 0.05; this is a design table, not a data-adaptive tuning rule",
+    "table": [
+      {"K_cap":1,"equal_nominal_alpha":0.03214285714285715,"fresh_alpha":0.03214285714285714,"m":0.5555555555555556},
+      {"K_cap":1.5,"equal_nominal_alpha":0.03021978021978022,"fresh_alpha":0.030219780219780223,"m":0.6545454545454545},
+      {"K_cap":2,"equal_nominal_alpha":0.028761061946902654,"fresh_alpha":0.02876106194690266,"m":0.7384615384615384},
+      {"K_cap":2.5,"equal_nominal_alpha":0.02777777777777778,"fresh_alpha":0.027777777777777776,"m":0.8},
+      {"K_cap":3,"equal_nominal_alpha":0.027070063694267517,"fresh_alpha":0.027070063694267517,"m":0.8470588235294118},
+      {"K_cap":4,"equal_nominal_alpha":0.02586206896551724,"fresh_alpha":0.025862068965517244,"m":0.9333333333333333},
+      {"K_cap":5,"equal_nominal_alpha":0.025,"fresh_alpha":0.025,"m":1.0}
+    ]
+  },
+  "rejected_overgeneralizations": ["Do not reset alpha when switching to fresh confirmation.","Do not choose K_cap or the risk split after inspecting same-history scores unless a separate validity proof is supplied.","Do not use the K guard outside the declared safe parameter domain.","Do not treat outcome-dependent realized weights as predictable weights.","Do not re-enter same-history reporting after a guard failure within the same lifetime.","Do not infer that fresh and same-history rows may overlap safely from this conservative construction.","Do not infer numerical-reporting validity from target-null decision validity alone."],
+  "implementation_status": {
+    "standalone_guard": "implemented and numerically validated",
+    "production_wiring": "not yet connected to the exact production V3 weight stream",
+    "denominator_contract": "standalone implementation duplicates the persisted V3 denominator geometry; agreement with the independent grouped calculation and prior persisted prefix values is at ~1e-13 scale, but direct production-class import/pathwise integration remains next work"
+  },
+  "frontier": ["Wire the K guard directly to the production V3 predictable-weight stream and bind each prefix to an immutable weight-prefix fingerprint/readback.","Implement the fresh-confirm wrapper using the computed delta_fresh, selector freeze, and strict post-handoff row identity; enforce one lifetime reporting budget across both phases.","Stress the full two-phase V3-shaped hybrid under null and off-target alternatives, measuring numerical miscoverage, reporting delay, and interval widening versus fixed 0.025/0.025 reporting.","Optimize a predeclared (K_cap, delta_same, delta_fresh) only on disjoint/public simulation or other validation-independent meta-data, never on the reporting history itself."],
+  "exact_next_action": "Locate/bind the actual role-local production V3 predictable-weight stream without crossing the clean boundary, then make the K guard consume that exact stream and add a fresh-confirm state machine with immutable post-handoff row provenance."
+}
