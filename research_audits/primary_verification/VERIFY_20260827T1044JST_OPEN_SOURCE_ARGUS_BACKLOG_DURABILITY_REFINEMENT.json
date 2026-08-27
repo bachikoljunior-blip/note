@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "verified_at": "2026-08-27T10:44:23+09:00",
+  "candidate": "open_source/clean-os-g1-005-backlog-durability-boundary",
+  "source_qualified_worker_artifact": {
+    "wave_id": "clean-g1-wave-c18-20260827T0900JST-259c0e15",
+    "path": "research_workers_clean_g1/open_source/RUN_20260827_0805_CREATION_STAMP_ROUTE_FINGERPRINT_DURABILITY.md",
+    "blob": "75bae163715373395829732e5de554f39bc748e7"
+  },
+  "frozen_control": {
+    "note_main_sha": "d61bcaf7b07a5b2051a3535a0f4b16ecf636532b",
+    "root_control_revision": 11,
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "primary_source": {
+    "repository": "lbx154/Argus",
+    "commit": "33da786bbc6787a2eeb63a5f492498eae87c78c7",
+    "files": [
+      "argus_skill/life/memory.py",
+      "argus_skill/daemon/state.py",
+      "argus_skill/manager/front_door.py",
+      "argus_skill/manager/dispatch.py",
+      "tests/daemon/test_state_portable.py"
+    ],
+    "standards_reference": "https://man7.org/linux/man-pages/man2/fsync.2.html"
+  },
+  "result": "supported_with_refinement",
+  "verified_observations": [
+    "ProjectMemory.open stores the project backlog at <project_root>/backlog.jsonl, while Manager _life_dir_for(mem) resolves the same project root and continuous state uses <life_dir>/continuous.json. Therefore the operator-priority backlog file and continuous.json share the same parent directory in this path.",
+    "Backlog._save calls _atomic_rewrite_jsonl. That helper writes a sibling temporary JSONL file, closes it, and os.replace()s it, but contains no explicit flush+os.fsync on the backlog file descriptor and no explicit directory fsync.",
+    "Continuous-state _atomic_write_bytes writes the continuous temp file, flushes it, os.fsyncs that file descriptor, invokes the before_replace callback, then os.replace()s continuous.json and finally fsyncs the parent directory.",
+    "manager_continuous_handoff passes its Manager/backlog commit as compare_and_swap_continuous_config(before_write=_commit); the callback can persist the operator-priority backlog item before continuous.json is replaced.",
+    "Linux fsync documentation distinguishes file-data durability from directory-entry durability: fsync(file) flushes file data/metadata, while a separate fsync(directory) is needed to ensure the containing directory entry reaches storage."
+  ],
+  "scope_refinement": {
+    "worker_core_claim": "Supported: backlog persistence does not have an explicit file-data fsync before a continuous objective can become durably enabled, so portable power-loss durability of the first mission row is not established by this code.",
+    "refined_directory_claim": "The worker's proposed requirement for a distinct backlog parent-directory fsync before the final continuous enable is stronger than necessary for this exact same-directory sequence. Because backlog.jsonl and continuous.json share the project directory, the continuous writer's final directory fsync occurs after both renames and can serve as the directory-metadata barrier for the earlier backlog rename. The remaining clear gap is the missing fsync of the backlog file contents before the continuous commit; a directory fsync is not a portable substitute for fsyncing that file's dirty data.",
+    "not_demonstrated": [
+      "No power-loss or storage-fault experiment was executed.",
+      "No claim is made that data loss will occur on every filesystem or mount mode.",
+      "No performance claim is made about globally hardening every JSONL rewrite.",
+      "The proposed creation stamp, exact-insert API, handoff fence, route fingerprint v4, and durable backlog writer remain unimplemented adaptations."
+    ]
+  },
+  "test_observability": {
+    "continuous_durability_tests_present": true,
+    "backlog_file_fsync_regression_found": false,
+    "note": "The public daemon portability tests exercise continuous replace/precommit failure behavior. No tracked test was found by direct repository search that asserts file-fsync ordering for _atomic_rewrite_jsonl."
+  },
+  "decision_relevance": "If the exact handoff invariant is implemented, the minimum durability primitive should explicitly fsync the authoritative backlog temp/file data before allowing the continuous commit. A separate earlier directory fsync is not independently required solely for same-directory rename metadata if the final continuous directory fsync is retained, though an implementation may still choose one for clearer transaction boundaries or other call sites.",
+  "exact_tested_scope": "Static source-level audit at Argus commit 33da786bbc6787a2eeb63a5f492498eae87c78c7 plus filesystem synchronization semantics from Linux fsync documentation. No live crash injection or mutation.",
+  "worker_feedback_written": false
+}
