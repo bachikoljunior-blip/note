@@ -1,9 +1,14 @@
-"""Superseding compliance runtime that fixes reservation provenance pre-score.
+"""Forward-contract admission/runtime bridge for reservation provenance.
 
 Only new ADMITs created through this module gain the forward-only runtime
-contract. All score/reservation/commit/close mechanics delegate to the frozen
-compliance runtime; its RESERVE events already carry the full frozen runtime
-binding. Historical blocks are unchanged.
+contract. Score/reservation/commit mechanics delegate to the frozen compliance
+runtime; its RESERVE events already carry the full frozen runtime binding.
+Historical blocks are unchanged.
+
+Safety boundary: the frozen CLOSE/replay module does not know the new provenance
+predicate. Therefore this bridge fails closed for prepare_close/recover unless a
+caller explicitly supplies a provenance-aware close module. This file must not
+be treated as a complete deployable runtime until that close/replay layer exists.
 """
 from __future__ import annotations
 from importlib.util import module_from_spec, spec_from_file_location
@@ -15,6 +20,10 @@ BASE_FILENAME = "reserved_score_runtime_compliance_2026-08-28.py"
 BASE_BLOB = "3e58813f34079e7f92eb0728bd7f9c27810d5418"
 CONTRACT_FILENAME = "reservation_runtime_provenance_contract_2026-08-28.py"
 SCHEMA_VERSION = 1
+
+
+class ProvenanceRuntimeIncomplete(RuntimeError):
+    pass
 
 
 def _load(filename: str, name: str) -> Any:
@@ -82,16 +91,27 @@ def prepare_recovery_commit_from_main(*args: Any, **kwargs: Any):
 
 
 def prepare_close(*args: Any, **kwargs: Any):
+    close_module = kwargs.get("close_module")
+    if close_module is None:
+        raise ProvenanceRuntimeIncomplete(
+            "provenance-aware CLOSE/replay module required before scientific close"
+        )
     return (kwargs.pop("base_runtime_module", None) or _base()).prepare_close(*args, **kwargs)
 
 
 def recover(*args: Any, **kwargs: Any):
+    close_module = kwargs.get("close_module")
+    if close_module is None:
+        raise ProvenanceRuntimeIncomplete(
+            "provenance-aware CLOSE/replay module required before recovery"
+        )
     return (kwargs.pop("base_runtime_module", None) or _base()).recover(*args, **kwargs)
 
 
 __all__ = [
     "BASE_FILENAME", "BASE_BLOB", "CONTRACT_FILENAME", "SCHEMA_VERSION",
-    "admit_and_issue_capability", "prepare_reservation", "reserve_and_issue",
-    "launch_reserved_score", "prepare_bound_slot", "prepare_commit",
-    "prepare_recovery_commit_from_main", "prepare_close", "recover",
+    "ProvenanceRuntimeIncomplete", "admit_and_issue_capability",
+    "prepare_reservation", "reserve_and_issue", "launch_reserved_score",
+    "prepare_bound_slot", "prepare_commit", "prepare_recovery_commit_from_main",
+    "prepare_close", "recover",
 ]
