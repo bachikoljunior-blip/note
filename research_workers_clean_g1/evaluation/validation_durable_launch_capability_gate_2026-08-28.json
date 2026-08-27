@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "validated_at": "2026-08-28T04:07:08.911662+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifact": "research_workers_clean_g1/evaluation/durable_launch_capability_gate_2026-08-28.py",
+  "artifact_blob_after_readback": "e06dc0550f65182d31b96e6b841d680b487f3b41",
+  "bound_adapter": {
+    "filename": "durable_k_guard_hybrid_journal_2026-08-28.py",
+    "blob": "d70f42076ad04549c82c5906132aaae59657e335"
+  },
+  "result": {
+    "ack_frame_bytes_in_contract_harness": 350,
+    "partial_ack_byte_cuts_rejected": 350,
+    "partial_ack_unexpected_successes": 0,
+    "acknowledged_prefix_byte_tampers_rejected": 350,
+    "acknowledged_prefix_tamper_unexpected_successes": 0,
+    "capability_payload_tamper_rejected": true,
+    "wrong_block_rejected": true,
+    "wrong_slot_rejected": true,
+    "stale_after_close_rejected": true,
+    "truncated_after_ack_cases_rejected": 4,
+    "capability_reusable_across_distinct_slots_of_same_active_block": true,
+    "prepared_but_unacknowledged_admit_cannot_issue_capability": true,
+    "durable_readback_must_equal_expected_before_plus_admit_frame": true
+  },
+  "validated_properties": [
+    "A LaunchCapability is issued only after exact full-journal readback equals the expected prior durable bytes plus the prepared ADMIT frame.",
+    "The capability binds the durable prefix length and SHA-256, canonical ADMIT digest, reporting-admission digest, admitted-slot-set digest, deadline, block/event identity and exact historical adapter binding.",
+    "Slot preparation through the new gate rejects a missing/truncated/changed acknowledged prefix, a tampered capability, wrong block, unadmitted slot, torn current tail, closed block or different active block.",
+    "The same capability can authorize multiple admitted slots while that exact block remains active; it is stale after CLOSE.",
+    "The writer boundary is explicit: expected-before CAS, exact append, durability acknowledgement, then complete-journal readback. Speculative caller memory does not satisfy the contract."
+  ],
+  "scope": [
+    "Contract harness used an injected deterministic fake adapter/framing implementation matching the bound adapter interface; the persisted gate was not byte-executed against the exact production sibling files in this environment because those repository files were not locally mountable and direct container network fetch was unavailable.",
+    "This is crash/integrity binding, not adversarial authentication. SHA-256 capability fields are not a secret MAC; a malicious caller with direct code access is outside this threat model.",
+    "The historical adapter remains immutable for replay/reproducibility and still exposes its old prepare_slot function. Enforcement is therefore structural only for callers routed through the new gate; an actual launcher must be wired to this entry point and must not bypass it.",
+    "Single-writer ordered-append model only. The DurableAppendWriter contract assumes its implementation really performs CAS plus append+fsync/durable acknowledgement plus readback; broken storage durability semantics remain out of scope.",
+    "No statistical estimator, K-guard, alpha allocation, reporting snapshot or tested-scope semantics changed in this artifact."
+  ],
+  "frontier": [
+    "Byte-execute the persisted launch gate against the exact bound adapter and its production V3/K-guard siblings in a repository-local runtime, then repeat the acknowledgement-boundary crash suite without the fake adapter substrate.",
+    "Provide a concrete file/storage DurableAppendWriter and crash-inject after append-before-fsync, after fsync-before-readback, and after readback-before-capability delivery; verify exact idempotent retry and no capability from an uncertain ack.",
+    "Bind the real score-bearing slot launcher to prepare_slot_authorized so the historical prepare_slot API is not an active-runtime bypass path while preserving historical modules unchanged for replay.",
+    "Stress residual-alpha fresh-allocation and production V3 reporting snapshots across CLOSE acknowledgement and report-exposure boundaries under the launch-capability path.",
+    "Define safe migration for legacy durable journals lacking enriched reporting ADMIT metadata; never retroactively issue launch capabilities for those historical rows."
+  ],
+  "frontier_nonempty": true
+}
