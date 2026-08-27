@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T18:05:47+09:00",
+  "frozen_control": {
+    "note_main_sha": "ad8fa2c445a67e15064b32222ce14a8978b04c29",
+    "control_revision": 12,
+    "control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role": "continual_learning",
+    "config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "opencompass_anchors": {
+    "v051_publication_source": "ecc86a2728c06fd2c1ad34f1d0094f42b5243c78",
+    "v052_sensitivity": "974179240a1a4e3c0ff14c60621cf1f6c95b287a"
+  },
+  "direct_runtime_delta": {
+    "v051": {"pandas": "<2.0.0", "pyext": "required"},
+    "v052": {"pandas": "unbounded", "pyext": "commented out"},
+    "all_other_lines_equal_in_runtime_txt_between_the_two_frozen_files": true,
+    "pyext_change_commit": "ea00b3507811b6e195ad468f6a292a1e46acfc4b",
+    "pyext_change_scope": "PR #2306 changed runtime requirement and made livecodebench/testing_util.py tolerate missing pyext",
+    "pandas_change_commit": "ff73a4c5778386cae0b9675d4382bb6dca4eced3",
+    "pandas_change_scope": "The pandas<2.0.0 -> pandas relaxation was bundled in commit titled '[Fix] fix smact requirement (#2377)' with no observed benchmark-specific rationale in the patch."
+  },
+  "track_a_code_isolation_contract_refinement": {
+    "python": "3.10.x",
+    "source_install": "Install both source anchors without allowing their package metadata to resolve different dependencies; use one explicit common environment.",
+    "pandas": "pin the same pandas<2 build on both sides; pandas==1.5.3 is a valid concrete candidate",
+    "pyext": "pin pyext==0.7 on both sides for strict package-closure symmetry under Python 3.10, even though the selected DeMix nine-benchmark modules do not directly import it",
+    "reason_for_pyext_symmetry": "OpenCompass 0.5.1 declares pyext while 0.5.2 removes it. Keeping it present in both Track A environments prevents presence/absence from becoming a second variable.",
+    "result_parser": "Use the role-local deterministic stdlib-csv v3 adapter, not DeMix's pandas positional parser, so pandas-version sensitivity in result parsing is not conflated with OpenCompass behavior.",
+    "summary_writer": "OpenCompass DefaultSummarizer formats/writes CSV with Python string/file operations and does not depend on pandas in the inspected 0.5.1 source path."
+  },
+  "nine_benchmark_direct_import_audit": {
+    "benchmarks": ["ARC-E", "HellaSwag", "PIQA", "SIQA", "WinoGrande", "MBPP", "HumanEval", "GSM8K", "MATH"],
+    "observed_dataset_modules_at_v051": {
+      "arc.py": "no pandas import in inspected loader prefix",
+      "hellaswag.py": "no pandas import in inspected loader prefix",
+      "piqa.py": "no pandas import in inspected loader prefix",
+      "siqa.py": "no pandas import in inspected loader prefix",
+      "winogrande.py": "no pandas import in inspected loader prefix",
+      "mbpp.py": "no pandas import in inspected loader/evaluator prefix",
+      "humaneval.py": "no pandas import in inspected loader/evaluator prefix",
+      "gsm8k.py": "no pandas import in inspected loader/evaluator prefix",
+      "math.py": "no pandas import in inspected loader/evaluator prefix"
+    },
+    "scope_guard": "This is a direct-module audit, not proof that pandas cannot affect transitive libraries, unrelated eagerly imported modules, or package-native environment behavior."
+  },
+  "track_b_release_time_prediction": {
+    "assumption": "Fresh Python 3.10 environment using public PyPI availability at OpenCompass 0.5.2 release time, absent external constraints.",
+    "v051_expected_pandas_ceiling_choice": "pandas 1.5.3 is the newest public pandas satisfying <2.0.0.",
+    "v052_expected_latest_python310_compatible_choice": "pandas 2.3.3 is the newest stable public pandas compatible with Python 3.10 before/at 2026-02-14; pandas 3.0.0 requires Python >=3.11.",
+    "status": "prediction from public package constraints/release metadata; must be verified by an actual fresh resolver lock before being treated as observed environment state"
+  },
+  "falsifiable_next_actions": [
+    "Build Track A with a single explicit lock and both source anchors installed against that identical environment.",
+    "Record Python/package lock hash, model/data/config/prompt hashes, raw inference/result hashes, summary CSV/schema/hash, v3 parser output/hash, and nine score deltas.",
+    "Build Track B with separate fresh package-native environments; freeze the resolver outputs before evaluation and confirm or reject the predicted pandas 1.5.3 vs 2.3.3 split.",
+    "If Track A is identical but Track B differs, test pandas and then other transitive lock deltas one at a time; do not attribute the difference to OpenCompass source globally."
+  ]
+}
