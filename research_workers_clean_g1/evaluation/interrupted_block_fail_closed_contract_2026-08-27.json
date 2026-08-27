@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T18:09:04+09:00",
+  "problem": "How should an admitted fixed-size evaluation block contribute when infrastructure interruption, cancellation, deadline, or canonical-verification failure leaves some planned exposures without an ordinary mismatch score?",
+  "fail_closed_contract": {
+    "admission": "Before observing any outcome from block t, freeze the planned block size B_t (or a predictable B_t and a predeclared cap if exposure weighting is used), the slot identities, and the block-closing rule/deadline.",
+    "per_slot_score": "For every pre-admitted slot j, set R_tj = X_tj in [0,1] if the canonical evaluation completes under the frozen contract; otherwise set R_tj = 1 for interruption, cancellation, deadline expiry, missing canonical verification, or other no-result state.",
+    "block_score": "Y_t = (1/B_t) * sum_j R_tj. Y_t is always in [0,1] once the block closes and therefore can be passed directly to a bounded average-conditional-mean confidence sequence.",
+    "meaning": "Without extra assumptions, Y_t targets a composite planned-exposure unreliability estimand: statistical mismatch OR operational inability to produce the certified result. Failure is part of the endpoint, not silently dropped missingness.",
+    "within_block_dependence": "No within-block independence assumption is required merely to form bounded Y_t. Interruption may depend on earlier/current block events; if it causes no-result, that slot receives 1 rather than disappearing from the denominator.",
+    "adaptive_between_blocks": "The next block may be admitted or sized using past completed blocks. Current-block outcomes cannot retroactively change whether the block/slot belongs to the estimand."
+  },
+  "hypothetical_full_completion_bound": {
+    "claim": "If every interrupted planned slot has a well-defined latent forced-completion mismatch X*_tj in [0,1], with observed completed slots satisfying X_tj = X*_tj, then R_tj >= X*_tj pointwise. The fail-closed block score therefore upper-bounds the latent full-completion mismatch average even when interruption is outcome-related.",
+    "scope_limit": "This is not available when 'the outcome had the request completed' is not well-defined—for example if retry/runtime/state changes alter the stochastic attempt identity. In that case only the composite actual-policy unreliability estimand is assumption-free."
+  },
+  "why_complete_case_is_not_fail_closed": {
+    "counterexample": "Let half of planned slots be latent mismatches. Suppose clean slots complete with probability 0.9 while mismatch slots complete with probability 0.1. The mismatch rate among completed slots is 0.1, although the planned-slot latent mismatch rate is 0.5. Dropping interruptions therefore looks five times better than the underlying planned-slot reliability.",
+    "fail_closed_score_in_same_example": "Treating every no-result slot as 1 gives expected composite unreliability 0.55, which is conservative for the 0.50 latent mismatch rate rather than optimistically biased.",
+    "lesson": "A complete-case denominator is a different estimand and can be strongly selected when completion is informative."
+  },
+  "weighting_and_estimand": {
+    "equal_block": "Feeding Y_t with unit block weights targets an average block reliability estimand.",
+    "planned_exposure_average": "If B_t is predictable and B_t <= B_cap is frozen before block outcomes, use predictable weight w_t = B_t/B_cap in the existing weighted CS to target planned-exposure-weighted conditional reliability. Do not use final realized completed count as the weight when it can depend on current outcomes.",
+    "completed_exposure_average": "Mismatch conditional on successful completion is a separate estimand. It cannot be recovered from the fail-closed composite score without assumptions/correction for informative completion."
+  },
+  "public_alignment": [
+    {
+      "source": "ICH E9(R1) estimands guidance",
+      "relevance": "Its composite strategy explicitly incorporates an intercurrent event into the endpoint rather than treating the post-event quantity as ordinary missing data. The evaluation analogue is to make no-certified-result an unfavorable endpoint when system-level reliability is the scientific question."
+    },
+    {
+      "source": "Kahan et al., Estimands in cluster-randomized trials, International Journal of Epidemiology 2023",
+      "relevance": "Different weighting rules target genuinely different estimands, and outcome-related cluster size can separate cluster-average from participant/exposure-average questions. This supports naming equal-block and equal-exposure reliability separately rather than silently changing denominators."
+    }
+  ],
+  "operational_requirements": [
+    "Persist the pre-admitted slot list and block deadline before outcomes begin, so an outage cannot erase failed slots from the denominator.",
+    "On recovery after the frozen deadline, any pre-admitted slot lacking an accepted canonical result is deterministically scored 1; do not rerun it and substitute a later successful result unless the estimand explicitly defines that retry policy in advance.",
+    "Report mismatch-only among completed slots, completion/failure rate, and fail-closed composite unreliability as separate diagnostics when all are useful; do not use the first as a substitute for the third.",
+    "If the goal is a hypothetical forced-completion mismatch rate rather than actual-policy unreliability, state the latent-outcome assumption explicitly and stress-test it."
+  ],
+  "scope_guards": [
+    "This construction protects the estimand from outcome-related dropping; it does not make infrastructure failures statistically independent.",
+    "Missing-as-one can be conservative for a bounded latent mismatch only when the latent forced-completion outcome is coherent. It is always directly interpretable as the composite actual-policy failure-or-mismatch endpoint.",
+    "The public clinical estimand literature is used as an analogy for endpoint definition, not as a proof of the sequential e-process used here."
+  ]
+}
