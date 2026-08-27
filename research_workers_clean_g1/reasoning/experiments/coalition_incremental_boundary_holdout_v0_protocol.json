@@ -1,0 +1,48 @@
+{
+  "schema": "coalition_incremental_boundary_holdout_v0_protocol",
+  "frozen_before_outcomes": true,
+  "frozen_at": "2026-08-28T03:05:30+09:00",
+  "semantic_control": {
+    "note_main": "5dca371ce05e08e12442c6e08449caab1975587d",
+    "desired_control_revision": 12,
+    "desired_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "question": "Can the exact upper-Shapley boundary certifier be updated one observation at a time by maintaining only the maximal upper-slice zero antichain, minimal lower-slice one antichain, a persistent ROBDD obtained by conjoining only newly non-dominated stronger clauses, and persistent rank-count memoization, while matching full rebuild exactly?",
+  "algorithm_contract": {
+    "new_upper_slice_zero_z": "If z is subset of an existing maximal zero, no boundary change. Otherwise remove all existing maximal zeroes contained in z, insert z, and conjoin only the stronger positive clause OR_{j notin z} x_j. Removed weaker clauses may remain physically in the persistent ROBDD because the new clause logically subsumes them.",
+    "new_lower_slice_one_a": "If an existing minimal one is subset of a, no boundary change. Otherwise remove all existing minimal ones containing a, insert a, and conjoin only the stronger negative clause OR_{j in a} not x_j. Removed weaker clauses may remain physically in the persistent ROBDD because the new clause logically subsumes them.",
+    "irrelevant_for_upper_bound": "Consistent lower-slice zeroes and upper-slice ones do not change this upper bound and do not add clauses.",
+    "counting": "Use an immutable-node ROBDD with a fixed natural variable order and memoized cardinality polynomial per node/level. A fresh-rebuild comparator reconstructs the current reduced boundary CNF from scratch using the same order after every effective update.",
+    "scope": "Inputs are observations from a generated monotone simple game, so consistency is guaranteed. This protocol does not certify behavior on inconsistent observation streams."
+  },
+  "holdout": {
+    "game_family": "Random minimal-support monotone simple games with antichain supports; support sizes sampled uniformly from {1,2,3,4,5,6} subject to n; support count max(3, floor(n/3)). This differs from the exploratory timing family that used sizes {2,3,4,5}.",
+    "n_values": [10, 14, 18],
+    "seeds": [730001, 730019, 730043, 730079],
+    "observation_budgets": {"10": 500, "14": 900, "18": 1300},
+    "player_rule": "player = seed mod n",
+    "observation_rule": "sample distinct full coalitions without replacement using Python random.Random(seed + 1000003*n); use their true monotone-game values; process in sampled order.",
+    "effective_update": "An observation that inserts a non-dominated maximal upper-slice zero or minimal lower-slice one and therefore strengthens the boundary formula.",
+    "no_outcome_filtering": true
+  },
+  "required_checks": [
+    "After every effective update, incremental maximal-zero antichain equals batch reduce_maximal of all observed upper-slice zeroes.",
+    "After every effective update, incremental minimal-one antichain equals batch reduce_minimal of all observed lower-slice ones.",
+    "After every effective update, persistent-ROBDD cardinality rank counts equal a fresh rebuild from the reduced current boundary exactly as integers.",
+    "The resulting upper Shapley bound computed from rank counts is therefore identical to fresh rebuild; any mismatch fails the holdout."
+  ],
+  "reported_metrics": [
+    "effective update count",
+    "final maximal-zero/minimal-one boundary sizes",
+    "median and p95 incremental update+count time",
+    "median and p95 fresh rebuild+count time",
+    "total incremental and rebuild time",
+    "median newly computed persistent rank-cache states per effective update",
+    "median reachable ROBDD nodes",
+    "total nodes ever allocated in the persistent manager"
+  ],
+  "success_condition": "Zero correctness mismatches in every holdout cell. Runtime ratios are descriptive and environment-specific; no universal speed claim is authorized from this holdout.",
+  "negative_scope": "Even if incrementality is exact and faster here, fixed variable ordering can still cause exponential ROBDD growth on hard boundary CNFs. This protocol does not establish polynomial scaling or justify lemma-library promotion/demotion on nonmonotone real proof utility."
+}
