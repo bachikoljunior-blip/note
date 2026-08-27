@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T04:16:11.705539+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T041218_JST_score_launch_gate.json",
+  "main_result": {
+    "artifact": "research_workers_clean_g1/evaluation/durable_attempt_reservation_ledger_2026-08-28.py",
+    "artifact_blob_after_readback": "f51cc37e5897d8dc0f395da95c1f6dd1c12da791",
+    "validation": "research_workers_clean_g1/evaluation/validation_durable_attempt_reservation_ledger_2026-08-28.json",
+    "validation_blob_after_readback": "fe2ff1f5208e623963cd981c9d0d6f3050304c46",
+    "result": "Added a durable sidecar RESERVE/COMMIT ledger keyed by block+slot and bound to the exact launch capability, request-binding digest and deterministic attempt_id. The default recovery policy is fail-closed unresolved, preventing a second stochastic attempt after a crash. An explicit deterministic-replay policy can reissue only the same attempt identity after recovery.",
+    "permit_epoch": "AttemptLaunchPermit is HMAC-bound to a process-epoch secret. A permit from a simulated crashed/restarted process was rejected; deterministic replay required an explicit new permit derived from the same durable reservation and same attempt identity.",
+    "stress": "All 901 partial reservation-ack cuts were rejected; exact ack issued a valid permit. Duplicate and conflicting same-slot reservations were rejected. Fail-closed reservation recovery refused replay. COMMIT changed recovery disposition to committed_no_relaunch and invalidated the permit."
+  },
+  "measurement_validity_rules": [
+    "Durably authorizing a slot is not enough to prevent stochastic retry selection; one statistical attempt identity must also be durably reserved before score generation.",
+    "Default crash recovery after RESERVE but before durable SLOT is unresolved/no-relaunch, not automatic retry. This sacrifices data to avoid a choose-among-retries channel.",
+    "A deterministic replay exception is permissible only when the scorer/runtime has separately established that attempt_id fixes the statistical attempt; the reservation ledger itself does not prove determinism.",
+    "Process-epoch MAC permits prevent accidentally persisting and reusing a pre-crash launch permit. Recovery requires a new decision from durable state.",
+    "Reservation COMMIT is launch-control bookkeeping bound to a scientific SLOT-event digest; the main ADMIT/SLOT/CLOSE journal remains score truth.",
+    "Two-file reservation/main-journal disagreement must fail closed. No atomic cross-file transaction is assumed."
+  ],
+  "frontier": [
+    "Integrate AttemptLaunchPermit into the score-launch wrapper so the scorer is invoked only after both durable ADMIT capability and durable one-attempt reservation permit validate.",
+    "On successful durable SLOT append, durably append reservation COMMIT with the exact SLOT-event digest; crash-inject score-complete/SLOT-append/reservation-COMMIT boundaries and verify fail-closed recovery.",
+    "If actual launchers can have concurrent OS processes, add flock/lease/fencing to reservation writer and stress simultaneous same-slot reservation races.",
+    "For the fail-closed policy, ensure block CLOSE naturally counts an uncommitted reserved slot as missing/failure=1 without any retry path.",
+    "Byte-execute all current artifacts against exact production durable adapter/V3/K-guard siblings in a repository-local runtime."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Create a reservation-aware score-launch wrapper that validates both LaunchCapability and same-process AttemptLaunchPermit before scorer invocation, requires result.attempt_id to equal the durable reservation, persists SLOT through prepare_slot_authorized, and then writes reservation COMMIT bound to the exact SLOT event digest; crash-inject every boundary so a reserved-but-uncommitted stochastic attempt never gets silently replaced by a different result."
+}
