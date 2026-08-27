@@ -1,0 +1,69 @@
+{
+  "schema_version": "AdaptiveStratifiedCPFixtureAnalysisV0",
+  "fixture": "support_family_v0.py",
+  "estimator_script": "support_family_v0.adaptive_stratified_cp.py",
+  "executed_at": "2026-08-27T22:23:00+09:00",
+  "python_environment": "OpenAI analysis runtime; Python 3.x, numpy, scipy 1.17.0",
+  "replicates": 1000,
+  "seeds": "integers 0 through 999",
+  "matched_budget_unit": "player-level marginal observations; one iid permutation yields five marginal observations",
+  "exact_shapley": {
+    "a_P": 0.2833333333333333,
+    "b_P_implies_R": 0.2,
+    "c_Q": 0.2,
+    "d_Q_implies_R": 0.2833333333333333,
+    "e_P_implies_Q": 0.03333333333333333
+  },
+  "adaptive_estimator": {
+    "name": "minimax player/coalition-size stratification with time-uniform alpha-spending Clopper-Pearson intervals",
+    "warm_start": "one uniformly sampled marginal from each of 25 player/coalition-size strata",
+    "allocation": "choose player with widest mean stratum interval; within that player choose widest stratum; deterministic-seed random tie breaks; sample coalition uniformly with replacement",
+    "confidence": "for stratum sample count m, alpha_m = 0.05 * 6 / (pi^2 * 25 * m^2); two-sided Clopper-Pearson; union bound over 25 strata and all positive m"
+  },
+  "results": [
+    {
+      "marginal_observations": 40,
+      "iid_permutations": 8,
+      "adaptive": {"median_rmse":0.12201918533228102,"p95_rmse":0.18708286933869708,"median_max_abs_error":0.2,"bridge_zero_estimate_rate":0.796,"simultaneous_interval_coverage":1.0,"median_bridge_upper_bound":0.9947040081863957,"median_max_player_interval_width":0.9947951960966631},
+      "iid_permutation": {"median_rmse":0.1274754878398196,"p95_rmse":0.20841386315973606,"median_max_abs_error":0.2,"bridge_zero_estimate_rate":0.779}
+    },
+    {
+      "marginal_observations": 80,
+      "iid_permutations": 16,
+      "adaptive": {"median_rmse":0.08499671587915598,"p95_rmse":0.13302129975969623,"median_max_abs_error":0.15000000000000002,"bridge_zero_estimate_rate":0.645,"simultaneous_interval_coverage":1.0,"median_bridge_upper_bound":0.9706332821390762,"median_max_player_interval_width":0.9745180991451946},
+      "iid_permutation": {"median_rmse":0.08599903100229289,"p95_rmse":0.15687334169339176,"median_max_abs_error":0.15416666666666667,"bridge_zero_estimate_rate":0.589}
+    },
+    {
+      "marginal_observations": 160,
+      "iid_permutations": 32,
+      "adaptive": {"median_rmse":0.057464245767994346,"p95_rmse":0.09424476278275389,"median_max_abs_error":0.09393939393939396,"bridge_zero_estimate_rate":0.461,"simultaneous_interval_coverage":1.0,"median_bridge_upper_bound":0.9050833237275112,"median_max_player_interval_width":0.9092569912177817},
+      "iid_permutation": {"median_rmse":0.06229131828219189,"p95_rmse":0.11226827987756233,"median_max_abs_error":0.09583333333333333,"bridge_zero_estimate_rate":0.328}
+    },
+    {
+      "marginal_observations": 320,
+      "iid_permutations": 64,
+      "adaptive": {"median_rmse":0.03826474035561957,"p95_rmse":0.06423567168561374,"median_max_abs_error":0.06333333333333335,"bridge_zero_estimate_rate":0.259,"simultaneous_interval_coverage":1.0,"median_bridge_upper_bound":0.7843850038546639,"median_max_player_interval_width":0.7887110193149692},
+      "iid_permutation": {"median_rmse":0.04352621336620038,"p95_rmse":0.07466285568797412,"median_max_abs_error":0.07500000000000001,"bridge_zero_estimate_rate":0.096}
+    },
+    {
+      "marginal_observations": 640,
+      "iid_permutations": 128,
+      "adaptive": {"median_rmse":0.024987342007203532,"p95_rmse":0.041729991768831486,"median_max_abs_error":0.04129859896392482,"bridge_zero_estimate_rate":0.101,"simultaneous_interval_coverage":1.0,"median_bridge_upper_bound":0.6416933373151131,"median_max_player_interval_width":0.6427385132171762},
+      "iid_permutation": {"median_rmse":0.031612481053111485,"p95_rmse":0.056473793749649,"median_max_abs_error":0.05156250000000001,"bridge_zero_estimate_rate":0.014}
+    }
+  ],
+  "interpretation": [
+    "The uncertainty-directed allocator improves aggregate RMSE at moderate/high matched observation budgets, but its point estimate misses the rare nonzero bridge more often than iid permutation sampling. At 320 observations the adaptive bridge-zero rate is 25.9% versus 9.6%; at 640 it is 10.1% versus 1.4%.",
+    "Therefore optimizing average attribution error or allocating only to currently wide aggregate intervals is not a safe lemma-elimination objective when rare but real interactions matter.",
+    "The time-uniform alpha-spending confidence sequence is safe but far too conservative for practical demotion: even at 640 observations the median upper bound for the true 1/30 bridge credit is about 0.642 and the median widest player interval is about 0.643.",
+    "Point estimate zero and safe evidence of zero are distinct. A zero point estimate cannot authorize demotion while its valid upper interval remains large.",
+    "For this five-player game, exact evaluation is preferred: there are only 2^5 = 32 coalition utility values, so Monte Carlo attribution is unnecessary. This fixture is a warning for larger candidate universes, not evidence that this adaptive allocator should be deployed."
+  ],
+  "design_update": [
+    "Keep an explicit exploration floor / rare-effect guard in any large-universe adaptive estimator.",
+    "Do not choose stopping/elimination solely by aggregate RMSE or point estimates.",
+    "Use estimator-specific uncertainty with materially tighter anytime guarantees than naive alpha-spending Clopper-Pearson, or exploit finite-population exact/without-replacement structure when feasible.",
+    "All coalition attribution remains advisory for library promotion/demotion unless chronologically future fixed-compute causal utility confirms value."
+  ],
+  "authority": "synthetic_engineering_calibration_only"
+}
