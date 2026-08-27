@@ -1,14 +1,9 @@
-"""Forward-contract admission/runtime bridge for reservation provenance.
+"""Complete forward-contract runtime for reservation authorization provenance.
 
-Only new ADMITs created through this module gain the forward-only runtime
-contract. Score/reservation/commit mechanics delegate to the frozen compliance
-runtime; its RESERVE events already carry the full frozen runtime binding.
-Historical blocks are unchanged.
-
-Safety boundary: the frozen CLOSE/replay module does not know the new provenance
-predicate. Therefore this bridge fails closed for prepare_close/recover unless a
-caller explicitly supplies a provenance-aware close module. This file must not
-be treated as a complete deployable runtime until that close/replay layer exists.
+New ADMITs bind the frozen reservation-runtime dependency set before score
+generation. Reservation/score mechanics delegate to the frozen compliance
+runtime, while CLOSE/replay defaults to the provenance-aware superseding layer.
+Historical blocks remain replayable under their historical predicate.
 """
 from __future__ import annotations
 from importlib.util import module_from_spec, spec_from_file_location
@@ -19,11 +14,10 @@ from typing import Any
 BASE_FILENAME = "reserved_score_runtime_compliance_2026-08-28.py"
 BASE_BLOB = "3e58813f34079e7f92eb0728bd7f9c27810d5418"
 CONTRACT_FILENAME = "reservation_runtime_provenance_contract_2026-08-28.py"
-SCHEMA_VERSION = 1
-
-
-class ProvenanceRuntimeIncomplete(RuntimeError):
-    pass
+CONTRACT_BLOB = "f6a4d996381bd100038d6ccfcf1b7c5f3f28e905"
+CLOSE_FILENAME = "reservation_compliance_close_replay_runtime_provenance_2026-08-28.py"
+CLOSE_BLOB = "c9982f2ef14cff5b1f59b314e95250745706c5e4"
+SCHEMA_VERSION = 2
 
 
 def _load(filename: str, name: str) -> Any:
@@ -43,6 +37,10 @@ def _base() -> Any:
 
 def _contract() -> Any:
     return _load(CONTRACT_FILENAME, "_evaluation_runtime_provenance_contract")
+
+
+def _default_close() -> Any:
+    return _load(CLOSE_FILENAME, "_evaluation_runtime_provenance_close")
 
 
 def admit_and_issue_capability(writer: Any, main_blob: bytes, ledger_blob: bytes, **kwargs: Any):
@@ -91,27 +89,21 @@ def prepare_recovery_commit_from_main(*args: Any, **kwargs: Any):
 
 
 def prepare_close(*args: Any, **kwargs: Any):
-    close_module = kwargs.get("close_module")
-    if close_module is None:
-        raise ProvenanceRuntimeIncomplete(
-            "provenance-aware CLOSE/replay module required before scientific close"
-        )
-    return (kwargs.pop("base_runtime_module", None) or _base()).prepare_close(*args, **kwargs)
+    close_module = kwargs.pop("close_module", None) or _default_close()
+    base = kwargs.pop("base_runtime_module", None) or _base()
+    return base.prepare_close(*args, close_module=close_module, **kwargs)
 
 
 def recover(*args: Any, **kwargs: Any):
-    close_module = kwargs.get("close_module")
-    if close_module is None:
-        raise ProvenanceRuntimeIncomplete(
-            "provenance-aware CLOSE/replay module required before recovery"
-        )
-    return (kwargs.pop("base_runtime_module", None) or _base()).recover(*args, **kwargs)
+    close_module = kwargs.pop("close_module", None) or _default_close()
+    base = kwargs.pop("base_runtime_module", None) or _base()
+    return base.recover(*args, close_module=close_module, **kwargs)
 
 
 __all__ = [
-    "BASE_FILENAME", "BASE_BLOB", "CONTRACT_FILENAME", "SCHEMA_VERSION",
-    "ProvenanceRuntimeIncomplete", "admit_and_issue_capability",
-    "prepare_reservation", "reserve_and_issue", "launch_reserved_score",
-    "prepare_bound_slot", "prepare_commit", "prepare_recovery_commit_from_main",
-    "prepare_close", "recover",
+    "BASE_FILENAME", "BASE_BLOB", "CONTRACT_FILENAME", "CONTRACT_BLOB",
+    "CLOSE_FILENAME", "CLOSE_BLOB", "SCHEMA_VERSION",
+    "admit_and_issue_capability", "prepare_reservation", "reserve_and_issue",
+    "launch_reserved_score", "prepare_bound_slot", "prepare_commit",
+    "prepare_recovery_commit_from_main", "prepare_close", "recover",
 ]
