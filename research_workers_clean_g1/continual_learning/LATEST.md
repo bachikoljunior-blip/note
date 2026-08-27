@@ -1,26 +1,27 @@
 # Continual Learning clean_g1 — latest pointer
 
-Latest durable checkpoint: `RUN_20260827T1001_JST.md`.
+Latest durable checkpoint: `RUN_20260827T1105_JST.md`.
 Base accumulated state: `STATE.md`.
 Matched data-mixing experiment contract: `MATCHED_DATA_MIXING_MANIFEST_v1.json`.
 
-For continuation, read `STATE.md`, then the minimum role-local checkpoint chain ending at `RUN_20260827T1001_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
+For continuation, read `STATE.md`, then the minimum role-local checkpoint chain ending at `RUN_20260827T1105_JST.md`. Do not read legacy `research_workers/continual_learning/`, O/O-derived state, comparator/integrator/index/feed/audit output, shared execution ledger/other-role receipts, or any other worker state.
 
 Current highest-value frontier update:
-- **DeMix `training_args.bin` is now fully content-addressed across all seven 30B `checkpoint-7500` components.** All seven remote SHA-256 values are distinct, even though six files display the same 5.94 kB size; `code_very_high` is 6.01 kB and distinct as well. Therefore exact reconstruction must retain component-specific execution-argument payload identity rather than assuming one shared training-args object from architecture/tokenizer sameness.
-- Exact `training_args.bin` SHA-256 values: general_target `125f9c553fc9ee9442634fb5894601bf4137d7515adcc90bee57912c33dc5a16`; code_high `0743793f644d894b226c31664f1ce49d14e494f06b610aac85aea4c5393f28a7`; code_medium `ebe6e04afdfa50ed4a1fad4e55696e335ce3a056cb6b1291170f85e1e6448b0b`; code_very_high `e133d0c47586bd5eabb28f562fc4bc86d07769de5bbafbc339a4ba431b3a57f0`; math_high `32e99f08b2ed20aa4ae2328cf5b4547ca06bac97913f188f96e0cb4a06001f24`; math_medium `15281db1fa986e3c9a536eba080179beb94121bac9bfc0894fcbe80e45730fbc`; math_very_high `83812cd6f142c8ed53d78376917b9a2d51ea8d0b2e0d6b2dc9f4d66bee021d1f`.
-- **Displayed-size equality is only a coarse structural clue, not an identity proof.** Config/tokenizer/index files show the same visible sizes across the seven component trees, while `trainer_state.json` already splits into at least 140 kB and 141 kB classes. Byte hashes are still required.
-- `training_args.bin` is pickle-bearing. Preserve Xet/SHA-256 identity and use a controlled safe parser before any field-level comparison; never casually execute remote pickle payloads.
-- SAFE-Merge remains quantitatively pinned as a protected-write/model-composition candidate: risk-aware masking supplies most of the safe-support benefit; recovery-only is unsafe at long horizon; BWT and held-out general-knowledge preservation must remain separate endpoints.
-- DeMix `mix_16` remains unexplained and the released rank-consistency evaluator remains synthetic/incomplete. Operational pairing stays `mix_0..15` until public evidence changes it.
-- OptiMer Table-1 weights remain figure-only; Table-4 exact Japanese positive-control weights remain the safe reconstruction anchor.
+- **DeMix `config.json` is now an explicit byte-equality class across all seven 30B checkpoint-7500 components.** The retrieved canonical raw serialization is exactly 727 UTF-8 bytes in every component; SHA-256 of that exact retrieved serialization is `199b96b3ab0f35d88b512fa29d5c0c3a6298b3727f6b0be5c0dba54546626f88`. This is a locally computed hash of the exact public raw bytes, not a claimed Xet/server digest.
+- **DeMix `generation_config.json` is likewise identical across all seven components:** 143 bytes; SHA-256 `afe20b2d6db0b0d845dde7f43979a6f04fb700e446b453503b10f48bd2d8fd85` under the same raw-byte convention.
+- The common model config pins Qwen3ForCausalLM, 28 layers, hidden size 2048, 16 attention heads/8 KV heads, max position 32768, `torch_dtype=float32`, `transformers_version=4.51.3`, and `use_cache=false`. These shared files should be deduplicated in a reconstruction, while the seven previously pinned `training_args.bin` payloads remain byte-distinct.
+- **The released DeMix evaluation path is not deterministic paper-reproduction code.** `eval_merged/proxy_eval.py` generates synthetic `random.random()+index` benchmark values. `iterative_sample/train_predictor.py` reads OpenCompass outputs but selects unsorted wildcard matches and hard-codes summary CSV row numbers and score column 4, without validating benchmark/metric names.
+- DeMix does not pin an OpenCompass version. For a public reconstruction only, use OpenCompass `0.5.1.post1@ecc86a2728c06fd2c1ad34f1d0094f42b5243c78` as a pre-paper stable anchor and `0.5.2@974179240a1a4e3c0ff14c60621cf1f6c95b287a` as a sensitivity comparator; do **not** claim the authors used the anchor. The two tags differ by 65 commits; target benchmark config files did not change in that interval, but core OpenICL evaluation/inference code and runtime requirements did, so output-schema/score equivalence must be tested rather than assumed.
+- A replacement evaluator must extract by benchmark+metric name, record OpenCompass commit/config/schema/output hashes, and fail closed on missing or duplicate names instead of using `iloc` positions.
+- DeMix `mix_16` remains unexplained; operational pairing remains `mix_0..15`.
+- SAFE-Merge remains a protected-write/model-composition candidate with acquired-task performance, BWT, held-out general knowledge, merge fidelity, offline merge cost, total training cost and durable storage kept separate.
 
 Exact next action:
-1. Content-address remaining DeMix small metadata across all seven immutable `checkpoint-7500` components and build explicit byte-equality classes (`config`, generation config, model index, tokenizer config/special-token/vocab/merges, `trainer_state.json`).
-2. If a safe non-executing parser path is available, compare relevant `training_args.bin` fields while keeping the SHA-256 table as byte-identity authority.
-3. Pin deterministic OpenCompass revision/config/schema and build a real evaluator adapter; never use DeMix's released synthetic placeholder as paper evidence.
-4. Continue source-qualified search for DeMix orphan `mix_16` metadata.
-5. Continue SAFE-Merge reconstruction/code search and execute the reduced displacement sweep before paper-scale compute, scoring acquired-task performance, BWT/retention, held-out general-knowledge preservation, merge fidelity, offline merge cost, total training cost and durable storage separately.
+1. Complete byte-level equality classes for `added_tokens.json`, `special_tokens_map.json`, `tokenizer_config.json`, `tokenizer.json`, `vocab.json`, `merges.txt`, model index and `trainer_state.json`; explain the 140/141 kB trainer-state split by content rather than size.
+2. Build a deterministic name-keyed OpenCompass adapter at `0.5.1.post1`, then run an identical tiny fixture at `0.5.2` to measure score/schema sensitivity before paper-scale evaluation.
+3. If a non-executing safe parser is available, compare relevant `training_args.bin` fields while keeping the seven SHA-256 values as byte-identity authority.
+4. Continue source-qualified search for orphan `mix_16` metadata.
+5. Continue SAFE-Merge reconstruction/code search and the reduced displacement sweep.
 6. Continue earlier selective-write/routing, replay/plasticity, world-model, task-free/drift and CLDD branches under exact tested-scope rules.
 
 Frontier must remain nonempty.
