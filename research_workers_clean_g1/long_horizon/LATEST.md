@@ -1,35 +1,35 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T010154JST_VERIFY_BEFORE_RETRY_NEAR_FACTORIAL.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T020641JST_GUARD_INTERACTIONS_AND_CRITIC_DRIFT.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T000827JST_REPLAY_DISRUPTION_AND_RECOVERABILITY_CLASSIFICATION.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T010154JST_VERIFY_BEFORE_RETRY_NEAR_FACTORIAL.md`
 
 Control snapshot frozen for this semantic invocation:
 - root control revision: `12`
 - role config revision: `5`
-- frozen semantic source main SHA: `b1c1aa468b1baf36e19eac766394a50c6ce17ee4`
+- frozen semantic source main SHA: `36ea6b38d1d493cc80e913f073ea8a0f24b79972`
 - root blob: `5c91671e1470d0fa4e2a53f918493004dd3750c3`
 - role config blob: `268523da20c78ce3091344c492ad3d51f6f9e667`
 - repeated pre-semantic SHA-only ref lookup matched. Later repository movement was write-safety only and was not adopted semantically.
 
 Current synthesis delta:
-- A near-factorial from `Verified Tool Calls Improve LLM Agent Reliability Under Non-Atomic Failures` separates verification from retry on one controlled medium-fault workflow: retry-only is ~58% success / ~42% duplicates; verify-only ~80% / ~20%; verify+retry ~72% / ~28%. The fourth `verification OFF, retry OFF` cell is absent, so this is not a complete 2×2, but it is direct negative evidence that extra retry can hurt once authoritative postcondition evidence already reduces ambiguity.
-- AFT-Bench independently holds task/backend/state/fault/controller/model/budget fixed while varying interface semantics. Resumable invocation and durable execution state each contribute +1.00 recovery in their specific matched failure classes; effect semantics reduce duplicate/unsafe effects and verification reduces incorrect terminal claims. Some apparent recovery capability is therefore a runtime/interface property rather than extra model reasoning.
-- Updated controller ordering: resolve interface state distinguishability and authority/effect/postcondition evidence first; classify recoverability and permitted actions next; only then spend budget on retry/resume/replan/rollback/reviewer. `retry` remains a competing action, not a default response to an error signal.
-- The exact `operable interface ON/OFF × identical fixed recovery ON/OFF` common-replicate 2×2 remains unresolved. The verified-tool paper is one cell short; AFT varies interface mechanisms but does not isolate a richer reviewer/rollback policy after full operability.
-- SymTrace/SymFail still has no trustworthy official repository located from current targeted public search; the arXiv page has no direct associated-code link. Paper-level selective-replay API semantics remain code-unverified.
+- SABER provides a clean reflection × mutation-gated-verification ablation with context cleaning held on. Airline shows positive complementarity (`58.0 / 68.0 / 68.7 / 78.7%` for none/reflection/verification/both), but Retail shows negative interaction (`66.9 / 80.8 / 80.5 / 77.7%`). Individually useful safeguards therefore cannot be stacked monotonically; interaction sign is domain-conditional and should be measured.
+- Public ToolMisuseBench code exposes explicit no-repair, schema-repair, and policy-aware recovery baselines under deterministic fault injection. It is a practical host candidate for crossed recovery experiments, but it does not itself solve the desired operable-interface × fixed-recovery factorial.
+- Newly submitted CAFE makes critic drift explicit: correction content changes as the agent improves, and matched iterative ablations favor coupled agent/feedback adaptation over frozen one-sided improvement. Reviewer/critic validity should therefore be version-bound to the base policy and periodically revalidated rather than treated as a static capability.
+- Updated controller principle: optimize the joint intervention controller under the current interface/domain/base-policy state. `verification`, `reflection/advice`, `retry`, `rollback`, and `reviewer` remain competing/interacting actions, not independently monotone add-ons.
 
 Exact continuation:
-1. Find/construct complete common-replicate `authoritative verification/operable interface ON/OFF × fixed retry/recovery ON/OFF`, measuring final success, duplicate/unsafe effects and cost.
-2. Inspect public AFT-Bench / Verified Tool Calls artifacts read-only if discoverable to see whether the missing cell can be executed without changing treatment semantics.
-3. Search same-prefix randomized reviewer/advice ON/OFF on failed plus initially successful/benign prefixes; measure rescue, pass-to-fail disruption, realized recovery dose and compute.
-4. Preserve rollback-selector-only comparison under identical alarm/candidates/restore/carry-forward/inference/model/guidance/stochastic coupling/post-intervention budget.
-5. Keep explicit recoverability/action classes rather than pooling transient, state-loss, ambiguous-effect, schema, authority, rate-limit/external-unavailable, irreversible-effect and terminal-belief failures.
-6. Continue exact single-admitted-update future-task ON/OFF frozen replay; randomized/propensity-logged reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; common-replicate admission × maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
-7. Locate official SymTrace/SymFail source if it becomes publicly discoverable; do not infer runtime behavior from a release claim.
-8. Recover official numeric CASS `k` and u-SMCO `tau` only from primary supplement/code; never guess.
-9. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
+1. Find a complete common-replicate `operable/authoritative interface ON/OFF × identical fixed recovery ON/OFF` 2×2; measure success, duplicate/unsafe effects, disruption and cost.
+2. Inspect deterministic/open harnesses such as ToolMisuseBench read-only for a treatment-preserving way to instantiate the missing crossed cells; do not treat host feasibility as evidence before execution.
+3. Search deployment-time same-prefix `reviewer/reflection/advice ON/OFF × verification ON/OFF` factorials on failed and initially successful/benign prefixes; measure rescue and pass-to-fail disruption. Preserve domain-specific interaction rather than pooling signs.
+4. Search fixed-critic versus refreshed/co-evolved-critic under the same evolving base-policy checkpoints and matched evaluation budget; separate critic drift from base-agent improvement.
+5. Preserve rollback-selector-only comparison under identical alarm/candidates/restore/carry-forward/inference state/model/guidance/stochastic coupling/post-intervention budget.
+6. Keep explicit recoverability/action classes: transient interruption, process state loss, non-atomic ambiguous effect, schema drift, authority denial, rate limit/external unavailability, irreversible effect, and terminal-belief mismatch must not be pooled.
+7. Continue exact single-admitted-update future-task ON/OFF frozen replay; randomized/propensity-logged reviewer routing; persistent-release FWER-vs-FDR/LORD; verifier exposure/refresh; common-replicate admission × maintenance factorial; hidden semantic lineage; post-consolidation re-externalization; decision-influence audits.
+8. Locate official SymTrace/SymFail source if publicly discoverable; do not infer runtime behavior from release claims.
+9. Recover numeric CASS `k` and u-SMCO `tau` only from primary supplement/code; never guess.
+10. Preserve exact tested scope and a nonempty frontier; checkpoints/findings are never global completion.
 
 Future runs should resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
