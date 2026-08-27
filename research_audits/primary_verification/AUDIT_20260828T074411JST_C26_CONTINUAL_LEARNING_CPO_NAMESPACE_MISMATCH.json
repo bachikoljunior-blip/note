@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "audit_time": "2026-08-28T07:44:11+09:00",
+  "generation": "clean_g1",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "e899934f5e038be524957a3abd6d0941df60cc91",
+    "root_control_revision": 12,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 24,
+    "downstream_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c26-20260828T060250JST-4d2d87a5",
+    "active_wave_blob": "ed8b965670a789bfe36c217bfa474a9cafdbb90e",
+    "source_set_digest": "4d2d87a5264fc083dfde2d7fc7b5296cc4436587baf081665b858a538af19cb3",
+    "selection_snapshot_note_main_sha": "8d544fd1254edec52ea2959806444c06ad8a2670"
+  },
+  "source_worker_artifact": {
+    "namespace": "continual_learning",
+    "path": "research_workers_clean_g1/continual_learning/RUN_20260828T0506_JST.md",
+    "blob": "6e0aaa4f6d706bf395a0b7d892b14b981a231de5",
+    "source_local_candidate_id": "continual_learning_c26_cpo_canonical_trainer_namespace"
+  },
+  "primary_source": {
+    "repository": "MaolinLuo/CPO",
+    "commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "files": ["src/compute_importance_mask.py", "src/trainer/grpo_trainer_cl.py"],
+    "api_reference": "PyTorch Module state_dict/named_parameters semantics"
+  },
+  "status": "primary_source_code_verified_namespace_mismatch_premise; worker_repair_only_synthetic_not_full_release_reproduced",
+  "verified": [
+    "CPO's public mask builder loads model.state_dict() and defines float_keys as every shared floating state-dict key; it does not first restrict keys to model.named_parameters().",
+    "The same builder carries prior accumulated mask entries forward wholesale and extracts reference weights from cur_sd for any retained key present in the state dict.",
+    "CPO's public CLGRPOTrainer applies the regularizer by iterating raw_model/unwrapped_model.named_parameters() and checking whether each parameter name exists in the importance mask. Mask keys that are not trainer-visible parameter names therefore have no gradient-consumption path in this trainer.",
+    "PyTorch's Module contract states that state_dict contains parameters plus persistent buffers, while named_parameters(remove_duplicate=True) removes duplicated Parameter objects by default.",
+    "An independent local PyTorch 2.10.0+cpu sanity fixture with one Linear module registered twice plus one persistent floating buffer produced state_dict keys ['buf','a.weight','b.weight'], default named_parameters ['a.weight'], and named_parameters(remove_duplicate=False) ['a.weight','b.weight']. This reproduces the namespace divergence mechanism in a minimal runtime fixture."
+  ],
+  "scope": [
+    "This verifies the public-release namespace mismatch premise: state-dict-only persistent buffers and duplicate alias names can be eligible for mask serialization even though the trainer consumes only canonical named_parameters entries.",
+    "It does not establish that the released Qwen3-VL checkpoints actually contain a material number of such dead aliases/buffers, nor quantify real mask-file/RSS/runtime savings.",
+    "The independent toy fixture ran on PyTorch 2.10.0+cpu, not the worker's requested PyTorch 2.8.0/full-Qwen/DeepSpeed environment. The PyTorch API semantics are documented, but exact 2.8/full-model byte-level reproduction remains open.",
+    "The worker's canonical trainer-namespace repair and six-case invariance matrix were not independently re-executed in this audit. They remain worker-local synthetic repair evidence rather than primary-source behavior.",
+    "Filtering by canonical parameter name is semantically conservative only for the current trainer contract. A future consumer that intentionally uses persistent buffers or noncanonical aliases would require a new explicit contract rather than inheriting this conclusion."
+  ],
+  "downstream_implication": "The public CPO release has a mechanically verifiable producer/consumer namespace mismatch: masks are produced from the broader state_dict namespace but consumed through named_parameters. A production cleanup may safely target only keys proven outside the exact trainer-consumed namespace, but real-model savings and repair invariance still require pinned PyTorch/full-model reproduction before being treated as measured benefit.",
+  "worker_feedback_written": false,
+  "exploration_state_mutated": false,
+  "exact_next_action": "On a future continual-learning audit, rerun the exact canonical-namespace fixture under PyTorch 2.8.0 and a smallest real tied Transformers model; only then bind any measured mask-byte/RSS/build-time benefit to the public CPO release."
+}
