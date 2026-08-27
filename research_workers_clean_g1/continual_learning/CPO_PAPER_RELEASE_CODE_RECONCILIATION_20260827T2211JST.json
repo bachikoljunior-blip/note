@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T22:11:06+09:00",
+  "role": "continual_learning",
+  "frozen_note_main_sha": "5c2d85296bce985c3a36625d9e6565d43a6c7903",
+  "frozen_control_revision": 12,
+  "frozen_control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+  "frozen_role_config_revision": 5,
+  "frozen_role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0",
+  "predecessor_checkpoint": "RUN_20260827T2103_JST.md",
+  "candidate": {
+    "name": "Continual Policy Optimization (CPO)",
+    "paper": "RL Forgets! Towards Continual Policy Optimization",
+    "arxiv": "2607.04364",
+    "public_repo": "MaolinLuo/CPO",
+    "public_repo_head": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "release_commit_date_utc": "2026-07-29T06:57:01Z",
+    "paper_v2_date": "2026-07-13",
+    "scope": "multimodal reasoning continual post-training with five explicit sequential tasks on Qwen3-VL 2B/4B/8B; not evidence for boundary-free continual learning"
+  },
+  "paper_mechanism": {
+    "selection": "global TopP over all d parameter coordinates by absolute realized movement",
+    "cumulative_support": "union current global TopP support with prior protected support",
+    "regularizer": "lambda / M times the global sum of absolute deviations over all M protected coordinates",
+    "reported_hyperparameters": {"top_percent": 10.0, "lambda": 100.0},
+    "theory_scope": "movement-to-Fisher relation is derived under a locally stationary SGD-style approximation with coordinate coefficients whose heterogeneity must be controlled for ranking consistency"
+  },
+  "release_code_contract": {
+    "selection_file": {"path": "src/compute_importance_mask.py", "blob": "5f17be7ad91bdc162a0d1e466198c1bdb2ded921"},
+    "trainer_file": {"path": "src/trainer/grpo_trainer_cl.py", "blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358"},
+    "args_file": {"path": "src/params.py", "blob": "d8d6211ddff612899e522129629c3015c3be27fb"},
+    "train_file": {"path": "src/train/train_grpo.py", "blob": "254db53daa0dec907fcf1fc24ae9a3c4b8287812"},
+    "zero3_file": {"path": "scripts/zero3_offload.json", "blob": "923b4187a5568a0e741b68248b29d25940f30990"},
+    "selection": "for every floating state_dict tensor independently, k=floor(numel*p/100) and torch.topk is applied within that tensor; zero-movement selected entries are dropped; previous masks are unioned tensor-wise",
+    "regularizer": "for each protected tensor t independently, add lambda/m_t times sign(theta-reference) on its m_t protected coordinates, then sum tensor contributions",
+    "default_lambda": 100.0,
+    "launcher_top_percent": {"2B": 10.0, "4B": 10.0, "8B": 10.0},
+    "optimizer_and_schedule": "AdamW, weight_decay=0.1, cosine LR, warmup_ratio=0.1; ZeRO-3 with CPU parameter and optimizer offload in the published launchers",
+    "mask_serialization": "dense BoolTensor mask per protected parameter tensor plus float32 reference values at all cumulative protected positions"
+  },
+  "paper_release_mismatches": [
+    {
+      "id": "selection_topology",
+      "paper": "global TopP across all coordinates",
+      "release_code": "per-tensor TopP independently; code explicitly states no global threshold",
+      "mechanistic_consequence": "release code forces approximately p-percent protection inside each sufficiently large tensor rather than allowing protection to concentrate in globally high-movement tensors"
+    },
+    {
+      "id": "normalization_topology",
+      "paper": "one global protected-count denominator M",
+      "release_code": "one denominator m_t per tensor",
+      "derived_coordinate_gradient_ratio": "for a nonzero protected deviation in tensor t, |g_release|/|g_paper| = M/m_t",
+      "derived_total_regularizer_l1_gradient_budget": "paper is approximately lambda over all protected coordinates; release code is approximately lambda times the number of protected tensors, assuming nonzero deviations",
+      "mechanistic_consequence": "small protected tensors can receive much larger per-coordinate regularization than the paper objective"
+    },
+    {
+      "id": "theory_optimizer_scope",
+      "paper_theory": "locally stationary SGD-style movement-to-Fisher approximation",
+      "release_training": "AdamW with weight decay, warmup and cosine schedule under RL noise",
+      "interpretation": "not an implementation bug; it limits how directly realized movement should be interpreted as Fisher importance in the released experiments"
+    }
+  ],
+  "reported_results_scope": {
+    "qwen3_vl_8b": {
+      "GSPO": {"MFT": 76.48, "MFN": 61.79, "MTA": 69.24},
+      "CPO": {"MFT": 74.80, "MFN": 75.46, "MTA": 74.69},
+      "external_capability_average": {"base": 59.71, "GSPO": 52.51, "CPO": 66.68}
+    },
+    "interpretation_guard": "These reported paper gains are evidence for the named experimental recipe, but without historical masks/checkpoints or an author clarification they cannot yet be causally attributed specifically to the paper equations rather than the later public release-code contract."
+  },
+  "storage_cost_model": {
+    "status": "derived estimate, not measured from released mask artifacts",
+    "assumptions": [
+      "dense torch.bool mask costs approximately one byte per coordinate",
+      "reference values are saved as float32, four bytes per protected coordinate",
+      "example model parameter count approximated as 8.8 billion solely for order-of-magnitude illustration"
+    ],
+    "first_task_at_10_percent_example": {
+      "dense_mask_gb_decimal": 8.8,
+      "reference_values_gb_decimal": 3.52,
+      "total_gb_decimal_before_serialization_overhead": 12.32
+    },
+    "four_independent_10_percent_supports_example": {
+      "expected_union_fraction": 0.3439,
+      "reference_values_gb_decimal": 12.104,
+      "dense_mask_gb_decimal": 8.8,
+      "total_gb_decimal_before_serialization_overhead": 20.904
+    },
+    "guard": "Actual overlap, exact float-parameter count, torch serialization overhead and saved-file behavior must be measured before reporting realized storage."
+  },
+  "matched_factorial_test": {
+    "purpose": "separate the effect of support selection topology from normalization topology",
+    "arms": [
+      "global TopP + global normalization (paper-spec)",
+      "per-tensor TopP + per-tensor normalization (release-code-spec)",
+      "per-tensor TopP + global normalization",
+      "global TopP + per-tensor normalization"
+    ],
+    "fixed_conditions": ["same GSPO base", "same task order/data", "same p=10%", "fair lambda tuning under matched validation/compute", "same evaluation and seeds"],
+    "measurements": [
+      "MFT/current-task plasticity",
+      "MFN/final retention",
+      "MTA",
+      "held-out pretrained/general capability",
+      "cumulative protected fraction",
+      "support distribution by layer/tensor",
+      "task-mask overlap/Jaccard",
+      "regularizer gradient norm relative to RL gradient",
+      "mask/reference durable bytes",
+      "mask construction time",
+      "per-step runtime and host-device transfer overhead"
+    ]
+  },
+  "open_frontier": [
+    "Run or obtain the 2x2 CPO factorial comparison before attributing gains to the paper mechanism.",
+    "Measure actual released-code mask/ref storage and runtime overhead on a tractable Qwen3-VL scale.",
+    "Search for author checkpoints/masks/logs or clarification that ties paper tables to paper-spec versus release-code-spec.",
+    "Resume DeMix/OpenCompass Track A1 when a networked Linux/Python-3.10 dependency-resolution environment is available.",
+    "Continue other role-local continual-learning branches with exact tested scope."
+  ]
+}
