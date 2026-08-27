@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T05:07:21.057492+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T041925_JST_reserved_score_pipeline.json",
+  "main_result": {
+    "auditor_artifact": "research_workers_clean_g1/evaluation/reservation_compliance_auditor_2026-08-28.py",
+    "auditor_blob_after_readback": "0a845daa2675ba2c769c231769b1729f7e78f01d",
+    "auditor_validation": "research_workers_clean_g1/evaluation/validation_reservation_compliance_auditor_2026-08-28.json",
+    "auditor_validation_blob": "667c9761c925cd0928a177f1c3c00c60afb2541a",
+    "close_replay_artifact": "research_workers_clean_g1/evaluation/reservation_compliance_close_replay_2026-08-28.py",
+    "close_replay_blob_after_readback": "ac69f485383118192b533e258bb6033b454ca9b3",
+    "close_replay_validation": "research_workers_clean_g1/evaluation/validation_reservation_compliance_close_replay_2026-08-28.json",
+    "close_replay_validation_blob": "843c6bbe00560d3000a2b2f3d389180a96b27834",
+    "result": "Closed the lower-level SLOT bypass gap at the scientific-row layer. The auditor accepts a planned SLOT score only after durable RESERVE, exact in-SLOT attempt binding, and durable COMMIT naming that exact SLOT event digest; every other planned slot is score=1. The superseding CLOSE/replay layer embeds and rederives that compliance audit, refuses CLOSE while a valid bound SLOT still lacks only COMMIT, and replaces the atomic legacy row with the fail-closed compliance row on replay while preserving legacy already-closed rows.",
+    "stress": "Auditor mixed-block test distinguished seven compliance states; 357/357 torn COMMIT partial cuts were rejected; 5,000 random campaigns had zero optimistic fail-closed violations. Compliance CLOSE stress kept the block active and reporting_rows=0 for all 2,633 nonempty partial CLOSE cuts, rejected closed-row and compliance-payload tampering with fully recomputed outer frames, required reconciliation before closing a bound-but-uncommitted SLOT, and replayed a legacy row followed by a new compliance row with the bypass SLOT forced to 1."
+  },
+  "measurement_validity_rules": [
+    "Historical atomic SLOT acceptance is transport/replay behavior, not scientific authority under the reservation-aware contract.",
+    "A planned slot contributes its durable score only after RESERVE + exact attempt binding + COMMIT to the exact SLOT digest; all other planned slots contribute failure=1.",
+    "A bound durable SLOT missing only COMMIT is recoverable bookkeeping. Reconcile COMMIT without rescoring before CLOSE; until then it remains fail-closed.",
+    "The compliance audit and digest must be persisted in CLOSE and rederived from the exact pre-CLOSE main prefix plus reservation ledger on every replay.",
+    "Torn CLOSE/COMMIT tails cannot advance scientific state; repair/quarantine the tail first.",
+    "Already closed legacy blocks are not reinterpreted. The new compliance semantics begin only at compliance CLOSE events.",
+    "The current compliance CLOSE format is not deployable through components that still bind the old durable_k_guard_hybrid_journal replay, because a bypass-forced row intentionally differs from the old SLOT-accepting row."
+  ],
+  "scope_and_limitations": [
+    "Validation used contract-faithful injected atomic/reservation/reporter modules because the exact repository sibling files were not mounted in the local Python runtime; repository readback verified source artifacts but not byte-execution of the full production sibling graph.",
+    "The new close/replay wrapper is a superseding research candidate, not a deployed runtime migration. The old launch-capability gate must be upgraded to replay through it before a compliance CLOSE can be followed by a new ADMIT in production.",
+    "Multi-process writer fencing/flock remains outside this artifact. Sequential durable-prefix crash semantics are tested; simultaneous OS-process writers are not.",
+    "Out-of-plan reservations and active event conflicts are surfaced in the compliance audit. Whether to reject the whole block rather than only fail-close affected planned slots remains a conservative-policy frontier."
+  ],
+  "frontier": [
+    "Create a compliance-aware launch-capability gate/runtime adapter that uses reservation_compliance_close_replay for all post-close recovery while preserving the legacy ADMIT acknowledgement contract.",
+    "Byte-execute the full ADMIT -> RESERVE -> SCORE -> bound SLOT -> COMMIT -> compliance CLOSE -> next ADMIT lifecycle against exact repository-local sibling files and verify readback/recovery at every persistence boundary.",
+    "Add writer lease/flock/fencing if launchers can race across OS processes, then simultaneous-reservation stress the same slot.",
+    "Decide and test a stricter whole-block fail-closed policy for out-of-plan reservations or target-block event-id conflicts, because such anomalies may signal a broader selection channel beyond one slot.",
+    "Verify real stochastic scorer determinism under attempt_id before enabling deterministic replay; keep fail-closed unresolved as default."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a compliance-aware launch-capability gate whose capability verification and post-close recovery call reservation_compliance_close_replay rather than the legacy adapter, while still acknowledging the legacy-format ADMIT frame. Then validate a two-block lifecycle where block 1 contains a durable lower-level bypass SLOT that is forced to failure=1 at compliance CLOSE and block 2 can still be admitted/launched after restart without reporter-state divergence."
+}
