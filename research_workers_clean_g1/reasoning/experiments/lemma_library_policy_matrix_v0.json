@@ -1,0 +1,145 @@
+{
+  "schema_version": "lemma_library_policy_matrix_v0",
+  "created_at": "2026-08-27T22:12:40+09:00",
+  "status": "preregistered_not_executed",
+  "purpose": "Separate the effect of iterative abstraction/consolidation from the effect of the retention/eviction rule in a compact persistent Lean lemma library, and compare cheap usage-based retention with causal future-task marginal-utility gating without future leakage.",
+  "evidence_motivation": {
+    "dreamprover": "DreamProver shows large system-level gains from iterative wake-sleep library optimization and real cross-task reuse, but its ablation does not isolate the usage-based/LRU forgetting rule from abstraction, clustering, consolidation, and changed library contents.",
+    "existing_guard": "Usage/retrieval/proof-dependency/coalition credit remain advisory. Chronologically future fixed-compute counterfactual proving is the authoritative promotion/demotion evidence."
+  },
+  "frozen_primary_design": {
+    "formal_system": "Lean 4",
+    "library_capacity_entries": 96,
+    "library_context_token_cap": 24000,
+    "task_order": "fixed and identical across conditions",
+    "model_and_decoding": "same pinned prover/model, tokenizer, temperature, sampling seed schedule and verifier across conditions",
+    "environment": "same pinned Lean/toolchain/project snapshot across conditions",
+    "retrieval": "same retriever, candidate universe, top-k and serialization across all conditions in which retrieval is enabled",
+    "candidate_generation": "same generated verified candidate pool within each chronological fold; candidate generation is not rerun separately per retention condition",
+    "library_serialization": "deterministic; when entry and token caps conflict, retain policy-ranked entries in deterministic tie-break order until both caps are satisfied",
+    "budget_accounting": [
+      "candidate generation tokens/cost",
+      "abstraction/clustering/consolidation tokens/cost",
+      "retention scoring/evaluation tokens/cost",
+      "retrieval tokens/cost",
+      "prover generation tokens/cost",
+      "Lean execution/checker time",
+      "wall-clock",
+      "state/index maintenance cost"
+    ],
+    "authoritative_comparison": "total-system-cost matched. Policy-selection overhead counts against the condition's budget; a secondary proof-budget-matched view may be reported only as a diagnostic."
+  },
+  "chronological_split": {
+    "unit": "rolling chronological folds within a domain/repository",
+    "per_fold": [
+      "G_i: generation window. Generate and kernel-verify candidate lemmas using only G_i and earlier state.",
+      "S_i: scoring/admission window strictly later than G_i. Usage statistics and causal marginal-utility estimates may use S_i, and S_i is consumed after scoring.",
+      "E_i: evaluation window strictly later than S_i. Primary solve/cost metrics are computed here; no E_i information may affect promotion, eviction, retrieval ranking, thresholds, or policy parameters for that fold."
+    ],
+    "leakage_rule": "No theorem, proof, dependency, retrieval trace, or outcome from S_i/E_i may influence candidate generation in G_i. No E_i information may influence library selection for E_i."
+  },
+  "conditions": [
+    {
+      "id": "C0_no_persistent_library",
+      "abstraction": "none",
+      "retention": "none",
+      "description": "Base prover with no learned persistent lemma library."
+    },
+    {
+      "id": "C1_staged_query_only",
+      "abstraction": "verified candidates available only in staged pool",
+      "retention": "no global promotion",
+      "description": "Verified generated candidates can be retrieved on demand but are not globally promoted."
+    },
+    {
+      "id": "C2_raw_fifo",
+      "abstraction": "raw verified intermediates",
+      "retention": "FIFO neutral eviction",
+      "description": "Control for persistent capacity without usage or causal scoring."
+    },
+    {
+      "id": "C3_raw_usage",
+      "abstraction": "raw verified intermediates",
+      "retention": "usage-frequency eviction",
+      "description": "Tests usage-based retention without clustering/abstraction."
+    },
+    {
+      "id": "C4_abstract_fifo",
+      "abstraction": "fixed clustered/abstracted/consolidated verified candidate producer",
+      "retention": "FIFO neutral eviction",
+      "description": "Isolates abstraction/consolidation benefit under a neutral retention rule."
+    },
+    {
+      "id": "C5_abstract_usage",
+      "abstraction": "same fixed clustered/abstracted/consolidated candidate producer as C4/C6/C7",
+      "retention": "usage-frequency eviction",
+      "description": "DreamProver-like cheap usage prior under fixed abstraction."
+    },
+    {
+      "id": "C6_abstract_causal",
+      "abstraction": "same fixed clustered/abstracted/consolidated candidate producer as C4/C5/C7",
+      "retention": "chronologically future fixed-compute marginal-utility gate",
+      "description": "Promotion/demotion uses paired fixed-compute proving on S_i; selection overhead is charged to total system cost."
+    },
+    {
+      "id": "C7_abstract_hybrid",
+      "abstraction": "same fixed clustered/abstracted/consolidated candidate producer as C4/C5/C6",
+      "retention": "usage/generalization/reprovability/support priors shortlist candidates, then causal marginal-utility gate",
+      "description": "Tests whether cheap advisory priors can reduce causal-evaluation overhead without sacrificing E_i utility."
+    }
+  ],
+  "causal_gate_v0": {
+    "scoring_window": "S_i only",
+    "comparison": "paired library-on versus library-off (or retained-set versus candidate-removed) proof attempts under identical task, model, decoding seed, verifier and per-task compute",
+    "primary_effects": [
+      "delta verified solve probability / solved count",
+      "delta total system cost per verified solve",
+      "delta prover tokens",
+      "delta Lean execution time",
+      "delta wall-clock"
+    ],
+    "pollution_costs": [
+      "retrieved-but-unused entries",
+      "extra context tokens",
+      "new failures or timeouts on tasks solved by the paired control",
+      "retrieval latency/index cost"
+    ],
+    "authority": "only this future-task matched counterfactual evidence may authorize causal promotion/demotion; cheap priors cannot widen authority"
+  },
+  "primary_metrics": [
+    "verified solved tasks on E_i",
+    "total-system cost per verified solve",
+    "full chronological fold completion rate",
+    "actual proof-term dependency use of library lemmas",
+    "explicit tactic reference use, reported separately",
+    "covered solved tasks with at least one library use",
+    "retrieved-but-unused rate",
+    "library token occupancy",
+    "promotion count and demotion count",
+    "library churn",
+    "demotion regret: a demoted lemma later shows positive matched counterfactual utility on a subsequent scoring window",
+    "negative transfer: paired tasks lost relative to control"
+  ],
+  "analysis_guards": {
+    "use_is_not_utility": true,
+    "retrieval_is_not_use": true,
+    "proof_dependency_is_not_causal_necessity": true,
+    "low_budget_zero_coalition_credit_cannot_authorize_demotion": true,
+    "shapley_or_support_credit_is_advisory_only_without_prevalidated_additive_or_MTM_structure": true,
+    "all_thresholds_and_tie_breaks_must_be_fixed_before E_i outcomes are observed": true
+  },
+  "planned_pairwise_interpretation": {
+    "C2_vs_C3": "usage retention effect without abstraction",
+    "C4_vs_C5": "usage retention effect with fixed abstraction",
+    "C3_vs_C5": "abstraction/consolidation effect under usage retention",
+    "C4_vs_C6": "causal gate versus neutral retention under fixed abstraction",
+    "C5_vs_C6": "causal gate versus usage retention under fixed abstraction",
+    "C6_vs_C7": "whether cheap priors reduce causal-gate overhead without losing downstream utility",
+    "C0_vs_C1": "query-only staged candidate value without global promotion"
+  },
+  "sensitivity": {
+    "predeclared_optional_capacity_entries": [64, 128],
+    "rule": "capacity sensitivity is secondary and may be run only after the primary K=96 matrix; it must not replace the primary result based on observed outcomes"
+  },
+  "completion_criterion": "This preregistration is complete only as a design artifact. It is not evidence that any policy is superior and does not change the global lemma library."
+}
