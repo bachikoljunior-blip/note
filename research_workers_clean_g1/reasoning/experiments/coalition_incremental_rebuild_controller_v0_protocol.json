@@ -1,0 +1,42 @@
+{
+  "schema": "coalition_incremental_rebuild_controller_v0_protocol",
+  "created_at": "2026-08-28T05:05:33.287703+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "79ca1416ce33c2b73f74f41ef284a6e4168bce32",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Outcome-aware follow-up to the prior exact incremental-boundary holdout. Test whether periodic or allocation/live-triggered fresh rebuilds can retain exact rank vectors while controlling stale-node accumulation and total runtime. Protocol is frozen before these new holdout outcomes.",
+  "holdout": {
+    "n_values": [14,18,22],
+    "seeds": [740011,740033,740071,740099],
+    "observation_budgets": {"14":900,"18":1300,"22":1800},
+    "game": "generated monotone simple game from subset-minimal random supports using the same generator family as the prior incremental holdout",
+    "player": "seed mod n",
+    "observation_stream": "seeded sample without replacement from all coalitions"
+  },
+  "strategies": {
+    "always_incremental": "Conjoin only newly strengthening boundary clauses into one persistent ROBDD; never rebuild.",
+    "always_rebuild": "After every effective boundary update, discard the strategy manager and fresh-rebuild from the current reduced maximal-zero/minimal-one boundary before rank evaluation.",
+    "periodic_32": "Use incremental updates but fresh-rebuild after every 32 effective boundary changes since the last rebuild.",
+    "ratio_4": "Use incremental updates; after an effective update, compute allocated_nonterminal_nodes / max(1, reachable_live_nonterminal_nodes) and fresh-rebuild before rank evaluation when the ratio is at least 4.",
+    "hybrid_ratio4_or_64": "Use incremental updates; fresh-rebuild when allocation/live ratio is at least 4 or 64 effective boundary changes have occurred since the last rebuild, whichever happens first."
+  },
+  "correctness_oracle": "At every effective update, independently fresh-rebuild from the reduced boundary and require exact equality of the full cardinality/rank-count vector for every strategy. Oracle construction time is validation overhead and excluded from strategy-runtime comparisons.",
+  "cost_accounting": {
+    "primary": ["strategy update+optional rebuild+rank-evaluation wall time", "ROBDD nonterminal allocations created by the strategy", "rebuild count"],
+    "memory_proxy": ["maximum allocated/live ratio before optional rebuild", "maximum allocated nodes in current manager", "final allocated nodes", "final reachable live nodes"],
+    "reporting": "Report runtime and memory proxies separately; no scalar utility is fit after outcomes. A strategy Pareto-dominates another only if it is no slower and no worse on max allocated/live ratio with at least one strict improvement, within this exact implementation."
+  },
+  "predeclared_tests": [
+    "All strategies must have zero exact-rank mismatches at every effective update; any mismatch invalidates that cell's performance comparison.",
+    "Compare always_incremental versus always_rebuild to establish the endpoints of the rebuild tradeoff.",
+    "Compare periodic_32 and ratio_4 against both endpoints; report whether the trigger reduces stale-node accumulation without paying always-rebuild cost.",
+    "Compare hybrid_ratio4_or_64 to ratio_4 to test whether a periodic backstop adds value when allocation/live remains deceptively low.",
+    "Do not infer general asymptotic complexity from Python wall-clock or these generated monotone games.",
+    "Do not apply these monotone-boundary results to nonmonotone finite-compute proof utility without a separate validated monotonicity contract."
+  ],
+  "scope": "Twelve newly seeded generated monotone simple-game observation streams; exact only for this boundary-CNF/ROBDD implementation and rank-count query."
+}
