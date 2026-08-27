@@ -1,0 +1,63 @@
+{
+  "derived_rule": "For journal/ledger objects, a storage-enforced atomic generation/ETag CAS is sufficient to reject stale same-object writers if every scientific mutation uses the precondition and scorer launch is causally downstream of a uniquely successful durable reservation. A lease without data-plane enforcement is not sufficient. A monotonic fence is required when the protected side effect cannot itself be guarded by the same storage CAS/version predicate.",
+  "duplicate_reservation": {
+    "a_reserve_success": true,
+    "b_reserve_success": false,
+    "final_generation": 1,
+    "scorer_launches_if_only_success_mints_permit": 1
+  },
+  "fencing": {
+    "final_value": "new",
+    "new_fence_write_succeeded": true,
+    "safe_against_stale_fence": true,
+    "stale_fence_write_succeeded": false
+  },
+  "generation_cas": {
+    "all_exactly_one_winner": true,
+    "cases": [
+      {
+        "final_generation": 1,
+        "final_value": "A",
+        "order": ["A", "B"],
+        "success": {"A": true, "B": false},
+        "winner_count": 1
+      },
+      {
+        "final_generation": 1,
+        "final_value": "B",
+        "order": ["B", "A"],
+        "success": {"A": false, "B": true},
+        "winner_count": 1
+      }
+    ]
+  },
+  "lease_only": {
+    "final_value": "stale",
+    "new_owner_write_succeeded": true,
+    "stale_owner_write_succeeded": true,
+    "unsafe": true
+  },
+  "lost_ack": {
+    "durable_identity_matches": true,
+    "first_storage_mutation_succeeded": true,
+    "generation": 1,
+    "recovery_policy": "fail_closed_no_new_stochastic_launch_permit",
+    "retry_with_stale_generation_succeeded": false
+  },
+  "public_sources": [
+    {
+      "claim": "ifGenerationMatch rejects a mutation when the object generation does not match and is documented for safe read-modify-write/race prevention.",
+      "url": "https://docs.cloud.google.com/storage/docs/request-preconditions"
+    },
+    {
+      "claim": "If-Match conditional writes fail when ETag differs; concurrent conditional writes allow one to finish and later mismatched writes fail.",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html"
+    },
+    {
+      "claim": "Transactions atomically compare key value/revision/version and apply success/failure operations, providing compare-and-swap primitives.",
+      "url": "https://etcd.io/docs/v3.6/learning/api/"
+    }
+  ],
+  "schema_version": 1,
+  "tested_model_local_sha256": "9e133609fdec7cbeb7824782e732458662b6d236584a4a7de6f6392500d9b47e"
+}
