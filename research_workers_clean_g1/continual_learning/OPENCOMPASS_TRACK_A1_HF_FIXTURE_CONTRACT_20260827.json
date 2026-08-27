@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-27T20:03:07+09:00",
+  "purpose": "Public reconstruction contract for a source-isolated OpenCompass 0.5.1 vs 0.5.2 sensitivity test. This is not evidence of the DeMix authors' exact wrapper/runtime.",
+  "opencompass_anchors": {
+    "v051_publication_source": "ecc86a2728c06fd2c1ad34f1d0094f42b5243c78",
+    "v052_sensitivity_source": "974179240a1a4e3c0ff14c60621cf1f6c95b287a"
+  },
+  "fixed_wrapper": {
+    "class": "opencompass.models.HuggingFaceCausalLM",
+    "source_path": "opencompass/models/huggingface.py",
+    "blob_at_v051": "a91ffea06613def42fbad989200cce64658fde8d",
+    "blob_at_v052": "a91ffea06613def42fbad989200cce64658fde8d",
+    "byte_identity_across_anchors": true,
+    "fixture_path": "research_workers_clean_g1/continual_learning/tools/demix_opencompass_track_a1_hf_fixture_20260827.py",
+    "fixture_blob": "2dc8d57b87c97ad7183b04ce7ec1ad44d04bebd1"
+  },
+  "fixture_model": {
+    "repository": "sshleifer/tiny-gpt2",
+    "revision": "5f91d94bd9cd7190a9f3216ff93cd1dd95f2c7be",
+    "pytorch_model_sha256": "b706b24034032bdfe765ded5ab6403d201d295a995b790cb24c74becca5c04e6",
+    "pytorch_model_xet_hash": "b84c5886e78dcb987e5b2776af99b7eac99cee407fa64cb8183e7ded7d873539",
+    "model_type": "GPT2LMHeadModel",
+    "n_ctx": 1024,
+    "n_layer": 2,
+    "n_head": 2,
+    "n_embd": 2,
+    "tokenizer_and_config_identity_rule": "all tokenizer/config files must resolve from the exact same Hugging Face revision before execution; persist local file hashes in the execution receipt",
+    "model_kwargs": {"revision": "5f91d94bd9cd7190a9f3216ff93cd1dd95f2c7be", "torch_dtype": "torch.float"},
+    "tokenizer_kwargs": {"revision": "5f91d94bd9cd7190a9f3216ff93cd1dd95f2c7be", "padding_side": "left", "truncation_side": "left"},
+    "generation_kwargs": {"do_sample": false, "use_cache": true},
+    "pad_token_id": 50256,
+    "max_seq_len": 1024,
+    "max_out_len": 512,
+    "batch_size": 1,
+    "batch_padding": false,
+    "device_intent": "CPU/source-isolation first; no wrapper switch between anchors"
+  },
+  "benchmark_configs_v051": [
+    {"abbr":"ARC-e","path":"opencompass/configs/datasets/ARC_e/ARC_e_ppl_a450bd.py","blob":"d51accc109a8f92677c722a893ccfa809207bdba","mode":"ppl","evaluator":"AccEvaluator"},
+    {"abbr":"hellaswag","path":"opencompass/configs/datasets/hellaswag/hellaswag_ppl_47bff9.py","blob":"6eeca3c0297f55571c72e8cfa8272a202cf96e89","mode":"ppl","evaluator":"AccEvaluator"},
+    {"abbr":"piqa","path":"opencompass/configs/datasets/piqa/piqa_ppl_1cf9f0.py","blob":"abbe285ace33459e60bc44cc8832e8bac3a18825","mode":"ppl","evaluator":"AccEvaluator"},
+    {"abbr":"siqa","path":"opencompass/configs/datasets/siqa/siqa_ppl_ced5f6.py","blob":"27db38d04c2252a9bb7d2898fe79f9c52734e0fa","mode":"ppl","evaluator":"AccEvaluator"},
+    {"abbr":"winogrande","path":"opencompass/configs/datasets/winogrande/winogrande_ll_c5cf57.py","blob":"7d0b595b6a9c91bcf4de7a2cfeb871dc00b0ee2f","mode":"ll","evaluator":"AccEvaluator"},
+    {"abbr":"mbpp","path":"opencompass/configs/datasets/mbpp/deprecated_mbpp_gen_1e1056.py","blob":"697cdf45184dd114efd350f45bdd923acd669933","mode":"gen","evaluator":"MBPPEvaluator"},
+    {"abbr":"openai_humaneval","path":"opencompass/configs/datasets/humaneval/humaneval_gen_8e312c.py","blob":"a8c6e5879de41a5ce25c3fd0cde2af749dadabef","mode":"gen","evaluator":"HumanEvalEvaluator","k":[1,10,100]},
+    {"abbr":"gsm8k","path":"opencompass/configs/datasets/gsm8k/gsm8k_gen_1d7fe4.py","blob":"9897608e65c4cda2c42fd614d95037f471616b7a","mode":"gen","evaluator":"Gsm8kEvaluator","dataset_postprocessor":"gsm8k_dataset_postprocess"},
+    {"abbr":"math","path":"opencompass/configs/datasets/math/math_gen_265cce.py","blob":"ef2a6af562a7ffc1b7a02530ed8d4de97b385b4b","mode":"gen","evaluator":"MATHEvaluator(version=v2)"}
+  ],
+  "source_reachability_audit": {
+    "hf_wrapper": "identical blob at both anchors, so wrapper implementation itself is removed as an A1 source confounder",
+    "models_registry": "0.5.2 adds unrelated OpenAI rollout and TeleChat imports; HuggingFaceCausalLM import remains unchanged",
+    "evaluator_registry": "0.5.2 adds PILLMEvaluator only; none of the nine frozen benchmark configs select it",
+    "openicl_eval_rollout_branch": "new 0.5.2 rollout aggregation path is unreachable for ordinary HuggingFaceCausalLM string predictions",
+    "openicl_eval_dataset_postprocessor_change": "0.5.2 forwards dataset_postprocessor kwargs whereas 0.5.1 passed only the sample. Of the nine configs, only GSM8K declares dataset_postprocessor and it supplies no kwargs beyond type, so this source change is behaviorally neutral for the frozen GSM8K config",
+    "openicl_eval_judge_gpu_change": "resource accounting only for judge-style evaluators; none of the nine frozen configs use that judge path",
+    "remaining_source_risks": [
+      "import-time registry/dependency side effects from new modules imported by opencompass.datasets/__init__.py",
+      "shared task/evaluation infrastructure not yet proven byte-identical",
+      "dependency resolution and runtime library behavior",
+      "DeMix authors' actual wrapper/config remains unknown"
+    ]
+  },
+  "execution_contract": {
+    "phase_1": "Under one exact Python 3.10 dependency lock, import both anchors and record import success plus package/file hashes before any benchmark run.",
+    "phase_2": "Run identical raw inference for all nine frozen configs and persist per-sample/raw-result hashes before evaluation.",
+    "phase_3": "Evaluate the seven non-code-execution benchmarks under the identical environment and compare result/summary/parser hashes.",
+    "phase_4": "Run MBPP/HumanEval evaluators only inside an appropriate isolated code-execution sandbox; otherwise retain raw-inference comparison without claiming score identity.",
+    "human_eval_metric_scope": "Standard frozen config requests k=[1,10,100]. A public DeMix reproduction may explicitly choose pass@1 for a deterministic reconstruction, but this must not be described as recovered author intent without an author result/config artifact.",
+    "success_condition": "Same wrapper/model/tokenizer/datasets/dependencies and byte-identical raw outputs + parsed scores across anchors. Any difference must be localized before moving to wrapper or package-native sensitivity tracks."
+  },
+  "next_action": "Finish import-time added-registry audit, pin the exact shared dependency lock, then execute Track A1 with this fixture and persist environment/model/tokenizer/raw-output/result hashes."
+}
