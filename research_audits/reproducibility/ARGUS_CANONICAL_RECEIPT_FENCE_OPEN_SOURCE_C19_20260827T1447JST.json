@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-27T14:47:28.044597+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "5fcfb917e2b8d0db5600b30a35898c6fb128bad6",
+    "root_control_revision": 11,
+    "root_control_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "downstream_control_revision": 19,
+    "downstream_control_blob": "3006c9416c64a704f4ad9e3071b7ee8edc7bf178",
+    "role_config_revision": 2,
+    "presemantic_head_sha_first": "5fcfb917e2b8d0db5600b30a35898c6fb128bad6",
+    "presemantic_head_sha_second": "5fcfb917e2b8d0db5600b30a35898c6fb128bad6",
+    "semantic_read_before_guard": false,
+    "semantic_freeze_respected": true
+  },
+  "wave": {
+    "wave_id": "clean-g1-wave-c19-20260827T1258JST-d39be122",
+    "source_set_digest": "d39be122e302e0a693c0358fbe6b9f79d4de1481a43da867f74ecfa804541cba",
+    "candidate_identity": [
+      "open_source",
+      "02b89cfe72a39b1b8a41847806df9dd83a171a7e",
+      "clean-os-g1-005"
+    ],
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260827_1201_CANONICAL_RECEIPT_FENCE.md"
+  },
+  "candidate": "disabled structured handoff fence + CAS-bound Manager postcondition receipt + canonical whole protected-state digest + deterministic replacement-reset mint gate + exact durable backlog insertion + current-state reconcile/rearm",
+  "audit_scope": "Source-derived Argus recovery adaptation only. This audit tests whether the current public Argus implementation really contains the failure seams and primitives the proposal relies on, and whether the proposed end-to-end repair already exists or has been independently reproduced. It does not claim that the adaptation has been implemented in Argus or O.",
+  "public_sources": {
+    "preview_repository": {
+      "repository": "lbx154/Argus",
+      "main_sha_observed": "33da786bbc6787a2eeb63a5f492498eae87c78c7",
+      "main_sha_matches_worker_source": true
+    },
+    "official_release_mirror": {
+      "repository": "microsoft/ArgusAgent",
+      "observed_sha_with_same_continuous_state_shape": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "note": "Same project/release lineage, not an independent implementation or independent reproduction."
+    }
+  },
+  "grade": {
+    "overall": "B+",
+    "official_failure_mechanism_support": "A",
+    "official_underlying_primitive_support": "A-",
+    "worker_source_alignment": "A-",
+    "proposed_full_recovery_implementation": "C / not present in inspected public Argus",
+    "independent_matched_reproduction": "C / not located",
+    "exact_power_loss_end_to_end_replay": "C / not demonstrated"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "finding": "The precommit/replace split is a real, officially regression-tested failure mode.",
+      "evidence": "Argus compare_and_swap_continuous_config executes before_write while holding the continuous lock and before replacing continuous.json. tests/daemon/test_state_portable.py::test_replace_failure_after_callback_surfaces_instead_of_false deterministically commits a side effect, forces the continuous replace to fail, observes ContinuousConfigCommitError, and verifies the old ContinuousConfigState remains while the side effect survives."
+    },
+    {
+      "id": "F2",
+      "finding": "The production Manager continuous handoff uses exactly that split-prone ordering.",
+      "evidence": "manager/front_door.py::manager_continuous_handoff passes _commit as before_write. _commit performs PreparedManagerHandoff.commit(), replacement backlog supersession, and optional persist before continuous.json replacement. manager/dispatch.py supplies a persist callback that creates the operator-priority BacklogItem and appends it with Backlog.add. Therefore a continuous replace failure can leave Manager/backlog side effects durable while continuous state is still the predecessor generation."
+    },
+    {
+      "id": "F3",
+      "finding": "The worker is correct that an ad-hoc handoff_fence field would currently be lost.",
+      "evidence": "daemon/state.py::ContinuousConfigState contains only enabled, objective, open_ended, done_reason, done_at, generation. _read_continuous_state_unlocked reconstructs only those fields; _continuous_state_reserve_text and _write_continuous_config_unlocked serialize only them; _same_continuous_state compares only them. No handoff_fence or ManagerReconcileReceiptV1 symbol exists in the inspected public preview source. A first-class schema extension is therefore required rather than injecting an unknown JSON key."
+    },
+    {
+      "id": "F4",
+      "finding": "The proposed replacement-reset mint checks are source-aligned, including the important same-stage case.",
+      "evidence": "skills/stage_machine.py::reset_stage_for_replacement_intent calls _set_stage(direction='reset', downgrade_downstream=True, legacy_rollback_history=True). _set_stage allows reset onto the same current stage, forces the target to in_progress, downgrades downstream done/ready/in_progress/skipped to pending, and appends both stage_history and rollback_history. vertical_select.reset_stage_for_new_intent is fail-open on ValueError, so a receipt mint gate must explicitly require the reset postconditions rather than trusting its boolean path implicitly."
+    },
+    {
+      "id": "F5",
+      "finding": "Canonical hashing of the parsed whole PIPELINE_STATE object is technically well motivated, but it is a reconciliation detector, not a durability proof for PIPELINE_STATE itself.",
+      "evidence": "core/pipeline_state.py writes the full heterogeneous JSON object with sort_keys=True through a sibling temporary and os.replace, but does not fsync the file or parent directory. A canonical parsed-object SHA-256 avoids whitespace/key-order noise and covers stage/policy/history fields omitted by a route-only digest. If the stronger receipt survives a power loss while the weaker pipeline write does not, digest mismatch can force Manager reconciliation; this still requires the receipt/fence implementation and recovery test to exist."
+    },
+    {
+      "id": "F6",
+      "finding": "The proposed exact durable Backlog insertion is not an existing Argus primitive and is the largest concrete implementation gap.",
+      "evidence": "life/memory.py::Backlog.add appends without checking an existing item id. add_many rejects duplicate ids by raising rather than returning an existing row idempotently. The production continuous persist callback uses Backlog.add with root_task_id, so retrying after the split can append a second row with the same id. _atomic_rewrite_jsonl uses os.replace but no file/parent-directory fsync. Generic Backlog.update sets any existing attribute, so id and ts are not immutable identities. The proposed (existing, inserted=False) retry contract plus immutable creation_stamp and power-loss durability therefore require new code and tests."
+    },
+    {
+      "id": "F7",
+      "finding": "No end-to-end public implementation or matched independent reproduction of clean-os-g1-005 was found.",
+      "evidence": "The inspected public Argus main has no handoff_fence or ManagerReconcileReceiptV1 implementation and no source-exact second-replace regression that performs disabled fence -> Manager reset -> receipt attach -> exact backlog insert -> forced final enable failure -> reconcile/rearm. Public web/GitHub searches surfaced the Argus repositories but no independent implementation/reproduction of this recovery sequence."
+    }
+  ],
+  "independent_reproduction_status": {
+    "official_regression_of_underlying_split": "present",
+    "independent_external_reproduction_of_full_candidate": "not located",
+    "independent_numeric_or_fault_injection_replay_by_this_audit": "not executed because the connected environment exposes repository source read-only but not a runnable clone/dependency environment; structural conclusions above are source-exact and bounded to inspected commit SHAs"
+  },
+  "safe_conclusion": "clean-os-g1-005 is strongly grounded in a real Argus crash-consistency defect and mostly accurate about the schema/reset primitives it would need. It should not yet be treated as a validated recovery solution. The public implementation still lacks the first-class fence/receipt schema, idempotent power-loss-durable backlog insertion, and the full second-replace crash/rearm regression. The strongest new audit result is that backlog retry safety is weaker than the proposal's target contract: current Backlog.add can duplicate the exact root_task_id and current backlog persistence is not fsync-complete.",
+  "reopen_or_promotion_conditions": [
+    "A public Argus change adds handoff_fence/ManagerReconcileReceipt as first-class ContinuousConfigState fields with read/write/reserve/_same/CAS coverage and backward-compatible old-state reads.",
+    "A backlog primitive provides exact-id idempotent insertion returning existing/inserted status, protects immutable creation identity, and has file + parent-directory durability semantics appropriate to the claimed power-loss model.",
+    "A deterministic regression executes the complete replacement sequence and forces the final continuous enable replace/durability failure after Manager state + receipt + backlog insertion, then proves one physical backlog identity and exact rearm without rerunning stale work.",
+    "An independent implementation or protocol-matched fault-injection reproduction appears."
+  ],
+  "exact_next_action": "Do not repeat unchanged clean-os-g1-005. On the next bootstrap-valid invocation, select a different source-qualified non-evaluation C19-or-later candidate unless one of the reopen/promotion conditions above is newly satisfied."
+}
