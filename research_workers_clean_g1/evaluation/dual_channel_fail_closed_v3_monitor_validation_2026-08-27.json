@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T20:13:00+09:00",
+  "implementation": "research_workers_clean_g1/evaluation/dual_channel_fail_closed_v3_monitor_2026-08-27.py",
+  "outer_cs": "research_workers_clean_g1/evaluation/weighted_average_incremental_lsm_v3_warm_root_2026-08-27.py",
+  "stress": {
+    "seed": 202608290,
+    "campaigns": 40,
+    "blocks_per_campaign": 24,
+    "checks": 960,
+    "tau_process": 0.8,
+    "tau_exposure": 0.8,
+    "alpha": 0.05,
+    "adaptive_block_rule": "First B=8; thereafter B=16 when the immediately preceding CLOSED block score is <0.5, else B=4. This uses past closed state only and freezes B before current outcomes.",
+    "adaptive_large_blocks": 769,
+    "adaptive_small_blocks": 151,
+    "first_blocks_at_B8": 40,
+    "process_endpoint_max_replay_diff": 0.0,
+    "exposure_endpoint_max_replay_diff": 0.0,
+    "process_log_e_max_replay_diff": 0.0,
+    "exposure_log_e_max_replay_diff": 0.0,
+    "joint_decision_mismatches": 0,
+    "state_roundtrip_mismatches": 0,
+    "exposure_weight_mismatches": 0,
+    "joint_safe_snapshots": 668,
+    "joint_not_safe_snapshots": 292
+  },
+  "contract_checks": [
+    "Every closed block score was appended to process_cs with weight 1 and exposure_cs with frozen planned_size/B_cap.",
+    "Future B adaptation used prior closed block score only; current block outcomes never changed B or exposure weight.",
+    "Realized completed count was not used as exposure weight even when outage/deadline caused missing slots.",
+    "Crash/recovery replay rebuilt both V3 channels from the same closed journal and reproduced both endpoints, both e-values at their unsafe tolerances, and the threshold-20 joint IUT decision exactly in all tested snapshots.",
+    "The stress included both joint-safe and joint-not-safe snapshots so replay equality was not tested only on one decision state."
+  ],
+  "scope_guards": [
+    "tau=.8 is deliberately chosen to exercise both sides of the joint decision in a short synthetic campaign; it is not a recommended production tolerance.",
+    "This validates implementation/replay semantics under the tested adaptive-block rule, not the underlying statistical theorem by simulation.",
+    "Predictable adaptation from past blocks is permitted by the stored contract; no current-outcome-dependent realized weight was introduced."
+  ]
+}
