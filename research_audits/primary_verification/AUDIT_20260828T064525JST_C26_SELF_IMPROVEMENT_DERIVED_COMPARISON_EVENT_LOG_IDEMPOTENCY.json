@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "audit_time": "2026-08-28T06:45:25+09:00",
+  "generation": "clean_g1",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "fa230054dc013636080949911da2a05b2eb8c33f",
+    "root_control_revision": 12,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "downstream_control_revision": 24,
+    "downstream_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role": "primary_source_verifier",
+    "role_config_revision": 5
+  },
+  "source_worker_artifact": {
+    "namespace": "self_improvement",
+    "path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T051254_JST_derived_comparison_event_log.md",
+    "blob": "5b73fde12c264bbb4d25571224aa92baa5a7e8ae",
+    "selection_snapshot_note_main_sha": "8d544fd1254edec52ea2959806444c06ad8a2670"
+  },
+  "sources": [
+    {
+      "repository": "Hiberius/creativelift-ai",
+      "commit": "18a59fb9ca5085738caf8e5d575017d5d6619b5b",
+      "role": "event-log plus derived sequential-stat precedent"
+    },
+    {
+      "repository": "idempot-dev/idempot-js",
+      "commit": "6a196389f172923da4a1c353cb917e7ae48a6ee5",
+      "role": "strict idempotency-key/request-fingerprint binding precedent"
+    }
+  ],
+  "status": "primary_code_verified_composable_precedents_with_critical_identity_gap_in_creativelift",
+  "verified_creativelift": [
+    "The API tests accept an Idempotency-Key and deduplicate an exact replay: the first request is accepted and the second reports accepted=0 and deduplicated=1.",
+    "The SQLAlchemy end-to-end test deliberately reuses the same Idempotency-Key with a different payload: the original request contains impression+purchase, while the replay contains only impression. The replay returns 200 and deduplicated=1 rather than rejecting a key/payload mismatch.",
+    "The SQL-backed ingest implementation checks an existing Event by organization_id+idempotency_key, writes the request idempotency key only onto the first event in the batch, commits the batch transaction, and on a concurrent unique-constraint race rolls back and returns the whole replay as deduplicated.",
+    "The Event model has a unique constraint on (organization_id,idempotency_key). This supplies concurrent duplicate exclusion for the keyed first event, but it does not bind the key to a canonical request-body fingerprint.",
+    "The measurement path rebuilds experiment VariantStats from persisted repository events and then invokes sequential_peek(control,treatment). Thus the exposed sequential-analysis result is derived from durable event observations rather than obviously maintained as a separate mutable sequential-counter record in this path."
+  ],
+  "verified_idempot_js": [
+    "The pinned implementation defines a canonical request fingerprint by parsing JSON, optionally removing configured fields, recursively sorting object keys, serializing the normalized value, and hashing it.",
+    "The pinned compliance spec explicitly requires same Idempotency-Key plus different body to return HTTP 422, and separately tests concurrent in-progress reuse. This is materially stricter key-to-effect identity semantics than the CreativeLift test path above."
+  ],
+  "scope": [
+    "CreativeLift is a valid precedent for event-backed recomputation and transactional duplicate exclusion, but it is not a valid precedent for immutable derived-event identity as-is because a reused key can silently alias a changed payload.",
+    "idempot-js supplies strict key/body fingerprint semantics, but it is a generic request-idempotency library, not a champion/challenger comparison-event journal and not an anytime-valid statistical system.",
+    "The desired composition -- durable append/event observation, strict logical-event identity, crash-safe replay/concurrency semantics, and anytime-valid promotion statistics -- is an architectural synthesis across sources. This run did not verify a single public system that jointly proves all four properties under one fault model.",
+    "No claim is made here that CreativeLift's sequential_peek is itself sufficient for adaptive repeated promotion across a lifetime of evolving candidates; that statistical contract must be verified separately."
+  ],
+  "downstream_implication": "A derived comparison event should carry a stable logical identity plus canonical payload/semantic fingerprint. On retry, exact identity+fingerprint match should replay/acknowledge the original result; identity reuse with a different fingerprint should fail closed. Sequential promotion state should be reconstructible from durable source events or an equivalently receipt-bound journal rather than relying on an independently mutable counter that can diverge after a crash.",
+  "worker_feedback_written": false,
+  "exploration_state_mutated": false,
+  "exact_next_action": "Rotate to another under-audited C26 namespace. If returning to this design family later, verify a real champion/challenger or derived-comparison event journal that combines strict key/payload binding with crash/concurrency tests, then separately bind its promotion test to an anytime-valid statistical contract."
+}
