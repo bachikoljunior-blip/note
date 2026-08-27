@@ -1,0 +1,45 @@
+{
+  "observed_at": "2026-08-28T04:05:22+09:00",
+  "frozen_note_main_sha": "f16350692369dc28f53f6b76d758d3e71f104dea",
+  "frozen_control_revision": 12,
+  "frozen_role_config_revision": 5,
+  "local_torch_version": "2.10.0+cpu",
+  "public_cpo_release": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+  "test_scope": "Source-equivalent synthetic namespace/mask-selection test. Not a full Qwen, DeepSpeed, or PyTorch-2.8 runtime reproduction.",
+  "finding": "The previously proposed exact-storage/view dedup is not a generally safe repair. Two distinct nn.Parameter objects can share exactly the same storage/view and are both yielded by named_parameters(remove_duplicate=True); storage-signature dedup collapses one and changes trainer semantics. A safer release-preserving filter is to construct masks only for the exact canonical names yielded by named_parameters(remove_duplicate=True) in both current and previous models. This also removes persistent-buffer mask entries that the public trainer can never consume.",
+  "cases": {
+    "Tied": {
+      "release_mask_keys": ["a.weight", "b.weight"],
+      "trainer_keys": ["a.weight"],
+      "storage_dedup_mask_keys": ["a.weight"],
+      "trainer_filter_mask_keys": ["a.weight"],
+      "interpretation": "Both repairs remove the tied dead alias in this ordinary tied-Parameter case."
+    },
+    "DistinctSameStorage": {
+      "release_mask_keys": ["p", "q"],
+      "trainer_keys": ["p", "q"],
+      "storage_dedup_mask_keys": ["p"],
+      "trainer_filter_mask_keys": ["p", "q"],
+      "interpretation": "Storage dedup is behavior-changing: p and q are different Parameter objects sharing the exact same storage/view, so the trainer consumes both. Canonical trainer-namespace filtering preserves both."
+    },
+    "ParamBuffer": {
+      "release_mask_keys": ["p", "buf"],
+      "trainer_keys": ["p"],
+      "storage_dedup_mask_keys": ["p", "buf"],
+      "trainer_filter_mask_keys": ["p"],
+      "interpretation": "A changed persistent floating buffer is included by the public state_dict-based builder but can never be consumed by the trainer's named_parameters loop. Canonical trainer-namespace filtering removes it."
+    }
+  },
+  "recommended_repair_contract": {
+    "rule": "Load each model object, record the ordered canonical floating parameter names from model.named_parameters(remove_duplicate=True), require current/previous canonical namespaces to match (or fail closed with an explicit mismatch report), and compute/save masks only for those canonical names that also exist in both state_dicts. Do not deduplicate solely by storage pointer/view signature.",
+    "why": "This matches the public trainer's own parameter namespace, removes tied aliases and buffers that are dead to the trainer, and preserves distinct Parameter objects even when they share storage.",
+    "additional_guard": "Keep current/previous canonical name, shape and dtype checks explicit; if architecture/tie canonicalization changes across checkpoints, fail closed rather than silently dropping keys."
+  },
+  "pytorch_2_8_source_support": "PyTorch 2.8 Module.named_parameters defaults remove_duplicate=True; its _named_members implementation memoizes member objects, while state_dict includes parameters and persistent buffers. A faithful 2.8 executable fixture is still pending because the local runtime is 2.10.0+cpu.",
+  "next_actions": [
+    "Run the same three-case harness under PyTorch 2.8.0.",
+    "Implement a current/previous canonical-parameter-namespace filter harness with fail-closed namespace/shape/dtype checks and verify trainer-effective mask/ref invariance on tied, registration-order, shared-storage-distinct-Parameter and buffer cases.",
+    "Apply the namespace accounting to a loadable Qwen3-VL-4B path when resources permit and measure actual dead alias/buffer bytes, task_k.pt bytes, RSS and build time.",
+    "Continue the existing ZeRO-3 world-size scaling and selection/normalization quality factorial."
+  ]
+}
