@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T18:10:07+09:00",
+  "question": "How far can equal-process reliability and planned-exposure-weighted reliability diverge when planned process size is informative?",
+  "analytic_two_type_examples": [
+    {
+      "name": "larger_processes_are_less_reliable",
+      "process_types": [
+        {"probability":0.5,"planned_size":10,"mismatch_probability":0.01},
+        {"probability":0.5,"planned_size":100,"mismatch_probability":0.05}
+      ],
+      "equal_process_mismatch": 0.03,
+      "planned_exposure_weighted_mismatch": 0.046363636363636364,
+      "absolute_gap": 0.016363636363636365,
+      "exposure_over_process_ratio": 1.5454545454545454
+    },
+    {
+      "name": "larger_processes_are_more_reliable",
+      "process_types": [
+        {"probability":0.5,"planned_size":10,"mismatch_probability":0.05},
+        {"probability":0.5,"planned_size":100,"mismatch_probability":0.01}
+      ],
+      "equal_process_mismatch": 0.03,
+      "planned_exposure_weighted_mismatch": 0.013636363636363636,
+      "absolute_gap": -0.016363636363636365,
+      "exposure_over_process_ratio": 0.45454545454545453
+    }
+  ],
+  "synthetic_lognormal_size_stress": {
+    "seed": 20260827,
+    "processes_per_condition": 500000,
+    "planned_size_distribution": "round(exp(N(log(30),0.9^2))) clipped to [5,200]",
+    "mean_planned_size": "about 43.4",
+    "planned_size_95th_percentile": 132,
+    "positive_size_reliability_association": {
+      "mismatch_curve": "0.005 + 0.075*((B-5)/195)^0.7",
+      "equal_process_mismatch": 0.026708725476338888,
+      "planned_exposure_weighted_mismatch": 0.04154315464431819,
+      "absolute_gap": 0.014834429167979303
+    },
+    "negative_size_reliability_association": {
+      "mismatch_curve": "reversed version of the same bounded curve",
+      "equal_process_mismatch": 0.05827900368065053,
+      "planned_exposure_weighted_mismatch": 0.043393481665758314,
+      "absolute_gap": -0.014885522014892216
+    },
+    "interpretation": "The sign of the estimand gap reverses with the direction of size-outcome association. There is no generally conservative choice between equal-process and exposure weighting; they answer different questions."
+  },
+  "outcome_dependent_realized_size_counterexample": {
+    "policy": "Use the first analytic two-type population, but stop each process at the first mismatch or its planned cap and then weight by realized completed request count.",
+    "expected_completed_requests_type_B100_p005": 19.881589415593318,
+    "expected_completed_requests_type_B10_p001": 9.561792499119559,
+    "asymptotic_realized_completed_request_mismatch_ratio": 0.037009926336836294,
+    "planned_exposure_weighted_target": 0.046363636363636364,
+    "lesson": "Replacing predictable planned size by outcome-dependent realized size changes the estimand and can move the estimate materially even when every observed request is scored correctly."
+  },
+  "recommended_joint_monitor": {
+    "equal_process_channel": "One bounded role/process score per pre-admitted process with unit weight. Answers reliability of an average process/run.",
+    "planned_exposure_channel": "The same block/process score with predictable planned-size weight B_t/B_cap fixed before current outcomes. Answers reliability of a randomly selected planned exposure under the declared process mix.",
+    "completion_channel": "Track completion/interruption separately or use the fail-closed composite score. Do not turn final realized completed count into a post-outcome weight.",
+    "simultaneous_inference": "Running two 95% confidence sequences gives marginal 95% validity for each channel, not automatically 95% joint simultaneous coverage. If a decision requires both claims simultaneously, preallocate a joint error budget or use a separately proved multivariate/e-value construction."
+  },
+  "public_alignment": [
+    "Kahan et al. 2023 show that cluster-average and participant-average estimands differ through weighting and can diverge under informative cluster size.",
+    "The 2026 CRT-Estimands extension of ICH E9(R1) continues to treat weighting/aggregation choice as part of the scientific estimand rather than an efficiency-only implementation detail."
+  ],
+  "scope_guards": [
+    "The lognormal scenarios are synthetic stress tests, not measurements of any deployed system.",
+    "The examples establish estimand separation, not bias of either correctly targeted estimator for its own estimand.",
+    "Predictable planned-size weighting remains subject to the existing w_i <= 1 cap/normalization and current-outcome predictability contract."
+  ]
+}
