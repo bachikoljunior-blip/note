@@ -1,0 +1,80 @@
+{
+  "schema": "coalition_boundary_width_pathology_v0_protocol",
+  "created_at": "2026-08-28T03:59:59+09:00",
+  "frozen_control": {
+    "note_main_sha": "5954bafd04ada75313b65300ac5b5c848883f8bc",
+    "desired_state_control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "goal": "Measure how graph-width structure, variable order, and compilation schedule affect exact ROBDD compilation of the positive monotone 2-CNF F_G = AND_{(u,v) in E}(x_u OR x_v), which embeds directly into the boundary-CNF certifier family. Distinguish final representation size from intermediate compilation blowup and preserve exact cardinality-by-rank counts.",
+  "families": [
+    {"id": "path18", "kind": "path_graph", "n": 18},
+    {"id": "binary_tree15", "kind": "balanced_binary_tree", "n": 15},
+    {"id": "grid4x4", "kind": "grid_2d", "rows": 4, "cols": 4, "n": 16},
+    {"id": "cubic18_s880301", "kind": "random_3_regular", "n": 18, "seed": 880301},
+    {"id": "cubic18_s880319", "kind": "random_3_regular", "n": 18, "seed": 880319}
+  ],
+  "variable_orders": [
+    "natural",
+    "reverse_natural",
+    "reverse_cuthill_mckee",
+    "greedy_vertex_separation",
+    "best_of_16_seeded_random_by_vertex_separation"
+  ],
+  "random_order_seed": 880401,
+  "compile_schedules": [
+    "lexicographic_incremental",
+    "seeded_random_incremental",
+    "balanced_pairwise"
+  ],
+  "clause_schedule_seed": 880503,
+  "implementation": {
+    "manager": "fresh pure-Python reduced ordered BDD manager per cell with arbitrary fixed order encoded by relabeling variables to order positions",
+    "rank_count": "exact cardinality polynomial by recursive branch convolution, counting satisfying assignments by Hamming weight",
+    "vertex_separation": "for a vertex order, max over prefixes of the number of prefix vertices having at least one neighbor in the suffix",
+    "greedy_order": "append the not-yet-placed vertex that minimizes the resulting current frontier size, breaking ties by degree then vertex id",
+    "balanced_pairwise": "build each clause BDD, then repeatedly AND adjacent pairs in a balanced binary tree; no clause-at-a-time persistent core",
+    "dynamic_reordering_scope": "No claim of reproducing CUDD sifting/window/group-sifting. The experiment is fixed-order plus schedule pathology only; CUDD heuristics remain an external implementation frontier."
+  },
+  "metrics": [
+    "order_vertex_separation_width",
+    "final_reachable_nonterminal_nodes",
+    "final_allocated_nonterminal_nodes",
+    "peak_reachable_nodes_during_incremental_schedule",
+    "apply_recursive_calls",
+    "apply_cache_hits",
+    "unique_node_allocations",
+    "rank_cache_states",
+    "compile_wall_clock_ms",
+    "rank_count_wall_clock_ms",
+    "exact_rank_count_vector"
+  ],
+  "correctness": {
+    "required": [
+      "Within each graph family, all variable orders and compilation schedules must yield exactly the same rank-count vector.",
+      "For every cell, evaluate the final BDD on 1024 deterministic pseudorandom assignments and require exact equality with direct CNF evaluation; if 2^n <= 262144 also exhaustively evaluate all assignments."
+    ],
+    "failure_policy": "Any mismatch is a correctness failure; do not interpret timing or size comparisons from a failed cell."
+  },
+  "resource_guard": {
+    "max_allocated_nodes_per_cell": 2000000,
+    "max_compile_seconds_per_cell": 45,
+    "on_guard": "mark guarded_out, retain partial exact measurements, and do not infer a lower bound from timeout/guard alone"
+  },
+  "preregistered_interpretation": [
+    "Path/tree cells are low-width controls; grid and random cubic cells probe higher pathwidth/order sensitivity.",
+    "A strong correlation between vertex-separation width and final OBDD nodes is descriptive support for width-aware switching, not a new asymptotic theorem.",
+    "If balanced compilation reduces allocated/intermediate work while final reachable nodes stay identical, that isolates compilation-order blowup from final OBDD lower bounds.",
+    "If every tested order remains large on random cubic cells, label only these concrete instances hard under tested orders; do not claim expander certification or all-order hardness from the experiment alone.",
+    "Exact rank counts, not total model count alone, are the required downstream query capability."
+  ],
+  "external_scope_anchors": [
+    "Amarilli, Monet, Senellart: constant-arity/degree monotone CNFs have OBDD size exponential in pathwidth in the stated theorem scope.",
+    "Bova, Slivovsky: bounded-degree expander-based CNF families give exponential OBDD lower bounds.",
+    "De Colnet SAT 2023: clause-at-a-time incremental bottom-up compilation can have exponential intermediate blowup even where another bottom-up schedule is polynomial.",
+    "CUDD supports dynamic reordering including sifting, symmetric/group sifting, window permutation, annealing, genetic, and exact methods; these are not reproduced by this v0 runner."
+  ],
+  "decision_rule": "Use results to decide whether the next implementation experiment should prioritize variable-order search, compilation-schedule rebuild triggers, or alternative structured representations. No result here authorizes lemma-library promotion/demotion or relaxes any safety/evidence gate."
+}
