@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T06:37:21+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "3dc8409f3cda20e6b1b8e6bc06e131e0f920f528",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T062126_JST_compliance_reserved_runtime.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reservation_runtime_provenance_contract_2026-08-28.py",
+      "blob_after_readback": "f6a4d996381bd100038d6ccfcf1b7c5f3f28e905"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reservation_compliance_auditor_runtime_provenance_2026-08-28.py",
+      "blob_after_readback": "dd5e09bde7e91b0f534896922aeb5b2529e92996"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reservation_compliance_close_replay_runtime_provenance_2026-08-28.py",
+      "blob_after_readback": "c9982f2ef14cff5b1f59b314e95250745706c5e4"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reserved_score_runtime_compliance_provenance_2026-08-28.py",
+      "blob_after_readback": "f9a3b7a120c36fe3ff37c8fe7167d1c4e66e8d6f"
+    },
+    {
+      "validation": "research_workers_clean_g1/evaluation/validation_provenance_full_chain_crash_2026-08-28.json",
+      "validation_blob": "09a714f9785add894cf80b20f633c1003f2b3064"
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/posix_flocked_cas_append_writer_2026-08-28.py",
+      "blob_after_readback": "70843c8011eed717001d31cfe59028beb86739c4",
+      "validation": "research_workers_clean_g1/evaluation/validation_posix_flocked_cas_append_writer_2026-08-28.json",
+      "validation_blob": "260d8215c43cd996a425023f48019c1fda2421dd"
+    }
+  ],
+  "result": "Runtime provenance is now an explicit forward-only scientific authorization predicate rather than post-hoc metadata. Historical ADMITs are not reinterpreted. New ADMITs bind the frozen reservation-runtime dependency digest before score generation; matching RESERVE provenance is required by the superseding auditor, and a contracted ADMIT cannot downgrade to the historical compliance CLOSE path. A 4531-byte-cut injected lifecycle preserved fail-closed semantics from ADMIT through restart. Separately, a POSIX flock + whole-file CAS + fsync/readback writer serialized 832 competing process attempts across 41 races with exactly one winner per race and rejected all stale prefixes.",
+  "validated_contracts": [
+    "Historical blocks without the new pre-score contract retain their historical scientific acceptance predicate; provenance differences alone do not retroactively invalidate exact attempt evidence.",
+    "For new contracted blocks, missing or mismatched RESERVE runtime provenance fails closed because the condition was fixed in ADMIT before any score could be generated.",
+    "A contracted ADMIT cannot be closed through the historical reservation-compliance binding; replay rejects that downgrade path while preserving replay of genuinely historical CLOSE events.",
+    "Across 4531 nonempty partial-frame cuts spanning ADMIT, RESERVE, SLOT, COMMIT and CLOSE, torn evidence was never treated as a clean complete append; missing COMMIT remained reconcilable from durable SLOT identity without a second scorer invocation; torn CLOSE produced zero reporting rows.",
+    "Single-host cooperative cross-process appends can be serialized without changing scientific event semantics by holding POSIX flock across exact whole-file CAS, append, fsync and exact readback. In 41 races / 832 process attempts there was exactly one successful append per race and 791 CAS rejections.",
+    "A crash-like partial append is not silently crossed by the flocked writer: subsequent append sees a prefix mismatch and fails until recovery truncates/quarantines to a validated prefix."
+  ],
+  "measurement_validity_rules": [
+    "Do not turn provenance metadata into a new scientific acceptance rule after evidence exists. Bind any provenance requirement before scoring, then enforce it mechanically at CLOSE/replay.",
+    "Authorization provenance and scientific identity remain distinct: reservation payload/digest and attempt_id retain scientific identity; runtime binding proves which authorized path emitted the reservation.",
+    "A forward contract must be downgrade-resistant: once ADMIT opts into a stronger predicate, historical CLOSE/replay cannot be used to bypass it.",
+    "Crash validity and concurrency validity are separate. Append-frame crash tests do not prove simultaneous writer safety; a reliable exclusion primitive plus CAS/readback is required for cooperative multi-process writers.",
+    "Cross-file atomicity is not required for the main journal and reservation ledger because existing partial-order recovery deliberately treats incomplete cross-file transitions as fail-closed/reconcilable states."
+  ],
+  "scope_limitations": [
+    "The provenance full-chain campaign used deterministic contract-faithful injected interfaces with the persisted event fields and frame codec; the exact complete frozen production sibling graph was not byte-executed in one repository-local checkout.",
+    "The flocked writer result is single-host/cooperative only on filesystems with reliable POSIX flock semantics. It is not a distributed lease/fencing proof for NFS, object stores or multi-host writers, and it cannot constrain callers that bypass the writer.",
+    "The full-chain crash campaign and the cross-process writer race were validated separately; a single campaign combining actual provenance runtime transitions with multiple racing OS processes remains outstanding.",
+    "No conclusion extends beyond the tested durability, authorization-provenance, replay and writer-serialization contracts."
+  ],
+  "frontier": [
+    "Run the complete provenance runtime against the exact blob-pinned production sibling graph in one repository-local Python runtime; compare durable ADMIT/RESERVE/SLOT/COMMIT/CLOSE bytes and replay state with the injected-contract results.",
+    "Combine the provenance lifecycle with real multiprocessing: race two or more processes on the same ADMIT and same slot reservation under PosixFlockedCASAppendWriter, then race SLOT/CLOSE and COMMIT/CLOSE boundaries; require one reservation/one scorer attempt, stale-capability rejection, and exact final replay.",
+    "If deployment can span hosts or storage without reliable flock, design a monotonic fencing-token writer whose storage layer rejects stale fence values; do not generalize the single-host result to distributed execution.",
+    "Add a durable runtime manifest/pointer only after exact production-byte execution confirms the superseding runtime graph; until then treat these artifacts as validated candidate machinery rather than production authority."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Build a multiprocessing lifecycle harness around the exact new runtime interfaces and PosixFlockedCASAppendWriter. First race duplicate ADMITs from the same prefix, then duplicate RESERVEs for the same slot, then a late SLOT against deadline CLOSE; verify exactly one scorer launch and fail-closed stale writers. If exact sibling byte execution remains unavailable, use the current blob-pinned injected modules but preserve every actual event field and frame codec, then checkpoint the race distribution and any new failure surface."
+}
