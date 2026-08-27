@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-28T01:05:39.117524+09:00",
+  "frozen_control": {
+    "note_main_sha": "6b18e219f7331218527979c7024cbefe4b0ed8f1",
+    "control_revision": 12,
+    "control_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role": "continual_learning",
+    "role_config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "source_locked_release": {
+    "repository": "MaolinLuo/CPO",
+    "commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "mask_builder_blob": "5f17be7ad91bdc162a0d1e466198c1bdb2ded921",
+    "trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+    "zero3_offload_blob": "923b4187a5568a0e741b68248b29d25940f30990",
+    "gspo_8b_launcher_blob": "54931993f3e98259c8ce89f82999fb552be6568f"
+  },
+  "logical_storage_model": {
+    "N": "scalar count over tensors that have at least one protected coordinate and therefore retain a dense bool mask",
+    "u": "fraction of N protected in the accumulated union",
+    "saved_mask_payload_bytes": "N + 4*u*N",
+    "trainer_persistent_aux_payload_bytes": "N + 4*u*N + 8*u*N = N + 12*u*N",
+    "dtype_bytes": {"bool_mask": 1, "float32_ref": 4, "int64_flat_index": 8},
+    "exclusions": "Python/dict/torch serialization overhead, allocator overhead, transient per-tensor device copies and transient diff/topk buffers",
+    "scope": "Formula is source-structural. Numerical scenarios below substitute total public BF16 model scalar count for N, so they are full-mask-domain scenarios rather than measured actual mask-domain memory. Independent support overlap is a scenario, not an observation."
+  },
+  "public_model_weight_anchors": {
+    "Qwen3-VL-4B-Instruct": {"bf16_weight_bytes": 8875631616, "inferred_scalars_if_all_2byte": 4437815808},
+    "Qwen3-VL-8B-Instruct": {"bf16_weight_bytes": 17534247392, "inferred_scalars_if_all_2byte": 8767123696}
+  },
+  "independent_10pct_support_scenarios": {
+    "Qwen3-VL-4B": {
+      "after_mask_1": {"union_fraction": 0.10, "runtime_aux_GiB": 9.0927, "single_saved_mask_GiB": 5.7863},
+      "after_mask_2": {"union_fraction": 0.19, "runtime_aux_GiB": 13.5564, "single_saved_mask_GiB": 7.2741},
+      "after_mask_3": {"union_fraction": 0.271, "runtime_aux_GiB": 17.5737, "single_saved_mask_GiB": 8.6133},
+      "after_mask_4": {"union_fraction": 0.3439, "runtime_aux_GiB": 21.1893, "single_saved_mask_GiB": 9.8184},
+      "four_mask_files_total_logical_GiB": 31.4921
+    },
+    "Qwen3-VL-8B": {
+      "after_mask_1": {"union_fraction": 0.10, "runtime_aux_GiB": 17.9630, "single_saved_mask_GiB": 11.4310},
+      "after_mask_2": {"union_fraction": 0.19, "runtime_aux_GiB": 26.7813, "single_saved_mask_GiB": 14.3704},
+      "after_mask_3": {"union_fraction": 0.271, "runtime_aux_GiB": 34.7177, "single_saved_mask_GiB": 17.0159},
+      "after_mask_4": {"union_fraction": 0.3439, "runtime_aux_GiB": 41.8604, "single_saved_mask_GiB": 19.3968},
+      "four_mask_files_total_logical_GiB": 62.2142
+    }
+  },
+  "four_mask_overlap_bounds_full_mask_domain": {
+    "fully_overlapping_u_0_10": {"Qwen3-VL-4B_runtime_aux_GiB": 9.0927, "Qwen3-VL-8B_runtime_aux_GiB": 17.9630},
+    "disjoint_u_0_40": {"Qwen3-VL-4B_runtime_aux_GiB": 23.9716, "Qwen3-VL-8B_runtime_aux_GiB": 47.3571}
+  },
+  "mask_construction_source_structure": {
+    "description": "cur_sd remains live while prev_model/prev_sd is loaded, so two full BF16 model-state tensor payloads can coexist before per-tensor diff processing.",
+    "two_full_weight_payload_GiB": {"Qwen3-VL-4B": 16.5322, "Qwen3-VL-8B": 32.6601},
+    "scope": "Source-structure tensor-payload estimate, not measured process RSS. Additional model/Python/transient buffers are excluded."
+  },
+  "runtime_transfer_warning": "Each _compute_loss moves full per-tensor protected flat indices and reference weights to param.device before ZeRO-3 partition filtering. Quantify actual host/device placement and transfer volume with a live profile before calling this H2D overhead.",
+  "next_measurements": [
+    "actual mask-domain scalar count per task",
+    "actual accumulated union fraction and overlap across task masks",
+    "actual task_k.pt bytes and serialization overhead",
+    "trainer CPU RSS for importance_mask/ref_weights/_mask_flat_idx",
+    "per-step device transfer bytes and runtime overhead under ZeRO-2 and ZeRO-3",
+    "post-reduction regularizer/RL gradient ratio with and without world-size correction"
+  ]
+}
