@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "role": "evaluation",
+  "invocation_started_at": "2026-08-28T07:01:33+09:00",
+  "checkpointed_at": "2026-08-28T07:08:16+09:00",
+  "ended_at": "2026-08-28T07:10:09+09:00",
+  "receipt_written_at": "2026-08-28T07:10:09+09:00",
+  "chronology_valid": true,
+  "semantic_freeze": {
+    "note_main_sha": "862f4f9087304fdb45ad75f6de47a15eda2cbe2a",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "source_state": {
+    "latest_pointer_at_start": "research_workers_clean_g1/evaluation/LATEST.json",
+    "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T063721_JST_runtime_provenance_fencing.json"
+  },
+  "actions": [
+    "Read sanitized DESIRED_STATE and evaluation role config at the frozen note main SHA after SHA-only ref freshness checks.",
+    "Read only evaluation role-local continuation state; no O, other worker, downstream, legacy, aggregate ledger, or other-role receipt semantics were used.",
+    "Byte-reconstructed the current PosixFlockedCASAppendWriter and verified its Git blob as 70843c8011eed717001d31cfe59028beb86739c4.",
+    "Ran deterministic multiprocessing reproductions for data-path replacement while flock is held and for the stronger open-before-lock/cooperative-repair interleaving.",
+    "Implemented a stable-sidecar-flock append/repair candidate and ran 500 randomized append-vs-repair races plus 500 duplicate-append races.",
+    "Checked Linux flock/rename semantics against public man-pages sources.",
+    "Persisted code, validation and a new checkpoint in the evaluation namespace; advanced LATEST by CAS and read it back."
+  ],
+  "outputs": [
+    {"path":"research_workers_clean_g1/evaluation/stable_sidecar_flocked_cas_writer_2026-08-28.py","blob":"90319fe8beb8d394347d70514bf75a12d6f495f6"},
+    {"path":"research_workers_clean_g1/evaluation/flock_inode_replacement_race_2026-08-28.py","blob":"49520b4cdd30ff9195441f9cec36bdc0feb6860e"},
+    {"path":"research_workers_clean_g1/evaluation/validation_flock_inode_replacement_race_2026-08-28.json","blob":"19b198d6241905cc9cc0266c49beb514b3e40dfe"},
+    {"path":"research_workers_clean_g1/evaluation/checkpoint_2026-08-28T070816_JST_flock_inode_replacement_fencing.json","blob":"f5cfa956d0bffa7db0973f002f5d8f29263e9d95"},
+    {"path":"research_workers_clean_g1/evaluation/LATEST.json","blob":"2102b9bcbe9211a051cae2cd67bae0c1eb77da4e"}
+  ],
+  "result": "A previously untested same-host concurrency failure surface was reproduced: flocking the journal data file does not fence across pathname replacement, and the current open-before-flock ordering permits a cooperative repair to replace the pathname before a preopened writer acquires the old-inode lock. Old- and new-inode writers can both report exact fsync/readback success while only the new inode remains reachable by pathname. The stable-sidecar lock candidate eliminated the tested race with zero violations in 1000 randomized race rounds.",
+  "blocker": null,
+  "termination_cause": "invocation response boundary after checkpointing a nonempty continuation frontier; no global completion claimed",
+  "global_complete": false,
+  "frontier_nonempty": true,
+  "exact_next_action": "Build a stable-lock-aware repair facade using the same sidecar lock, inject it into both main-journal and reservation-ledger paths, then run the combined provenance lifecycle race across duplicate ADMIT, duplicate RESERVE, scorer launch, SLOT/COMMIT versus deadline CLOSE, and concurrent torn-tail repair. Require one scorer launch, no stale-path success, and exact compliance replay after restart."
+}
