@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "created_at": "2026-08-28T04:20:00+09:00",
+  "frozen_control": {
+    "note_main_sha": "ab7d475334153c77932b30e91f2324a0abd17ac1",
+    "control_revision": 12,
+    "config_revision": 6
+  },
+  "source": {
+    "repository": "gitmoot/gitmoot",
+    "revision": "ab854269230e814131f00fe0b1ccbc21b46bfd67",
+    "pace_merge_pr": 690,
+    "pace_merge_commit": "2a9a47a264f02dc2ae80ebd1a3d01bf1eb56d165",
+    "class": "real persistent self-improvement promotion path with merged candidate-local anytime-valid gate"
+  },
+  "positive_evidence": {
+    "candidate_local_anytime_gate": "PACE is implemented as a testing-by-betting e-process over paired candidate-vs-champion discordant outcomes; commit threshold is 1/alpha, ties discarded, pair budget fail-safe rejects; gate is additive and off by default",
+    "promotion_wiring": "runCandidateNotify applies existing guardrails first, then PACE; continue or reject blocks promotion, commit permits later replay/canary/promotion gates",
+    "durable_sufficient_statistics": "candidate-vs-champion human A/B outcomes are aggregated into persisted skillopt_bandit_arms; PACE notification reconstructs candidate wins/losses as challenger Alpha-1/Beta-1",
+    "restart_property_of_current_count_mode": "because PACE promotion is recomputed from persisted aggregate counts rather than in-memory e-process wealth, process restart does not by itself erase the current terminal-wealth sufficient statistic",
+    "scope": "per candidate only; RFC and implementation explicitly do not claim run-level/familywise protection"
+  },
+  "durability_gaps": {
+    "logical_comparison_identity_before_evaluation": {
+      "status": "not_established",
+      "evidence": "manual A/B delivers champion and challenger first, then creates a fresh per-invocation comparisonToken; live A/B similarly creates a fresh token only when recording the pick"
+    },
+    "paired_evidence_atomicity": {
+      "status": "not_established",
+      "evidence": "recordSkillOptABPick persists the ranked feedback event first; champion and challenger bandit arms are then incremented by two separate IncrementBanditArm calls, each with its own SQL transaction"
+    },
+    "comparison_to_bandit_dedupe": {
+      "status": "not_observed",
+      "risk": "no inspected unique comparison/event id is passed into IncrementBanditArm, so bandit mutation is not visibly idempotent per comparison"
+    },
+    "crash_windows": [
+      "after ranked feedback event but before either bandit arm: evidence row exists but PACE sufficient statistic does not include it",
+      "after champion-arm increment but before challenger-arm increment: paired posterior state is asymmetric; PACE candidate count itself remains unchanged but auxiliary champion confidence is inconsistent",
+      "after challenger-arm increment but before command completion: retry/new invocation can mint a new comparison token and add another candidate outcome; no inspected transaction proves exactly-once logical comparison consumption"
+    ],
+    "stream_order_loss": "current promotion seam uses aggregate terminal counts, not a persisted ordered PaceAccumulator; this deliberately gives an order-invariant terminal-wealth test, not preservation of an earlier streaming threshold crossing",
+    "cross_candidate_spending": "explicitly absent from the PACE contract; per-candidate alpha does not control familywise false promotion across many candidates",
+    "remote_evaluation_exactly_once": "not established in this path; both candidate responses are delivered before the comparison identity used for durable feedback is minted"
+  },
+  "proposed_atomic_evidence_transaction": [
+    "mint stable logical_comparison_id before either candidate/champion evaluation",
+    "bind champion/candidate artifact IDs, prompt/input digest, evaluator/human identity and query/statistical reservation to that ID",
+    "make provider calls retry-safe under that ID or reconcile UNKNOWN provider outcomes",
+    "store one immutable comparison outcome keyed by logical_comparison_id",
+    "in the same database transaction, apply both champion and challenger arm updates exactly once using a unique applied_comparison row",
+    "derive PACE candidate-local state from immutable comparison rows or transactionally maintained sufficient statistics",
+    "release promotion feedback/statistical transition exactly once",
+    "keep cross-candidate error spending in a separate durable ledger if run-level control is desired"
+  ],
+  "falsification_tests": [
+    "SIGKILL after feedback event persist but before first arm increment; resume must converge to exactly one comparison and two symmetric arm updates",
+    "SIGKILL between champion and challenger arm updates; resume must not leave permanent asymmetry or count a different comparison as repair",
+    "SIGKILL after both arm updates but before CLI completion; retry must not count the logical comparison twice",
+    "replay same logical_comparison_id with modified candidate/champion/prompt digest must fail",
+    "after restart PACE decision from durable state must equal uninterrupted execution",
+    "many-candidate null simulation must be reported separately because candidate-local alpha is not familywise"
+  ],
+  "exact_next_action": "Search GitMoot or another public self-improvement system for a transaction that atomically binds one immutable comparison/event ID to both paired sufficient-statistic updates and a persisted sequential-test state, then check whether its evaluation/provider calls are also logical-query-idempotent. If absent, use this exact GitMoot seam as a concrete prototype target for comparison-level idempotency and crash injection, while separately searching for durable cross-candidate statistical spending and an adaptive-selection-unused outer test."
+}
