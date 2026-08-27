@@ -1,7 +1,7 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-27T0805JST.md`
-Current invocation chain: `2026-08-27T0805JST.md` -> `2026-08-27T0703JST.md` -> `2026-08-27T0605JST.md` -> `2026-08-27T0503JST.md`
+Newest checkpoint: `2026-08-27T0904JST.md`
+Current invocation chain: `2026-08-27T0904JST.md` -> `2026-08-27T0805JST.md` -> `2026-08-27T0703JST.md` -> `2026-08-27T0605JST.md` -> `2026-08-27T0503JST.md`
 Previous checkpoint chain: `2026-08-27T0408JST.md` -> `2026-08-27T0305JST.md` -> `2026-08-27T0207JST.md` -> `2026-08-27T0107JST.md` -> `2026-08-27T0107JST-followup.md`
 Earlier predecessor chain: `2026-08-27T0107JST-followup2.md` -> `2026-08-27T0033JST.md` -> `2026-08-27T0006JST.md` -> `2026-08-27T0006JST-followup.md` -> `2026-08-27T0006JST-followup2.md` -> `2026-08-27T0006JST-followup3.md` -> `2026-08-27T0006JST-followup4.md` -> `2026-08-27T0006JST-followup5.md`
 
@@ -9,36 +9,34 @@ Read `STATE.md`, then the minimum predecessor chain needed for unresolved-fronti
 
 ## Chronology note
 
-Current invocation observations: start `2026-08-27T08:00:55+09:00`, checkpoint `2026-08-27T08:05:35+09:00`; chronology is valid. Prior chronology corrections remain authoritative for earlier artifacts.
+Current invocation observations: start `2026-08-27T08:58:36+09:00`, checkpoint `2026-08-27T09:04:22+09:00`; chronology is valid. Prior chronology corrections remain authoritative for earlier artifacts.
 
 ## Top unresolved frontier
 
-1. Execute C263 unchanged in the first environment able to faithfully materialize pinned CSSC; never promote static inspection to runtime evidence.
-2. Materialize pinned OPA and Regorus toolchains and run `rego_tier0_fixtures_v0.json` through OPA topdown, exact OPA Wasm, Regorus interpreter and Regorus RVM before any seeded generation.
-3. Bind OPA-Wasm evidence to the exact emitted `policy.wasm` bytes, compiler identity, Wasm ABI and pinned runtime/SDK; preserve raw output plus canonical projection.
-4. Reuse Regorus's matched interpreter/RVM adapter in run-to-completion/no-host-await mode and persist the serialized `Program` identity/digest.
-5. Block seeded generation on any deterministic fixture mismatch; shrink only while preserving `reasoning.rego_tier0_generator.v0` support.
-6. Recover/read Brown `https://git.sr.ht/~jakob/rego-proofs` and current VeriRego source through an allowed readable transport; until then keep thesis-backed and implementation-backed claims separate.
-7. Only after Tier-0 executable calibration, add integers/comparisons as a separately versioned Tier-1 with explicit numeric-semantics calibration.
+1. Recover the exact older CSSC commit bound to C263 and execute the full two-node same-batch no-op path through `StructuredController`; current-main helper runtime evidence does not by itself close C263.
+2. Regression-test an immutable attribution design where provider cost events remain unchanged and two same-batch consumers produce two append-only consumption edges.
+3. Materialize pinned OPA and Regorus toolchains and run `rego_tier0_fixtures_v0.json` through OPA topdown, exact OPA Wasm, Regorus interpreter and Regorus RVM before any seeded generation.
+4. Bind OPA-Wasm evidence to exact emitted `policy.wasm` bytes, compiler identity, Wasm ABI and pinned runtime/SDK; preserve raw output plus canonical projection.
+5. Reuse Regorus's matched interpreter/RVM adapter in run-to-completion/no-host-await mode and persist serialized `Program` identity/digest.
+6. Block seeded generation on any deterministic fixture mismatch; shrink only while preserving `reasoning.rego_tier0_generator.v0` support.
+7. Recover/read Brown `https://git.sr.ht/~jakob/rego-proofs` and current VeriRego source through an allowed readable transport; until then keep thesis-backed and implementation-backed claims separate.
 8. Preserve all prior deterministic authorization, route/data-flow, crash/recovery, causal-journal, immutable-cost, output-release and epsilon=0 gates. Deterministic provider pilot remains blocked and `epsilon>0` remains forbidden.
 
 ## Newest synthesis
 
-- **C457:** serialized `rego_tier0_generator_v0.json` freezes the Tier-0 grammar, route-support predicates, canonical projection and support-preserving shrink rules before generated outcomes. Readback blob `e6d109206f6172038491ebbd8cc0e8a53d587b68`.
-- **C458:** serialized `rego_tier0_fixtures_v0.json` freezes eight deterministic fixtures covering defined bool/string/null, undefined missing ref, local `:=`, equality and inequality. Readback blob `70192b610086742f25e8b3601698445b83acf135`.
-- **C459:** OPA's documented Wasm path and official `@open-policy-agent/opa-wasm` SDK support loading raw `policy.wasm` bytes, setting data and evaluating input; this gives the exact-artifact adapter shape needed for the campaign.
-- **C460:** Regorus's pinned RVM harness already compiles the same policy/entrypoint, checks Program serialization, executes run-to-completion with the same data/input and compares against the ordinary interpreter.
-- **C461:** June 2026 VUT thesis materials independently corroborate VeriRego's Go implementation and source URL `https://github.com/VeriFIT/VeriRego`, but the current GitHub connector returns 404/no result; repository content remains unread. Brown SourceHut remains source-known but transport-blocked.
-- **C263:** remains static-only; faithful runtime materialization is still unavailable here.
+- **C462:** at current public CSSC main `f40a3d3aa3054f4b07bb17e3fe5aa6d55e3d28f8`, the exact `attribute_proposal_batch` helper was executed under matching immutable-ledger replacement semantics. One batch consumed by `node-1` then `node-2` changed all historical matching event `action_id`s from null -> node-1 -> node-2. Durable runtime evidence: `cssc_cost_attribution_microrepro_f40a3d3.json`, blob `d7e2e23852cb87cca1a193fa9031aafccc67e4bc`.
+- **C463:** current action execution calls attribution before structured action dispatch, while current `REFINE_ARGUMENT` reducer semantics include deterministic no-op paths when refined IDs hit nothing. This keeps the full two-consumer reachability concern live, but the complete controller path was not executed here.
+- **C464:** deterministic Rego Tier-0 execution remains blocked by toolchain materialization: the container has Python/Go/Node but no `opa` or Rust/Cargo, GitHub DNS is unavailable from the container, and the available binary-download path did not yield an executable. No route result was fabricated.
+- **C263:** remains pending as an exact older-pin end-to-end runtime reproduction; current-main helper runtime evidence is intentionally scoped separately.
 
 ## Exact continuation
 
-1. Execute C263 unchanged when faithful pinned CSSC materialization becomes available.
-2. Run the frozen deterministic Tier-0 fixtures through pinned OPA/Regorus routes, persisting exact artifacts and raw/canonical outputs.
-3. Only after deterministic route calibration passes, start seeded Tier-0 generation and support-preserving mismatch shrinking.
+1. Recover and run C263 unchanged at its exact older pin; keep helper-level and end-to-end evidence distinct.
+2. Build/test the append-only `proposal_batch -> consumer` edge oracle against the demonstrated current-main overwrite behavior.
+3. Run the frozen deterministic Tier-0 fixtures through pinned OPA/Regorus routes with exact artifact identities; only then permit seeded generation.
 4. Recover Brown and VeriRego source through allowed readable transports; keep source-known/unread and thesis-only scopes explicit until readback.
 5. Preserve every prior deterministic safety and measurement gate; `epsilon>0` remains forbidden.
 
-`2026-08-27T0805JST.md` is newest and is not global completion.
+`2026-08-27T0904JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
