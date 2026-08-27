@@ -1,0 +1,64 @@
+{
+  "observed_at": "2026-08-28T07:05:07+09:00",
+  "frozen_control": {
+    "note_main_sha": "bd3458c9610ba9e166289c3f7fc1a8cbee057b3f",
+    "control_revision": 12,
+    "root_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "role": "continual_learning",
+    "config_revision": 5,
+    "role_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "public_source_anchors": {
+    "cpo_release": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+    "transformers": "huggingface/transformers@v4.57.3",
+    "qwen_hf_revision_observed": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "qwen_model": "Qwen/Qwen3-VL-4B-Instruct"
+  },
+  "facts": {
+    "serialized_bf16_parameter_count": 4437815808,
+    "serialized_weight_bytes": 8875631616,
+    "serialized_embedding_key": "model.language_model.embed_tokens.weight",
+    "serialized_lm_head_key_present": false,
+    "tie_word_embeddings": true,
+    "vocab_size": 151936,
+    "text_hidden_size": 2560,
+    "tied_matrix_numel": 388956160,
+    "cpo_mask_builder_namespace": "model.state_dict() floating keys",
+    "cpo_trainer_namespace": "named_parameters() canonical duplicate-free parameter keys",
+    "qwen3vl_explicit_registered_buffers": [
+      {"module": "Qwen3VLVisionRotaryEmbedding", "name": "inv_freq", "persistent": false},
+      {"module": "Qwen3VLTextRotaryEmbedding", "name": "inv_freq", "persistent": false}
+    ]
+  },
+  "derived_runtime_namespace": {
+    "state_dict_logical_float_entries_if_only_tied_alias_is_extra": 4826771968,
+    "alias_inflation_vs_physical_parameters_percent": 8.764585481417079,
+    "top10_alias_positions_if_all_selected_movements_nonzero": 38895616,
+    "dead_alias_mask_plus_float32_ref_bytes": 544538624,
+    "dead_alias_mask_plus_ref_plus_int64_index_bytes": 855703552,
+    "dead_alias_mask_plus_ref_gib": 0.50714111328125,
+    "dead_alias_aux_gib": 0.79693603515625,
+    "dead_alias_mask_plus_ref_vs_serialized_checkpoint_percent": 6.1352098369919545,
+    "dead_alias_aux_vs_serialized_checkpoint_percent": 9.641044029558786
+  },
+  "new_interpretation": [
+    "The immutable public Qwen checkpoint stores the tied embedding once and has no lm_head.weight entry, but Transformers re-ties lm_head.weight to the input embedding after loading and PyTorch state_dict exposes registered aliases. The public CPO mask builder therefore expands the mask namespace beyond the serialized checkpoint namespace.",
+    "The public trainer precomputes int64 nonzero indices for every saved mask key before iterating named_parameters, so a dead tied alias consumes mask, reference and index storage even though no trainer hook can consume that alias key.",
+    "The exact Qwen3-VL model source registers only two explicit RoPE buffers and both are persistent=False; no persistent floating buffer was found in the audited Qwen3-VL, PreTrainedModel or GradientCheckpointingLayer sources. Therefore the tied alias is the source-evident trainer-invisible floating state for this exact stack, subject to the scope limits below.",
+    "Public CPO 4B training sets freeze_vision_tower=False, freeze_llm=False and freeze_merger=False, so the tied embedding is trainable. Actual nonzero top-10 support still requires a real checkpoint diff and is not assumed."
+  ],
+  "scope_limits": [
+    "No Qwen3-VL-4B model was loaded in this invocation.",
+    "No PyTorch 2.8 binary execution occurred; environment download failed because DNS/package download was unavailable.",
+    "The 10-percent dead-alias payload is conditional on the selected embedding movements being nonzero; the builder discards zero-valued top-k positions.",
+    "The Hugging Face revision is the current public immutable revision observed during this run, not proof of the exact local model revision used by the CPO authors.",
+    "No claim is made about unreleased code used for paper tables."
+  ],
+  "exact_next_actions": [
+    "Acquire a compatible PyTorch 2.8 runtime and rerun the existing canonical trainer-namespace harness with executable/environment/output hashes.",
+    "Run the same namespace accounting on the smallest real Transformers 4.57.3 tied-weight model, then Qwen3-VL-4B if resources permit.",
+    "For real Qwen3-VL-4B, record state_dict logical scalar count, named_parameters physical scalar count, alias key set, actual nonzero support, task_k.pt bytes, build RSS/time and trainer-resident index/ref bytes before and after canonical namespace repair.",
+    "Measure the public builder's reported total_params/n_pos inflation and verify repaired logging tracks canonical physical parameter namespace.",
+    "Continue the independent ZeRO-3 regularizer scaling test and paper-vs-release selection/normalization factorial."
+  ]
+}
