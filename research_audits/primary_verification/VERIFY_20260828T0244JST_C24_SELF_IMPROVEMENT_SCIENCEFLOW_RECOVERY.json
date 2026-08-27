@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "audit_kind": "primary_source_verification",
+  "created_at": "2026-08-28T02:43:56+09:00",
+  "frozen_control": {
+    "note_main_sha": "c44307f1802090d9bc1b0694ddd3074c8faa1eab",
+    "root_control_revision": 12,
+    "downstream_control_revision": 23,
+    "role_config_revision": 5,
+    "semantic_freeze_respected": true
+  },
+  "wave": {
+    "wave_id": "clean-g1-wave-c24-20260828T005432JST-e1c4c313",
+    "manifest_blob": "1f0279130a7c2357232f5aeb51683bd7a3b7ec3e"
+  },
+  "clean_source": {
+    "namespace": "self_improvement",
+    "path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T0013_JST_scienceflow_recovery.md",
+    "blob": "8f5ea4790aca4ad7282f09b49a41ef9816ca5303"
+  },
+  "public_source": {
+    "repository": "huawei-noah/noah-research",
+    "commit": "d38150de76b45a0992bcfe175957d08004b7319a",
+    "paths_inspected": [
+      "ScienceFlow/scienceflow/solver/lnr/solver.py",
+      "ScienceFlow/scienceflow/solver/lnr/snapshot_store.py",
+      "ScienceFlow/scienceflow/solver/lnr/workspace_snapshot.py",
+      "ScienceFlow/scienceflow/core/parallel_runner.py",
+      "ScienceFlow/scripts/lnr_kill_resume.sh",
+      "ScienceFlow/tests/test_long_horizon_repl.py"
+    ]
+  },
+  "findings": [
+    {
+      "claim": "ScienceFlow can target an exact archived historical node rather than only the latest visible Stage ID.",
+      "status": "verified_source_and_test",
+      "evidence": "StageSnapshot carries separate snapshot_id, node_uid and lineage_id. The public LNR tests construct duplicate visible S01 snapshots across distinct lineage node UIDs and bind pending_estra.target_node_uid to the older W00:L01:S01. The restore path resolves stage_id plus requested node UID before switching."
+    },
+    {
+      "claim": "Workspace snapshot restore preflights content-addressed objects before clearing the live target and supports ordinary-exception rollback through a terminal archive.",
+      "status": "verified_source",
+      "evidence": "WorkspaceSnapshotStore.restore() calls _preflight_restore_entries() before _clear_target_preserving_git(); file objects are SHA-256 addressed and optional object verification rejects missing/digest-mismatched objects. SnapshotStore.restore() captures a terminal archive before restore and restores that archive on a Python exception. LnrSolver._restore_pending_estra() also attempts terminal-archive rollback for later exceptions after SnapshotStore.restore() returned."
+    },
+    {
+      "claim": "The current implementation does not establish semantic equivalence across arbitrary hard process death during an ESTRA transition.",
+      "status": "verified_gap_with_scope_guard",
+      "evidence": "LnrSolver initializes pending_estra as an in-memory attribute, constructs it in _set_pending_estra_from_decision(), and only consumes it in the same process through _restore_pending_estra(). The inspected restore transaction has no durable phase journal binding pending action, exact target node, terminal archive and post-restore controller/evaluator/budget cursors. Its rollback is exception-driven; SIGKILL cannot execute that Python rollback. The supplied lnr_kill_resume.sh first sends normal kill, sleeps one second, then sends SIGKILL to surviving matching processes, so hard death is an operationally reachable supported workflow condition rather than a purely hypothetical signal class.",
+      "scope_guard": "This is source-level absence of an arbitrary-kill semantic-equivalence guarantee at the pinned commit. It does not show that a published ScienceFlow run actually died in this window or produced a wrong scientific result."
+    },
+    {
+      "claim": "Parallel-run charged-budget state is less durable than the content-addressed workspace/resource store.",
+      "status": "verified_source_with_scope_guard",
+      "evidence": "parallel_runner.py loads malformed/unreadable JSON as an empty dict and writes logs/state.json with direct Path.write_text for running/interrupted/final state. The same state carries charged_elapsed_sec, resume_prior_charged_elapsed_sec and resume_total_budget_sec. No atomic replace/fsync is used in those writes in the inspected path.",
+      "scope_guard": "This applies to the parallel-run task state file, not to every ScienceFlow resource-control file or workspace snapshot object. It establishes a crash-durability asymmetry, not an observed budget-accounting failure rate."
+    }
+  ],
+  "downstream_assessment": {
+    "supported": [
+      "exact historical-node rewind identity",
+      "content-addressed restore preflight",
+      "ordinary-exception terminal-workspace rollback"
+    ],
+    "not_supported_as_strong_claim": [
+      "arbitrary-kill transactional equivalence of ESTRA transitions",
+      "durable recovery of pending ESTRA intent across process death",
+      "published-run failure caused by the identified crash windows"
+    ],
+    "evidence_effect": "Strengthens the candidate as positive evidence for exact artifact-preserving rewind, while adding a material limitation for persistent self-improvement: workspace recovery is stronger than controller-transaction recovery. Downstream evidence should keep these as separate dimensions."
+  },
+  "exact_next_verification": "Rotate within sealed C24 to another non-scientist namespace. Prefer an exact source tuple whose public raw code or quantitative artifact can independently falsify a downstream-relevant claim; avoid repeating already source-bound C22/C23 tuples. A high-value next target is open_source or evaluation if its C24 artifact contains a current unverified implementation or numerical contract.",
+  "global_completion": false
+}
