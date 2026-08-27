@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T01:15:58+09:00",
+  "continued_validation": "research_workers_clean_g1/evaluation/validation_2026-08-28T0114_JST_selector_distortion_running_mean_extension.json",
+  "frozen_control": {
+    "main_sha": "e9ade8213b461ccfe17888b5b56cd2bf18fb29ad",
+    "root_control_revision": 12,
+    "role_control_revision": 9,
+    "config_revision": 6
+  },
+  "safe_domain_guard": {
+    "domain": "Both channel running true weighted-average conditional mismatch means lie in [0,mu0].",
+    "derivation": [
+      "For each lambda and fixed predictable weight history, d_lambda(m) is nonincreasing in m. If m1<m2, scaling any vector feasible at m2 by m1/m2 yields a componentwise smaller vector feasible at m1 and therefore a denominator product no smaller than at m2.",
+      "Thus for theta in [0,mu0], rho_lambda(theta)=d_lambda(theta)/d_lambda(mu0) lies in [1,1/d_lambda(mu0)], since d_lambda(0)=1.",
+      "The V3 mixture ratio q=E(mu0)/E(theta) is a convex combination of rho_lambda(theta), so q lies in [1,U], U=max_lambda 1/d_lambda(mu0).",
+      "For two channels with independently unknown true means anywhere in [0,mu0], q2/q1 is therefore within [1/U1,U2], and the selector-distortion constant can be taken as K=max(U1,U2). This K depends only on predictable weights and mu0, not on observed scores or unknown true means."
+    ],
+    "operational_rule": "For a reporting prefix whose declared scientific domain is both true means <=mu0, compute U_j=max_lambda 1/d_j,lambda(mu0) from the predictable weights only and K=max(U1,U2). If K<=5, the exact nine-split same-history selected numerical bounds inherit the <=delta anytime miscoverage guarantee from the selector-distortion theorem. If K>5, same-history reporting is no longer certified at level delta by this theorem; switch to fresh-confirm/fixed-alpha or accept only the explicit weaker 2*delta/c(K) certificate if that weaker contract is predeclared."
+  },
+  "alternating_weight_audit": {
+    "mu0": 0.05,
+    "equal_process_weights": "all 1",
+    "planned_exposure_weights": "alternating .25,1 starting with .25",
+    "production_lambdas": [0.47,1.06,1.87,3.37,7.4],
+    "results": [
+      {"prefix_n":10,"K_domain":1.6696453474358879},
+      {"prefix_n":20,"K_domain":2.7877155862143064},
+      {"prefix_n":25,"K_domain":3.6021399257330975},
+      {"prefix_n":30,"K_domain":4.654496358497224},
+      {"prefix_n":31,"K_domain":4.899312234305981,"c_K":2.0117436618364493,"error_over_delta":0.9941624462106028},
+      {"prefix_n":32,"K_domain":5.157004865929272,"c_K":1.982602873455088,"error_over_delta":1.0087748922277078},
+      {"prefix_n":40,"K_domain":7.771358189622174,"c_K":1.7962218170142452,"error_over_delta":1.1134482284178484},
+      {"prefix_n":80,"K_domain":60.394008111407636,"c_K":1.258292746621901,"error_over_delta":1.5894552403400062}
+    ],
+    "first_uncertified_prefix_under_level_delta": 32,
+    "interpretation": "For this exact deterministic weight schedule and safe-domain restriction, same-history numeric reporting is certified by the K<=5 theorem through prefix 31 but not from prefix 32 onward. The sharp transition is a property of this weight/lambda/mu0 configuration, not a universal sample-size threshold."
+  },
+  "combined_contract_boundary": {
+    "warning": "The safe-domain guard assumes the scientific truth lies inside the decision-safe domain. It is not a full-parameter-space confidence guarantee. If numerical bounds are displayed even when the true means may exceed mu0, a separate full-domain reporting guarantee is still required.",
+    "possible_composition": "If a separate decision-IUT controls the event of falsely declaring the unsafe truth safe, and numerical reporting is only interpreted on the safe domain, then false-safe risk and safe-domain numeric-miscoverage risk can be tracked as separate ledgers and union-bounded if a single overall error contract is desired. Do not silently count both at the same alpha without stating the combined budget."
+  },
+  "scope_guards": [
+    "The data-free K formula above applies to the domain theta_j in [0,mu0]. It does not cover theta_j>mu0.",
+    "Weights must be predictable. Current-score-dependent weighting can invalidate the component supermartingale premise.",
+    "The alternating-weight horizon numbers are numerical evaluations of the exact V3 denominator and do not transfer to a different exposure-weight schedule.",
+    "A production implementation should compute K from the actual frozen predictable weight history rather than hard-code n=31."
+  ],
+  "next_action": "Implement a role-local K-guard calculator directly against the production V3 component envelopes and validate it pathwise on arbitrary predictable weight sequences. Then compare three reporting modes on identical paths: same-history when K<=5, automatic fresh-confirm at the first K>5 prefix, and fixed .025/.025 reporting. Measure selected-CI coverage, stopping delay and numeric-bound width without using post-hoc mode selection."
+}
