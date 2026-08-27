@@ -1,0 +1,103 @@
+{
+  "generation": "clean_g1",
+  "worker": "evaluation",
+  "checkpoint_time": "2026-08-27T14:08:11+09:00",
+  "invocation_started_at": "2026-08-27T14:02:43+09:00",
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-27T131334_JST_divergence_certificate_analyzer.json",
+  "control": {
+    "frozen_main_sha": "67209489667eb344748d5eed8da6ebb86a20d860",
+    "root_control_revision": 11,
+    "role_control_revision": 9,
+    "config_revision": 6,
+    "root_manifest_blob": "bf7b8c7f6971c0ec2f3fa7a8d53dca1f88ac50a3",
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4",
+    "semantic_freeze_observed": true
+  },
+  "independence": {
+    "read_O": false,
+    "read_O_derived_state": false,
+    "read_legacy_worker_state": false,
+    "read_downstream_state": false,
+    "read_other_worker_state": false,
+    "read_shared_execution_ledger": false,
+    "read_other_role_receipts": false,
+    "own_feedback_used": false
+  },
+  "main_result": {
+    "title": "Rare mismatch certification needs an explicit top-level trial-unit contract plus an anytime-valid bound; all-pairs repeat counts can create severe pseudoreplication.",
+    "artifact": {
+      "path": "research_workers_clean_g1/evaluation/mismatch_anytime_certifier.py",
+      "blob": "195b1bef50f0c37718a1bc4acccfa81803beadf5",
+      "creation_commit": "bc3ffa181d7a37a0c0f7536b03c2a3f474c69bec",
+      "functions": [
+        "Jeffreys beta-binomial mixture confidence-sequence upper endpoint for Bernoulli mismatch",
+        "fixed-sample zero-failure bound for comparison only",
+        "zero-mismatch sample planning for fixed versus continuous-peeking designs",
+        "fail-closed canonical protected-statistic instability",
+        "explicit rejection of all-pairs repeat counts as Bernoulli trial counts"
+      ]
+    },
+    "public_case": {
+      "source": "https://github.com/vllm-project/vllm/issues/51187",
+      "published": "2026-08-05",
+      "fingerprint": "vLLM 0.26.0; torch 2.11.0+cu130; RTX 4060 Laptop sm_89; driver 595.84; Qwen3-0.6B float16; enforce-eager; VLLM_BATCH_INVARIANT=1",
+      "observations": [
+        "The reporter repeated byte-identical concurrent workloads five times against one unchanged server process and explicitly compared all ten repeat pairs, not independent first-vs-rest trials.",
+        "At 44 co-resident sequences there were three distinct logprob outputs across five repeats and five differing repeat pairs; at 45 co-resident there were two distinct outputs and three differing repeat pairs.",
+        "Emitted token ids did not diverge in the batch-invariant reproducer even though logprobs did; the report gives 188 and 128 diverging request-by-repeat-pair observations.",
+        "The same configuration could be fully reproducible in another server lifetime, so lifetime-level intermittency is part of the observed process.",
+        "A default-mode negative control failed 7/7 and included a first-token divergence at position 23, showing the client detector can observe token nondeterminism when present."
+      ],
+      "measurement_correction": "The 188/128 request-by-repeat-pair counts must not be used as n in a Bernoulli confidence bound. Ten pair comparisons from five repeats reuse the same five outputs, and requests also share a concurrent workload/server lifetime. The independent or conditionally stable top-level trial/cluster must be declared before inference."
+    },
+    "anytime_bound": {
+      "reference": "Howard, Ramdas, McAuliffe, Sekhon, Time-uniform, nonparametric, nonasymptotic confidence sequences; beta-binomial mixture family",
+      "reference_url": "https://arxiv.org/abs/1810.08240",
+      "martingale": "M_n(p)=B(s+a,n-s+b)/(B(a,b)*p^s*(1-p)^(n-s)), with a=b=1/2 in the utility",
+      "use": "Invert M_t(p)<1/alpha for a time-uniform confidence set. This is appropriate for continuous peeking/optional stopping only under the declared Bernoulli/fingerprint trial-unit contract.",
+      "zero_mismatch_planning_alpha_0_05": [
+        {"tolerance": 0.05, "fixed_prefixed_n": 59, "anytime_jeffreys_n": 116},
+        {"tolerance": 0.02, "fixed_prefixed_n": 149, "anytime_jeffreys_n": 320},
+        {"tolerance": 0.01, "fixed_prefixed_n": 299, "anytime_jeffreys_n": 680},
+        {"tolerance": 0.005, "fixed_prefixed_n": 598, "anytime_jeffreys_n": 1438},
+        {"tolerance": 0.001, "fixed_prefixed_n": 2995, "anytime_jeffreys_n": 8062}
+      ]
+    },
+    "decision_rule": "A repeated-inference fast path is not certified merely because pairwise mismatch count is zero. First require a predeclared top-level trial unit and fingerprint. Fail closed if the canonical protected statistic ever mismatches; if canonical repeats have zero observed mismatches, still require the anytime upper bound to lie below the canonical-instability tolerance. Then require the fast-vs-canonical mismatch upper bound below its tolerance. Never pool fingerprints without a justified common parameter contract.",
+    "why_this_matters": "The mismatch hierarchy now has a measurement-validity gate. Public reproducibility reports often generate many dependent pair comparisons from only a few repeated executions; treating those pairs as independent can make rare-event certification look orders of magnitude stronger than the actual evidence."
+  },
+  "measurement_validity_rules": [
+    "Declare the statistical trial/cluster unit before reading mismatch results; all-pairs repeat comparisons are diagnostic edges, not independent Bernoulli trials.",
+    "Requests co-resident in one workload/server lifetime may share failure mechanisms and cannot automatically be counted as independent trials.",
+    "Use an anytime-valid confidence sequence when sample collection can continue until a target bound is crossed; do not repeatedly peek at a fixed-sample Clopper-Pearson-style bound.",
+    "Canonical protected-statistic instability is fail-closed; a noisy canonical target cannot certify a fast-path mismatch rate.",
+    "Keep runtime/model/hardware/batching fingerprints separate unless a common conditional mismatch parameter contract is established."
+  ],
+  "scope_guards": [
+    "The beta-binomial utility is valid only under its declared Bernoulli/filtration contract; it does not repair arbitrary cluster dependence or runtime drift.",
+    "The public vLLM #51187 data do not provide enough independent top-level trials to certify a sub-percent token/sign mismatch rate, despite the much larger dependent pair-comparison counts.",
+    "No live GPU/vLLM token-divergent raw trace was obtained in this run, so the previous token->score->sign analyzer still lacks a same-fingerprint raw divergence dataset.",
+    "The default-mode first-token divergence in #51187 is a detector control, not evidence that the batch-invariant logprob-divergent trace changed tokens.",
+    "No forbidden semantic inputs were read."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "action": "Obtain a public raw repeated-inference artifact with actual token divergence under one fully recorded fingerprint, then run decision_stat_first_divergence_analyzer.py to measure token->score and paired-score->oriented-sign propagation."
+    },
+    {
+      "priority": 2,
+      "action": "Extend mismatch_anytime_certifier.py to accept predeclared independent cluster records and produce cluster-level bounded/e-process inference instead of requiring a scalar Bernoulli trial assumption."
+    },
+    {
+      "priority": 3,
+      "action": "Design a lifetime/fingerprint lease rule that combines canonical-stability confidence, fast-vs-canonical mismatch confidence, drift invalidation, and minimum independent-server-lifetime coverage without pooling dependent request pairs."
+    },
+    {
+      "priority": 4,
+      "action": "Extend deterministic prefix certificates to JSON/schema tool-call scorers and measure certificate-position latency versus full completion on public raw traces."
+    }
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Search for a raw same-fingerprint token-divergent repeated-inference trace; if none is public, advance cluster-aware rare-mismatch inference by treating workload/server-lifetime as the top-level unit rather than all-pairs repeat edges."
+}
