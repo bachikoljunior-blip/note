@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-27T20:04:30+09:00",
+  "purpose": "Refresh the public repeated-inference frontier for raw/token divergence that could propagate into deterministic evaluation scores or paired signs.",
+  "sources": [
+    {
+      "date": "2026-07-31",
+      "source": "https://github.com/vllm-project/vllm/issues/50602",
+      "observation": "A live vLLM serving engine with one LoRA adapter under greedy decoding produced 2-4 distinct byte outputs across 16 byte-identical requests in many fast execution arms. A specific fp32-eager-cuBLAS interior produced 64+/64+ byte-identical serving calls and repeated 40-request sweeps. The issue reports same-server run-to-run output flips but does not publish the per-call raw outputs; probe logs are described as available on request.",
+      "scope": "Strong evidence that full serving context can introduce run-to-run output divergence even when isolated kernel/offline probes are clean. It does not yet quantify token divergence to deterministic score or paired-sign divergence because the raw output set is not published in the issue body."
+    },
+    {
+      "date": "2026-03-26",
+      "source": "https://github.com/vllm-project/vllm/issues/38234",
+      "observation": "Under temperature=0 and batch-invariant mode, EAGLE speculative decoding and non-EAGLE execution produced token sequences that diverged from the first token; the issue publishes both token sequences.",
+      "scope": "This proves token-level propagation across two engine configurations, not run-to-run divergence under one frozen fingerprint, so it is not a same-fingerprint mismatch-rate sample."
+    },
+    {
+      "date": "2026-08-05",
+      "source": "https://github.com/vllm-project/vllm/issues/51187",
+      "observation": "Five repeats of a byte-identical concurrent workload under one unchanged server process showed non-identical logprobs at high co-residency while generated token IDs remained identical in the reported reproducer.",
+      "scope": "Demonstrates that response/logprob mismatch can fail to propagate to token mismatch; full-output mismatch must not be used as a proxy for score/sign mismatch."
+    }
+  ],
+  "measurement_rule_update": [
+    "Track response/logprob, token/text, deterministic score bit, paired score pair, and oriented sign Z as separate layers.",
+    "Do not count cross-configuration token divergence as a same-fingerprint stochastic-repeat trial.",
+    "Do not infer score/sign divergence from byte-output divergence when the actual outputs or scorer results are unavailable.",
+    "A public same-fingerprint trace with raw divergent outputs plus a deterministic task scorer remains the preferred missing artifact."
+  ],
+  "frontier": "Find or generate a public same-fingerprint repeated-inference trace that exposes the divergent raw/token outputs and a deterministic scorer contract, then measure raw->token->score->paired-sign propagation without pseudoreplication."
+}
