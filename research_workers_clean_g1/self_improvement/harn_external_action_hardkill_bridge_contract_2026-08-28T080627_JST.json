@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 87,
+  "created_at": "2026-08-28T08:06:27+09:00",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "3dff64912d405392d25f0ca51ed3bcb9275c51d1",
+    "control_revision": 12,
+    "config_revision": 6,
+    "config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "source_qualified_findings": [
+    {
+      "id": "HARN-MAIN-NO-HYPOP-BRIDGE-20260828",
+      "source": "burin-labs/harn",
+      "source_revision": "45e857e405481d78dae83dfb7319ff27aa306e99",
+      "release_baseline": "v0.10.118@40a4030d5c2204d27975cfd22f4d65fbe89ad2cc",
+      "finding": "The current public main is 50 commits ahead of the latest release baseline, but the portable hypothesis workflow contract remains byte-identical at blob 70e3c042e9242e7df4612cf670f41ed65325c511. Repository code search still finds the workflow boundary/testbench scenario rather than a provider-backed hypothesis.operation adapter, and exact pull-request searches for hypothesis.operation or operation_receipt_id returned zero matches.",
+      "scope": "Public burin-labs/harn repository only; absence from public search is not proof that no private adapter exists."
+    },
+    {
+      "id": "HARN-EXTERNAL-ACTION-SEMANTIC-IDEMPOTENCY-20260828",
+      "source": "burin-labs/harn/crates/harn-stdlib/src/stdlib/external_action/contracts.harn",
+      "source_revision": "45e857e405481d78dae83dfb7319ff27aa306e99",
+      "finding": "Harn already has a provider-neutral ExternalActionIntent whose effect fingerprint covers actor, provider, capability, operation, environment, payload, protected disclosure and external spend. It derives a stable idempotency_key from that fingerprint, distinguishes confirmed/failed-before-dispatch/rejected/indeterminate outcomes, supports reconciliation, and requires explicit linked retry lineage after a terminal action.",
+      "scope": "Mechanism-level component; not itself wired to hypothesis.operation."
+    },
+    {
+      "id": "HARN-EXTERNAL-ACTION-HARDKILL-GAP-20260828",
+      "source": "burin-labs/harn/crates/harn-stdlib/src/stdlib/stdlib_checkpoint.harn + stdlib/external_action/runtime.harn",
+      "source_revision": "45e857e405481d78dae83dfb7319ff27aa306e99",
+      "finding": "external_action_execute uses checkpoint_stage_keyed for replay identity, but checkpoint_stage_keyed executes f() first and persists the keyed record only after f() returns. Therefore a hard process death after the provider has accepted an action but before adapter.dispatch returns or the receipt is checkpointed can leave no keyed checkpoint; a resumed call can execute f() again. The runtime's durable indeterminate/reconcile path covers returned/thrown/malformed adapter outcomes, but this code structure alone does not establish crash-after-remote-accept exactly-once semantics.",
+      "scope": "Code-path inference from current public implementation. No public external_action SIGKILL/fault-injection test at this exact provider-accept-before-checkpoint boundary was found by repository search."
+    },
+    {
+      "id": "HARN-BATCH-WRITEAHEAD-STILL-STRONGER-20260828",
+      "source": "burin-labs/harn v0.10.118 model-batch execution",
+      "source_revision": "40a4030d5c2204d27975cfd22f4d65fbe89ad2cc",
+      "finding": "The model-batch path from sequence 86 remains the stronger hard-kill component because it persists provider-operation state before remote create and uses deterministic provider tokens where supported or reconciliation-required fail-closed behavior otherwise. The newly inspected generic external_action layer does not replace that write-ahead requirement for hard kills.",
+      "scope": "Provider-batch create lifecycle, not every preparatory side effect and not yet hypothesis.operation end-to-end."
+    },
+    {
+      "id": "HARN-HYPOP-NO-THIRD-OUTER-SURFACE-20260828",
+      "source": "burin-labs/harn/crates/harn-stdlib/src/stdlib/eval/hypothesis/contracts.harn",
+      "source_revision": "45e857e405481d78dae83dfb7319ff27aa306e99",
+      "finding": "The portable PopulationAdapter contract has iterate and gate CaseSets but no third outer/final test CaseSet. The gate surface is consumed by promotion. Thus the portable hypothesis plan cannot by itself attest that a final evaluation surface was never queried by tuning, promotion, rollback, routing, stopping or recovery.",
+      "scope": "Portable std/eval/hypothesis contract only; applications can maintain a separate external lockbox."
+    },
+    {
+      "id": "ONLINE-FDR-REPLAYABLE-DERIVED-STATE-20260828",
+      "source": "OliverHennhoefer/online-fdr online_fdr/p_values/investing/lord/plus_plus.py",
+      "source_revision": "95baa9358e57e5894101b2084053abe71cfb51e6",
+      "finding": "LORD++ state in the inspected implementation is a deterministic recursion over ordered p-values/rejections: test_one derives alpha_t from fixed parameters plus prior rejection indices/wealth and then updates those values. This suggests a restart-safe architecture in which ordered immutable test-result events are authoritative and alpha-wealth is re-derived by replay instead of maintained as an independently mutable database row.",
+      "scope": "Construction inferred from a deterministic implementation; online-fdr does not itself provide the crash-durable event ledger or self-improvement integration."
+    }
+  ],
+  "minimal_bridge_contract": {
+    "logical_identity": "Bind hypothesis operation_receipt_id, plan_fingerprint, assignment_plan_id, arm/case/trial identity, evaluator/scoring protocol, provider/model configuration, and exact input/artifact digests into one canonical effect identity.",
+    "write_ahead": "Persist the logical evaluation/provider operation before remote dispatch. A post-return cache is insufficient for hard-kill safety.",
+    "provider_boundary": "Use a documented deterministic provider idempotency token when available; otherwise transition to indeterminate/reconciliation-required and make zero blind create retries.",
+    "observation_authority": "Only reconciled provider truth may emit one immutable paired observation. Rebuild candidate-local anytime-valid state and cross-candidate online-testing state from the ordered immutable observation/test-result log.",
+    "outer_test": "Keep a third test surface outside the hypothesis iterate/gate contract and instrument it so pre-final query count is provably zero."
+  },
+  "falsification_frontier": [
+    "Add or find a provider-backed hypothesis.operation adapter that routes each advance block through a write-ahead provider operation rather than checkpoint_stage_keyed around a remote call.",
+    "SIGKILL after provider acceptance but before adapter return. Recovery must produce one logical provider action, one paired observation and the same verdict as uninterrupted execution.",
+    "Run the same hard-kill test against generic external_action_execute; if it does not re-dispatch, identify the lower runtime primitive that provides the missing pre-dispatch durable marker. Otherwise retain the hard-kill gap.",
+    "Implement or find an append-only cross-registration hypothesis-result ledger and reconstruct LORD++/LORD/SAFFRON state from genesis after restart; compare every alpha threshold and decision to uninterrupted stateful execution.",
+    "Add a third outer-test contract or external lockbox with a monotone query ledger; prove zero queries before final frozen artifact nomination."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Prioritize a public hard-kill test of Harn std/external_action at the provider-accepted-before-checkpoint boundary and a provider-backed hypothesis.operation adapter. If absent, search for a self-improvement/experimentation system whose ordered immutable evaluation log is authoritative for both candidate-local sequential evidence and cross-candidate online-FDR state, then verify restart replay equivalence. In parallel look for a first-class third outer-test surface with zero-pre-final-query instrumentation."
+}
