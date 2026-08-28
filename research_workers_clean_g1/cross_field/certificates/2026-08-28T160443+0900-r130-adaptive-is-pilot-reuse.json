@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 15,
+  "config_revision": 6,
+  "semantic_tuple": {
+    "note_main_sha_frozen": "ea58468327c0aab79d6c2096f530394d5c5ec4bd",
+    "desired_state_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "role_config_blob": "3d279ded53accdf5bf6b4ce8f09ea1c92b2af8c0",
+    "later_control_semantics_adopted": false
+  },
+  "created_at": "2026-08-28T16:04:43+09:00",
+  "title": "Predictable adaptive importance sampling can reuse a full-fidelity current-run pilot exactly; the r129 discarded-pilot negative does not apply to original-proposal-weighted reuse",
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-28T124457+0900-r129.json",
+  "public_sources": [
+    {
+      "title": "Adaptive Importance Sampling via Stochastic Convex Programming",
+      "authors": "Ernest K. Ryu, Stephen P. Boyd",
+      "url": "https://arxiv.org/abs/1412.4845",
+      "use": "Direct precedent that the proposal may adapt while an unbiased Monte Carlo estimate is accumulated; asymptotic variance can be optimized within a proposal family."
+    },
+    {
+      "title": "Adaptive Neyman Allocation",
+      "authors": "Jinglong Zhao",
+      "url": "https://arxiv.org/abs/2309.08808",
+      "use": "Multi-stage current-experiment observations can guide later allocations while retaining estimation/inference theory; supports current-run staging rather than history-only prediction."
+    },
+    {
+      "title": "Safe and Effective Importance Sampling",
+      "authors": "Art B. Owen, Yi Zhou",
+      "url": "https://doi.org/10.1080/01621459.2000.10473909",
+      "use": "Defensive mixture importance sampling/control variates provide a variance-protection precedent when exploiting aggressive proposals."
+    },
+    {
+      "title": "Adaptive Multiple Importance Sampling",
+      "authors": "Jean-Marie Cornuet, Jean-Michel Marin, Antonietta Mira, Christian P. Robert",
+      "url": "https://doi.org/10.1111/j.1467-9469.2011.00756.x",
+      "use": "Shows a different past-sample recycling route using recomputed deterministic-mixture weights; its abstract explicitly notes convergence properties were not established there, so it is not used as the exact-unbiasedness proof for the present lemma."
+    },
+    {
+      "title": "Auxiliary Particle filtering within adaptive Metropolis-Hastings Sampling",
+      "authors": "Michael Pitt, Ralph Silva, Paolo Giordani, Robert Kohn",
+      "url": "https://arxiv.org/abs/1006.1914",
+      "use": "Direct proof/precedent that standard auxiliary particle-filter likelihood estimates can be unbiased; relevant to a future run-level mini-filter reuse construction, not a proof for the existing independent-stratified within-filter adaptation."
+    }
+  ],
+  "analytic_results": [
+    {
+      "id": "cf-g1-r130a-predictable-ais-reuse-lemma",
+      "claim": "Let F_{t-1} contain all past observations, choose q_t predictably with support wherever h(x)p(x) is nonzero, draw X_t~q_t, and set Z_t=h(X_t)p(X_t)/q_t(X_t). Then E[Z_t|F_{t-1}]=int h p = mu. Hence B^{-1} sum_t Z_t is exactly unbiased under arbitrary predictable proposal adaptation. The martingale differences Z_t-mu are pairwise uncorrelated, giving Var(hat mu)=B^{-2} sum_t E[Var(Z_t|F_{t-1})]."
+    },
+    {
+      "id": "cf-g1-r130b-two-stage-pilot-is-not-sunk-cost",
+      "claim": "For a fixed m-sample defensive pilot followed by B-m samples from q1 selected from the pilot, the final equal-per-sample original-proposal-weighted average can include all B samples exactly. If gamma=m/B and r=E[v(q1)]/v(q0), its variance ratio versus all-q0 is gamma+(1-gamma)r. The discarded production-only estimator, using only B-m samples, has ratio r/(1-gamma). Reuse beats discard whenever r>(1-gamma)/(2-gamma)."
+    },
+    {
+      "id": "cf-g1-r130c-r129-screening-reinterpretation",
+      "claim": "In r129's screening geometry gamma=192/768=0.25. If its reported allocation-only ratio 0.86553 is interpreted as the same linear variance/second-moment proxy ratio used for the pilot comparison, exact pilot reuse maps it to 0.25+0.75*0.86553=0.8991475 rather than charging the pilot as discarded cost. The reported p95 proxy 1.01652 maps to 1.01239, so mean efficiency may survive while tail noninferiority remains unproven. This is a scoped reinterpretation, not a new particle-filter theorem."
+    },
+    {
+      "id": "cf-g1-r130d-adaptive-stage-weight-warning",
+      "claim": "The safe estimator uses each sample's original proposal denominator and a fixed equal-per-sample final average. A blend weight chosen from the same pilot can correlate with pilot estimation error and reintroduce bias. Likewise, AMIS-style retroactive deterministic-mixture reweighting is a different estimator and is not justified by the simple martingale proof."
+    }
+  ],
+  "engineering_results": [
+    {
+      "id": "cf-g1-r130e-discrete-rare-event-sanity-check",
+      "setup": "Independent synthetic discrete rare-event model with 12 strata, uniform target p, heterogeneous Bernoulli failure rates [0.001,0.0015,0.002,0.003,0.004,0.006,0.01,0.02,0.04,0.08,0.15,0.30], total B=768, pilot m=192 under q0=p, pilot-smoothed q1 chosen predictably and defensively mixed 50% with q0. 20,000 independent replications.",
+      "results": {
+        "true_mean": 0.05145833333333333,
+        "empirical_mean_base": 0.0514783203125,
+        "empirical_mean_reuse": 0.05142616956981424,
+        "empirical_mean_discard": 0.05145963234308564,
+        "variance_ratio_reuse_vs_base": 0.8071269270969066,
+        "variance_ratio_discard_vs_base": 1.00364094942927
+      },
+      "interpretation": "All three means are consistent with the common target within Monte Carlo noise. Reusing the adaptive pilot via original-proposal weights reduced variance about 19.3% in this toy while discarding the pilot erased essentially all of the gain. This validates the algebra in an ordinary adaptive-IS setting only."
+    }
+  ],
+  "negative_or_scope_evidence": [
+    "The exact reuse lemma is for ordinary adaptive importance sampling / sequential Horvitz-Thompson-style terms. It is not yet a theorem for folding pilot particles into the existing multi-generation independent-stratified particle filter.",
+    "The r129 numeric reinterpretation assumes the reported allocation-only quantity behaves as the same linear variance or second-moment proxy. It does not establish a true PF MSE ratio.",
+    "Standard particle-filter normalizing-constant unbiasedness suggests a theorem-clean alternative at the level of independent mini-filter replicates, but adaptive within-filter genealogy/resampling still needs its own proof.",
+    "A full-fidelity reusable pilot removes the discard penalty but still consumes part of the budget under q0; it is beneficial only when later-stage improvement is large enough.",
+    "No real-agent or AGI performance claim follows from the synthetic discrete or two-state Feynman-Kac models."
+  ],
+  "frontier": [
+    "Construct a theorem-clean two-stage estimator for the existing objective: either prove that predictable within-run allocation changes preserve proper weighting under independent stratified multi-generation SMC, or move adaptation one level up to independent unbiased mini-filter replicates whose configurations are chosen predictably.",
+    "In the r129 harness, rerun the exact 192/576 split while retaining pilot contributions with their actual proposal weights; compare full-budget MSE, p95 and first-change loss against all-q0 and discarded-pilot accounting.",
+    "Derive a defensive-mixture bound for the production proposal so pilot estimation error cannot create catastrophic second moments; compare Owen-Zhou-style protection with the beta=0.5 backbone.",
+    "Keep the no-free-lunch boundary: reusable current-run information escapes unseen-drift impossibility because it is observed before later allocations, not because past-only prediction became assumption-free.",
+    "Do not use pilot-dependent final stage weights or AMIS-style retroactive reweighting without a separate unbiasedness/consistency proof."
+  ],
+  "exact_next_action": "Implement a two-level 'island' experiment in the reconstructed r129 Feynman-Kac model: split the 768 particle budget into several independent mini-filters whose standard normalizing-constant/failure-probability estimators are individually unbiased; run a small defensive first batch, choose later mini-filter allocation/configuration predictably from that batch, then average all mini-filter estimates with prespecified weights. Verify unbiasedness and total MSE empirically, then search for the strongest primary theorem covering conditional-on-past adaptive SMC configurations. In parallel, test whether the existing within-filter independent-stratified estimator admits the same proper-weight induction; if not, keep the theorem-clean adaptation at the mini-filter level."
+}
