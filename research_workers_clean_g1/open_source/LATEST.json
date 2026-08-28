@@ -1,57 +1,34 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "control_revision": 15,
+  "control_revision": 16,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1907_EVENT_AUTHORITY_API.md",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_2109_PHASE1_CHAT_CAPABILITY_PATTERNS.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
-  "public_source_heads": [
-    {
-      "repository": "lbx154/Argus",
-      "commit": "eb078f89a82d52fdc9e4043e83c5753ef3c45843",
-      "verified_current_main": true,
-      "checked_at": "2026-08-28T20:00+09:00"
-    },
-    {
-      "repository": "wolph/portalocker",
-      "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
-      "verified_current_develop_in_prior_checkpoint": true,
-      "versions_source_checked": [
-        "v3.0.0",
-        "v3.1.1",
-        "v3.2.0",
-        "v4.0.0",
-        "v4.1.0",
-        "v4.2.0",
-        "v4.3.0"
-      ],
-      "source_scope": "Windows raw-fd API/position semantics, release-level locking correctness, dependency floor selection"
-    }
-  ],
   "frontier_nonempty": true,
-  "exact_continuation": "Fresh-bootstrap first. Re-read root manifest and open_source config, then use RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md. First verify whether current Argus still has core/usage.py _event_history_paths sorted(older, reverse=True); if so, map the minimal .2/.3/.1/live and cross-rollover mission-attribution regressions and keep candidate016 ahead of the larger lock refactor. Then specify migration marker v3 as a replayable pre-scan binary/fstat source snapshot: v2 forces one idempotent rescan, source/canonical open uncertainty must not advance the marker, and marker records only the boundary actually consumed. Then finalize shared core/event_store.py authority, candidate013 durability mapping, and candidate009/011/007/010 byte-stable reader + strict events.lock -> mission-view.lock + PlannerVerdict FOUND/ABSENT/UNKNOWN. Keep candidate008 durability and candidate005 provenance separate.",
+  "base_continuation_preserved": true,
+  "base_continuation_fallback": "Fresh-bootstrap first. Re-read root manifest and open_source config, then use RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md. First verify whether current Argus still has core/usage.py _event_history_paths sorted(older, reverse=True); if so, map the minimal .2/.3/.1/live and cross-rollover mission-attribution regressions and keep candidate016 ahead of the larger lock refactor. Then specify migration marker v3 as a replayable pre-scan binary/fstat source snapshot: v2 forces one idempotent rescan, source/canonical open uncertainty must not advance the marker, and marker records only the boundary actually consumed. Then finalize shared core/event_store.py authority, candidate013 durability mapping, and candidate009/011/007/010 byte-stable reader + strict events.lock -> mission-view.lock + PlannerVerdict FOUND/ABSENT/UNKNOWN. Keep candidate008 durability and candidate005 provenance separate.",
+  "exact_continuation": "Fresh-bootstrap first. If the Phase-1 overlay remains active, do not resume the preserved Argus base continuation. Convert RUN_20260828_2109_PHASE1_CHAT_CAPABILITY_PATTERNS.md into a crash/retry transaction protocol with per-mutation precondition -> effect -> exact readback -> ambiguous-response recovery rows. Audit deterministic claim release and stale-claim recovery plus PR-create ambiguity against official GitHub APIs. Recheck whether the connected GitHub surface exposes a direct fresh workflow-dispatch action; if absent, keep Actions/Argo/Temporal as background-controller boundaries. Add a commit-status/PR-head evidence binding recipe using get_commit_combined_status, PR head SHA, review commit_id, and merge expected_head_sha. Preserve the Argus continuation only as restoration metadata until Phase 1 ends or control explicitly restores it.",
   "run_findings": {
-    "candidate_016_usage_generation_order": "core/usage.py _event_history_paths currently sorts retained N>=2 generations with reverse=True, yielding .3,.2,.1,live where the canonical event-log contract and tests define .2,.3,.1,live. This order feeds ensure_project_events_standardized, _legacy_event_records, and _legacy_call_threads. _legacy_event_records is stateful across mission starts/completions and call starts, so a rollover split can misattribute call usage to the wrong mission. Minimal correction is sorted(older) plus direct order, migration-order, and cross-rollover mission-attribution regressions.",
-    "candidate_015_migration_marker": "events.migration-v2.json is existence-only and stores no consumed source signature. AgentCliBackend still has a no-usage-context/no-env fallback to <working_dir>/.argus/events.jsonl, so mixed direct/managed usage can grow legacy history after marker creation. Independently, migration silently continues on legacy source open OSError and still writes the marker, permanently hiding that generation. Replace with v3 replay semantics keyed to a pre-scan opened-handle/fstat boundary; v2 is untrusted and forces one idempotent rescan; unreadable source/canonical generations do not advance the marker; canonical identity scan+append occurs under shared event authority.",
-    "candidate_015_prescan_rule": "Never certify a post-scan stat as consumed: an append can land after EOF was observed but before that stat. Marker v3 must record the pre-scan byte boundary actually scanned, read only complete newline-terminated physical rows within that bound, and allow a later changed snapshot to replay safely.",
-    "candidate_014_writer_inventory": "Targeted classification still finds three production canonical events.jsonl append mechanisms: JsonlEventSink._append; AgentIOLogger.log->_jsonl_append; ensure_project_events_standardized. They do not yet share one cross-platform authority.",
-    "candidate_014_core_api": "Use a core event-store primitive: EventLogAuthorityError(OSError); event_log_authority(log_path) with a 0600 sidecar/real file object/Portalocker low-level exclusive nonblocking primitive, retry only AlreadyLocked, permanent failure as domain OSError, best-effort post-commit cleanup; plus isolate_unterminated_tail_unlocked(log_path).",
-    "candidate_013_regression_map": "Current head still omits ROUND_REVIEW_STARTED from SIGNAL_EVENT_TYPES. Add it to default signal; remove ordinary ENGINEER_PROGRESS from durable Mission View projection unless deliberately made fully durable; test default reviewer-start persistence and durable-projection/signal invariant.",
-    "candidate_012_dependency_floor": "Current Argus head still declares portalocker>=3. Prior public-source analysis selected >=4.2 as the first defensible floor for the inspected Windows raw-fd locking surface.",
-    "candidate_011_ordering_revised": "All canonical writers need shared pre-record delimiter isolation before rotation/append. Never truncate damaged bytes; stable reading should be physical-row bytes.",
-    "candidate_010_supervisor_contract": "Planner verdict persistence evidence: FOUND suppresses re-emit; ABSENT alone authorizes one re-emit after a complete stable clean scan; UNKNOWN keeps outbox pending and returns PLAN_RETRY without Planner invocation.",
-    "candidate_007_windows_bootstrap_race": "Mission View reconciliation still needs strict events.lock -> mission-view.lock and an internal projection path that does not recursively reacquire event authority.",
-    "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
-    "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "This invocation froze semantic work on note SHA 6c593ed993f9d143bde084d7cc5841ed7c611c1c control15/config6. Later note head 235054a0948c38dec665c06f0955b15bf5ef6fa0 was observed only for authorized role-local write coordination; newer control semantics were not adopted.",
-    "connector_mutation_boundary": "Only role-local checkpoint/LATEST and immutable open_source receipt writes are authorized. No branch/ref/source/control/other-worker/downstream/legacy/shared-ledger mutation was performed."
+    "phase1_direct_chat_transaction": "The inspected GitHub surface supports a repository-only durable sequence: SHA-only freshness read; deterministic create-only file/ref claim; immutable checkpoint create plus exact commit-SHA readback; mutable pointer update with current blob-SHA precondition; deterministic branch/head PR preparation with search-before-retry; review pinned to commit_id; final merge pinned by expected_head_sha. Every ambiguous mutation requires read-before-retry.",
+    "contents_cas_boundary": "GitHub Contents update uses the current file blob SHA and can return 409; this is per-path CAS, not a multi-file or branch-head transaction. GitHub documents serializing content update/delete requests.",
+    "claim_boundary": "Create-only file paths or deterministic refs are stronger exclusive claims than additive labels/assignees, but neither has automatic TTL/stale recovery. Stale ownership must be proven from claim metadata before reclaim.",
+    "ref_update_boundary": "update_ref(force=false) provides fast-forward overwrite protection but is not strict expected-old-SHA CAS.",
+    "pr_merge_boundary": "GitHub sync merge accepts a PR-head SHA precondition and returns 409 on mismatch; connected merge_pull_request exposes expected_head_sha, making it the strongest inspected direct exclusive handoff primitive.",
+    "background_boundary": "GitHub public REST supports workflow_dispatch, but connected tool discovery in this invocation exposed workflow readback and rerun actions, not a fresh dispatch action. Actions concurrency/artifacts therefore require an existing background runner execution. Argo requires Kubernetes plus a resident Workflow Controller; Temporal durable replay requires Temporal Service plus Worker processes. Configuration alone is not execution.",
+    "temporal_retry_counterexample": "Temporal documents that an Activity may execute or partially complete more than once even when completion is observed exactly once; write Activities should be idempotent and external effects can use idempotency keys. This is a public counterexample to treating retry-safe orchestration as executed-once side effects.",
+    "control_freeze": "Semantic tuple froze on note SHA 8e8e6ad17ad2dbee406a9957c2fbf2f34ba2ca03, control16/config6. A later SHA-only head check observed 36c0a8ba27be779938e8a1dd9d78bd96c10d4f41; semantic work stopped and newer control semantics were not read/adopted. Later head use was write coordination only.",
+    "connector_mutation_boundary": "Capability discovery remained read-only. Mutations were confined to the authorized open_source role-local checkpoint/LATEST and immutable receipt persistence; no source/control/other-worker/downstream/shared-ledger mutation was performed."
   },
   "independence": {
     "clean_exploration": true,
     "read_other_worker_state": false,
-    "read_o_or_o_derived": false,
+    "read_o_or_o_derived_semantics": false,
     "read_downstream_semantics": false,
     "read_legacy_pre_independence": false,
     "read_shared_aggregate_ledger": false
