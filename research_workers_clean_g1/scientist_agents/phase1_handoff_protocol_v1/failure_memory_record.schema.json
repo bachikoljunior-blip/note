@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scientist-agents:failure-memory-record:v1",
+  "title": "Bounded failure-memory handoff record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "source_branch_digests",
+    "transfer_class",
+    "source_scope",
+    "target_scope",
+    "target_context_signature",
+    "ruled_out_route",
+    "recommended_alternative",
+    "risk_if_misapplied",
+    "receiver_decision",
+    "use_mode",
+    "revalidation",
+    "curator_record_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "record_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "source_branch_digests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    },
+    "transfer_class": {"enum": ["same_domain", "cross_domain", "domain_general"]},
+    "source_scope": {"$ref": "#/$defs/scope"},
+    "target_scope": {"$ref": "#/$defs/scope"},
+    "target_context_signature": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "ruled_out_route": {"type": "string", "minLength": 1, "maxLength": 300},
+    "recommended_alternative": {"type": "string", "minLength": 1, "maxLength": 300},
+    "risk_if_misapplied": {"type": "string", "minLength": 1, "maxLength": 300},
+    "receiver_decision": {"enum": ["adopt", "reject", "hold"]},
+    "use_mode": {"enum": ["advisory", "constraint"]},
+    "revalidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "status", "checks"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "status": {"enum": ["pass", "fail", "not_run"]},
+        "checks": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "result", "evidence"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1, "maxLength": 120},
+              "result": {"enum": ["pass", "fail", "missing"]},
+              "evidence": {"$ref": "#/$defs/evidence_ref"}
+            }
+          }
+        }
+      }
+    },
+    "curator_record_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "mechanism", "assumptions", "tested_scope"],
+      "properties": {
+        "domain": {"type": "string", "minLength": 1, "maxLength": 120},
+        "mechanism": {"type": "string", "minLength": 1, "maxLength": 180},
+        "assumptions": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 180}
+        },
+        "tested_scope": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "evidence_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "digest", "kind"],
+      "properties": {
+        "uri": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "kind": {"enum": ["artifact", "measurement", "analysis", "receipt", "external_state"]}
+      }
+    }
+  }
+}
