@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "control_revision": 13,
+  "control_revision": 14,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1308_EVENT_LOCK_MIN_VERSION_COMMIT_BOUNDARY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1509_PORTALOCKER_FLOOR_TAIL_ORDER.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -18,28 +18,26 @@
     {
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
-      "minimum_version_source_checked": "v3.0.0",
-      "latest_release_checked": "v4.3.0",
-      "source_scope": "cross-version Windows backend/API contract, low-level exclusive lock semantics, lower-bound real-file-handle requirement, and current portability documentation"
+      "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.3.0"],
+      "source_scope": "Windows raw-fd support boundary, exclusive-lock backend evolution, exception classification, and current migration contract"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "First implement/source-map one event-specific authority wrapper that preserves the current 0600 events.lock creation mode via os.open plus a real file object, retries only AlreadyLocked, propagates permanent acquire errors, and keeps a successful canonical append successful across unlock failure. Add a spawned-process portable test and explicit Windows portalocker==3.0.0 coverage. Under the same authority add candidate011 bytewise isolation for an unterminated current JSONL tail. Next cross-platformize Mission View authority and enforce events.lock -> mission-view.lock for cold bootstrap/projection without nested event-lock acquisition; add the deterministic stale-bootstrap overwrite regression. Then finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN and move iter_call_events/Mission View reconciliation to the stable-generation primitive. Continue candidate008 durability and candidate005 transition_id provenance separately.",
+  "exact_continuation": "First finish the Portalocker floor decision by checking remaining direct Argus Portalocker call sites for any 3.0/3.1-specific behavior or shared-lock requirement; if none, use >=3.2 as the candidate source-verified raw-fd-compatible floor and add one explicit Windows portalocker==3.2.0 CI cell. Then source-map the event-specific authority wrapper preserving 0600 raw-fd semantics, retrying only AlreadyLocked and treating post-commit unlock as cleanup. Under the same authority add candidate011 bytewise unterminated-tail isolation before _maybe_roll(), not after. Next enforce events.lock -> mission-view.lock for cross-platform cold bootstrap/projection without nested event-lock acquisition, then finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN and stable-generation readers. Keep candidate008 durability and candidate005 transition_id provenance separate.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_009_mode_preservation": "A plain Path.open('a+b') would weaken the current explicit 0600 creation semantics for events.lock. Preserve mode with os.open(O_CREAT|O_RDWR|O_BINARY-if-present, 0600), then wrap that fd as a real file object for Portalocker 3.0.0 compatibility.",
-    "candidate_009_version_span": "Argus declares portalocker>=3. Portalocker 3.0.0 Windows uses pywin32/LockFileEx and requires a real IO object; Portalocker 4.0+ switched default exclusive Windows locking to msvcrt without pywin32. Current-resolver Windows CI therefore does not prove lower-bound compatibility.",
-    "candidate_009_ci_requirement": "Add explicit Windows portalocker==3.0.0 coverage in addition to the existing macOS/Windows portable matrix, which installs -e '.[qr]' and resolves a current dependency.",
-    "candidate_007_windows_bootstrap_race": "Mission View _locked is fcntl-only cross-process; on Windows it is process-local. After event writer locking is fixed, a concurrent cold snapshot can still overwrite a newer projected event with an older bootstrapped=true view. Bootstrap/reconciliation must share event authority and use events.lock -> mission-view.lock ordering.",
-    "candidate_007_no_nested_event_lock": "Do not make update_mission_view_event blindly reacquire events.lock when JsonlEventSink already holds it. Separate-open flock calls can conflict even within one POSIX process; writer projection should use an internal authority-held path.",
-    "candidate_011_partial_tail": "Current canonical append does not isolate an unterminated prior JSONL tail. A crash-truncated partial record can concatenate with the next complete JSON object and make the new event unreadable too. Under event authority, after rotation, append one delimiter newline when a nonempty current file does not end in newline; preserve partial bytes for forensics rather than truncating them.",
-    "candidate_011_scope": "Source-shaped deterministic simulation reproduced concatenated invalid JSON; no production crash/power-loss incident is claimed. This is process-crash record-boundary containment, separate from candidate008 durability.",
+    "candidate_012_dependency_floor": "Argus declares portalocker>=3 but current production lock paths such as core/knob_store.py and core/cost_control.py pass raw integer fds to portalocker.lock/unlock. Portalocker v3.0.0 and v3.1.1 Windows immediately call tell/seek/fileno on the supplied object and are incompatible with raw ints; v3.2.0 explicitly handles int descriptors. The previous event-only portalocker==3.0.0 compatibility plan is therefore misleading unless all existing raw-fd callers are also rewritten.",
+    "candidate_012_minimal_fix": "Prefer correcting the declared floor to the source-verified raw-fd-compatible >=3.2 and testing portalocker==3.2.0 on Windows, unless there is an explicit product requirement to preserve 3.0/3.1. Argus already requires Python>=3.11, so this floor change adds no Python-version constraint.",
+    "candidate_009_mode_preservation_revised": "With a >=3.2 floor, the event authority can retain os.open(...,0600) plus raw-fd Portalocker locking; os.fdopen is no longer needed solely for v3.0 compatibility. Still retry only AlreadyLocked, propagate permanent acquire errors, and keep a committed append successful across unlock cleanup failure.",
+    "candidate_009_lower_bound_concurrency_scope": "Portalocker 3.0/3.1 Win32 code reuses a cached OVERLAPPED while current code creates a fresh OVERLAPPED per call and documents that concurrent sharing is invalid. Argus constructs many independent sinks, including a fresh Manager-front-door sink per emission. No Windows crash was reproduced, so this remains a source-level lower-bound concurrency hazard rather than an incident claim.",
+    "candidate_011_ordering_revised": "Delimiter isolation must happen before _maybe_roll(). Otherwise an otherwise-valid JSON tail missing only its newline can be moved permanently to events.jsonl.1 unterminated, while iter_call_events explicitly skips rows not ending in newline. Under event authority: inspect final byte bytewise, append one newline if needed, then maybe_roll, then append the new row.",
+    "candidate_011_local_model": "At the roll threshold, current ordering moved a complete old JSON object into .1 without newline; pre-rotation isolation moved the same object into .1 newline-terminated while both wrote the new row to fresh current. This was a local source-shaped model, not production/power-loss reproduction.",
+    "candidate_007_windows_bootstrap_race": "Mission View _locked remains fcntl-only cross-process; on Windows a stale cold bootstrap can overwrite a newer projected event. Reconciliation must share event authority with lock order events.lock -> mission-view.lock and avoid nested event-lock acquisition from writer projection.",
     "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation.",
-    "candidate_010_id_scope": "Planner outbox preserves caller-provided delivery_id, so evidence matching must stay exact-string/UTF-8 based unless a separate production invariant proves SHA-only IDs.",
-    "candidate_008_status": "unchanged separate power-loss durability hypothesis; canonical event append lacks explicit fsync ordering and Mission View lacks parent-directory fsync; no incident reproduced",
+    "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA ced3c20fcf614bae9e36535a40560a55d496222b control13/config6; later note head afc22197727fa16561a61bed4655f77933fdc7f7 was observed only for write coordination and not adopted",
-    "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation enforced root13 plus role config6 local read-only discovery/write boundary and mutated only authorized open_source state/receipt destinations."
+    "control_freeze": "semantic work froze on note SHA a407c86e0039226a0eef0082fec10c3603befa9f control14/config6; later note head a27006202dec52ff469f034ff47af7492c63ce29 was observed only for write coordination and not adopted semantically",
+    "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation enforced root14 plus role config6 local discovery/write guard and mutated only authorized open_source state/receipt destinations."
   },
   "independence": {
     "clean_exploration": true,
