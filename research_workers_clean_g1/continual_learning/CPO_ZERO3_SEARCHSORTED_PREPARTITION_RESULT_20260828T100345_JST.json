@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-28T10:03:45+09:00",
+  "role": "continual_learning",
+  "frozen_note_main_sha": "1b20c07eeaf56639afe0d05240cf0724e0b0572b",
+  "frozen_control_revision": 12,
+  "frozen_config_revision": 5,
+  "public_cpo_anchor": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+  "source_basis": {
+    "trainer": "src/trainer/grpo_trainer_cl.py@2715d5f79fd45fcbc0f7e4155d82f2042042a358 uses mask.view(-1).nonzero(as_tuple=True)[0] for flat indices and later boolean partition filtering",
+    "mask_builder": "src/compute_importance_mask.py@5f17be7ad91bdc162a0d1e466198c1bdb2ded921 stores reference weights by boolean mask indexing over the same flattened mask",
+    "pytorch_2_8_docs": "torch.nonzero returns lexicographically sorted indices; for the flattened 1-D mask this means ascending flat indices. torch.searchsorted supports lower-bound slicing of a sorted 1-D sequence."
+  },
+  "test": {
+    "torch_version": "2.10.0+cpu",
+    "seed": 827,
+    "trials": 5000,
+    "rank_cases": 82760,
+    "boolean_filter_vs_searchsorted_slice_failures": 0,
+    "coverage": "random N=1..50000, world_size=1..32, support up to 50%, including non-divisible partitions and boundary hits"
+  },
+  "result": {
+    "statement": "Because CPO's flat protected indices are sorted and refs are aligned in the same flat-mask order, one-time ZeRO rank localization can use two CPU searchsorted bounds and a contiguous slice instead of materializing an O(s) in_partition boolean vector. The slice must be cloned before releasing the global idx/ref tensors; an ordinary slice shares storage and would otherwise pin the full global allocation.",
+    "safe_algorithm": [
+      "global_n_masked = flat_idx.numel()",
+      "partition_size = ceil(ds_numel / world_size)",
+      "ds_start = rank * partition_size; ds_end = min(ds_start + partition_size, ds_numel)",
+      "lo = searchsorted(flat_idx, ds_start, right=False); hi = searchsorted(flat_idx, ds_end, right=False)",
+      "rank_global_idx = flat_idx[lo:hi].clone(); rank_ref = ref[lo:hi].clone()",
+      "optionally derive rank_local_idx = rank_global_idx - ds_start",
+      "release dense mask, global flat_idx and global ref only after shape/order/count checks pass",
+      "retain global_n_masked as the regularizer denominator; do not substitute hi-lo"
+    ],
+    "view_lifetime_check": "In the executed runtime, a plain tensor slice shares the original storage pointer while clone() does not; cloning is therefore required for actual steady-state memory release."
+  },
+  "scope": "Algorithmic/source-equivalent result. PyTorch 2.8 documentation supports sorted nonzero/searchsorted semantics, but the code has not yet been run under the public PyTorch 2.8 + DeepSpeed 0.16.4 runtime.",
+  "next_actions": [
+    "Integrate searchsorted+clone rank localization into the source-equivalent load prototype with canonical trainer namespace and global denominator checks.",
+    "Fail closed if ds_numel/world_size/rank or canonical parameter identity differs from the tuple used to build the rank-local state.",
+    "Measure actual per-parameter support imbalance before choosing sparse index width and before treating s/W as a capacity estimate."
+  ]
+}
