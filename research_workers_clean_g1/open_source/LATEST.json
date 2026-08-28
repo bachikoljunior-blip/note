@@ -4,40 +4,38 @@
   "control_revision": 14,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1509_PORTALOCKER_FLOOR_TAIL_ORDER.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1512_PORTALOCKER_FLOOR_SCOPE.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1509_PORTALOCKER_FLOOR_TAIL_ORDER.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
       "commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
       "verified_current_main": true,
-      "predecessor_observed": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
       "ahead_by_observed": 0
     },
     {
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
       "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.3.0"],
-      "source_scope": "Windows raw-fd support boundary, exclusive-lock backend evolution, exception classification, and current migration contract"
+      "source_scope": "Windows raw-fd support and position semantics, exclusive-lock backend evolution, lower-bound selection"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "First finish the Portalocker floor decision by checking remaining direct Argus Portalocker call sites for any 3.0/3.1-specific behavior or shared-lock requirement; if none, use >=3.2 as the candidate source-verified raw-fd-compatible floor and add one explicit Windows portalocker==3.2.0 CI cell. Then source-map the event-specific authority wrapper preserving 0600 raw-fd semantics, retrying only AlreadyLocked and treating post-commit unlock as cleanup. Under the same authority add candidate011 bytewise unterminated-tail isolation before _maybe_roll(), not after. Next enforce events.lock -> mission-view.lock for cross-platform cold bootstrap/projection without nested event-lock acquisition, then finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN and stable-generation readers. Keep candidate008 durability and candidate005 transition_id provenance separate.",
+  "exact_continuation": "Decide the Portalocker floor with an actual Windows lower-bound regression rather than API shape alone: pin 3.2.0 and run workspace_lease acquire->owner-write->release->reacquire plus cross-process exclusion and the new event authority. If clean, >=3.2 is defensible; if not, choose >=4.0, whose raw-fd byte-zero normalization is explicit. Then finish event authority preserving 0600 semantics plus candidate011 bytewise delimiter isolation before _maybe_roll(). Next enforce events.lock -> mission-view.lock for cross-platform reconciliation, then PlannerVerdict FOUND/ABSENT/UNKNOWN stable-snapshot semantics and stable-generation readers. Keep candidate008 durability and candidate005 transition_id provenance separate.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_012_dependency_floor": "Argus declares portalocker>=3 but current production lock paths such as core/knob_store.py and core/cost_control.py pass raw integer fds to portalocker.lock/unlock. Portalocker v3.0.0 and v3.1.1 Windows immediately call tell/seek/fileno on the supplied object and are incompatible with raw ints; v3.2.0 explicitly handles int descriptors. The previous event-only portalocker==3.0.0 compatibility plan is therefore misleading unless all existing raw-fd callers are also rewritten.",
-    "candidate_012_minimal_fix": "Prefer correcting the declared floor to the source-verified raw-fd-compatible >=3.2 and testing portalocker==3.2.0 on Windows, unless there is an explicit product requirement to preserve 3.0/3.1. Argus already requires Python>=3.11, so this floor change adds no Python-version constraint.",
-    "candidate_009_mode_preservation_revised": "With a >=3.2 floor, the event authority can retain os.open(...,0600) plus raw-fd Portalocker locking; os.fdopen is no longer needed solely for v3.0 compatibility. Still retry only AlreadyLocked, propagate permanent acquire errors, and keep a committed append successful across unlock cleanup failure.",
-    "candidate_009_lower_bound_concurrency_scope": "Portalocker 3.0/3.1 Win32 code reuses a cached OVERLAPPED while current code creates a fresh OVERLAPPED per call and documents that concurrent sharing is invalid. Argus constructs many independent sinks, including a fresh Manager-front-door sink per emission. No Windows crash was reproduced, so this remains a source-level lower-bound concurrency hazard rather than an incident claim.",
-    "candidate_011_ordering_revised": "Delimiter isolation must happen before _maybe_roll(). Otherwise an otherwise-valid JSON tail missing only its newline can be moved permanently to events.jsonl.1 unterminated, while iter_call_events explicitly skips rows not ending in newline. Under event authority: inspect final byte bytewise, append one newline if needed, then maybe_roll, then append the new row.",
-    "candidate_011_local_model": "At the roll threshold, current ordering moved a complete old JSON object into .1 without newline; pre-rotation isolation moved the same object into .1 newline-terminated while both wrote the new row to fresh current. This was a local source-shaped model, not production/power-loss reproduction.",
-    "candidate_007_windows_bootstrap_race": "Mission View _locked remains fcntl-only cross-process; on Windows a stale cold bootstrap can overwrite a newer projected event. Reconciliation must share event authority with lock order events.lock -> mission-view.lock and avoid nested event-lock acquisition from writer projection.",
+    "candidate_012_dependency_floor": "Argus declares portalocker>=3. Portalocker v3.0/v3.1 Windows are source-incompatible with existing Argus raw-int fd lock calls; v3.2 adds raw-int API support. Repository code search found no Portalocker shared-lock use and current direct sites use exclusive locking.",
+    "candidate_012_floor_scope_revised": "Treat >=3.2 as the checked raw-fd API floor, not yet a proven semantic floor. workspace_lease acquires via raw fd, writes owner JSON through the same fd, then unlocks it at a nonzero file position. Portalocker 3.2 does not normalize raw-fd position for its msvcrt operation; Portalocker 4.0+ does. A real Windows 3.2.0 regression must decide >=3.2 versus >=4.0.",
+    "candidate_012_ci_gap": "Current macOS/Windows portable workflow installs the current resolver and does not include tests/core/test_workspace_lease.py. A lower-bound Windows cell should explicitly include workspace_lease plus event-authority regressions.",
+    "candidate_009_mode_preservation": "After floor selection, event authority should preserve current os.open(...,0600) lock creation, retry only AlreadyLocked, propagate permanent acquire failures, and treat unlock after a committed canonical append as cleanup rather than a reason to duplicate the event.",
+    "candidate_011_ordering_revised": "Bytewise boundary isolation belongs before _maybe_roll(); otherwise a valid JSON tail missing only newline can be moved into .1 unterminated and iter_call_events will skip it. Pre-rotation repair is idempotent and preserves malformed bytes without truncation.",
+    "candidate_007_windows_bootstrap_race": "Mission View _locked remains fcntl-only cross-process; Windows reconciliation must share event authority with lock order events.lock -> mission-view.lock and avoid nested event-lock acquisition from writer projection.",
     "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation.",
     "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA a407c86e0039226a0eef0082fec10c3603befa9f control14/config6; later note head a27006202dec52ff469f034ff47af7492c63ce29 was observed only for write coordination and not adopted semantically",
-    "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation enforced root14 plus role config6 local discovery/write guard and mutated only authorized open_source state/receipt destinations."
+    "control_freeze": "semantic work froze on note SHA a407c86e0039226a0eef0082fec10c3603befa9f control14/config6; later note heads were used only for write coordination and not adopted semantically",
+    "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation used discovery read-only and mutated only authorized open_source state/receipt destinations."
   },
   "independence": {
     "clean_exploration": true,
