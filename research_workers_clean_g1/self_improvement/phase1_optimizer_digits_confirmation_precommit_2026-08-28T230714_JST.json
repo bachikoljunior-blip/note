@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "purpose": "Independent evaluation-only confirmation precommit for the exact Digits conditional-reforecast policy after sequence 104 exposed a promising but not pristine held-out signal.",
+  "fixed_from_sequence_104": {
+    "dataset": "sklearn.datasets.load_digits",
+    "library_version": "1.8.0",
+    "metric": "3-fold stratified CV balanced_accuracy",
+    "success_threshold": 0.97,
+    "direct_family": {"RandomForestClassifier":[[10,null],[20,null],[40,null],[80,null],[40,8]],"random_state":0,"n_jobs":1},
+    "transversal_family": {"StandardScaler+SVC":[[0.1,"scale"],[1.0,"scale"],[10.0,"scale"],[100.0,"scale"],[10.0,0.001]]},
+    "cv_n_jobs": 1,
+    "deadline_seconds": 2.31361566624998,
+    "fixed_cap_seconds": 1.15680783312499,
+    "static_percentile_switch_seconds": 2.31361566624998,
+    "lambda_cost": 0.2,
+    "hysteresis": 0.02,
+    "deadline_success_floor": 0.35,
+    "two_consecutive_advantage_required": true,
+    "conditional_estimator": {
+      "checkpoint": "after each completed failed direct configuration",
+      "direct_conditioning": "calibration episodes still unsuccessful after the same direct-config index k",
+      "direct_success_before_deadline": "among same-index calibration survivors, fraction with a later direct success whose calibration remaining time from checkpoint k is <= the current evaluation remaining budget",
+      "direct_remaining_cost": "mean over survivors of min(later direct time-to-success-or-exhaustion minus cumulative time at k, evaluation remaining budget), clipped at zero",
+      "alternative_success": "fraction of calibration transversal traces whose time-to-success-or-exhaustion is successful and <= evaluation remaining budget",
+      "alternative_cost": "mean min(transversal time-to-success-or-exhaustion, evaluation remaining budget)",
+      "utility": "P(success in remaining budget) - lambda_cost * E(capped remaining cost)/remaining_budget",
+      "raw_advantage": "alternative_utility > direct_utility + hysteresis OR (direct_success_probability < deadline_success_floor AND alternative_success_probability >= deadline_success_floor)",
+      "switch": "two consecutive raw-advantage checkpoints; no mid-config interruption; if remaining budget <=0 no switch"
+    },
+    "semantic_policy_spec_sha256": "55347067a6ada5d2ab7d36e1cbd74ca2ecf9266b48dfd93b6650876f264d12a2"
+  },
+  "confirmation_evaluation_seeds": [7000,7001,7002,7003,7004,7005,7006,7007,7008,7009,7010,7011,7012,7013,7014,7015,7016,7017],
+  "calibration_reuse": "Reuse only the frozen 5000-5011 calibration traces/derived estimator from sequence 104; do not recompute thresholds or alter policy from confirmation outcomes.",
+  "candidate_rule": "Useful on this exact workload only if success improves with <=10% mean-time worsening OR mean time improves >=10% with success loss <=0.02; otherwise mixed/null.",
+  "scope_limit": "One public bundled dataset, two fixed model families, one host/runtime. Confirmation is evaluation-only and must not be used to retune itself."
+}
