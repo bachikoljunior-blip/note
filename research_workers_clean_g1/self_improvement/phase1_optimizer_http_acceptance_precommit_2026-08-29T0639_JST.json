@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-29T06:39:30.177483+09:00",
+  "role": "self_improvement",
+  "generation": "clean_g1",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "study_id": "OPT-HTTP-ACCEPT-v1",
+  "predecessor_sequence": 108,
+  "frozen_authority": {
+    "desired_state_control_revision": 22,
+    "desired_state_blob": "e4f6d24c137284d002941ac04254e3dbeca2cfcb",
+    "role_control_revision": 14,
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f"
+  },
+  "predecessor_latest_blob": "caeb10128524fcbd13f5366ba14bdfefce7e16c7",
+  "harness": {
+    "path": "research_workers_clean_g1/self_improvement/phase1_optimizer_http_acceptance_harness_v1_2026-08-29T0638_JST.py",
+    "git_blob": "77c86cc1b8959a6c70e7a64f9831ba0e9e59224a"
+  },
+  "public_existing_mechanisms": [
+    {
+      "source": "IETF draft-ietf-httpapi-idempotency-key-header-07",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-idempotency-key-header-07",
+      "mechanical_fact": "Idempotency-Key is intended to make non-idempotent methods fault-tolerant; a key must be unique and not reused for a different payload."
+    },
+    {
+      "source": "Stripe API idempotency documentation",
+      "url": "https://docs.stripe.com/api-v2-overview",
+      "mechanical_fact": "Same idempotency key can replay a prior request result under documented scope, illustrating provider-side recovery semantics rather than blind client retry."
+    }
+  ],
+  "provider_modes": {
+    "reconcilable": "stable eval_id plus durable query-by-ID reconciliation; provider effects are unique by semantic eval identity in this local reference",
+    "neither": "no idempotent replay guarantee and no reconciliation API; unresolved durable intent must become UNKNOWN on restart without POST replay"
+  },
+  "precommitted_cases": [
+    "prewire crash after durable intent / reconcilable -> reconcile miss then exactly one execute/effect and COMPLETE",
+    "prewire crash after durable intent / neither -> BLOCKED_UNKNOWN with zero execute/effect",
+    "controller SIGKILL after provider durable effect commit but before response read / reconcilable -> reconcile existing effect, no second execute, COMPLETE",
+    "controller SIGKILL after provider durable effect commit but before response read / neither -> BLOCKED_UNKNOWN, no second execute",
+    "provider process crash after durable effect commit but before response send / reconcilable -> restart provider then reconcile effect, no second execute, COMPLETE",
+    "provider process crash after durable effect commit but before response send / neither -> BLOCKED_UNKNOWN, no second execute"
+  ],
+  "terminal_gate": "After terminal COMPLETE or BLOCKED_UNKNOWN, a second fresh controller resume must cause zero additional provider execute or reconcile calls.",
+  "all_pass_rule": "Every case must satisfy its exact effect/call/outcome/terminal gate; otherwise report FAIL without modifying the mechanism.",
+  "scope": "Loopback HTTP, separate provider/controller OS processes, SQLite FULL/WAL durability. Does not prove arbitrary remote provider semantics or network partitions outside tested boundaries.",
+  "ordered_protocol": [
+    "persist/readback harness",
+    "persist/readback this precommit",
+    "execute the exact harness once",
+    "persist/readback full report",
+    "checkpoint exact scope and preserve nonempty frontier"
+  ]
+}
