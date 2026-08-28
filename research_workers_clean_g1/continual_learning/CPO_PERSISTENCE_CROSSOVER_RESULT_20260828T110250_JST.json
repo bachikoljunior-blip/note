@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-08-28T02:02:50Z",
+  "runtime": {"python":"3.13.5","torch":"2.10.0+cpu","numpy":"2.3.2"},
+  "purpose": "Separate runtime-state optimization from persistence-format choice for CPO masks.",
+  "cost_model_bytes_per_original_scalar": {
+    "release_dense_bool_plus_fp32_ref": "1 + 4u",
+    "sparse_int64_plus_fp32_ref": "12u",
+    "sparse_int32_plus_fp32_ref": "8u",
+    "bitpacked_mask_plus_fp32_ref": "0.125 + 4u"
+  },
+  "analytic_crossovers": {
+    "int64_sparse_beats_release_dense_bool_if_u_lt": 0.125,
+    "int32_sparse_beats_release_dense_bool_if_u_lt": 0.25,
+    "int64_sparse_beats_bitpacked_if_u_lt": 0.015625,
+    "int32_sparse_beats_bitpacked_if_u_lt": 0.03125
+  },
+  "independent_10pct_union_examples": [
+    {"tasks":1,"u":0.10,"release":1.4,"int64_sparse":1.2,"int32_sparse":0.8,"bitpacked":0.525},
+    {"tasks":2,"u":0.19,"release":1.76,"int64_sparse":2.28,"int32_sparse":1.52,"bitpacked":0.885},
+    {"tasks":3,"u":0.271,"release":2.084,"int64_sparse":3.252,"int32_sparse":2.168,"bitpacked":1.209},
+    {"tasks":4,"u":0.3439,"release":2.3756,"int64_sparse":4.1268,"int32_sparse":2.7512,"bitpacked":1.5006}
+  ],
+  "torch_save_measurement": {
+    "N": 5000000,
+    "support_layout": "first k positions; serialization-size test only",
+    "rows": [
+      {"u":0.10,"k":500000,"release_dense_bool_fp32":7001925,"sparse_int64_fp32":6001925,"sparse_int32_fp32":4001925,"bitpacked_uint8_fp32":2626885},
+      {"u":0.19,"k":950000,"release_dense_bool_fp32":8801925,"sparse_int64_fp32":11401925,"sparse_int32_fp32":7601925,"bitpacked_uint8_fp32":4426885},
+      {"u":0.271,"k":1355000,"release_dense_bool_fp32":10421893,"sparse_int64_fp32":16261893,"sparse_int32_fp32":10841861,"bitpacked_uint8_fp32":6046853},
+      {"u":0.3439,"k":1719500,"release_dense_bool_fp32":11879877,"sparse_int64_fp32":20635845,"sparse_int32_fp32":13757829,"bitpacked_uint8_fp32":7504837}
+    ]
+  },
+  "interpretation": [
+    "Rank-local sparse idx/ref is still attractive for steady-state runtime because each rank keeps only its partition slice.",
+    "Global int64-sparse persistence is only smaller than the public dense-bool+fp32-ref format below 12.5% support; after union growth it can become substantially larger.",
+    "For tensors with numel < 2^31, int32 persistence moves the dense-bool crossover to 25%, but it still loses after enough union growth and must be widened or otherwise adapted before indexing if the execution path requires int64 indices.",
+    "Bit-packing the global mask while retaining fp32 references is smaller than both sparse formats at the tested 10%-34.39% supports; load-time conversion to sorted rank-local indices should therefore be evaluated as a hybrid persistence/runtime design.",
+    "These are storage-format results, not training-quality results and not real Qwen task_k.pt measurements."
+  ]
+}
