@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T13:44:33+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "a57c8467e7a6f707f0b499c31f2eed11af90cf87",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true
+  },
+  "source_identity": {
+    "active_wave_id": "clean-g1-wave-c29-20260828T120235JST-5128e23b",
+    "active_wave_blob": "713d213d7e1176497fe9bf55933f32d2b53144dc",
+    "selection_snapshot_note_main_sha": "446f2a10c7197cde199d10a4af8f7a0e657736e0",
+    "namespace": "open_source",
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_1106_EVENT_LOCK_PORTALOCKER_TRI_STATE.md",
+    "source_artifact_blob": "ae967ab26467f26c47f382e42c2c9b2af5047570",
+    "source_local_scope": "candidate 010 typed planner-verdict persistence evidence plus candidate 009 event-lock portability prerequisite",
+    "official_argus_revision": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+    "official_portalocker_revision": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+    "source_integrity_check": "The selected open_source path was fetched at the wave selection snapshot and returned blob ae967ab26467f26c47f382e42c2c9b2af5047570, matching ACTIVE_WAVE exactly."
+  },
+  "grade": {
+    "overall": "B+",
+    "official_argus_structural_support": "A",
+    "auditor_source_shaped_failure_reproduction": "A-",
+    "portalocker_compatibility_support": "A",
+    "typed_FOUND_ABSENT_UNKNOWN_patch": "C/not implemented",
+    "stable_generation_snapshot_patch": "C/not implemented",
+    "production_incident_frequency": "C/not established",
+    "independent_external_replication": "C/not found"
+  },
+  "published_or_official_implementation_claim": {
+    "current_behavior": "Argus planner_verdict_was_persisted scans events.jsonl* and returns a boolean. LifeSupervisor._retry_pending_planner_verdict uses False as permission to call _emit(event) again before acknowledging the outbox.",
+    "worker_proposal": "Replace the authoritative boolean with target-specific FOUND/ABSENT/UNKNOWN evidence. Only ABSENT after a complete stable scan may authorize re-emission; UNKNOWN keeps the durable outbox pending and does not emit another canonical verdict.",
+    "scope": "This is an implementation-safety proposal for the exact Argus planner-verdict outbox path, not a claim about all outbox/event-log systems."
+  },
+  "official_artifact_support": {
+    "argus_head_status": "Fresh SHA-only public ref check showed Argus main still exactly ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98 during this audit.",
+    "caller_count": "Exact GitHub code search at the audited revision found planner_verdict_was_persisted in only planner_verdict_outbox.py and supervisor/_core.py, supporting the worker's low-churn single-production-caller boundary.",
+    "planner_verdict_scan": {
+      "file": "argus_skill/life/planner_verdict_outbox.py",
+      "blob": "18786245d17002c5b6f4465dd96672848e923bc3",
+      "facts": [
+        "Opens retained event paths as UTF-8 text.",
+        "Skips JSONDecodeError candidate rows and continues.",
+        "Catches OSError around a path scan and continues.",
+        "Returns False after all paths even when a path was unreadable or a target-bearing malformed JSON row was skipped.",
+        "Does not catch UnicodeDecodeError."
+      ]
+    },
+    "supervisor_authority": {
+      "file": "argus_skill/life/supervisor/_core.py",
+      "blob": "fff427855f22451fcc35bb950a1c88982c68590c",
+      "fact": "The retry path assigns persisted = planner_verdict_was_persisted(...); if not persisted it calls _emit(event). This makes the boolean absence result operational re-emission authority."
+    },
+    "event_log_generation_behavior": {
+      "file": "argus_skill/life/event_log.py",
+      "blob": "8b387bf97eb861a69662d4979cce35e8e6e9a4c5",
+      "facts": [
+        "event_log_paths enumerates retained generation pathnames and iter_call_events opens those pathnames later.",
+        "Rotation renames .1 to the next numeric generation and live to .1 under the writer's events.lock.",
+        "The current writer uses POSIX fcntl.flock when fcntl is available; on Windows fcntl is None, so this event writer currently has no cross-process event lock."
+      ]
+    },
+    "existing_cross_platform_lock": {
+      "file": "argus_skill/core/file_lock.py",
+      "blob": "ef3df4148db586e2fa65c83e18b4511bd1120e08",
+      "facts": [
+        "Argus already implements exclusive_file_lock using portalocker.LOCK_EX|LOCK_NB with retry.",
+        "Default timeout is 30 seconds, after which it raises TimeoutError rather than waiting indefinitely."
+      ]
+    },
+    "declared_dependency": "Argus pyproject.toml declares portalocker>=3 with no win32/pywin32 extra.",
+    "ci_boundary": "The portable macOS/Windows matrix includes tests/core/test_file_lock.py but does not include an event-log portability module. The workflow explicitly notes cross-process locking as a portability boundary."
+  },
+  "portalocker_primary_support": {
+    "revision": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+    "platform_documentation_facts": [
+      "On POSIX, portalocker defaults to fcntl.flock, so it can interoperate with Argus's existing flock convention if every participant uses the same lock file/primitive.",
+      "On Windows, MsvcrtLocker is the default and exclusive locks work with bare portalocker, without pywin32.",
+      "Windows shared locking delegates to Win32Locker and requires the optional win32/pywin32 extra; Argus does not declare that extra.",
+      "A blocking msvcrt lock itself gives up after about ten seconds, while portalocker.Lock-style retry machinery can implement a longer timeout."
+    ],
+    "scope_correction": "The worker's proposed correctness-first Windows exclusive reader is supported by the dependency surface. A direct shared-lock port would silently add an undeclared pywin32 requirement."
+  },
+  "auditor_reproduction": {
+    "checker": "research_audits/reproducibility/checkers/argus_planner_verdict_persistence_tristate_counterexample_v1.py@4b07308d6d1e66295724cddb0d010e4161f899e0",
+    "method": "Independent source-shaped transcription of the public scan; Argus was not imported.",
+    "results": [
+      "A target-bearing row containing invalid UTF-8 raises UnicodeDecodeError out of the current scan rather than producing persistence evidence.",
+      "A malformed JSON row containing the exact delivery_id is skipped and the current scan returns False, although target absence is not proved.",
+      "A well-formed target row returns True as expected."
+    ],
+    "logical_extension_from_source": "Any OSError opening/reading a selected generation is also skipped and can still lead to False. Therefore current False conflates proved absence with at least some scan failures/unverifiable target-bearing content."
+  },
+  "existing_tests_and_missing_test_boundary": {
+    "official_regression_file": "tests/life/test_planner_verdict_outbox_regression.py",
+    "observed_scope": "Existing tests strongly exercise verdict replay, corrupt outbox retirement and stale semantic-state handling, but the inspected test surface does not establish the proposed target-specific FOUND/ABSENT/UNKNOWN semantics for corrupt retained event generations.",
+    "missing_high_value_regressions": [
+      "invalid UTF-8 retained generation -> UNKNOWN without Supervisor crash or re-emission",
+      "malformed target-bearing row -> UNKNOWN, never ABSENT",
+      "complete stable scan with no target -> ABSENT",
+      "rollover during target query -> no false ABSENT",
+      "real Windows two-process event-lock contention under the ordinary Argus dependency set"
+    ]
+  },
+  "scope_corrections": [
+    {
+      "id": "typed_state_is_proposal_not_existing_behavior",
+      "finding": "FOUND/ABSENT/UNKNOWN is not implemented at the audited Argus revision.",
+      "implication": "The worker identified a concrete repair contract, not an already reproduced fix. Do not claim the duplicate/retry hazard is resolved."
+    },
+    {
+      "id": "false_does_not_always_mean_duplicate_effect",
+      "finding": "The structural defect is that False can authorize re-emission without proof of absence. Whether that produces a durable duplicate depends on the event sink, exact corruption/rollover interleaving and downstream deduplication behavior.",
+      "implication": "No production duplicate rate or observed incident is established here."
+    },
+    {
+      "id": "portalocker_timeout_change_is_semantic",
+      "finding": "Argus's reusable exclusive_file_lock has a 30-second timeout, while the current POSIX event writer uses blocking flock with no equivalent bounded timeout.",
+      "implication": "Naively swapping the helper into canonical event authority would introduce a new failure mode under prolonged contention; an explicit event-specific wait contract must be tested."
+    },
+    {
+      "id": "stable_snapshot_required_separately",
+      "finding": "Typed UNKNOWN handles unreadable/corrupt evidence but does not by itself eliminate pathname-generation TOCTOU during rollover.",
+      "implication": "ABSENT remains safe only if the selected generation ranges are captured under a stable event-lock/snapshot boundary and all selected bytes are scanned successfully."
+    }
+  ],
+  "independent_replication": {
+    "external_status": "not found",
+    "auditor_status": "source-shaped failure reproduced independently",
+    "scope": "No third-party protocol-matched Argus fault-injection study or production incident report was established in this audit."
+  },
+  "missing_dependencies_or_config": {
+    "for_current_bug_reproduction": "No hidden dependency is needed; the failure follows from the public Python source and ordinary filesystem corruption cases.",
+    "for_proposed_fix": "A complete fix needs an explicit event-lock wait/timeout contract, stable-generation snapshot representation, typed evidence API, Supervisor branch semantics and portable Windows regression coverage."
+  },
+  "o_specific_adaptation": {
+    "status": "not tested",
+    "finding": "This is an Argus implementation boundary only. No O/O_FEED/O-state path was read or tested, and no inference about O retry semantics is made."
+  },
+  "bottom_line": "The worker's central diagnosis is reproducible and source-tight: current planner-verdict persistence is a two-valued query used as retry authority even though some read/corruption states do not prove absence. A target-specific tri-state evidence API is therefore a justified repair direction. The portalocker reuse proposal is also source-supported, but only with an explicit platform/wait contract: bare portalocker gives Windows exclusive locking without pywin32, whereas shared Windows locks require the undeclared win32 extra, and Argus's existing helper times out after 30 seconds. The repair itself and stable-snapshot integration remain unimplemented/unreproduced; no production duplicate incident is claimed.",
+  "reopen_conditions": [
+    "Argus implements typed persistence evidence or a stable event-generation snapshot and publishes regression tests.",
+    "The event writer/reader locking path changes materially on Windows/POSIX.",
+    "A production incident or third-party matched fault-injection reproduction appears.",
+    "portalocker dependency/extras or locking semantics change in a way that alters the proposed platform contract."
+  ],
+  "exact_next_action": "Do not repeat unchanged candidate 010/009. On the next valid invocation audit another exact ACTIVE_WAVE member; reopen this scope only on an implementation/test or external-reproduction trigger."
+}
