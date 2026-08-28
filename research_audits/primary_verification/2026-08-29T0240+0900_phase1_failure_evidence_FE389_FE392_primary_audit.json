@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "h2": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_config_revision": 6,
+    "enabled_desired": true,
+    "semantic_freeze_sha": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843"
+  },
+  "findings": [
+    {
+      "id": "FE-389",
+      "verdict": "SUPPORTED_PRIMARY_WITH_CHRONOLOGY_AND_CURRENT_VERSION_SCOPE",
+      "claim": "A task/node with multiple outstanding interrupts can be prematurely re-executed after only a partial resume unless the runtime tracks enough per-task interrupt/resume state to keep it suspended.",
+      "primary_evidence": [
+        "langchain-ai/langgraph issue #6208 is maintainer/collaborator-authored and describes the pre-fix limitation: a node with two interrupts could rerun after one resume because stored metadata did not track enough pending resume/interrupt information",
+        "langchain-ai/langgraph PR #6158 merged 2025-10-06, merge commit 6cc889981854b12acb1dad406adf5d517e8a22f2, implements selective interrupt task scheduling for sync and async loops",
+        "PR #6158 changed _loop.py to aggregate interrupt writes, count resumes per task, derive skipped_task_ids, and raise GraphInterrupt while incomplete resumes remain; main.py excludes skipped_task_ids from execution",
+        "PR #6158 adds sync and async tests named test_node_with_multiple_interrupts_requires_full_resume plus sequential-resume tests; the test contract states the node must not re-execute until valid resume values have been supplied for all interrupts"
+      ],
+      "scope_correction": "Issue #6208 is still open and its body describes the earlier limitation even though the later merged PR body says it solves #6208 and the merged patch contains the multi-interrupt implementation/tests. Treat the merged commit/tests as evidence that this specific implementation was added, not as proof that every current LangGraph release/runtime deployment retains identical semantics without a pinned release/current-code reproduction."
+    },
+    {
+      "id": "FE-392",
+      "verdict": "SUPPORTED_AS_REPORTER_LEVEL_STATE_INVARIANT_COUNTEREXAMPLE_ONLY",
+      "claim": "AutoGen GraphFlow can be reported as complete after interruption/resume while saved coordination state still has remaining work but no ready/enqueued successor.",
+      "primary_evidence": [
+        "microsoft/autogen issue #7043 is open, labeled needs-triage, and supplies a resume scenario where the workflow emits 'Digraph execution is complete' while the saved GraphManager state has remaining work, enqueued_any=false, and ready=[]",
+        "the issue reports Python 3.11 and Python dev/main branch rather than a pinned release/commit; it remains unassigned and open"
+      ],
+      "scope_correction": "This is a reporter-supplied reproduction/state snapshot, not a maintainer-confirmed root cause or merged-fix regression. It directly supports the invariant shape 'remaining work + empty ready/enqueued state is incompatible with authoritative completion' only within the reported GraphFlow scenario. It does not establish prevalence, current-release persistence, or the reporter's proposed atomic-transition root cause."
+    }
+  ],
+  "overall_verdict": "FE389_SUPPORTED_BY_MERGED_CODE_TESTS; FE392_REPORTER_LEVEL_ONLY",
+  "phase1_implication": "Partial-resume scheduling requires generation/task-local obligation accounting, and completion must not be inferred solely from an empty ready queue when durable remaining-work state contradicts it. These are mechanism-specific safety precedents, not a generic parity proof.",
+  "writes_guard": {
+    "desired_state_json": 0,
+    "exploration_workers": 0,
+    "exploration_feedback": 0,
+    "primary_o_state": 0,
+    "shared_execution_ledger": 0
+  },
+  "exact_next_verification": "Fresh bootstrap. Probe evaluation/LATEST once for the root20/config6 checker-v2 durable precommit and three controls. If absent, rotate to FE-383 (OpenAI Agents Python HITL resume unsent tool-output provenance) and independently verify issue #3004, merged PR #3006, and changed tests; prioritize whether the dedup bug is specifically server-managed conversation hydration and whether the fix distinguishes generated-local from server-acknowledged outputs.",
+  "termination": "second selected Phase-1 source-verification leaf completed under the same frozen tuple; recurring Phase-1 objective remains nonterminal"
+}
