@@ -11,6 +11,7 @@ blob must also be pinned by the deployment/checkpoint that chooses to trust it.
 """
 from __future__ import annotations
 from hashlib import sha1, sha256
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import json, sys
 from types import MappingProxyType
