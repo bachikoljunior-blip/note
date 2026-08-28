@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:18:06+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "exact_sibling_execution": {
+    "status": "all 17 siblings declared by process-stable context v2 were locally materialized and Git-blob verified before import",
+    "wrapper": "research_workers_clean_g1/evaluation/blob_pinned_process_runtime_context_v2_2026-08-28.py"
+  },
+  "v1_replay_authority_defect": {
+    "trigger": "complete one runtime-provenance contracted block with reservation_compliance_close_replay_runtime_provenance_2026-08-28.py, then attempt the next ADMIT using the v1 context's historical compliance replay authority",
+    "observed": "ComplianceCloseError: compliance CLOSE reporting binding mismatch",
+    "cause": "v1 ProcessStableRuntimeContext.admit_and_issue_capability passes historical_close as compliance_module even after histories can contain the newer runtime-provenance CLOSE format",
+    "corrected_authority": "closeprov",
+    "corrected_next_admit": "succeeded and issued capability for block b2"
+  },
+  "v2_two_epoch_lifecycle": {
+    "block_1": {"score": 0.25, "runtime_contract_enforced": true, "reporting_prefix": 1},
+    "fresh_context_attempt_identity_same_as_old": false,
+    "old_permit_in_fresh_context": "AttemptReservationError: launch permit is invalid for this process epoch",
+    "block_2": {"score": 0.5, "runtime_contract_enforced": true, "reporting_prefix": 2},
+    "scorer_calls_total": 2,
+    "final_reporting_rows": 2,
+    "final_tail_status": "clean_eof",
+    "final_closed_rows": [
+      {"block_id":"b1","planned_size":1,"completed_canonical":1,"missing_or_failed":0,"block_score":0.25,"exposure_weight":1.0},
+      {"block_id":"b2","planned_size":1,"completed_canonical":1,"missing_or_failed":0,"block_score":0.5,"exposure_weight":1.0}
+    ]
+  },
+  "durable_slot_before_commit_recovery": {
+    "score": 0.25,
+    "scorer_calls": 1,
+    "close_before_commit": "RecoveryCommitRequired: reconcile bound SLOT COMMITs before CLOSE: ('s1',)",
+    "fresh_epoch_old_permit": "AttemptReservationError: launch permit is invalid for this process epoch",
+    "fresh_epoch_recovery_disposition": "fail_closed_unresolved_no_relaunch",
+    "recovery_commit_without_rescore": true,
+    "final_audit_all_slots_compliant": true,
+    "final_block_score": 0.25,
+    "final_reporting_rows": 1
+  },
+  "two_slot_crash_after_score_before_slot": {
+    "precrash_scorer_calls": ["s1","s2"],
+    "postrestart_additional_scorer_calls": 0,
+    "s1": {"durable_slot": true, "recovered_commit_without_rescore": true, "scientific_status":"compliant", "scientific_score":0.2},
+    "s2": {"score_was_generated_precrash": true, "durable_slot": false, "recovery_commit":"ReservedPipelineError: expected exactly one durable SLOT event", "scientific_status":"reserved_missing_slot", "scientific_score":1.0},
+    "final_block_score": 0.6,
+    "completed_compliant": 1,
+    "fail_closed_slots": 1,
+    "final_reporting_rows": 1
+  },
+  "integrated_torn_frame_campaign": {
+    "frame_lengths": {"slot":934,"commit":358,"close":2546},
+    "all_proper_byte_cuts_checked": {"slot":933,"commit":357,"close":2545},
+    "valid_prefix_contract_violations": {"slot":0,"commit":0,"close":0},
+    "representative_repair_outcomes": {
+      "torn_slot": {"recovery_commit_rejected":true,"scientific_status":"reserved_missing_slot","block_score":1.0},
+      "torn_commit": {"repair_then_recovery_commit":true,"scientific_status":"compliant","block_score":0.2},
+      "torn_close": {"repair_then_reclose":true,"scientific_status":"compliant","block_score":0.2}
+    }
+  },
+  "interpretation": "The process-stable repair now passes the exact no-stub ADMIT->RESERVE->SCORE->bound SLOT->recovery COMMIT->runtime-provenance CLOSE/replay lifecycle when its ADMIT replay authority is upgraded to the provenance-aware close/replay module. The original v1 candidate had a second liveness defect: after the first provenance-aware CLOSE it attempted the next ADMIT through the historical replay layer and failed on the new reporting binding. V2 fixes that authority while preserving process-epoch permit invalidation. The integrated crash tests preserve the one-attempt rule: a score lost before durable SLOT is never relaunched and contributes fail-closed score=1, whereas a durable bound SLOT can recover COMMIT without re-running the scorer.",
+  "measurement_validity_rules": [
+    "Runtime replay authority is part of the versioned scientific contract. A wrapper that can write a newer CLOSE format must use a replay authority that can read that format before issuing later ADMITs.",
+    "A score result is scientific only after its bound SLOT frame is durable. Generating a stochastic result before crash is not evidence if the SLOT never became durable.",
+    "A durable bound SLOT missing only COMMIT may recover COMMIT from immutable main-journal evidence without scorer relaunch.",
+    "Fresh process epochs must invalidate old permit MACs while still permitting read-only recovery/reconciliation from durable reservations and slots.",
+    "Torn final frames must collapse to the previous valid checksummed prefix; recovery semantics are determined only from that prefix."
+  ],
+  "scope_limitations": [
+    "This is single-host cooperative POSIX execution with StableSidecarJournalIO; no multi-host/distributed fencing claim is made.",
+    "The lifecycle uses deterministic scalar scorers to validate evidence/control semantics, not production LLM inference latency or stochastic quality.",
+    "The proper-byte-cut campaign proves prefix framing behavior for the generated SLOT/COMMIT/CLOSE frames and representative repaired scientific outcomes; it does not model arbitrary corruption of already-durable earlier bytes or storage that violates fsync ordering."
+  ]
+}
