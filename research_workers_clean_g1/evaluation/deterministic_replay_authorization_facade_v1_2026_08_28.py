@@ -228,6 +228,30 @@ def _bound_request_binding(
     }
 
 
+def authorized_request_binding(
+    request_binding: Any,
+    contract: DeterminismReplayContract,
+    registry: TrustedCertificateRegistry,
+    current: RuntimeDeterminismSnapshot,
+    *,
+    triggered_invalidation_conditions: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Return the exact request binding required for reservation, score and SLOT.
+
+    Deterministic replay changes the historical request_binding_digest and
+    attempt_id by design. The same returned binding must therefore be supplied
+    to the score-launch and bound-SLOT pipeline. Supplying the original
+    request_binding later fails closed because the permit binding will differ.
+    """
+    validate_contract_for_runtime(
+        contract,
+        registry,
+        current,
+        triggered_invalidation_conditions=triggered_invalidation_conditions,
+    )
+    return _bound_request_binding(request_binding, contract, registry)
+
+
 def verify_attempt_module_identity(attempt_module: Any) -> None:
     path = getattr(attempt_module, "__file__", None)
     if not path:
@@ -291,13 +315,13 @@ def prepare_reservation(
             "DETERMINISTIC_REPLAY requires pre-score runtime snapshot, "
             "replay contract, and trusted certificate registry"
         )
-    validate_contract_for_runtime(
+    bound = authorized_request_binding(
+        request_binding,
         replay_contract,
         trusted_registry,
         current_runtime,
         triggered_invalidation_conditions=triggered_invalidation_conditions,
     )
-    bound = _bound_request_binding(request_binding, replay_contract, trusted_registry)
     return attempt_module.prepare_reservation(
         ledger_blob, main_blob, capability,
         block_id=block_id,
@@ -352,7 +376,8 @@ def recover_deterministic_replay_permit(
     if verify_attempt_identity:
         verify_attempt_module_identity(attempt_module)
     _fail_closed, deterministic = _retry_constants(attempt_module)
-    validate_contract_for_runtime(
+    bound = authorized_request_binding(
+        request_binding,
         replay_contract,
         trusted_registry,
         current_runtime,
@@ -367,7 +392,6 @@ def recover_deterministic_replay_permit(
         raise ReplayAuthorizationError(
             "only DETERMINISTIC_REPLAY can use replay authorization"
         )
-    bound = _bound_request_binding(request_binding, replay_contract, trusted_registry)
     try:
         return attempt_module.recover_deterministic_replay_permit(
             ledger_blob, main_blob, capability,
@@ -404,7 +428,7 @@ __all__ = [
     "SCHEMA_VERSION", "AUTH_NAMESPACE", "ATTEMPT_LEDGER_FILENAME",
     "ATTEMPT_LEDGER_BLOB", "ReplayAuthorizationError",
     "RuntimeDeterminismSnapshot", "DeterminismReplayContract",
-    "TrustedCertificateRegistry", "validate_contract_for_runtime", "verify_attempt_module_identity",
+    "TrustedCertificateRegistry", "validate_contract_for_runtime", "authorized_request_binding", "verify_attempt_module_identity",
     "prepare_reservation", "reserve_and_issue",
     "recover_deterministic_replay_permit", "authorization_binding_summary",
 ]
