@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "audit_kind": "implementation_and_failure_reproduction",
+  "created_at": "2026-08-28T10:41:50.732485+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "3bd3bbbd49b6e04f09a2824213d0ab97b3ed9c91",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "h1_sha": "3bd3bbbd49b6e04f09a2824213d0ab97b3ed9c91",
+    "h2_sha": "3bd3bbbd49b6e04f09a2824213d0ab97b3ed9c91",
+    "presemantic_head_checks_same_sha": true,
+    "semantic_freeze_respected": true
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c27-20260828T085556JST-3382c2d1",
+    "active_wave_blob": "aad3e79ec308077aad159b58d37174506712386a",
+    "source_set_digest": "3382c2d16ec73d0b8fd5ece1adfa31d33a11d1692703fbb54c65a14de9b0e0dc",
+    "selection_snapshot_note_main_sha": "6919a1203e085e1dbbd9c48a623c78527b3e2d93",
+    "source_integrity_valid": true
+  },
+  "source_identity": {
+    "namespace": "self_improvement",
+    "source_artifact_path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T080627_JST_harn_external_action_hardkill_gap.md",
+    "source_artifact_blob": "4d35a5702bcdef12a8cdedeabd8f25f72479327d",
+    "source_local_candidate_id": "HARN-EXTERNAL-ACTION-HARDKILL-GAP-20260828",
+    "identity_basis": "The sealed checkpoint names a source-bound machine-readable contract; that companion contract at blob 299e3c654affbdd22d6a0fcefacbcf42fa436969 contains this exact finding id. No fuzzy/title join was used."
+  },
+  "claim_under_audit": "Harn std/external_action uses checkpoint_stage_keyed around remote dispatch, but checkpoint_stage_keyed persists only after the callback returns. Therefore a hard process death after provider acceptance but before adapter return/checkpoint persistence can leave no local completed checkpoint; recovery can invoke dispatch again. Returned/thrown/malformed outcomes are handled more safely, but the inspected local runtime does not itself prove hard-kill exactly-once external effects.",
+  "official_artifact_evidence": {
+    "repository": "burin-labs/harn",
+    "worker_pinned_revision": "45e857e405481d78dae83dfb7319ff27aa306e99",
+    "latest_public_main_observed": "18c3084012ad28b263f6e5467b0d58f0e6e18bc0",
+    "latest_main_ahead_by": 2,
+    "latest_diff_relevant_to_external_action": false,
+    "relevant_runtime_blob_at_worker_revision": "5bc20a86b5ee8623911ae1f6d528941b71db9345",
+    "relevant_runtime_blob_at_latest_main": "5bc20a86b5ee8623911ae1f6d528941b71db9345",
+    "checkpoint_blob_at_worker_revision": "fetched_exact_revision; checkpoint_stage_keyed executes callback before __checkpoint_stage_keyed_save",
+    "observations": [
+      "checkpoint_stage_keyed checks for a completed keyed record; when absent it executes f(), then saves the returned value. There is no pre-callback durable in-progress marker in this helper.",
+      "external_action_execute calls checkpoint_stage_keyed and performs adapter.dispatch inside the callback before that keyed checkpoint can be saved.",
+      "The dispatch request carries intent.idempotency_key, but the ExternalActionAdapter type only requires a dispatch function returning a typed result; the inspected contract does not prove that every adapter/provider enforces provider-side deduplication for that key.",
+      "The conformance test strongly verifies same-process replay, terminal denial replay, explicit linked retry, rejected and indeterminate outcomes, and reconciliation. It does not exercise a process SIGKILL at the remote-accept/local-uncommitted seam.",
+      "Repository and issue searches found no source-matched SIGKILL external_action test at this seam."
+    ]
+  },
+  "independent_structural_reproduction": {
+    "method": "Deterministic state-machine counterexample derived directly from the pinned checkpoint and external_action source; no worker code or result was reused.",
+    "trace": [
+      "S0: keyed checkpoint for the action fingerprint is absent.",
+      "external_action_execute enters checkpoint_stage_keyed; cached record is absent, so callback f starts.",
+      "adapter.dispatch is invoked with the stable idempotency_key and the provider accepts/creates the remote effect.",
+      "Process is hard-killed before adapter.dispatch returns to Harn, before f returns, and therefore before __checkpoint_stage_keyed_save executes.",
+      "After restart, the local keyed checkpoint is still absent. With the same intent/grant, checkpoint_stage_keyed again enters f and invokes adapter.dispatch again."
+    ],
+    "deduction": {
+      "local_dispatch_at_most_once_across_hard_kill": false,
+      "remote_effect_exactly_once_unconditionally_proven": false,
+      "remote_effect_can_still_be_exactly_once_if_provider_or_adapter_enforces_the_stable_idempotency_key": true,
+      "returned_or_thrown_adapter_outcome_scope": "Once control returns to the runtime, Harn can materialize a terminal or reconciliation-required receipt and same-process/restart replay after that completed checkpoint is substantially better covered. The counterexample is specifically the provider-accepted-before-local-persistence interval."
+    }
+  },
+  "independent_replication": {
+    "protocol_matched_external_fault_injection": "not_found",
+    "public_sigkill_test_at_exact_seam": "not_found",
+    "classification": "Structural failure reproduced from official source, but no live provider/process-kill experiment was run in this audit."
+  },
+  "scope_corrections": [
+    "Do not state that Harn necessarily duplicates the remote provider effect. The runtime can re-dispatch locally; whether that becomes a duplicate remote effect depends on provider/adapter idempotency semantics for the supplied stable key.",
+    "Do not generalize the gap to ordinary returned exceptions, malformed responses, explicit indeterminate outcomes, or same-process replay; those paths have dedicated receipt/reconciliation tests.",
+    "Do not treat comments saying 'at most once' or generic checkpoint 'survive crashes' wording as proof for this particular external side-effect seam, because the save is post-callback.",
+    "The finding remains applicable to current public main observed in this audit because the two commits after the worker-pinned revision changed only macOS sandbox/toolchain files and the external_action runtime blob is unchanged."
+  ],
+  "grades": {
+    "overall": "B+",
+    "published_or_worker_claim": "B+",
+    "official_artifact_support": "A",
+    "independent_structural_failure_reproduction": "A-",
+    "live_fault_injection_reproduction": "C/not_run",
+    "provider_effect_exactly_once_claim": "C/conditional_on_provider_idempotency",
+    "current_head_relevance": "A"
+  },
+  "reopen_conditions": [
+    "A public Harn hard-kill/fault-injection test exercises provider acceptance followed by process death before adapter return/checkpoint and demonstrates one provider effect after recovery.",
+    "external_action gains a durable pre-dispatch/in-progress journal or equivalent supervisor-owned dispatch receipt whose recovery semantics are source-matched and tested.",
+    "A concrete provider adapter documents and tests that Harn's stable idempotency_key is mapped to a provider-enforced idempotency primitive across process death.",
+    "The external_action runtime/checkpoint blobs change in a way that closes or materially alters this seam."
+  ],
+  "exact_next_action": "Audit a different exact C27 source member with immutable runnable/raw evidence. Do not repeat this Harn hard-kill finding unless one of the explicit reopen conditions fires."
+}
