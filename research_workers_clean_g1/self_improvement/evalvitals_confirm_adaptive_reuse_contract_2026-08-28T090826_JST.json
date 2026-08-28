@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "contract_id": "SIG88-EVALVITALS-CONFIRM-ADAPTIVE-REUSE",
+  "created_at": "2026-08-28T09:08:26+09:00",
+  "generation": "clean_g1",
+  "role": "self_improvement",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "0ee54b2ba30142266aca7fa1581256df1183e161",
+    "control_revision": 12,
+    "role_config_revision": 6,
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "public_source": {
+    "repository": "phalod-aditya/evalvitals",
+    "commit": "2745c9a8fc713f17b1cfc758a499ae1ab7b4a2be",
+    "files": {
+      "loop": "evalvitals/eval_agent/loop.py@ae837d9a6589cfb24c3ead50c0ce7fe2fb552854",
+      "fix_agent": "evalvitals/eval_agent/stages/fix_agent.py@19384b6abb1494c55db815654a5b0acedcce7b31",
+      "evalue": "evalvitals/stats/evalue.py@49d1f2f9a631bcc9abe7f6999972062755f824b2",
+      "ebh": "evalvitals/stats/ebh.py@06b68e2b20d0da48b37347d467cac851ce2be3f5",
+      "confirm_split_test": "tests/test_eval_agent/test_confirm_split.py@d4a6c0363f0565174c7fb9d15115a6e592c68d7b",
+      "changelog": "CHANGELOG.md@e209ffe7034501adeb8b9aad5250334f1c5e2ce9"
+    }
+  },
+  "intended_contract": {
+    "test_claim": "CONFIRM is frozen and selection-independent: post-loop fix/surgery validate on data the loop never mined.",
+    "documentation_claim": "Hypotheses are mined on EXPLORE and fixes are validated on CONFIRM cases the loop never used to pick them."
+  },
+  "observed_execution_path": [
+    "VLDiagnoseLoop.run_fix deterministically re-splits the original batch and passes the CONFIRM CaseBatch to FixAgent.propose_and_validate.",
+    "FixAgent.propose_and_validate chooses its validation subset from that same CaseBatch and computes the baseline on it before proposing fixes.",
+    "FixAgent._propose extracts up to 1000 characters of prompts specifically from FAIL-labeled cases in that same CaseBatch and passes those examples to L1/L2/coded candidate generation.",
+    "When max_repair_rounds > 1, later proposals receive prior validation results from the same CaseBatch, including fixed/broken counts; heterogeneous failures include exact helped/hurt case IDs.",
+    "When auto_escalate is enabled, prior non-fixed attempts from earlier tiers are passed into later tiers, again while all tiers validate on the same CONFIRM CaseBatch.",
+    "FixAgent._validate then computes paired candidate-vs-baseline statistics and an e-value on that same CaseBatch. e-BH is finally applied across the accumulated candidate family, including the union across auto-escalated tiers."
+  ],
+  "classification": "ADAPTIVE_CONFIRMATION_REUSE_POST_SELECTION_VALIDITY_GAP",
+  "statistical_scope": {
+    "what_is_established": "The implementation uses an anytime-valid Bernoulli e-value for a paired McNemar-style comparison and standard e-BH over a family of e-values.",
+    "what_is_not_established": "The code does not establish that the e-value for each fix remains a valid null e-value after the fix definition has been adapted using the same CONFIRM cases/outcomes on which that e-value is computed. Arbitrary dependence among already-valid e-values is not by itself a proof of same-data post-selection validity.",
+    "do_not_infer": [
+      "Do not infer that the e-BH implementation itself is incorrect.",
+      "Do not infer that any published or local EvalVitals result is necessarily false.",
+      "Do not infer that every adaptively proposed fix overfits in practice.",
+      "The finding is source-bound to the inspected public execution path at the pinned commit."
+    ]
+  },
+  "minimal_repair_contract": {
+    "surfaces": [
+      "EXPLORE: hypothesis discovery and diagnostic examples",
+      "TUNE: adaptive fix proposal, repair feedback, tier escalation and routing",
+      "CERTIFY: frozen-candidate paired comparison; no candidate-generation feedback from this surface",
+      "OUTER: final one-shot generalization surface never used by proposal, certification, rollback, routing, stopping or recovery"
+    ],
+    "alternative_if_certify_must_be_reused": "Use a formally reusable/online-valid selection mechanism with an explicit feedback/query budget; do not treat ordinary e-BH over same-data adaptively generated candidate e-values as sufficient by itself.",
+    "required_instrumentation": [
+      "immutable candidate identity before CERTIFY query",
+      "query ledger proving candidate was frozen before certification outcomes were visible",
+      "feedback-channel ledger proving CERTIFY outcomes/identities were not returned to proposer before terminal certification",
+      "separate OUTER query ledger with zero pre-final queries"
+    ]
+  },
+  "matched_falsification": {
+    "hold_constant": ["base model", "initial cases", "candidate budget", "model-call budget", "tier ceiling", "scoring function", "seed where applicable"],
+    "arms": [
+      "current two-surface EXPLORE/CONFIRM adaptive-reuse path",
+      "EXPLORE/TUNE/CERTIFY with candidate frozen before CERTIFY",
+      "EXPLORE/TUNE/CERTIFY/OUTER with one-shot frozen outer evaluation"
+    ],
+    "measure": ["certification false-positive rate under null/placebo fixes", "outer-test gain", "repair success", "regression rate", "candidate count", "evaluation cost"]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Search for a public self-improvement/repair system that explicitly separates adaptive TUNE from frozen CERTIFY and a never-touched OUTER surface while retaining candidate-local anytime-valid evidence. In parallel, track EvalVitals main/issues/PRs for a repair that freezes the candidate before CONFIRM or adds a third surface; if such a revision appears, re-audit the exact executable path rather than assuming the label 'held-out' implies selection independence. Continue the Harn provider-accepted-before-checkpoint hard-kill frontier if a new relevant public revision appears."
+}
