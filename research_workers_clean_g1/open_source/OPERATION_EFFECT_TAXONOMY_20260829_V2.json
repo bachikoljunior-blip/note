@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "scope": "Fail-closed capability taxonomy from inspected GitHub, GitLab and Gerrit contracts; provider surface and phase are explicit",
+  "states": [
+    {
+      "name": "INTENT_HEAD_BOUND",
+      "phase": "pre_effect",
+      "meaning": "The effect request is bound to an exact reviewed source/head or patch-set revision."
+    },
+    {
+      "name": "REQUEST_OPERATION_ID_BOUND",
+      "phase": "request_or_admission",
+      "meaning": "A server-assigned identifier exists early enough to recover an ambiguous request/admission without blindly reissuing the effect."
+    },
+    {
+      "name": "QUEUE_OR_TRAIN_ADMITTED",
+      "phase": "pre_effect_async",
+      "meaning": "Server has admitted the change into asynchronous queue/train processing."
+    },
+    {
+      "name": "CI_STATE_BOUND",
+      "phase": "pre_effect_async",
+      "meaning": "A pipeline/check execution is bound to the queue/train candidate state. Synthetic merge-group/train SHAs are not final target-ref SHAs."
+    },
+    {
+      "name": "FINAL_TARGET_REF_EFFECT_EXACT",
+      "phase": "post_effect",
+      "meaning": "The exact protected/target ref transition that actually landed is durably observed."
+    },
+    {
+      "name": "POST_EFFECT_GROUP_ID_BOUND",
+      "phase": "post_effect",
+      "meaning": "A server identifier groups the actual submitted effects after completion. This can aid attribution/revert/audit but cannot necessarily recover a pre-effect ambiguous request."
+    },
+    {
+      "name": "POST_EFFECT_POLICY_EXACT",
+      "phase": "post_effect",
+      "meaning": "Server-derived policy/submit evidence is exact-read and bound to the landed effect or submitted group, preserving bypass/override/evaluate-only semantics."
+    }
+  ],
+  "providers": {
+    "github": {
+      "INTENT_HEAD_BOUND": "sync/async merge sha expected-head precondition",
+      "REQUEST_OPERATION_ID_BOUND": "async merge UUID; 409 existing-UUID recovery requires pending expected_head_sha/merge_method/merge_action comparison",
+      "QUEUE_OR_TRAIN_ADMITTED": "terminal async status enqueued; this is terminal only for the request, not the final merge",
+      "CI_STATE_BOUND": "merge-group/check-run evidence; merge-group SHA is queue-group state",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "exact base-ref before_sha->after_sha transition chain",
+      "POST_EFFECT_GROUP_ID_BOUND": "the same async UUID can identify terminal request result while retained, but the result endpoint expires after 24h and split stack groups require separate final-effect closure",
+      "POST_EFFECT_POLICY_EXACT": "Rule Suite exact tuple/id readbacks; active result pass/bypass and evaluation_result separated"
+    },
+    "gitlab": {
+      "INTENT_HEAD_BOUND": "merge-train add sha or merge-request merge sha",
+      "REQUEST_OPERATION_ID_BOUND": "merge-train car/entry integer id returned/listed for the admitted MR",
+      "QUEUE_OR_TRAIN_ADMITTED": "active merge-train car",
+      "CI_STATE_BOUND": "train pipeline id/SHA/status; later cars can be canceled/recreated when earlier train membership changes",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "merged MR attribution plus exact target-branch ref evidence; commit fields are merge-method-sensitive",
+      "POST_EFFECT_GROUP_ID_BOUND": "the same car id is visible in complete-scope train entries with merged status/merged_at in the inspected contract",
+      "POST_EFFECT_POLICY_EXACT": "train pipeline outcome plus merged MR state; no GitHub-Rule-Suite-equivalent per-ref policy object is claimed"
+    },
+    "gerrit": {
+      "INTENT_HEAD_BOUND": "POST /changes/{change-id}/revisions/{revision-id}/submit addresses one exact patch-set revision",
+      "REQUEST_OPERATION_ID_BOUND": "NOT_OBSERVED in the inspected submit contract: submit returns ChangeInfo, but submission_id is documented only for status MERGED, so it is not assumed to exist before effect completion",
+      "QUEUE_OR_TRAIN_ADMITTED": "not modeled as a merge queue in the inspected Gerrit submit contract",
+      "CI_STATE_BOUND": "submit requirements/plugin submit rules are current server policy evidence; pre-submit snapshots are not replayable effect leases",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "read the destination ref after submit because submit type may merge, fast-forward, rebase or cherry-pick and can create a commit different from the reviewed patch set",
+      "POST_EFFECT_GROUP_ID_BOUND": "ChangeInfo.submission_id is set for MERGED changes, shared by changes in one submission, and should be captured with Submitted Together closure; its string format is explicitly not a contract",
+      "POST_EFFECT_POLICY_EXACT": "MERGED ChangeInfo + submission_id + preserved submit-requirement/override evidence; historical ChangeInfo can be read at a NoteDb meta SHA"
+    }
+  },
+  "recovery_consequences": [
+    "GitHub and GitLab expose request/admission IDs early enough to be recovery anchors after ambiguous asynchronous admission; Gerrit's inspected revision-submit API instead offers an exact patch-set path and a post-effect submission group ID, not an observed pre-effect request ID.",
+    "A post-effect submission/group ID must not be retroactively treated as proof that an ambiguous request was uniquely admitted before final state is observed.",
+    "If an effect response is ambiguous and no request-operation ID exists, recover by reading exact resource state first; only retry when that read proves the intended effect has not occurred and the effect endpoint's idempotency/precondition semantics make retry safe.",
+    "Group closure is a separate authority axis: GitHub stack member vector, GitLab train car membership, and Gerrit Submitted Together closure all need durable capture where one trigger may affect multiple changes."
+  ],
+  "cross_provider_invariants": [
+    "Pre-effect authorization/policy reads are not leases unless the effect API atomically consumes that exact authorization revision.",
+    "Expected-head/revision binding, request-operation identity, group closure, final target-ref effect and post-effect policy evidence are independent axes.",
+    "Queue/train admission and CI success are not final target-ref effect.",
+    "Final effect is proven against the target repository ref, not a synthetic merge-group/train pipeline SHA.",
+    "Bypass, override and evaluate-only outcomes remain distinct from enforced pass.",
+    "Ambiguous mutation responses are recovered by exact state/operation readback before retry."
+  ],
+  "primary_sources": [
+    "https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously",
+    "https://docs.github.com/en/rest/repos/rule-suites",
+    "https://docs.gitlab.com/api/merge_trains/",
+    "https://docs.gitlab.com/api/merge_requests/",
+    "https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html",
+    "https://gerrit-review.googlesource.com/Documentation/cross-repository-changes.html",
+    "https://gerrit-review.googlesource.com/Documentation/config-submit-requirements.html"
+  ]
+}
