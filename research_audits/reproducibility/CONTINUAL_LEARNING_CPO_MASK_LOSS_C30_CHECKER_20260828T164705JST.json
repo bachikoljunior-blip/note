@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:47:05+09:00",
+  "purpose": "Auditor-independent source-equivalent check of the released CPO mask_loss aggregation algebra. This checker did not import the clean worker script and did not execute DeepSpeed.",
+  "source": {
+    "repository": "MaolinLuo/CPO",
+    "commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "trainer_path": "src/trainer/grpo_trainer_cl.py",
+    "trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358"
+  },
+  "independent_method": {
+    "implementation": "NumPy-only reimplementation of the published partition formula and logging scalar; no torch/deepspeed/worker-code dependency",
+    "synthetic_seed_count": 137,
+    "tensor_specs": [[1,0.0],[7,0.17],[19,0.43],[103,0.09],[1009,0.31],[4093,0.013]],
+    "world_sizes": [1,2,3,4,5,8,16],
+    "zero3_cases": 959,
+    "lambda": 100.0,
+    "max_abs_error_sum_rank_partials_vs_full": 8.526512829121202e-14,
+    "max_abs_error_release_over_full_vs_one_over_world_size": 2.220446049250313e-16,
+    "all_cases_passed": true
+  },
+  "algebra": {
+    "per_tensor_rank_partial": "l_ir = sum_{j in R_i intersect P_r} |theta_ij-ref_ij| / |R_i|",
+    "partition_identity": "Because P_r are disjoint and cover all valid parameter positions, sum_r l_ir = sum_{j in R_i}|theta_ij-ref_ij|/|R_i|.",
+    "released_zero3_log": "lambda * mean_r(sum_i l_ir) = full_masked_L1 / W, up to floating-point summation error.",
+    "corrected_zero3_log": "lambda * sum_r(sum_i l_ir) = full_masked_L1.",
+    "zero2_unsharded_log": "Each rank computes the full scalar, so mean across replicated ranks preserves the full scalar."
+  },
+  "scope_guard": "This establishes source-level aggregation algebra only. It is not pinned PyTorch 2.8.0 + DeepSpeed 0.16.4 distributed execution, does not authenticate historical TensorBoard event files, and does not test or repair the separate regularizer-gradient scaling path."
+}
