@@ -1,0 +1,82 @@
+{
+  "core_claims": [
+    "A certificate over elapsed horizons is incomplete unless it also proves the replay-surface set it quantified over.",
+    "An immutable registry snapshot/digest provides provenance but not currentness; without a current registry epoch compare it cannot reject pre-GC surface-set drift.",
+    "A registry-epoch fence checked only at GC still cannot prevent a replay source added after the last witness is deleted from resurrecting an old generation.",
+    "Lifecycle-safe full deletion therefore requires either a durable retirement barrier/tombstone that future replay-surface mutations must honor, or a permanent compact incarnation witness.",
+    "GC deletion must also use a current-incarnation UID/resourceVersion/CAS precondition to prevent a stale compactor from deleting a new incarnation after logical-key reuse."
+  ],
+  "continuation": "Model retirement-barrier garbage collection itself: barrier compaction/TTL, registry migration across authority domains, queue deletion/recreation with reused names, backup/archive restore, and producer code rollback that bypasses the registry. Compare permanent tombstone, generation lower-bound watermark, signed registry epoch chain, and sink-side generation rejection; measure stale resurrection after barrier GC, cross-domain enforceability, storage, and operational recovery.",
+  "dimensions": {
+    "apparent_old_horizons_elapsed": [false, true],
+    "clock_safe_for_expiry_proof": [false, true],
+    "delayed_action": ["result", "effect"],
+    "latent_stale_item": [false, true],
+    "logical_key_reusable": [false, true],
+    "registry_event": ["none", "add_before", "add_after", "extend_before", "extend_after", "redrive_before", "redrive_after"],
+    "stale_gc_compactor_race": [false, true]
+  },
+  "equal_weight_synthetic": true,
+  "model": "dynamic_replay_surface_registry_witness_gc",
+  "not_production_failure_rate": true,
+  "policies": {
+    "epoch_fence_at_gc": {"bulky_reclaimed": 64, "full_gc": 64, "full_witness_retained": 384, "future_resurrection": 48, "safe_full_delete": 40, "stale_after_gc": 24, "unsafe": 24},
+    "epoch_fence_retirement_barrier": {"bulky_reclaimed": 64, "compact_retained": 64, "full_gc": 64, "full_witness_retained": 384, "safe_full_delete": 64},
+    "permanent_compact_witness": {"bulky_reclaimed": 448, "compact_retained": 448},
+    "snapshot_digest": {"bulky_reclaimed": 224, "false_quiescence_at_gc": 160, "full_gc": 224, "full_witness_retained": 224, "future_resurrection": 96, "safe_full_delete": 120, "stale_after_gc": 104, "unsafe": 104},
+    "unversioned_max": {"bulky_reclaimed": 224, "false_quiescence_at_gc": 160, "full_gc": 224, "full_witness_retained": 224, "future_resurrection": 96, "new_witness_delete": 56, "safe_full_delete": 90, "stale_after_gc": 104, "unsafe": 134}
+  },
+  "scenario_count": 448,
+  "slices": {
+    "after_gc_drift_elapsed_clock_safe_latent": {
+      "n": 24,
+      "policies": {
+        "epoch_fence_at_gc": {"bulky_reclaimed": 24, "full_gc": 24, "future_resurrection": 24, "stale_after_gc": 24, "unsafe": 24},
+        "epoch_fence_retirement_barrier": {"bulky_reclaimed": 24, "compact_retained": 24, "full_gc": 24, "safe_full_delete": 24},
+        "permanent_compact_witness": {"bulky_reclaimed": 24, "compact_retained": 24},
+        "snapshot_digest": {"bulky_reclaimed": 24, "full_gc": 24, "future_resurrection": 24, "stale_after_gc": 24, "unsafe": 24},
+        "unversioned_max": {"bulky_reclaimed": 24, "full_gc": 24, "future_resurrection": 24, "new_witness_delete": 6, "stale_after_gc": 24, "unsafe": 24}
+      }
+    },
+    "before_gc_drift_elapsed_clock_safe_latent": {
+      "n": 24,
+      "policies": {
+        "epoch_fence_at_gc": {"full_witness_retained": 24},
+        "epoch_fence_retirement_barrier": {"full_witness_retained": 24},
+        "permanent_compact_witness": {"bulky_reclaimed": 24, "compact_retained": 24},
+        "snapshot_digest": {"bulky_reclaimed": 24, "false_quiescence_at_gc": 24, "full_gc": 24, "stale_after_gc": 24, "unsafe": 24},
+        "unversioned_max": {"bulky_reclaimed": 24, "false_quiescence_at_gc": 24, "full_gc": 24, "new_witness_delete": 6, "stale_after_gc": 24, "unsafe": 24}
+      }
+    },
+    "clock_unsafe_elapsed_no_drift_latent": {
+      "n": 8,
+      "policies": {
+        "epoch_fence_at_gc": {"full_witness_retained": 8},
+        "epoch_fence_retirement_barrier": {"full_witness_retained": 8},
+        "permanent_compact_witness": {"bulky_reclaimed": 8, "compact_retained": 8},
+        "snapshot_digest": {"bulky_reclaimed": 8, "false_quiescence_at_gc": 8, "full_gc": 8, "stale_after_gc": 8, "unsafe": 8},
+        "unversioned_max": {"bulky_reclaimed": 8, "false_quiescence_at_gc": 8, "full_gc": 8, "new_witness_delete": 2, "stale_after_gc": 8, "unsafe": 8}
+      }
+    },
+    "no_drift_elapsed_clock_safe": {
+      "n": 16,
+      "policies": {
+        "epoch_fence_at_gc": {"bulky_reclaimed": 16, "full_gc": 16, "safe_full_delete": 16},
+        "epoch_fence_retirement_barrier": {"bulky_reclaimed": 16, "compact_retained": 16, "full_gc": 16, "safe_full_delete": 16},
+        "permanent_compact_witness": {"bulky_reclaimed": 16, "compact_retained": 16},
+        "snapshot_digest": {"bulky_reclaimed": 16, "full_gc": 16, "safe_full_delete": 16},
+        "unversioned_max": {"bulky_reclaimed": 16, "full_gc": 16, "new_witness_delete": 4, "safe_full_delete": 12, "unsafe": 4}
+      }
+    },
+    "unversioned_gc_aba_reusable": {
+      "n": 56,
+      "policies": {
+        "epoch_fence_at_gc": {"bulky_reclaimed": 16, "full_gc": 16, "full_witness_retained": 40, "future_resurrection": 12, "safe_full_delete": 10, "stale_after_gc": 6, "unsafe": 6},
+        "epoch_fence_retirement_barrier": {"bulky_reclaimed": 16, "compact_retained": 16, "full_gc": 16, "full_witness_retained": 40, "safe_full_delete": 16},
+        "permanent_compact_witness": {"bulky_reclaimed": 56, "compact_retained": 56},
+        "snapshot_digest": {"bulky_reclaimed": 56, "false_quiescence_at_gc": 40, "full_gc": 56, "future_resurrection": 24, "safe_full_delete": 30, "stale_after_gc": 26, "unsafe": 26},
+        "unversioned_max": {"bulky_reclaimed": 56, "false_quiescence_at_gc": 40, "full_gc": 56, "future_resurrection": 24, "new_witness_delete": 56, "stale_after_gc": 26, "unsafe": 56}
+      }
+    }
+  }
+}
