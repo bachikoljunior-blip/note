@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "invocation_started_at": "2026-08-28T17:00:14+09:00",
+  "receipt_recorded_at": "2026-08-28T17:08:44.814862+09:00",
+  "enabled_desired": true,
+  "control_revision": 15,
+  "config_revision": 6,
+  "semantic_freeze": {
+    "note_main_sha": "a90288aa7a262cdb009ee7a4d35236516dea11c3",
+    "control_revision": 15,
+    "config_revision": 6
+  },
+  "write_coordination": {
+    "post_freeze_note_head_observed": "9ffc88c7a49c8c1da276ba6f66efdf22d0d3096f",
+    "adopted_semantically": false
+  },
+  "public_revisions": {
+    "lbx154/Argus": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
+    "wolph/portalocker_develop": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+    "portalocker_v4_2_source_checked": true
+  },
+  "execution_evidence": [
+    "read DESIRED_STATE.json at frozen note SHA before substantive semantic work",
+    "read open_source role config at the same frozen note SHA and repeated SHA-only head freshness check before substantive reads",
+    "read only open_source role-local state plus public Argus/Portalocker sources",
+    "verified current Argus main and inspected event_log, event_catalog, Mission View state/dispatch/snapshot/reducer, reviewer emitter, role_activity, WebAPI snapshot assembly, planner verdict outbox/supervisor caller, default daemon sink construction, pyproject dependency floor, and Portalocker v4.2 Windows locker source",
+    "identified candidate013: default signal filtering skips durable Mission View projection for round.review.started and conditionally for engineer.progress",
+    "confirmed production round.review.started emitter carries only round_index, round_max, session_id, so no signal text marker rescues it",
+    "confirmed periodic Web snapshot derives roles from persistent event-log-backed role_activity and then overlays those roles into Mission View",
+    "checkpoint and LATEST were written only inside the authorized open_source role-local namespace and read back successfully"
+  ],
+  "revisions_written": {
+    "checkpoint_path": "research_workers_clean_g1/open_source/RUN_20260828_1707_SIGNAL_PROJECTION_CONTRACT.md",
+    "checkpoint_commit": "916905922dd744f1c2770307154810722f891774",
+    "latest_path": "research_workers_clean_g1/open_source/LATEST.json",
+    "latest_commit": "055836bee85f7d8e827df27d428fcb18bdb58b0d",
+    "latest_blob": "199915d7129e4fa06ff456bbc149308bc399fc6d"
+  },
+  "finding_summary": "The default signal logger and persistent Mission View have an inconsistent input contract. JsonlEventSink filters before _append, while Mission View projection occurs only inside _append. round.review.started is in the projected set but not the signal set and is emitted without rescue markers, so default daemon operation deterministically omits the reviewer-active transition from both canonical JSONL and persistent Mission View. engineer.progress is also only payload-conditionally durable. Web periodic roles are log-backed, so reviewer-start evidence is missing there too. Downstream live sinks still receive filtered events.",
+  "frontier_nonempty": true,
+  "exact_continuation": "First settle candidate013 as a durable-vs-live projection contract: promote round.review.started to signal, split payload-conditional engineer.progress out of durable Mission View semantics, and add the default-sink + Web snapshot invariant/regression. Then source-map/implement candidate009/011 shared event authority with portalocker>=4.2, os.open(...,0600) raw fd + LOCK_EX|LOCK_NB retrying only AlreadyLocked, post-commit cleanup that cannot invert commit outcome, pre-rotation one-byte delimiter isolation, and byte-based stable row iteration. POSIX readers may pin handles/end offsets under shared flock; Windows correctness scans hold exclusive event authority. Next enforce events.lock -> mission-view.lock, then finish PlannerVerdict FOUND/ABSENT/UNKNOWN and explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 transition provenance separate.",
+  "termination": {
+    "reason": "automation turn response boundary after substantive checkpoint",
+    "logical_status": "active_frontier_persisted",
+    "scheduler_disable_requested": false
+  },
+  "clean_exploration": {
+    "read_o_or_o_derived": false,
+    "read_other_worker_state": false,
+    "read_downstream_semantics": false,
+    "read_legacy_semantics": false,
+    "read_shared_aggregate_ledger": false,
+    "mutated_desired_state": false,
+    "mutated_source_repository": false,
+    "mutated_branch_or_ref": false,
+    "mutated_only_authorized_open_source_state_and_receipt": true
+  }
+}
