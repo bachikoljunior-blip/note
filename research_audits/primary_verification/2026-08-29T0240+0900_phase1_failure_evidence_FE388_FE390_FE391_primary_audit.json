@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "h2": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_config_revision": 6,
+    "enabled_desired": true,
+    "semantic_freeze_sha": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843"
+  },
+  "findings": [
+    {
+      "id": "FE-388",
+      "verdict": "SUPPORTED_AS_OPEN_EXTERNAL_REPORT_ONLY",
+      "claim": "Long in-flight LangGraph Cloud tool/subagent work was reported to be re-dispatched from the last checkpoint while the original execution remained active.",
+      "primary_evidence": [
+        "langchain-ai/langgraph issue #7417 is open, labeled external, unassigned, and author_association NONE; the reporter states long calls around 180s were duplicated with identical arguments, duplicate tools nodes lacked a preceding model node, and original plus duplicate both completed",
+        "the reporter states the pattern was observed on langgraph 1.1.3-1.1.6, EU Cloud, Plus tier and that several configuration changes did not remove it"
+      ],
+      "scope_correction": "No maintainer/collaborator confirmation was found in the fetched issue metadata/comments, and the issue itself says the reporter cannot inspect the Go persistence server and does not know the stale-run criterion. Therefore the traces are source-qualified reporter evidence only: do not promote the proposed heartbeat/sweep mechanism, prevalence, current-version persistence, or a platform-wide LangGraph Cloud defect as verified."
+    },
+    {
+      "id": "FE-390",
+      "verdict": "INDEPENDENTLY_RECOMPUTED_SYNTHETIC_MECHANISM_TEST",
+      "claim": "Under the worker's fixed event order, a stale generation-1 write overwrites generation 2 without fencing, while a SQLite resource-side monotonic fence rejects the stale write.",
+      "source_artifacts": [
+        "research_workers_clean_g1/failure_evidence/probes/2026-08-29T020139+0900-fencing_pointer.py@eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+        "research_workers_clean_g1/failure_evidence/probes/2026-08-29T020139+0900-fencing_pointer.json@eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843"
+      ],
+      "independent_recomputation": {
+        "no_fence_final_value": "A_stale",
+        "no_fence_last_writer": "A_gen1",
+        "fenced_B_rowcount": 1,
+        "fenced_A_rowcount": 0,
+        "fenced_final_value": "B_current",
+        "fenced_final_fence": 2,
+        "matches_worker_json": true
+      },
+      "scope_correction": "This verifies only the deterministic SQL predicate and event ordering in one local in-memory SQLite process. It is not a Redis lease-expiry/network-partition/GC-pause reproduction and does not establish distributed fencing correctness for a particular production store."
+    },
+    {
+      "id": "FE-391",
+      "verdict": "INDEPENDENTLY_RECOMPUTED_SYNTHETIC_RECONSTRUCTION_TEST",
+      "claim": "Under the worker's fixed cp1/cp2 objects and deliberately stale cached pointer, cache-only reconstruction selects seq1 while authoritative pointer/hash/provenance revalidation selects seq2.",
+      "independent_recomputation": {
+        "cp1_sha256": "f5de27bc32dc2916c746eafbe479b4712692ac11c67789942824e8fd3003ebed",
+        "cp2_sha256": "42f5547617373238573746f5e088ff593e7e672591c8109b768e1c362a252510",
+        "worker_hashes_match": true,
+        "naive_selected_seq": 1,
+        "authoritative_selected_seq": 2,
+        "pointer_mismatch": true,
+        "provenance_check": "digest(cp2)==authoritative hash; seq==2; predecessor==cp1"
+      },
+      "scope_correction": "This is synthetic stale-pointer reconstruction over two in-memory objects. It proves the guard logic for that constructed mismatch, not that GitHub or this repository actually serves stale LATEST pointers in production and not that SHA agreement alone proves semantic validity."
+    }
+  ],
+  "overall_verdict": "FE388_REPORTER_LEVEL_ONLY; FE390_FE391_INDEPENDENTLY_RECOMPUTED_WITH_SYNTHETIC_SCOPE",
+  "phase1_implication": "An in-flight claim should be protected by stable generation/identity at the mutation boundary, and cached continuation hints should not authorize resume when they disagree with an authoritative versioned/hash-bound pointer. The recomputed controls show the local mechanisms but do not substitute for the root20 actual Chat/repository operational acceptance controls.",
+  "writes_guard": {
+    "desired_state_json": 0,
+    "exploration_workers": 0,
+    "exploration_feedback": 0,
+    "primary_o_state": 0,
+    "shared_execution_ledger": 0
+  },
+  "exact_next_verification": "Fresh bootstrap: first inspect evaluation/LATEST for a root20/config6 checker-v2. If present, verify the durable manifest/readback timestamp/commit precedes first control execution and independently recompute all hard-gate outcomes for Controls A/B/C. If absent, stop rotating through already-covered FE382-FE392 and choose the highest-value current Phase-1 assignment-bound leaf with operational Chat/repository evidence, prioritizing actual false completion or superseded-child/duplicate-effect state transitions over additional open issue reports.",
+  "termination": "fourth Phase-1 verification leaf completed under the frozen tuple; recurring objective remains nonterminal"
+}
