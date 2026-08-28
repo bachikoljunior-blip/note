@@ -1,0 +1,89 @@
+*** Source-qualified regression candidate only; not applied upstream. ***
+*** Target: OpenHands/software-agent-sdk v1.44.1 commit 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a ***
+*** File: tests/cross/test_conversation_lease_behavior.py ***
+
+@@
+ @pytest.mark.asyncio
+ async def test_crash_recovery_error_is_on_active_branch_for_next_turn(tmp_path):
+@@
+             recovered_state.view.manipulation_indices
++
++
++@pytest.mark.asyncio
++async def test_crash_recovery_reconciles_user_message_written_after_persisted_head(
++    tmp_path,
++):
++    """A user MessageEvent committed before HEAD autosave must remain reachable.
++
++    This mirrors the same event-file-vs-base-state crash window as the existing
++    unmatched-action regression, but the later durable event is ordinary user
++    input rather than an ActionEvent.  The desired assertion is that takeover
++    makes the durable message reachable from the recovered active branch.
++
++    At v1.44.1 this is expected to expose the uncovered source-level boundary:
++    EventService.start only repairs RUNNING + unmatched executable ActionEvent,
++    while ConversationState._resolve_active_leaf trusts a non-null persisted
++    leaf_event_id as-is.
++    """
++    conversations_dir = tmp_path / "conversations"
++    workspace_dir = tmp_path / "workspace"
++    workspace_dir.mkdir()
++
++    async with ConversationService(conversations_dir=conversations_dir) as primary:
++        conversation_info, _ = await primary.start_conversation(_request(workspace_dir))
++        assert primary._event_services is not None
++        event_service = primary._event_services[conversation_info.id]
++        state = await event_service.get_state()
++        conversation = event_service._conversation
++        assert conversation is not None
++        conversation_dir = conversations_dir / conversation_info.id.hex
++
++        first_user = MessageEvent(
++            source="user",
++            llm_message=Message(
++                role="user", content=[TextContent(text="first durable message")]
++            ),
++        )
++        conversation._on_event(first_user)
++        stale_leaf = state.leaf_event_id
++        assert stale_leaf == first_user.id
++
++        later_user = MessageEvent(
++            source="user",
++            llm_message=Message(
++                role="user", content=[TextContent(text="must survive the restart")]
++            ),
++        )
++        conversation._on_event(later_user)
++        assert state.leaf_event_id == later_user.id
++
++        # Reproduce the on-disk state after the event file lands but before the
++        # enclosing state context flushes leaf_event_id / last_user_message_id.
++        # Rewind both fields because LocalConversation's default callback batches
++        # those public-state updates into the same base_state.json save.
++        base_state_path = conversation_dir / "base_state.json"
++        base_state = json.loads(base_state_path.read_text())
++        base_state["leaf_event_id"] = stale_leaf
++        base_state["last_user_message_id"] = first_user.id
++        base_state_path.write_text(json.dumps(base_state))
++        _expire_lease(conversation_dir)
++
++        async with ConversationService(
++            conversations_dir=conversations_dir
++        ) as secondary:
++            assert secondary._event_services is not None
++            recovered = secondary._event_services[conversation_info.id]
++            recovered_state = await recovered.get_state()
++
++            # The event file is durable regardless of HEAD reconstruction.
++            assert later_user.id in {event.id for event in recovered_state.events}
++
++            # Desired crash-safety property: durable user input must also be on
++            # the branch consumed by the next turn.  This assertion is expected
++            # to fail at the pinned v1.44.1 source unless another uninspected
++            # higher-level reconciliation path advances HEAD.
++            assert later_user.id in {
++                event.id for event in recovered_state.active_branch()
++            }
++
+*** End candidate ***
