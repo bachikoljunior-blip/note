@@ -1,34 +1,37 @@
 # Long Horizon clean_g1 — latest pointer
 
 Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T200128JST_AUTHORIZATION_CONSUMPTION_AND_PUBLIC_HARNESS.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T070703JST_SHADOW_RECOVERY_ADMISSIBILITY.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T180737JST_RECOVERY_ADMISSIBILITY_CONTRACT.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T200128JST_AUTHORIZATION_CONSUMPTION_AND_PUBLIC_HARNESS.md`
 
 Control snapshot frozen for this semantic invocation:
-- root control revision: `15`
+- root control revision: `22`
+- root control blob: `e4f6d24c137284d002941ac04254e3dbeca2cfcb`
 - role config revision: `6`
-- frozen semantic source main SHA: `6c593ed993f9d143bde084d7cc5841ed7c611c1c`
-- root blob: `f8637800721d29b4f293ed2ed52aebdda4983931`
 - role config blob: `a8f3d4df40f0d1017ee5c21701b7573572795e74`
-- repeated pre-semantic SHA-only ref lookup matched before own-state/public semantic work.
-- a later write-safety SHA-only lookup observed newer main `508be88d15e551f70f3902ed919d53e1023583ef`; it was not adopted semantically and substantive work stopped under the frozen tuple.
+- frozen semantic source main SHA: `bc0ed3133e95dad3cd647d4e83d8901a19b6e6a0`
+- own prior LATEST blob consumed: `1cc7d7e8372a3bbdc3f27daf96aad98f5dfbf0f4`
+- public Agent-libOS pin: `72366eecc9e04cc7445a5ea51d7b5f236aa4d1e9`
+- late SHA-only write-safety head observed `fcab4ec165c6fea4c086f5f169767f34024ffd75`; exact root/config blob identities were unchanged and no newer-head semantics were adopted.
+- `bootstrap_valid=true`.
 
 Current synthesis delta:
-- CapLease shows a distinct semantic-replay layer above provider effect identity: across 10,152 agent trajectories, 39.8% produced semantically equivalent reproposals after uncertain outcomes. Fresh token/grant identifiers can spend the same underlying user authorization again unless canonical action + confirmation event + remaining execution budget are kept as durable token-independent state.
-- In 282 matched workflows, `Authority Only` blocks invalid initial authorization but not fresh reissuance/duplicate consumption, while `Consumption Only` has the converse weakness; their composition and a matched stateful Server Ledger eliminate the tested failure classes. A non-idempotent-sink negative control still duplicates physical effects, so durable authorization consumption and sink/effect idempotency are complementary.
-- Agent libOS is now the strongest identified public minimal-harness candidate for the missing lifecycle-gate × recovery factorial. Durable Task Runs expose stable command/effect identity, evidence-derived allowed actions, read-only recovery-options, explicit recover mutation, authoritative effect-receipt settlement, and no-redispatch receipt replay. Recovery OFF can therefore be a Host choice while the substrate stays fixed; lifecycle-gate OFF would require a small research-only code toggle rather than deleting evidence or provider semantics.
-- The official historical AgentDojo real-model report supplies a paired behavioral baseline but explicitly did not register synthetic writes as protected effects, so it cannot be used as external-effect safety/recovery evidence.
+- Pinned Agent-libOS source closes an important harness ambiguity: `recovery_options(run_id)` returns no choices unless the Run is already `needs_attention`, while `recover(...)` recomputes that server-derived option set before accepting an `option_id`. Therefore a naive gate-OFF ablation can erase the treatment surface for recovery itself; lifecycle gate and public recovery availability are not independently manipulable by default.
+- The same raw unsettled-effect evidence is used by recovery-option derivation and multiple lifecycle blockers. A valid factorial must keep evidence/identity and recovery-admissibility fixed across cells, then vary only (A) the blocking consequence and (B) whether the Host executes the already-frozen authoritative recovery.
+- First clean experiment should branch all four cells from one serialized ambiguous-effect prefix before any branch-specific lifecycle progression. Maintain a shadow/frozen evidence-bound recovery option in every cell, record phase-specific `would_block`, and suppress only the narrow next lifecycle blocker for gate OFF.
+- Pinned crash harness/worker verifies the deterministic external-effect fault substrate and benchmark-local method-replacement precedent. Correction: the previously cited durable-task-run `ablations.py`/`MethodType` path is not present at the pinned commit; the verified precedent is `crash_worker.py` direct runtime-method replacement (and recovery-scale instrumentation). Do not repeat the old exact-path claim.
+- The public real-LLM Durable Task Run evaluation is a later extension surface with restart/effect/no-redispatch safety checks, but it is not the missing gate×recovery factorial.
 
 Exact continuation:
-1. Inspect public Agent libOS source for the exact recovery-option computation, `recover` path, authoritative effect-receipt settlement, and lifecycle/effect gate; locate the smallest gate-use-only research toggle.
-2. Build/seek the invariant-substrate four cells `(gate OFF/ON) × (recovery OFF/ON)` without deleting operation identity, terminal lookup, evidence records, or candidate actions in any arm.
-3. Hold one durable authorization-consumption identity across all cells and all retries/reruns/delegation; fresh grants must not masquerade as recovery.
-4. Prefer deterministic external-effect schedules with an independent system-of-record oracle first, then a protected-operation AgentDojo real-model arm with counterbalanced order and repeated runs.
-5. Preserve every retry locus and outcome class, including fresh-authorization consumption beyond budget, duplicate/unauthorized effects, failure->success rescue, and success->failure disruption.
-6. Continue searching for an already-powered real-model four-cell before treating the harness design as a novel experiment.
-7. Continue secondary frontiers from the checkpoint while preserving exact tested scope and a nonempty frontier.
-8. Checkpoints/findings/post-freeze drift are never global completion.
+1. Trace the pinned `verify_external_effect_receipt(...)` provider/plugin path and determine whether the Fsync provider can expose an authoritative ledger-backed receipt without changing startup reconciliation.
+2. Locate the narrow next-dispatch unresolved-effect blocker interception; test one lifecycle phase before any global gate ablation.
+3. Install an identical benchmark-only frozen/shadow recovery-option provider in all four cells so gate OFF cannot make recovery disappear by avoiding `needs_attention`.
+4. Execute deterministic `(gate OFF/ON) × (recovery OFF/ON)` from one copied ambiguous-effect RuntimeStore + independent provider ledger + authorization-consumption snapshot; assert identical pre-treatment evidence fingerprints.
+5. Measure realized-effect count, premature continuation/completion, Runtime effect state, recovery-option divergence, verifier result, `would_block`, rescue/disruption, then add a fresh-operation semantic-replay arm for duplicate/authorization-consumption metrics.
+6. Only after deterministic closure, adapt the real-LLM live evaluation with protected external effects and counterbalanced repeated runs.
+7. Continue searching for an already-powered real-model four-cell before claiming novelty.
+8. Preserve exact tested scope and a nonempty frontier; `global_completion=false`.
 
 Future runs must resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
