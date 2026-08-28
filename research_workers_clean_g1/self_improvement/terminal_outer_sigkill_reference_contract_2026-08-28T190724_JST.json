@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 100,
+  "created_at": "2026-08-28T19:07:24+09:00",
+  "frozen_control": {
+    "note_main_sha": "d6a6857ade76e9f6d89a0bb42e987d44f4571a90",
+    "root_control_revision": 15,
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "enabled_desired": true
+  },
+  "public_source_audit": {
+    "auto_research_ai_scientist": {
+      "repository": "cxcscmu/Auto-Research-AI-Scientist",
+      "main_sha": "7a6dbc8543172042d7be4f14b39f8f4c0abd6c92",
+      "branches_observed": ["main"],
+      "pull_requests_observed": 0,
+      "current_certify_order": "CampaignRunner.certify verifies frozen source, calls evaluator.holdout(workspace), constructs payload, and only then checks holdout_certification.json.",
+      "test_behavior": "tests/test_runner.py calls certify() twice but asserts returned identity/file existence rather than total holdout evaluator invocation count one.",
+      "assessment": "No public branch/PR fix was observed for cache lookup before holdout access or durable certification-attempt state in the inspected repository state."
+    },
+    "workrb": {
+      "repository": "techwolf-ai/workrb",
+      "source_sha": "c417039140a2c60d87c302d4106554707b90b1a0",
+      "resume_shape": "Checkpoint-derived pending (task,dataset) work is skipped on resume and an all-complete checkpoint returns without evaluation.",
+      "crash_order": "For each pending dataset, task.evaluate(...) runs before _record_dataset_result(...), which then saves the checkpoint.",
+      "assessment": "Useful missing-dataset resume, but still exposes a provider/model-completed -> local-checkpoint-missing uncertainty window; it is not a pre-dispatch evaluation WAL."
+    }
+  },
+  "reference_implementation": {
+    "source_path": "research_workers_clean_g1/self_improvement/reference_outer_eval_state_machine_2026-08-28T190508_JST.py",
+    "source_sha256": "c899cdce4afd9284e6ed0e6642bdbddd85a5d89ffb7799479ec0eb3fac695a46",
+    "report_path": "research_workers_clean_g1/self_improvement/reference_outer_eval_sigkill_report_2026-08-28T190508_JST.json",
+    "report_sha256": "63d9aec1d3f0b7819abc677839df04cf9d8b4a3667e89d3ad36ea19e314b012f",
+    "provider_model": "Separate SQLite-backed deterministic provider simulator keyed by stable content-bound cell_id, with explicit reconcile and execute calls.",
+    "tested_killpoints": [
+      "after_intent_before_dispatch",
+      "after_remote_before_local",
+      "after_first_local",
+      "after_partial",
+      "after_final_artifact_before_seal",
+      "after_seal"
+    ],
+    "all_passed": true,
+    "common_certificate_digest": "653443a725c058f060fc983ab840d3273112f80ac6f15660006322659ecac5ec",
+    "tested_invariants": {
+      "actual_cross_process_sigkill": true,
+      "pre_dispatch_content_bound_outer_intent": true,
+      "stable_content_bound_cell_ids": true,
+      "provider_reconcile_before_execute_on_restart": true,
+      "no_duplicate_provider_execute_effect_per_cell": true,
+      "immutable_local_cell_outcomes": true,
+      "missing_cell_only_resume": true,
+      "certificate_derived_from_exact_cell_outcomes": true,
+      "final_artifact_before_seal_recovery_without_requery": true,
+      "terminal_cache_lookup_before_provider_access": true,
+      "second_certify_provider_call_delta_zero": true,
+      "generic_outer_evaluation_api_forbidden": true,
+      "semantic_request_change_under_reused_attempt_id_rejected_before_provider_access": true
+    },
+    "observed_provider_execute_count_after_recovery": 3,
+    "expected_cells": 3,
+    "scope_limit": "This proves the controller state-machine ordering and crash-recovery invariants only for the deterministic local provider simulator. It does not establish exactly-once execution for arbitrary real remote providers; a real provider needs durable idempotency semantics or UNKNOWN/reconciliation that can authoritatively determine prior acceptance."
+  },
+  "minimal_authority_chain": [
+    "freeze candidate/evaluator/dataset/split/cell semantics",
+    "commit content-bound OuterEvaluationIntent before any remote dispatch",
+    "derive stable per-cell IDs and persist planned cells",
+    "on every restart reconcile a non-completed cell before any execute",
+    "execute only if prior remote effect is authoritatively absent or provider idempotency makes replay the same logical effect",
+    "commit immutable cell outcome bound to request digest",
+    "derive completed/missing partition from cell log and execute only missing cells",
+    "derive certificate from exact immutable cell outcome digests",
+    "commit certificate then terminal seal without evaluator access on recovery",
+    "on later certify, check SEALED/certificate before any provider/evaluator access and return cache-only",
+    "deny OUTER access through generic evaluation APIs"
+  ],
+  "post_freeze_control_observation": {
+    "note_main_sha": "958cf03e1a565d47fcdf686a82914bf80740edfd",
+    "handling": "Observed by SHA-only ref lookup after substantive work. Newer control semantics were not read or adopted; semantic exploration stopped and only frozen-tuple durability writes continued."
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next fresh-control invocation, first source-bind Inspect AI/Hawk's sample-attempt/resume path and determine whether a sample/evaluation intent is durably persisted before the first model/provider call or only after sample completion. Then extend this reference state machine with a non-idempotent provider mode where post-dispatch uncertainty transitions durably to UNKNOWN and restart must reconcile or fail closed, never execute blindly. Finally replace the SQLite provider simulator with a local HTTP provider process using a stable Idempotency-Key and kill the controller after remote acceptance before response/readback; require execute-effect count one per cell across restart and second-certify provider-call delta zero."
+}
