@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T10:05:55.415390+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "77c59f68c701cfea3560d5d3b1f969e7f3fa0567",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "finding": "A naive ProcessStableRuntime V4 that binds the new deterministic-replay authorization facade cannot be inserted only at RESERVE/recovery. The current forward provenance chain hard-codes the historical compliance runtime binding at both ADMIT and audit.",
+  "exact_dependencies": {
+    "current_top_runtime_blob": "f9a3b7a120c36fe3ff37c8fe7167d1c4e66e8d6f",
+    "current_base_runtime_blob": "3e58813f34079e7f92eb0728bd7f9c27810d5418",
+    "runtime_contract_blob": "f6a4d996381bd100038d6ccfcf1b7c5f3f28e905",
+    "runtime_auditor_blob": "dd5e09bde7e91b0f534896922aeb5b2529e92996",
+    "runtime_close_replay_blob": "c9982f2ef14cff5b1f59b314e95250745706c5e4",
+    "new_auth_facade_blob": "f21613ebb6db487d70983ad46caf063ac86c804b"
+  },
+  "why": {
+    "admit": "Current top runtime calls contract.bind_admit(event, base._binding()), so every new contracted ADMIT stores the digest of the historical base runtime binding.",
+    "audit": "Current runtime-provenance auditor computes expected_binding = historical base runtime _binding() and passes it to reservation_binding_status for every slot.",
+    "close": "Current CLOSE/replay selects only its current runtime-provenance auditor binding or the historical auditor binding; a third replay-authorized runtime/auditor is not recognized.",
+    "consequence": "If only RESERVE were changed to advertise a replay-authorized runtime binding, the existing auditor would mark the contracted slot runtime_provenance_fail:reserve_runtime_binding_mismatch. If ADMIT alone were changed, the existing auditor would reject the ADMIT contract because its expected binding is still the historical base."
+  },
+  "safe_decision": "Do not persist or activate the local V4 prototype as a runtime. Keep the new replay authorization facade role-local and non-default until the whole forward provenance chain is versioned together.",
+  "required_forward_only_upgrade": [
+    "Define replay-authorized compliance runtime binding v2 that extends the frozen historical base binding with the replay-authorization facade blob.",
+    "Bind that v2 digest in new ADMITs before any score generation; historical ADMITs remain historical and are never reinterpreted.",
+    "Emit the exact same v2 binding in replay-authorized RESERVE events while preserving FAIL_CLOSED reservation behavior.",
+    "Add runtime-provenance auditor v2 that chooses the expected binding from the pre-score ADMIT contract version, not from a single hard-coded historical base.",
+    "Add superseding CLOSE/replay that recognizes the v2 auditor/binding and refuses downgrade to current/historical CLOSE for v2-contracted ADMITs.",
+    "Only then expose ProcessStableRuntime V4 replay APIs; default FAIL_CLOSED remains V3-compatible."
+  ],
+  "local_prototype_status": "A local, unpersisted V4 API prototype passed isolated injected tests for bypass rejection, bound-request propagation, fresh-epoch recovery and historical replay rejection, but it intentionally was not written to the repository after the provenance-chain mismatch was identified.",
+  "scope_limitations": [
+    "No claim that the new facade is integrated into the active V3 runtime.",
+    "No exact full-sibling byte execution in this run.",
+    "The finding is structural and based on frozen role-local source blobs; it does not require O, other workers, downstream state or legacy research."
+  ]
+}
