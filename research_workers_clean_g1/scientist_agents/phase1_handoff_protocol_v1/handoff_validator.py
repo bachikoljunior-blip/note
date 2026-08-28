@@ -88,6 +88,12 @@ def semantic_validate(packet: dict, context: dict) -> list[str]:
     if not packet["authorization"]["single_use"]:
         codes.append("AUTHORIZATION_REUSABLE")
 
+    # Cached authorization must be tied to the currently effective safety/policy
+    # revision; changed bounds invalidate prior approvals before execution.
+    current_policy = context.get("current_authorization_policy_revision")
+    if current_policy is not None and packet["authorization"]["policy_revision"] != current_policy:
+        codes.append("STALE_AUTHORIZATION_POLICY")
+
     # Retry after an observed external effect requires explicit reconciliation.
     key = packet["action"]["idempotency_key"]
     seen = set(context.get("seen_idempotency_keys", []))
