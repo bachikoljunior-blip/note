@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:28:43+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "637a4cb210b6ec3f14ca04b768c61f27ee7ac37a",
+    "root_control_revision": 15,
+    "downstream_control_revision": 24,
+    "role_config_revision": 2
+  },
+  "target": {
+    "source_path": "research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T140248JST_RETRY_TOPOLOGY_AND_EXACTLY_ONCE_FACTORIAL.md",
+    "source_blob": "54a327d535556a9c5a5a4d1b82c667f81918d669",
+    "public_repo": "gssanjana4/idempotencybench",
+    "public_commit": "1b9b30fd37f983d6e2eb0ebf535bfcb1086fb311",
+    "summary_blob": "686827fc390c5590a1e1b4bf43117284cbe3a6e2",
+    "agents_blob": "e90df701dca0b70f4c367a534d0380a35af78b9b",
+    "world_blob": "7e6c8e54698d67b6b9da56a867b00103e2f4be8b",
+    "harness_blob": "1031981375d72aa043e93be13879770a7ae4a1f4",
+    "tasks_blob": "85e7c83461de04c3ca6b57f378d2169e9c9ee56b"
+  },
+  "independent_checks": {
+    "naive_retry_receipt_2x2": {
+      "no_retry_none": {"success": 0.875, "ivr": 0.0},
+      "no_retry_runtime_receipts": {"success": 0.875, "ivr": 0.0},
+      "tool_retry_none": {"success": 1.0, "ivr": 1.0},
+      "tool_retry_runtime_receipts": {"success": 1.0, "ivr": 0.0},
+      "status": "exactly matches results/summary.csv and follows deterministically from public source"
+    },
+    "why_no_retry_success_is_0_875": "There are eight templates. timeout_after_commit commits the first effect and raises. With naive/no_retry, seven single-effect templates have their goal already achieved despite the surfaced failure; the one multi-step template omits its second goal. Thus success=7/8 exactly and omission=1/8.",
+    "why_tool_retry_none_has_ivr_1": "The transport catches the post-commit timeout and repeats the same call below agent visibility. With mitigation=none, keys are ignored, so every task commits the first semantic effect twice. IVR is therefore 320/320 exactly while remaining steps complete.",
+    "why_runtime_receipts_zero_the_ivr": "World._commit checks a semantic-id receipt set keyed by task_id, tool and canonical arguments before committing. The transport repeat hits the existing receipt and does not append a second effect. This deterministically gives IVR=0 in the checked cell.",
+    "stable_key_topology": "Public agents.py confirms NaiveAgent mints fresh UUID keys per call, while StableKeyAgent hashes task identity + intended action. Public summary.csv confirms idem_keys work for transparent tool retry with a repeated key but fail for naive agent_retry/whole_run/at_least_once where keys are regenerated; StableKeyAgent + idem_keys restores IVR=0 across those modes.",
+    "real_model_pilot": "results/fable5_pilot.csv exactly contains four n=8 cells: base+none IVR=.125/success=1; the other three cells IVR=0/success=1. This is artifact-backed but statistically tiny and not a powered model-level effect."
+  },
+  "new_scope_boundary": {
+    "name": "receipt_atomicity_is_simulated_not_crash_reproduced",
+    "finding": "The benchmark's runtime_receipts mitigation is an in-memory set updated inside the same World._commit method as the in-memory ground-truth ledger. timeout_after_commit is raised only after _commit returns. The scripted 0-IVR cells therefore validate the semantics of an ideal atomic semantic-receipt substrate, but do not reproduce durability/atomicity across a real crash window between an external provider commit and local receipt persistence.",
+    "importance": "This does not weaken the retry-topology result inside the benchmark. It narrows the implementation inference: a production runtime must separately prove that receipt identity and persistence are transactionally tied to the external effect or reconciled after ambiguity.",
+    "scope": "Do not describe the in-memory receipt set as an empirical proof of crash-safe durable exactly-once infrastructure."
+  },
+  "replay_notes": {
+    "scripted_grid": "The public scripted harness is stdlib-only and deterministic for the reported IVR/success metrics; UUID randomness affects idempotency keys but not the semantic duplicate metric in mitigation=none and is intentionally part of naive-key behavior.",
+    "historical_bitwise_csv": "Line-ending/platform details may change CSV bytes, so scientific cell replay is stronger than byte-identical file replay unless the exact Python/platform writer environment is pinned."
+  },
+  "scope_guard": "The exact deterministic result is for IdempotencyBench's 8 templates/320 parameterizations and simulator-defined faults/mitigations. It does not establish real-provider exactly-once behavior, and the n=8 Claude Fable 5 pilot must remain a mechanism check."
+}
