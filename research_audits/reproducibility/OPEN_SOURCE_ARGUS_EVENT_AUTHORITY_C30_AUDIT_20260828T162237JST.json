@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:22:37+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "637a4cb210b6ec3f14ca04b768c61f27ee7ac37a",
+    "root_control_revision": 15,
+    "root_control_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "semantic_freeze_respected": true
+  },
+  "target": {
+    "namespace": "open_source",
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
+    "source_blob": "657a5833dacbdd65560b9162603eeb1233bffce1",
+    "active_wave_id": "clean-g1-wave-c30-20260828T150101JST-ef8d11da",
+    "public_primary": "lbx154/Argus@ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+    "dependency_primary": "wolph/portalocker v3.0.0 plus current v4 line"
+  },
+  "grade": {
+    "overall": "A-",
+    "public_source_identity_and_reachability": "A",
+    "candidate009_portalocker_lower_bound": "A",
+    "mission_view_windows_race_preconditions": "A-",
+    "candidate011_utf8_partial_json_reproduction": "A",
+    "candidate011_arbitrary_invalid_byte_recovery": "B-",
+    "production_incident_or_full_windows_reproduction": "C",
+    "implemented_patch_evidence": "not_yet_claimed"
+  },
+  "evidence_separation": {
+    "official_artifact_support": [
+      "Argus main still resolves to the exact worker-pinned commit. event_log.py uses a process-local threading.Lock plus fcntl.flock when fcntl exists; mission_view._view_state._locked has the same platform structure. On Windows the fcntl half is absent.",
+      "JsonlEventSink._append opens events.lock with os.open(..., 0o600), writes line + newline without inspecting the existing final byte, then invokes Mission View projection while event authority is still held on POSIX.",
+      "snapshot_mission_view can bootstrap from events.jsonl and atomically replace mission-view.json under only Mission View's own lock; update_mission_view_event also independently reads/reduces/replaces under that lock.",
+      "Portalocker v3.0.0 Windows source calls tell(), seek(), and fileno() on the lock argument before LockFileEx. Current Portalocker 4.x uses a materially different Windows exclusive-lock implementation; Argus declares portalocker>=3."
+    ],
+    "independent_replication": [
+      "Candidate011's ordinary UTF-8 unterminated-tail failure was independently reproduced with a minimal source-equivalent append: an unterminated JSON prefix plus a new valid row became one malformed physical line.",
+      "The Mission View stale-bootstrap race is independently source-derived from two unlocked-across-process critical sections on Windows, but no full production Windows run was executed in this audit."
+    ],
+    "failed_replication": "No protocol-matched failed external reproduction located.",
+    "O_specific_adaptation": [
+      "The proposed event authority wrapper, exact lock ordering events.lock -> mission-view.lock, delimiter-isolation repair, and regression matrices are worker proposals; they are not present in the pinned Argus source and must not be described as upstream fixes.",
+      "The deterministic race models are source-shaped reproductions, not production incident reports."
+    ]
+  },
+  "findings": [
+    {
+      "name": "candidate009_real_file_object_requirement",
+      "status": "confirmed",
+      "finding": "The worker's lower-bound compatibility concern is exact: Portalocker 3.0.0's Windows LockFileEx path requires file-object operations tell/seek/fileno, so a raw os.open integer descriptor is insufficient there. os.open(...,0600) followed by os.fdopen preserves Argus's explicit creation mode while supplying the required object."
+    },
+    {
+      "name": "windows_event_authority_gap",
+      "status": "confirmed_source_precondition",
+      "finding": "At the pinned Argus commit, the event writer has no interprocess lock on Windows because fcntl is absent and the remaining threading.Lock is process-local. A cross-platform event lock is therefore justified as a source-level correctness change."
+    },
+    {
+      "name": "windows_mission_view_lost_projection_interleaving",
+      "status": "confirmed_source_reachability",
+      "finding": "The worker's stale-bootstrap overwrite sequence is source-reachable: one Windows process can bootstrap and later replace mission-view.json while another appends/projects a newer event, because Mission View's lock is also only process-local on Windows. Atomic os.replace prevents torn files but not lost updates between processes. No production occurrence is inferred."
+    },
+    {
+      "name": "candidate011_utf8_partial_tail",
+      "status": "independently_reproduced",
+      "finding": "Current _append does not verify a trailing newline. If an existing UTF-8 JSON record is truncated before newline, the next valid append is concatenated to it and becomes collateral malformed data. Inserting one delimiter while holding event authority is a minimally destructive framing containment for this case."
+    },
+    {
+      "name": "candidate011_invalid_byte_overclaim_boundary",
+      "status": "scope_narrowing",
+      "finding": "The worker's regression matrix includes an arbitrary invalid-byte tail. Bytewise delimiter insertion can isolate the next row physically, but current iter_call_events reads the file through a UTF-8 text iterator and has no per-line UnicodeDecodeError boundary around iteration. Therefore the existing reader can still abort before reaching the newly isolated valid row. The repair is complete for line framing, not for reader recovery from arbitrary invalid UTF-8.",
+      "required_scope_or_repair": "Either state candidate011 as UTF-8-decodable partial-record isolation, or change iter_call_events to bytewise line iteration/per-row decode failure handling if arbitrary invalid bytes are in scope."
+    },
+    {
+      "name": "durability_scope",
+      "status": "worker_scope_correct",
+      "finding": "No fsync/power-loss guarantee is established by these candidates; the worker correctly keeps candidate008 durability separate."
+    }
+  ],
+  "safe_conclusion": "The C30 open-source artifact is strongly reproducible as a source audit. The Windows event-lock and Mission View interprocess-lock gaps are present at the exact pinned Argus commit, Portalocker 3.0.0 validates the real-file-object lower-bound concern, and the ordinary UTF-8 partial-JSON tail failure reproduces independently. The main correction is narrower: candidate011's proposed delimiter isolation does not by itself make Argus's current iter_call_events resilient to arbitrary invalid UTF-8 tails, because decoding can fail before a valid later row is reached. This is a reader-recovery scope issue, not a rebuttal of the delimiter repair for ordinary truncated JSON. None of these findings should be generalized into a production incident claim or into proof that the proposed patch has been implemented upstream.",
+  "reopen_conditions": [
+    "an upstream Argus patch/release implementing cross-platform event and Mission View authority with exact regression tests",
+    "a Windows CI reproduction at portalocker==3.0.0 and at a current 4.x resolver",
+    "a regression covering arbitrary invalid UTF-8 tail plus iter_call_events recovery, if that scope is retained",
+    "a production incident/failure report with matched source version",
+    "power-loss tests only for the separately scoped durability candidate"
+  ],
+  "checker": "research_audits/reproducibility/OPEN_SOURCE_ARGUS_EVENT_AUTHORITY_C30_CHECKER_20260828T162237JST.json"
+}
