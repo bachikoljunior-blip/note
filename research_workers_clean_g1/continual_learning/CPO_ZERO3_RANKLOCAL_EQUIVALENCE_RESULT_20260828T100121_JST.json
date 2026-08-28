@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-28T10:01:21+09:00",
+  "role": "continual_learning",
+  "frozen_note_main_sha": "1b20c07eeaf56639afe0d05240cf0724e0b0572b",
+  "frozen_control_revision": 12,
+  "frozen_config_revision": 5,
+  "public_cpo_anchor": "MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+  "public_trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+  "public_mask_builder_blob": "5f17be7ad91bdc162a0d1e466198c1bdb2ded921",
+  "harness": {
+    "path": "research_workers_clean_g1/continual_learning/CPO_ZERO3_RANKLOCAL_EQUIVALENCE_HARNESS_20260828T100121_JST.py",
+    "sha256": "cbf4a97cc45e833c57fefe0d5a9ea2c873b9427467e20b50cb246ead2ad961d6",
+    "torch_version": "2.10.0+cpu",
+    "seed": 826,
+    "trials": 1000,
+    "rank_cases": 8529,
+    "bitwise_failures": 0,
+    "partial_loss_failures": 0,
+    "partition_coverage_failures": 0,
+    "edge_stats": {
+      "zero_support": 1,
+      "nondivisible": 787,
+      "empty_rank_partition": 1,
+      "zero_diff": 382,
+      "boundary_hits": 600
+    }
+  },
+  "new_result": {
+    "statement": "Prepartitioning protected global indices and aligned reference values once by ZeRO rank is algebraically equivalent to the public per-step global-copy-then-filter path for pending global_idx, sign-gradient values, per-rank partial mask-loss contribution, and complete partition coverage, provided the GLOBAL masked-count denominator is preserved.",
+    "tested_scope": "source-equivalent CPU algebra only; no DeepSpeed hook/reduce-scatter execution and no PyTorch 2.8 runtime",
+    "required_invariants": [
+      "retain global_n_masked per tensor as a scalar; do not replace it with rank-local support count",
+      "retain global_idx for gradient-hook injection because the public hook indexes the full pre-reduce-scatter gradient",
+      "prepartition ref values with the same boolean selection/order as global_idx",
+      "fail closed or rebuild rank-local state if world_size, rank assignment, ds_numel, or canonical parameter identity changes"
+    ]
+  },
+  "naive_local_denominator_counterexample": {
+    "lambda": 100.0,
+    "world_size": 4,
+    "global_support": 40,
+    "rank_local_support": [20, 5, 0, 15],
+    "current_release_pre_reduce_per_coordinate": 2.5,
+    "current_release_post_average_per_coordinate": 0.625,
+    "naive_local_post_average_nonempty_ranks": [1.25, 5.0, 1.6666666666666667],
+    "explicit_world_size_corrected_post_average_per_coordinate": 2.5,
+    "interpretation": "Using local support count is not a transport-only optimization: it changes regularizer semantics and introduces rank-dependent coordinate scale when support is imbalanced. Distributed scaling correction must remain a separate explicit axis."
+  },
+  "conditional_qwen4b_steady_state_model": {
+    "conditions": "canonical mask domain N=4,437,815,808; exactly 10% global support s=443,781,580; W=8; support treated as balanced for rank-local sparse-state sizing",
+    "current_aux_bytes_per_rank_formula": "N + 12*s (dense bool mask + int64 global indices + fp32 refs)",
+    "current_aux_gib_per_rank": 9.09268368780613,
+    "ranklocal_after_mask_drop_bytes_per_rank_formula": "12*ceil(s/W) (rank-local int64 global indices + fp32 refs)",
+    "ranklocal_aux_gib_per_rank": 0.6199557110667229,
+    "conditional_per_rank_reduction_fraction": 0.9318181812594973,
+    "aggregate_current_gib_8ranks": 72.74146950244904,
+    "aggregate_ranklocal_gib_8ranks": 4.959645688533783,
+    "scope": "capacity model, not measured RSS; actual support and per-rank imbalance must be profiled"
+  },
+  "next_actions": [
+    "Implement a load-time/first-call rank-localization prototype that stores global_n_masked separately and releases global idx/ref plus dense masks after verified partitioning.",
+    "Run the same equivalence harness under public PyTorch 2.8.0 and then with DeepSpeed 0.16.4 hooks/reduce-scatter.",
+    "Instrument real per-parameter support imbalance; do not assume balanced s/W when sizing per-rank state.",
+    "Keep rank-localization transport optimization separate from the known explicit world-size regularizer correction."
+  ]
+}
