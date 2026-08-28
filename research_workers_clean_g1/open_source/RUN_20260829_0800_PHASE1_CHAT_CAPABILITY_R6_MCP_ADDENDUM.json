@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "status": "active",
+  "kind": "capability_addendum",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "control": {
+    "control_revision": 24,
+    "config_revision": 6,
+    "enabled_desired": true,
+    "frozen_root_blob": "f3221f10748a3d2ae86d9a544e27e5a44192b007",
+    "frozen_config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "transport_mode": "exact_blob_two_pass",
+    "authority_recheck_after_additional_semantic_work": "unchanged"
+  },
+  "base_checkpoint": {
+    "path": "research_workers_clean_g1/open_source/RUN_20260829_0800_PHASE1_CHAT_CAPABILITY_R6.json",
+    "commit": "3d67a5b13b272706205b69906ee63f7b6b23d6a7",
+    "blob": "82be20e9f8da1008cac852dc2f6810563d95c26a"
+  },
+  "openhands_regression_candidate": {
+    "path": "research_workers_clean_g1/open_source/OPENHANDS_STALE_USER_HEAD_REGRESSION_CANDIDATE_20260829_R6.patch",
+    "commit": "530d30caa2b78daf5397b663313659115ddcc35e",
+    "blob": "410884315812a03446e773e3ad1f2467ddd1eb6d",
+    "status": "source-qualified candidate only; not applied upstream or executed against the upstream package",
+    "current_runtime_probe": "openhands Python package is not installed in the current local analysis environment; no hosted runner or quota-bearing execution route was invoked",
+    "expected_property": "a durable later user MessageEvent must be reachable from recovered active_branch after the persisted non-null HEAD is rewound to the preceding user message"
+  },
+  "mcp_csharp_release_pin": {
+    "repository": "modelcontextprotocol/csharp-sdk",
+    "release": "v2.2.0",
+    "target_commit": "6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "published_at": "2026-08-13T08:45:54Z",
+    "source_blobs": {
+      "IMcpTaskStore.cs": "6851f21ac41464fba93fc5a02cfdcd109a9db314",
+      "McpTasksBuilderExtensions.cs": "e61466a69b550ee0761e99e4541b5a6dd888a7a0",
+      "McpTasksClientExtensions.cs": "833f2b25005eb26951839b389c15b4e2dd874d03",
+      "InMemoryMcpTaskStore.cs": "d1014c110a601c0baed83cab93a4edacae104ad1"
+    }
+  },
+  "new_findings": [
+    {
+      "id": "mcp-csharp-built-in-task-creation-has-no-original-request-key",
+      "verdict": "CONFIRMED_EXACT_RELEASE",
+      "evidence": "`IMcpTaskStore.CreateTaskAsync` accepts only a CancellationToken and returns a unique task. `WithTasks` calls CreateTaskAsync before scheduling background tool execution and before returning CreateTaskResult.",
+      "failure_trace": [
+        "original tools/call enters RunAsTaskAsync",
+        "CreateTaskAsync durably creates task A",
+        "background tool execution for A is scheduled",
+        "CreateTaskResult carrying taskId A is lost before client records it",
+        "blind retry re-enters RunAsTaskAsync",
+        "built-in interface supplies no original-request/idempotency key to CreateTaskAsync, so ordinary store behavior creates task B and schedules another execution"
+      ],
+      "boundary": "Application-specific pre-task filters or the effect API itself can still add idempotency; the built-in Tasks store contract does not close the ambiguity."
+    },
+    {
+      "id": "mcp-csharp-inmemory-store-demonstrates-non-durable-default",
+      "verdict": "CONFIRMED_EXACT_RELEASE",
+      "evidence": "InMemoryMcpTaskStore documents that tasks do not persist across process restarts and CreateTaskAsync uses a fresh Guid. IMcpTaskStore requires a singleton/shared store or external backing under stateless HTTP so later polls can resolve.",
+      "phase1_effect": "The convenient in-memory store is development/test-only recovery evidence, not a cross-run scheduled-Chat mechanism. Production durability introduces a shared server-side state dependency."
+    },
+    {
+      "id": "mcp-csharp-auto-polling-does-not-durably-export-taskid",
+      "verdict": "CONFIRMED_EXACT_RELEASE",
+      "evidence": "`CallToolWithPollingAsync` calls `CallToolAsTaskAsync`; when a task result is returned it passes the `CreateTaskResult` directly into `PollTaskToCompletionAsync`, where `taskId` is a local variable. No persistence callback/store is present in this convenience method.",
+      "safe_pattern": "For crash-resumable clients, prefer `CallToolAsTaskAsync`, persist `TaskCreated.TaskId` immediately, then drive GetTaskAsync manually. This only closes post-receipt client crashes, not the pre-receipt response-loss gap."
+    },
+    {
+      "id": "mcp-task-durable-state-is-separate-from-exactly-once-effect",
+      "verdict": "CONFIRMED_PATTERN",
+      "evidence": "Exact C# release makes the separation concrete: task store durability ensures `tasks/get` can find a handle, while background execution starts separately and creation has no effect idempotency token.",
+      "safe_rule": "Treat task durability as observation/recovery state. Exactly-once or duplicate-safe effects still require a tool/effect-level stable key, compare-and-set, or exact post-effect readback."
+    }
+  ],
+  "phase1_acceptance": {
+    "accepted_zero_dependency_mechanism_found": false,
+    "residual_richer_mode_or_user_execution_dependency": true,
+    "residual_detail": "MCP task execution still requires an MCP server/background executor and durable shared store for restart-safe service; OpenHands regression execution would require the local package/runtime, which is absent in this Chat environment.",
+    "finite_monthly_quota_dependency": false,
+    "quota_bearing_experiment_consumed": false,
+    "incremental_monetary_cost": 0,
+    "classification": "new exact blockers/patterns; no accepted handoff"
+  },
+  "frontier": [
+    "If a zero-quota in-process OpenHands source/runtime surface becomes available directly in Chat, execute the saved stale-user-HEAD regression candidate at exact v1.44.1; until then keep its result source-level rather than claiming a failing upstream test.",
+    "Audit whether OpenHands Agent Server can safely reconcile only a unique descendant chain of the persisted HEAD on startup, stopping on forks and ignoring pure state artifacts; compare with an event+HEAD commit marker.",
+    "For MCP C# v2.2.0, inspect whether pre-Tasks alternate filters receive a stable caller request identity suitable for application idempotency and whether the 2026-07-28 request envelope exposes a reusable request key; reject JSON-RPC message id if its semantics are transport-correlation only.",
+    "Search a second Chat-exposed open-source API/state system for a server-minted durable handle whose creation itself accepts a documented idempotency key, while requiring no resident worker or finite monthly quota."
+  ],
+  "exact_continuation": "Fresh bootstrap and freeze authoritative control. Read own LATEST, this addendum, the base 0800 checkpoint, and the saved OpenHands regression candidate only. First examine the MCP 2026-07-28 modern request envelope and C# pre-Tasks filter context for a documented stable creation-idempotency field; do not promote JSON-RPC id without spec evidence. In parallel, refine OpenHands recovery to a unique-descendant reconciliation rule with fork/artifact counterexamples. If an in-process OpenHands runtime becomes directly available without hosted/quota execution, run the saved regression candidate; otherwise preserve it as source-level only. Continue searching for a Chat-exposed durable-handle API with built-in creation idempotency and no residual server/worker/user execution dependency.",
+  "termination": {
+    "global_completion": false,
+    "scheduler_change_requested": false,
+    "reason": "checkpointed a materially stronger exact-release MCP implementation boundary and a concrete OpenHands upstream regression candidate; frontier remains nonempty"
+  }
+}
