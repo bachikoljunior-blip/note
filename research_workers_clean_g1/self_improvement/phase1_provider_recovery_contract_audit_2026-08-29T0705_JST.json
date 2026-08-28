@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "sequence": 110,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "created_at": "2026-08-29T07:05:15+09:00",
+  "bootstrap_valid": true,
+  "frozen_authority": {
+    "head_at_freeze": "752ebb0ed3052ae2549acf2c78ff08e9bbb6a9f1",
+    "desired_state": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "control_revision": 22,
+      "blob_sha": "e4f6d24c137284d002941ac04254e3dbeca2cfcb"
+    },
+    "role_config": {
+      "path": "automation_control/roles/self_improvement.json",
+      "control_revision": 14,
+      "config_revision": 7,
+      "blob_sha": "c5d194b341a70356da196cfb88636ab41fc1bc9f"
+    },
+    "postfreeze_authority_identity_verified": true,
+    "verified_at_head": "e10a2d3fff62e6c76185fb5d952e9b32727e639f"
+  },
+  "class_definitions": {
+    "idempotent_plus_reconcile": "Provider documents safe retry under a stable client operation identity and also exposes a read/query surface that can recover the committed operation/resource using that identity or a deterministic target identity.",
+    "idempotent_only": "Provider documents safe retry under a stable client operation identity, but the generic API contract does not expose a separate exact lookup by that operation identity after response loss.",
+    "reconcile_only": "Provider exposes deterministic state/resource identity sufficient to query and verify the intended effect, but does not promise that blindly replaying the original mutation returns the original result or is itself the recovery mechanism.",
+    "neither": "The documented client-visible mutation contract exposes neither safe replay under a client operation identity nor an exact native lookup keyed by the lost operation identity."
+  },
+  "providers": [
+    {
+      "provider": "Amazon EC2 RunInstances",
+      "class": "idempotent_plus_reconcile",
+      "operation_identity": "ClientToken plus API action and EC2 idempotency scope. RunInstances scope is Regional unless an Availability Zone is specified explicitly or implicitly, in which case idempotency is zonal.",
+      "safe_replay": "Retrying a successfully completed request with the same ClientToken and same parameters succeeds without further actions.",
+      "payload_mismatch": "A successful request retried with the same ClientToken but differing parameters can fail with IdempotentParameterMismatch; Region/Availability-Zone scope rules are special-cased by the service.",
+      "reconcile_surface": "DescribeInstances exposes a client-token filter for the token used at launch, so the controller can query for instances created by the exact token before any replay.",
+      "retention": "The cited EC2 idempotency documentation does not state a token-cache TTL. The controller must not infer indefinite replay safety from silence; resource reconciliation by client-token remains separately available while the instance record is queryable.",
+      "controller_transition": "After ambiguous response loss: RECONCILE_FIRST using DescribeInstances(client-token). If a unique matching launch is found, bind it to the local request digest and COMPLETE. If none is found and the provider idempotency contract is still trusted, retry with the same ClientToken and same payload. Never switch to a fresh token for the same logical attempt. If identity scope or payload binding is uncertain, BLOCKED_MISMATCH/UNKNOWN.",
+      "sources": [
+        "https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-idempotency.html",
+        "https://docs.aws.amazon.com/botocore/latest/reference/services/ec2/paginator/DescribeInstances.html"
+      ]
+    },
+    {
+      "provider": "Google Compute Engine instances.insert",
+      "class": "idempotent_plus_reconcile",
+      "operation_identity": "requestId query parameter, a non-zero UUID supplied by the client.",
+      "safe_replay": "The API states that if a timed-out request is retried with the same requestId, the server can detect the original operation and ignore the duplicate if it was already received/completed.",
+      "payload_mismatch": "The cited requestId documentation does not define a Stripe/AWS-style mismatch error. Therefore the controller must bind requestId to an immutable local request digest and never reuse it for a changed payload.",
+      "reconcile_surface": "Mutations return Operation objects whose clientOperationId equals requestId when provided. Operation list endpoints expose Operation resources including clientOperationId; the controller can scan/list within the operation scope to recover the operation after response loss. For deterministic resources such as VM instance names, Compute Engine documentation also recommends GET of the target resource to confirm success.",
+      "retention": "Completed Compute Engine operations are retained for at least 1 hour and at most 14 days; callers should not depend on retention longer than the 1-hour minimum. The requestId deduplication retention itself is not stated in the cited method page, so replay beyond a documented safety window must not be assumed.",
+      "controller_transition": "After ambiguous response loss: scan the appropriate zonal/regional/global operations for clientOperationId=requestId and verify targetLink/operationType against the local request digest. If found, track it to DONE and reconcile the target resource. If not found, retry only with the same requestId while the documented idempotency contract is considered valid. After operation evidence may have expired and no deterministic target can be verified, fail closed UNKNOWN rather than allocate a new requestId for the same logical effect.",
+      "sources": [
+        "https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/insert",
+        "https://docs.cloud.google.com/compute/docs/reference/rest/v1/globalOperations/list",
+        "https://docs.cloud.google.com/compute/docs/instances/viewing-compute-operations",
+        "https://cloud.google.com/compute/docs/api/how-tos/api-requests-responses"
+      ]
+    },
+    {
+      "provider": "Stripe API v1 POST mutations",
+      "class": "idempotent_only",
+      "operation_identity": "Idempotency-Key supplied by the client; analysis is explicitly limited to API v1 POST semantics, not Stripe API v2.",
+      "safe_replay": "Stripe v1 stores the first executed request's status code and body for an idempotency key, including 500 responses, and returns the same result on later same-key retries.",
+      "payload_mismatch": "Stripe compares parameters and returns an idempotency error when the same key is reused with non-matching parameters/endpoint semantics.",
+      "reconcile_surface": "Stripe's generic error guidance says a caller may retrieve the relevant object or use webhooks, but the generic API v1 idempotency contract does not document a separate endpoint that retrieves the cached result by Idempotency-Key itself. Therefore the generic class is idempotent-only; object-specific APIs may add reconciliation on top.",
+      "retention": "Keys can be pruned after they are at least 24 hours old. Reusing a key after pruning can create a new request, so same-key replay cannot be treated as permanent exactly-once protection.",
+      "controller_transition": "After ambiguous network failure within the protected window: retry the exact same POST with the exact same Idempotency-Key and request digest until a definitive result is received. If the 24-hour minimum retention boundary has been exceeded, first use any separately verified object-specific lookup/webhook identity; otherwise mark UNKNOWN and do not issue a new key for the same logical effect.",
+      "sources": [
+        "https://docs.stripe.com/api/idempotent_requests",
+        "https://docs.stripe.com/error-low-level",
+        "https://docs.stripe.com/error-handling"
+      ]
+    },
+    {
+      "provider": "GitHub REST repository contents create/update",
+      "class": "reconcile_only",
+      "operation_identity": "Deterministic repository path plus branch/ref; updates additionally bind to the current blob SHA via the required sha field.",
+      "safe_replay": "The endpoint does not document an idempotency key or replay cache. Blindly replaying a lost create/update is not the recovery primitive and can return Conflict/Validation errors; update requests require the blob SHA being replaced.",
+      "payload_mismatch": "Content is explicit in the request and update uses the previous blob SHA as a compare-and-swap precondition. A changed current blob means the controller must treat the state as a conflict rather than silently replaying against a new base.",
+      "reconcile_surface": "GET repository content by exact path/ref returns the file and blob SHA. After response loss, the controller can read the deterministic path and compare the resulting content/blob to the intended content before deciding whether another write is safe.",
+      "retention": "No short operation-cache retention is needed for reconciliation; correctness depends instead on the lifetime of the branch/ref/path and on preserving the exact pre-intent base blob SHA. Branch movement or deletion is a semantic conflict, not a reason for blind replay.",
+      "controller_transition": "After ambiguous response loss: GET the exact path at the intended branch/ref. If the expected content/blob is present, COMPLETE without another write. If the old base blob is still current, the original mutation may be retried with that exact base precondition. If another blob is current, CONFLICT/BLOCKED; do not overwrite by substituting the new SHA automatically.",
+      "sources": [
+        "https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28"
+      ]
+    },
+    {
+      "provider": "GitHub REST Create an issue",
+      "class": "neither",
+      "operation_identity": "The documented create request accepts title/body/milestone/labels/assignees/field values but no native client idempotency token. The successful response assigns a server-generated issue number; GET requires that issue_number.",
+      "safe_replay": "No native idempotent replay contract is documented for create-issue POST.",
+      "payload_mismatch": "No provider-native operation-key mismatch contract is documented because no client operation key exists for this endpoint.",
+      "reconcile_surface": "The exact created issue is retrievable by issue_number only after that server-generated number is known. If the create response is lost, the documented endpoint contract does not provide an exact native lookup by a client-supplied operation identity.",
+      "retention": "Not applicable to an idempotency cache because none is documented. Application-level markers/search could be added by a caller, but that is an extra protocol and should not be treated as native exact reconciliation without its own tested uniqueness/consistency contract.",
+      "controller_transition": "After ambiguous response loss: UNKNOWN/fail-closed. Do not blindly POST the same create again. A higher-level caller may avoid this class only by introducing and separately verifying an application-level deterministic identity/reconciliation protocol before dispatch.",
+      "sources": [
+        "https://docs.github.com/en/rest/issues/issues"
+      ]
+    }
+  ],
+  "controller_contract_delta": {
+    "before_dispatch": [
+      "Persist provider_class, provider_operation_identity, request_digest, identity_scope, and any expiry/retention deadline before the first wire send.",
+      "Never reuse one provider operation identity for a different request_digest.",
+      "For reconcile-only resources, persist the deterministic target identity and exact precondition/base version before dispatch."
+    ],
+    "on_restart": [
+      "idempotent_plus_reconcile: reconcile first; replay only same identity+digest when no committed effect is found and replay is still inside the documented contract.",
+      "idempotent_only: replay only same identity+digest inside the documented idempotency window; after expiry, require a separate verified resource identity or fail UNKNOWN.",
+      "reconcile_only: query deterministic target first; accept only exact intended state; retry only if the persisted precondition is still unchanged; otherwise conflict/fail closed.",
+      "neither: ambiguous DISPATCHING state becomes UNKNOWN/BLOCKED_UNKNOWN; never blind retry."
+    ],
+    "terminal_rule": "A terminal COMPLETE/BLOCKED_UNKNOWN/CONFLICT state must be checked before any provider access so a second fresh resume is provider-call-free."
+  },
+  "tested_scope": "Source audit of documented public API contracts only. No live paid/cloud mutations were performed. Classification is limited to the named endpoints/versions and exact documented client-visible semantics; it does not imply that every endpoint at the same provider has the same class.",
+  "frontier_nonempty": true,
+  "exact_next_action": "Return to the frozen CAL-LEX-3ARM-v1 optimizer frontier without retuning: reconstruct the exact frozen selector/harness from own state, preregister at least two additional public real workload families and multiple independent calibration panels before timing them, then falsify on selector-choice instability or loss of pooled competitiveness. In parallel, extend the HTTP reference controller with provider-class fields, explicit expiry deadlines, payload-mismatch transitions, and a reconcile-only CAS path matching this audit."
+}
