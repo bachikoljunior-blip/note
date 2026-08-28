@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "sequence": 102,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "frozen_control": {
+    "note_main_sha": "af7a4728f22ddbf0ee42763221afefe51729c9f0",
+    "root_control_revision": 16,
+    "role_config_revision": 7,
+    "enabled_desired": true
+  },
+  "objective": "Audit generic optimizer policies for forecast/reforecast, transversal candidate generation, alternative-plan switching and crash-safe evaluation when progress overruns expectations.",
+  "observations": [
+    {
+      "mechanism": "multi-fidelity early stopping",
+      "source": "https://arxiv.org/abs/1603.06560",
+      "source_name": "Hyperband",
+      "claim_scope": "Hyperband allocates a predefined resource across many configurations and uses adaptive resource allocation/early stopping rather than fully evaluating every configuration. This supports a probe-then-intensify control pattern, not a general proof that any early metric predicts final utility."
+    },
+    {
+      "mechanism": "scheduler-controlled pause/stop and restore",
+      "source": "https://docs.ray.io/en/master/tune/getting-started.html",
+      "source_name": "Ray Tune ASHA",
+      "claim_scope": "Ray Tune documents ASHA as terminating less-promising trials and allocating more resources to promising trials. Its restore API resumes unfinished trials from persisted experiment state/checkpoints, while SIGKILL can skip a graceful final checkpoint. This is checkpoint-based recovery, not exactly-once protection for arbitrary external evaluator side effects."
+    },
+    {
+      "mechanism": "adaptive capping against an incumbent",
+      "source": "https://automl.github.io/SMAC3/v2.4.0/advanced_usage/13_adaptive_capping/",
+      "source_name": "SMAC3 adaptive capping",
+      "claim_scope": "For runtime minimization, SMAC3 can abort a challenger once cumulative cost cannot beat the incumbent. This gives a concrete fail-fast rule based on an irreversible lower bound on accumulated positive runtime cost."
+    },
+    {
+      "mechanism": "runtime prediction and ranked fallback",
+      "source": "https://new.aaai.org/Library/JAIR/Vol32/jair32-014.php",
+      "source_name": "SATzilla",
+      "claim_scope": "SATzilla uses empirical hardness/runtime models for per-instance solver selection and historically falls back to the next predicted solver on solver failure. This supports explicit alternative ranking and forecast-conditioned switching, but its published setting is solver selection rather than long-horizon self-improvement."
+    },
+    {
+      "mechanism": "complementarity-oriented candidate generation",
+      "source": "https://www.cs.ubc.ca/labs/algorithms/Projects/Hydra/",
+      "source_name": "Hydra",
+      "claim_scope": "Hydra iteratively adds configurations to the extent that they improve a current portfolio, rewarding complementary strengths rather than merely local variants of the incumbent. This is a useful analogue for transversal candidate generation."
+    },
+    {
+      "mechanism": "universal restarts under unknown runtime distributions",
+      "source": "https://www.cs.utexas.edu/~diz/pubs/speedup.pdf",
+      "source_name": "Luby-Sinclair-Zuckerman universal restart strategy",
+      "claim_scope": "For Las Vegas algorithms with independent restarts, the universal restart strategy is within a logarithmic factor of the best restart strategy without knowing the runtime distribution. This only transfers when repeated attempts are meaningfully independent and restart-safe."
+    },
+    {
+      "mechanism": "persistent study state and stale-trial detection",
+      "source": "https://optuna.readthedocs.io/en/latest/tutorial/20_recipes/014_ablation_study_by_optuna.html",
+      "source_name": "Optuna RDBStorage heartbeat/retry",
+      "claim_scope": "Optuna documents heartbeat-based detection of killed/hung RUNNING trials with RDBStorage and optional retry; JournalStorage lacks heartbeat and can leave a parameter combination blocked. Retry is operational recovery, not evidence that an external side effect can be safely repeated."
+    }
+  ],
+  "candidate_control_policies": [
+    {
+      "id": "DFR",
+      "name": "direct-first conditional reforecast",
+      "rule": "Start with the cheapest credible direct plan. At fixed durable checkpoints, condition the forecast on the fact that the plan is still unfinished: estimate P(complete before deadline | elapsed=t, unfinished) and expected remaining cost, rather than comparing elapsed time with a static full-run percentile. Continue only while conservative current utility remains competitive with the best alternative after switch cost and uncertainty margin.",
+      "reason": "A static p90 trigger can be later than the remaining deadline under heavy-tailed runtimes; conditional survival information is more decision-relevant after an overrun."
+    },
+    {
+      "id": "TGR",
+      "name": "transversal generation and race",
+      "rule": "When overrun or forecast-calibration alarms fire, generate a small set of candidates from deliberately different mechanism families, score marginal portfolio value on the incumbent's failure set, allocate equal probe budgets, then intensify only survivors with successive-halving/adaptive-capping style resource allocation.",
+      "reason": "Local variants can share the incumbent's failure mode; portfolio complementarity is the target, not merely raw standalone score."
+    },
+    {
+      "id": "UAS",
+      "name": "utility-advantage switching",
+      "rule": "For plan i at checkpoint t, define U_i(t)=P_i(success within remaining budget)-lambda*E_i(capped remaining cost)/(remaining budget)-risk_penalty_i. Switch only when a conservative alternative estimate exceeds the current estimate by switch_cost_normalized plus hysteresis, or when the current plan is forecast-infeasible before the deadline.",
+      "reason": "This prevents universal fixed timeouts from harming easy/direct-good regimes while still permitting early abandonment in heavy-tail/decomposition-favorable regimes."
+    },
+    {
+      "id": "LRS",
+      "name": "Luby restart safety fallback",
+      "rule": "If runtime calibration is poor, runtimes appear heavy-tailed, and reruns are independent plus side-effect-safe, fall back to a universal restart schedule rather than relying on a misspecified point forecast. Do not use this fallback for deterministic progress, non-independent reruns, or non-idempotent external effects.",
+      "reason": "Unknown heavy-tail regimes can make a single long attempt arbitrarily unattractive, but restart theory assumes safe independent reruns."
+    },
+    {
+      "id": "CSE",
+      "name": "crash-safe evaluation envelope",
+      "rule": "Before an expensive or externally visible evaluation, persist a stable attempt/candidate identity and evaluation intent. On restart, reconcile an in-flight attempt before any retry. If provider semantics prove neither idempotent same-key replay nor reconciliation, persist UNKNOWN and fail closed rather than blind-retry. Derive selection evidence only from immutable completed outcomes.",
+      "reason": "Checkpoint/retry frameworks recover computation but do not automatically make external evaluator effects exactly once."
+    }
+  ],
+  "measurable_forecast_and_switching_criteria": {
+    "forecast_metrics": [
+      "deadline success calibration: compare predicted P(success by B) with observed frequency in held-out history",
+      "runtime calibration: p50/p90 coverage plus median absolute log runtime error on completed runs",
+      "conditional calibration after overrun: for each checkpoint t, compare predicted and observed remaining-time survival among runs unfinished at t",
+      "forecast drift: rolling calibration error relative to the model snapshot used when the plan was chosen"
+    ],
+    "candidate_triggers_for_calibration_not_universal_constants": [
+      "soft reforecast whenever elapsed exceeds the initial median forecast or a new blocker changes plan state",
+      "generate transversal alternatives when elapsed/initial_expected_time >= 1.5, branch-count/forecast >= 1.5, or deadline-success forecast falls below a precommitted floor",
+      "switch only after two consecutive checkpoints of alternative utility advantage unless the current plan is already deadline-infeasible",
+      "use a hysteresis margin so small noisy score changes do not cause thrashing",
+      "cap a challenger immediately when accumulated positive cost proves it cannot beat the incumbent under the active objective"
+    ],
+    "no_regression_restoration_metadata": [
+      "baseline artifact/state digest and immutable restore pointer",
+      "candidate digest, parent/ancestry, mechanism-family label",
+      "objective/evaluator/version identifiers and dataset/split identifiers",
+      "forecast model snapshot, calibration window and uncertainty summary used for the decision",
+      "budget consumed before switch, switch checkpoint, reason code and alternative ranking",
+      "immutable outcome/evidence log cursor used by the decision",
+      "best-safe incumbent pointer plus explicit rollback preconditions"
+    ]
+  },
+  "synthetic_ablation": {
+    "purpose": "Stress-test decision rules only; not external empirical evidence.",
+    "seeded_setup": {
+      "calibration_runs_per_plan": 5000,
+      "evaluation_runs_per_regime": 100000,
+      "deadline_budget": 60,
+      "switch_cost": 1,
+      "reforecast_checkpoints": [10, 15, 20, 30, 40],
+      "utility_lambda": 0.2,
+      "utility_hysteresis": 0.02,
+      "regimes": {
+        "direct_good": "direct median~8 light-tail; decomposition ~15; transversal median~14",
+        "direct_heavy": "direct 70% median~8 / 30% median~50 mixture; decomposition ~15; transversal median~18",
+        "decomp_good": "direct 50% median~10 / 50% median~70 mixture; decomposition ~14; transversal median~22"
+      }
+    },
+    "results": [
+      {"regime":"direct_good","policy":"direct_only","success_by_60":1.0,"mean_capped_time":8.4901,"p90_capped_time":12.4945},
+      {"regime":"direct_good","policy":"fixed15_switch","success_by_60":0.99995,"mean_capped_time":8.9767,"p90_capped_time":12.4945},
+      {"regime":"direct_good","policy":"p90_switch","success_by_60":0.99986,"mean_capped_time":9.8211,"p90_capped_time":12.4945,"static_trigger":12.5801},
+      {"regime":"direct_good","policy":"reforecast_utility","success_by_60":1.0,"mean_capped_time":8.4901,"p90_capped_time":12.4945,"switch_rate":0.0},
+      {"regime":"direct_heavy","policy":"direct_only","success_by_60":0.89062,"mean_capped_time":19.9249,"p90_capped_time":60.0},
+      {"regime":"direct_heavy","policy":"fixed15_switch","success_by_60":1.0,"mean_capped_time":15.4156,"p90_capped_time":32.1020},
+      {"regime":"direct_heavy","policy":"p90_switch","success_by_60":0.89062,"mean_capped_time":19.9249,"p90_capped_time":60.0,"static_trigger":62.4151},
+      {"regime":"direct_heavy","policy":"reforecast_utility","success_by_60":1.0,"mean_capped_time":16.0679,"p90_capped_time":27.7113,"switch_rate":0.46008,"mean_switch_time":10.0},
+      {"regime":"decomp_good","policy":"direct_only","success_by_60":0.68293,"mean_capped_time":32.5719,"p90_capped_time":60.0},
+      {"regime":"decomp_good","policy":"fixed15_switch","success_by_60":1.0,"mean_capped_time":20.9575,"p90_capped_time":31.6600},
+      {"regime":"decomp_good","policy":"p90_switch","success_by_60":0.68293,"mean_capped_time":32.5719,"p90_capped_time":60.0,"static_trigger":99.6638},
+      {"regime":"decomp_good","policy":"reforecast_utility","success_by_60":1.0,"mean_capped_time":20.9781,"p90_capped_time":27.0459,"switch_rate":0.75096,"mean_switch_time":10.0}
+    ],
+    "bounded_inference": [
+      "A universal fixed timeout can waste work in a direct-good regime.",
+      "A static p90-overrun trigger can be unusable in heavy-tail regimes because the calibrated p90 can lie beyond the entire deadline.",
+      "A conditional reforecast rule can preserve the direct-good case while switching in the two heavy-tail regimes in this synthetic setup.",
+      "The numerical lambda, hysteresis and checkpoint schedule are candidate settings only; they require calibration on non-synthetic workloads before adoption."
+    ]
+  },
+  "crash_safe_evaluation_local_evidence": {
+    "source": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T200700_JST_inspect_hawk_http_provider_recovery.md",
+    "scope": "Own clean-state sequence 101 demonstrated a local HTTP/SIGKILL reference in which stable idempotency plus reconciliation recovered provider-accepted/local-unrecorded effects without duplicate execute, while a provider with neither capability failed closed as UNKNOWN. This is reused only as a generic crash-safety invariant, not as evidence about arbitrary providers."
+  },
+  "status": {
+    "substantive_progress": true,
+    "assignment_complete": false,
+    "blocker": "Post-freeze SHA-only head check observed note main drift from af7a4728f22ddbf0ee42763221afefe51729c9f0 to 8046b89db7230b72a57591899fab78be451a4809. Per frozen control revision 16, no newer control was fetched or adopted and semantic work stopped.",
+    "base_continuation_preserved": true,
+    "exact_next_phase1_action": "On the next fresh-control invocation, re-resolve the root/control tuple first. Then build an executable phase1 optimizer-controller reference that persists forecast snapshot, attempt identity, incumbent restore pointer and switch decision before each expensive evaluation; inject crashes before/after reforecast and before/after alternative dispatch; verify restart does not duplicate completed evaluations or lose the safe incumbent. In parallel, run the direct-only/fixed-cap/static-percentile/conditional-reforecast comparison on at least one public non-synthetic optimizer workload, precommitting calibration metrics and thresholds. Continue to a new generic Phase-1 transversal candidate rather than restoring the preserved base frontier if this leaf becomes saturated."
+  }
+}
