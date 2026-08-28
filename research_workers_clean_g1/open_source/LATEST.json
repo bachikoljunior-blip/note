@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "control_revision": 14,
+  "control_revision": 15,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1512_PORTALOCKER_FLOOR_SCOPE.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1509_PORTALOCKER_FLOOR_TAIL_ORDER.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1602_PORTALOCKER_42_UTF8_BOUNDARY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1512_PORTALOCKER_FLOOR_SCOPE.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -17,24 +17,24 @@
     {
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
-      "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.3.0"],
-      "source_scope": "Windows raw-fd support and position semantics, exclusive-lock backend evolution, lower-bound selection"
+      "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.1.0", "v4.2.0", "v4.3.0"],
+      "source_scope": "Windows raw-fd API/position semantics, release-level locking correctness, dependency floor selection"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Decide the Portalocker floor with an actual Windows lower-bound regression rather than API shape alone: pin 3.2.0 and run workspace_lease acquire->owner-write->release->reacquire plus cross-process exclusion and the new event authority. If clean, >=3.2 is defensible; if not, choose >=4.0, whose raw-fd byte-zero normalization is explicit. Then finish event authority preserving 0600 semantics plus candidate011 bytewise delimiter isolation before _maybe_roll(). Next enforce events.lock -> mission-view.lock for cross-platform reconciliation, then PlannerVerdict FOUND/ABSENT/UNKNOWN stable-snapshot semantics and stable-generation readers. Keep candidate008 durability and candidate005 transition_id provenance separate.",
+  "exact_continuation": "Treat portalocker>=4.2 as the first defensible dependency floor for the inspected Windows low-level locking surface, then source-map/implement the event authority with existing os.open(...,0600) raw fd + LOCK_EX|LOCK_NB, retrying only AlreadyLocked. Add candidate011 pre-rotation one-byte delimiter isolation, but make stable generation iteration byte-based so a torn UTF-8 code point cannot poison later valid rows. POSIX readers may pin handles/end offsets under shared flock; Windows correctness scans hold exclusive event authority. Then enforce events.lock -> mission-view.lock and finish PlannerVerdict FOUND/ABSENT/UNKNOWN plus explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 transition provenance separate.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_012_dependency_floor": "Argus declares portalocker>=3. Portalocker v3.0/v3.1 Windows are source-incompatible with existing Argus raw-int fd lock calls; v3.2 adds raw-int API support. Repository code search found no Portalocker shared-lock use and current direct sites use exclusive locking.",
-    "candidate_012_floor_scope_revised": "Treat >=3.2 as the checked raw-fd API floor, not yet a proven semantic floor. workspace_lease acquires via raw fd, writes owner JSON through the same fd, then unlocks it at a nonzero file position. Portalocker 3.2 does not normalize raw-fd position for its msvcrt operation; Portalocker 4.0+ does. A real Windows 3.2.0 regression must decide >=3.2 versus >=4.0.",
-    "candidate_012_ci_gap": "Current macOS/Windows portable workflow installs the current resolver and does not include tests/core/test_workspace_lease.py. A lower-bound Windows cell should explicitly include workspace_lease plus event-authority regressions.",
-    "candidate_009_mode_preservation": "After floor selection, event authority should preserve current os.open(...,0600) lock creation, retry only AlreadyLocked, propagate permanent acquire failures, and treat unlock after a committed canonical append as cleanup rather than a reason to duplicate the event.",
-    "candidate_011_ordering_revised": "Bytewise boundary isolation belongs before _maybe_roll(); otherwise a valid JSON tail missing only newline can be moved into .1 unterminated and iter_call_events will skip it. Pre-rotation repair is idempotent and preserves malformed bytes without truncation.",
-    "candidate_007_windows_bootstrap_race": "Mission View _locked remains fcntl-only cross-process; Windows reconciliation must share event authority with lock order events.lock -> mission-view.lock and avoid nested event-lock acquisition from writer projection.",
-    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation.",
+    "candidate_012_dependency_floor": "Revised to portalocker>=4.2 as the first defensible floor for Argus's inspected raw-fd Windows locking surface. Upstream 4.0 fixed raw-fd current-position mutual-exclusion failure; 4.1 changed no runtime behavior; 4.2 fixed further Windows locker correctness including shifted fallback LK_* values and one cached OVERLAPPED reused across calls/threads. Argus Python>=3.11 has no Python-version cost, and current Windows CI resolves latest rather than the declared minimum.",
+    "candidate_012_scope_guard": "This does not prove every Argus path fails on portalocker 3.2/4.0/4.1. Inspected raw-fd acquisitions start at offset zero and workspace_lease advances only after acquisition. The claim is dependency-policy based: a <4.2 floor knowingly admits upstream-known low-level Windows defects in the API family Argus directly uses.",
+    "candidate_009_mode_preservation": "With a >=4.2 floor, event authority can preserve os.open(...,0600) and pass the raw fd directly to low-level Portalocker; separate os.fdopen conversion is unnecessary for Windows byte-zero correctness. Retry only AlreadyLocked, propagate permanent acquire failures, and treat unlock failure after committed append as cleanup before close.",
+    "candidate_011_ordering_revised": "Boundary isolation remains before _maybe_roll(): if nonempty current log does not end in newline, append exactly one newline under event authority before rotation, never truncate the damaged bytes.",
+    "candidate_011_utf8_coupling": "Delimiter isolation alone is insufficient when process interruption tears a multibyte UTF-8 sequence. A local probe showed strict UTF-8 iteration raises UnicodeDecodeError before a later valid Planner verdict row, while binary physical-row iteration still reaches it. Stable generation reading must therefore be byte-based with per-row decode/parse status.",
+    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable clean scan; UNKNOWN covers snapshot/open/decode/target-relevant parse ambiguity, leaves outbox pending, and returns PLAN_RETRY without Planner invocation.",
+    "candidate_007_windows_bootstrap_race": "Mission View cross-platform reconciliation still needs event authority plus strict events.lock -> mission-view.lock and a writer projection entry point that does not recursively reacquire event authority.",
     "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA a407c86e0039226a0eef0082fec10c3603befa9f control14/config6; later note heads were used only for write coordination and not adopted semantically",
+    "control_freeze": "semantic work froze on note SHA 3ec8df30be44c52bebc80f18dcfb2b8dba4a05df control15/config6; later note heads were used only for authorized write coordination and were not adopted semantically",
     "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation used discovery read-only and mutated only authorized open_source state/receipt destinations."
   },
   "independence": {
