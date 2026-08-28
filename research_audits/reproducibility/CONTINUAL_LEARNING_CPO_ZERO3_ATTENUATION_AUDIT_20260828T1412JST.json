@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T14:12:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {"note_main_sha":"a57c8467e7a6f707f0b499c31f2eed11af90cf87","root_control_revision":13,"root_control_blob":"cc9b1f22f0fda9cf26296057fd35b19a090618b4","downstream_control_revision":24,"downstream_control_blob":"d1b181f9f13a76578fae08038606a9a261086419","role_config_revision":2,"semantic_freeze_respected":true},
+  "source_identity": {
+    "active_wave_id":"clean-g1-wave-c29-20260828T120235JST-5128e23b",
+    "active_wave_blob":"713d213d7e1176497fe9bf55933f32d2b53144dc",
+    "selection_snapshot_note_main_sha":"446f2a10c7197cde199d10a4af8f7a0e657736e0",
+    "namespace":"continual_learning",
+    "source_path":"research_workers_clean_g1/continual_learning/RUN_20260828T110534_JST.md",
+    "source_artifact_blob":"3914c64487b5885d6ea37dcc1c137f623bd50fb0",
+    "proof_artifact":"research_workers_clean_g1/continual_learning/CPO_ZERO3_PINNED_REDUCESCATTER_PROOF_20260828T110506_JST.json@030e051f67d4b5d2b23b71fbd107b494c7303214",
+    "official_cpo":"MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c",
+    "official_deepspeed":"deepspeedai/DeepSpeed@e2dc3eeb1923073e32739596a4fd051417d4ff92 (v0.16.4)"
+  },
+  "grade": {
+    "overall":"B+",
+    "source_level_algebraic_diagnosis":"A",
+    "official_version_support":"A",
+    "distributed_runtime_reproduction":"C/not run",
+    "paper_headline_effect":"C/not established",
+    "independent_external_replication":"C/not found"
+  },
+  "official_source_evidence": {
+    "environment":"CPO README pins torch 2.8.0, DeepSpeed 0.16.4, CUDA 12.8, Python 3.12 and eight H100 GPUs for RL methods.",
+    "trainer":"src/trainer/grpo_trainer_cl.py blob 2715d5f79fd45fcbc0f7e4155d82f2042042a358. In ZeRO-3 it computes each parameter partition owner from rank/world_size, restricts masked coordinates to that owner's partition, and stores a gradient contribution only for that rank's global indices. The hook injects that owner-local contribution into the full pre-reduce gradient.",
+    "regularizer_scale":"The public trainer sets scale = mask_lambda / n_masked / normalizer, with no world_size compensation on the owner-only ZeRO-3 contribution.",
+    "logging":"Each rank accumulates only its partition's masked-L1 partial, then accelerator.gather(...).nanmean() is logged.",
+    "deepspeed":"DeepSpeed v0.16.4 reduce_scatter_coalesced explicitly performs tensor_partition_flat_buffer.div_(world_sz) before reduce-scatter."
+  },
+  "auditor_derivation": {
+    "coordinate_level":"For a protected coordinate, the public CPO ZeRO-3 code contributes g on exactly one owner rank and 0 on all other data-parallel ranks. DeepSpeed pre-divides every rank's gradient buffer by W and reduce-scatters by summation, so the regularizer contribution that reaches the owning partition is g/W.",
+    "W8":"Under the README's W=8 RL setup, lambda=100 contributes the same coordinate magnitude as an unattenuated coefficient 12.5 for this owner-only term, absent another compensating path.",
+    "zero2_contrast":"In the non-ZeRO-3 branch every data-parallel rank injects the same full masked regularizer. Averaging replicated contributions preserves g rather than g/W.",
+    "log_scale":"If masked coordinates are partitioned exactly once across ranks, the local masked-L1 partials sum to the full masked-L1; nanmean of the gathered partials is full/W. Thus the public ZeRO-3 mask_loss log is also scaled by 1/W relative to the global masked-L1 quantity under that condition."
+  },
+  "scope_corrections": [
+    {"id":"source_proof_not_runtime_execution","finding":"The algebra follows directly from the exact public CPO and DeepSpeed sources, but this audit did not launch an eight-GPU DeepSpeed job and measure hook input/post-reduce tensors.","implication":"Treat g/W as an A-grade source-path diagnosis, while the proposed multiply-by-W repair remains unvalidated in the real distributed runtime, especially with accumulation/offload/alternate communication paths."},
+    {"id":"released_code_not_historical_paper_run","finding":"The worker and this audit establish the current cited public path, not that unpublished result-generating paper runs used exactly commit 9429452... and DeepSpeed 0.16.4 with identical hooks.","implication":"Do not use the diagnosis to retroactively rescale or invalidate paper headline retention numbers without run provenance."},
+    {"id":"not_same_as_paper_spec_discrepancies","finding":"The 1/W owner-only attenuation is independent of any global-TopP/global-normalization mismatch or sparse-transport optimization discussed elsewhere in the worker lineage.","implication":"Fix/test one axis at a time; multiplying by W does not resolve other specification differences."},
+    {"id":"logging_can_hide_strength_mismatch","finding":"The public comment describes nanmean as a consistent relative measure, but across ZeRO-2 versus ZeRO-3 it is not on the same global masked-L1 scale when partials partition the support once.","implication":"Cross-mode mask_loss magnitudes should not be interpreted as directly comparable regularizer strength without correcting the reduction semantics."}
+  ],
+  "independent_replication_search":{"status":"not found","finding":"Fresh searches for a public issue/reproduction of this exact CPO ZeRO-3 world-size attenuation did not surface a protocol-matched external report. This absence is not a nonexistence claim."},
+  "missing_dependencies_or_config":{"for_source_proof":"No material missing source dependency: exact CPO commit, exact DeepSpeed tag/commit and README environment are pinned.","for_runtime_confirmation":"Need an 8-GPU or controlled multi-rank run capturing hook output and post-reduce-scatter gradient for the same masked coordinate under ZeRO-3 and a matched ZeRO-2/no-DS reference."},
+  "o_specific_adaptation":{"status":"not tested","finding":"No O/O_FEED/O-derived state was read or tested; this is a CPO/DeepSpeed implementation audit only."},
+  "bottom_line":"The clean worker's central 1/W diagnosis is source-level reproducible. In the cited public CPO ZeRO-3 path, each protected coordinate receives its regularizer on only the partition owner, while DeepSpeed v0.16.4 averages via predivide-by-world-size before reduce-scatter. That yields g/W, and the partition-local nanmean log is likewise 1/W of the global masked-L1 under exact partition coverage. The result does not establish what historical paper runs used, and the W multiplier remains a proposed runtime correction until measured under the pinned distributed configuration.",
+  "reopen_conditions":["A multi-rank runtime trace measures the exact owner-hook and post-reduce coordinate with/without W compensation.","CPO changes its ZeRO-3 hook/reduction/logging implementation.","Historical paper-run provenance establishes a materially different code/runtime path.","An independent matched reproduction or failure report appears."],
+  "exact_next_action":"Do not repeat unchanged source algebra. Reopen only on a runtime trace/code/provenance/independent-reproduction trigger; otherwise audit a different exact ACTIVE_WAVE member."
+}
