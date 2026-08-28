@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "artifact": "CPO sparse canonical rank-local prototype validation",
+  "observed_at_utc": "2026-08-28T02:01:22Z",
+  "runtime": {
+    "python": "3.13.5",
+    "torch": "2.10.0+cpu",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41"
+  },
+  "frozen_control": {
+    "note_main_sha": "87254e51cf23c49e06fa3b2769c58e635d06d99b",
+    "control_revision": 13,
+    "role_config_revision": 5
+  },
+  "public_source": {
+    "repository": "MaolinLuo/CPO",
+    "commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "trainer_path": "src/trainer/grpo_trainer_cl.py",
+    "trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+    "mask_builder_path": "src/compute_importance_mask.py",
+    "mask_builder_blob": "5f17be7ad91bdc162a0d1e466198c1bdb2ded921"
+  },
+  "prototype_sha256": "622485450a19e593a856e3d09c5c54e3dfc7a744448fbe5a56d0a1190d81261f",
+  "tests": {
+    "tied_alias_and_buffer": {
+      "canonical_named_parameters": ["embed.weight"],
+      "state_dict_keys": ["float_buf", "embed.weight", "lm_head.weight"],
+      "dropped_noncanonical": ["float_buf", "lm_head.weight"],
+      "dense_mask_mapping_empty_after_destructive_conversion": true
+    },
+    "distinct_parameters_shared_storage": {
+      "same_storage": true,
+      "distinct_parameter_objects": true,
+      "retained_canonical_names": ["a", "b"]
+    },
+    "partition_equivalence": {
+      "cases": 544,
+      "failures": 0,
+      "world_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "comparison": "searchsorted+clone rank-local idx/ref vs direct global boolean partition filter"
+    },
+    "regularizer_equivalence": {
+      "cases": 544,
+      "pending_gradient_bitwise_failures": 0,
+      "partial_loss_failures": 0,
+      "denominator": "global_n_masked retained per parameter",
+      "mask_lambda": 100.0,
+      "normalizer": 3.0
+    },
+    "runtime_guards": {
+      "valid_zero3_tuple": "pass",
+      "bad_ds_numel": "fail_closed",
+      "invalid_rank": "fail_closed",
+      "namespace_shape_change": "fail_closed"
+    }
+  },
+  "claims": [
+    "A release-format dense mask can be converted to a trainer-canonical sparse representation without changing tested pending-gradient or partial-loss algebra.",
+    "Dropping noncanonical state_dict-only aliases/buffers is safe only with respect to the tested trainer namespace contract; it is not a claim about arbitrary consumers.",
+    "Two CPU searchsorted bounds plus clone reproduce direct rank filtering for sorted global indices in the tested cases.",
+    "global_n_masked must remain global; replacing it with rank-local support changes coordinate scaling under support imbalance."
+  ],
+  "limitations": [
+    "Executed under torch 2.10.0+cpu, not the CPO-pinned torch 2.8.0.",
+    "DeepSpeed 0.16.4 hook/reduce-scatter behavior was not executed in this runtime.",
+    "No real Qwen3-VL checkpoint, GPU RSS, bus traffic, or wall-clock profile was measured.",
+    "This prototype preserves current public-code per-tensor selection/normalization semantics; it does not implement paper-spec global TopP/global normalization.",
+    "The previously identified ZeRO-3 1/world_size regularizer attenuation is intentionally not corrected here."
+  ]
+}
