@@ -1,0 +1,82 @@
+{
+  "schema_version":1,
+  "worker":"cross_field",
+  "generation":"clean_g1",
+  "control_revision":12,
+  "config_revision":5,
+  "semantic_tuple":{"note_main_sha_frozen":"83a92b73f7c07d4c101c8aa7a58411e83074bc67","desired_state_blob":"5c91671e1470d0fa4e2a53f918493004dd3750c3","role_config_blob":"a28a0cef2712c1561973bde4c83cea6e14a4c024"},
+  "title":"Past-only variance-proxy particle allocation under moving bottlenecks: defensive square-root mixing is materially more robust to stale estimates than unhedged Neyman allocation",
+  "public_sources":[
+    {"title":"Variance estimation in the particle filter","authors":"Anthony Lee, Nick Whiteley","url":"https://arxiv.org/abs/1509.00394","date":"2015-09-01; revised 2016-06-28; Biometrika 2018","used_for":"Single-run genealogy-based asymptotic-variance estimation; decomposition into time-step terms v_{p,n}; fixed-budget optimum c_p proportional to sqrt(v_{p,n}); paper reports an outlier-observation example where optimal allocation reduced variance by about a factor of 40. The paper also explicitly notes its non-asymptotic second-moment expression does not apply to non-multinomial resampling."},
+    {"title":"Adaptive online variance estimation in particle filters: the ALVar estimator","authors":"Alessandro Mastrototaro, Jimmy Olsson","url":"https://arxiv.org/abs/2207.09590","date":"2022-07-19; Statistics and Computing 2023","used_for":"Genealogy-only online asymptotic-variance monitoring with adaptive lag, average constant-in-time memory/compute for fixed N, and no extra simulation. Published experiments report ALVar about 1.5-2x a standard PF at N=1000 and about 2-2.5x at N=100000, while adapting lag automatically."},
+    {"title":"Central limit theorem for the stratified resampling mechanism","authors":"Roberta Flenghi, Benjamin Jourdain","url":"https://arxiv.org/abs/2308.02186","date":"2023-08-04","used_for":"Direct CLT evidence for one-step stratified resampling. The paper gives an inductive particle-filter asymptotic-variance formula under a stated conjecture about the corresponding fractional-part convergence at later filtering steps, so it is not treated here as a theorem-level multi-generation single-run variance estimator."},
+    {"title":"Adaptive Neyman Allocation","authors":"Jinglong Zhao","url":"https://arxiv.org/abs/2309.08808","date":"2023-09-15","used_for":"Cross-field precedent that earlier-stage variance observations can guide later-stage Neyman allocations and that the statistical cost of learning an unknown optimal allocation can be analyzed competitively."},
+    {"title":"Weighted Average Importance Sampling and Defensive Mixture Distributions","authors":"Tim Hesterberg","url":"https://doi.org/10.1080/00401706.1995.10484303","date":"1995","used_for":"Cross-field precedent for retaining a nominal/base component as insurance against proposal misspecification; used only as analogy for the defensive uniform reserve, not as a proof for particle allocation."}
+  ],
+  "synthetic_drift_model":{
+    "state_space":[0,1],
+    "initial_distribution":[0.8,0.2],
+    "transition_matrix":[[0.94,0.06],[0.25,0.75]],
+    "generations":5,
+    "mild_potential":[0.8,1.2],
+    "shock_potential":[0.08,8.0],
+    "regime_definition":"In regime j in {0,...,4}, generation j uses shock_potential and the other four generations use mild_potential. Regimes cycle 0->1->2->3->4, so the dominant asymptotic variance term moves across generations.",
+    "exact_relative_variance_terms_by_regime":[
+      [3.82184918,0.12841001,0.14382981,0.10443230,0.03992040],
+      [2.34765281,2.90649353,0.09977100,0.09138341,0.03824871],
+      [1.65202347,1.94084831,2.36518204,0.06525703,0.03460119],
+      [1.27878706,1.43549064,1.65941500,2.01951795,0.02598092],
+      [1.06026555,1.14581700,1.26488601,1.45916379,1.78250049]
+    ],
+    "dominant_generation_by_regime":[0,1,2,3,4],
+    "exact_normalizing_constants":[1.9273941607546883,2.0923215268986883,2.1407604542586890,2.0785247841402885,1.8981447328522238],
+    "resampling":"Independent stratified uniforms per stratum; no shared-offset systematic variable.",
+    "total_particle_budget_per_run":320
+  },
+  "past_only_proxy_and_controller":{
+    "proxy":"At completed run r and generation p, compute H_{p,r}(x)=Q_{p,5}(1)(x) from that synthetic run's known finite-state Feynman-Kac model and use sample CV^2, s^2(H(X_p))/mean(H(X_p))^2, as a one-run plug-in proxy for v_{p,5}=eta_p(H^2)/(eta_p H)^2-1. It is used only after the run completes; no current-run outcome changes the current particle counts.",
+    "proxy_scope":"This is an online asymptotic-variance proxy, not a claim that the Lee-Whiteley finite-N genealogy estimator remains exact under stratified resampling.",
+    "proxy_uniform_64_validation":{"repetitions_per_regime":3000,"mean_proxy_by_regime":[[3.88516791,0.13037813,0.14598539,0.10524889,0.03997521],[2.38502431,3.04897556,0.10166588,0.09233149,0.03836456],[1.67794333,1.99888924,2.53582286,0.06620582,0.03475235],[1.29863852,1.46316374,1.72479989,2.18204168,0.02631685],[1.07664478,1.16427510,1.30056360,1.53023027,1.93857059]],"dominant_generation_identification_rate":[1.0,0.8556667,0.8516667,0.8390,0.8353333],"median_relative_L1_error":[0.01549,0.08006,0.10671,0.11371,0.11961]},
+    "estimator_update":"Abar_{r+1}=0.4*Abar_r+0.6*proxy_r; schedule for run r+1 is chosen only from Abar_{r+1} after run r has completed.",
+    "defensive_allocation":"For beta in [0,1), q_p=(1-beta)/5 + beta*sqrt(Abar_p)/sum_s sqrt(Abar_s), N_p approximately 320*q_p with integer rounding. The validated controller fixes beta=0.5, so every generation retains a 32-particle uniform reserve before the remaining 160 particles are directionally concentrated.",
+    "robustness_bound":"Because q_p >= (1-beta)/5 for every p, for any nonnegative true coefficient vector A and any stale/misspecified estimate Abar, sum_p A_p/(320*q_p) <= [1/(1-beta)] * sum_p A_p/64. Thus beta=0.5 gives a crude allocation-mismatch ceiling of 2x the uniform asymptotic variance; beta=0.75 gives 4x. This bound concerns the separable asymptotic objective only, not finite-N stratified PF variance."
+  },
+  "exact_stale_schedule_stress":{
+    "method":"Use the exact coefficient vectors above in the separable asymptotic objective sum_p A_p/N_p, but deliberately allocate from another regime's coefficient vector.",
+    "beta_0_5":{"matched_regime_ratio_to_uniform":[0.57593,0.69914,0.80636,0.90267,0.99368],"worst_cross_regime_ratio_to_uniform":1.23418,"worst_case":"true regime 4 with schedule learned from regime 1"},
+    "beta_0_75":{"matched_regime_ratio_to_uniform":[0.50955,0.62718,0.74671,0.86357,0.99166],"worst_cross_regime_ratio_to_uniform":1.57103},
+    "unhedged_floor16_KKT":{"matched_regime_ratio_to_uniform":[0.48790,0.59852,0.71782,0.84870,0.99124],"worst_cross_regime_ratio_to_uniform":2.28931,"worst_case":"true regime 4 with schedule learned from regime 1"},
+    "interpretation":"More aggressive matched-regime allocation is better when the coefficients are current, but stale estimates can reverse the gain. The defensive uniform reserve makes the mismatch penalty substantially smaller in this drift family."
+  },
+  "independent_stream_validation":{
+    "controller":"beta=0.5, EWMA alpha=0.6, total particles=320, independent stratified resampling; each stream cycles through the five regimes three times. Discovery/tuning seeds were disjoint from the validation seeds summarized here.",
+    "phase_length_5":{"streams":100,"uniform_normalized_MSE":0.03362318,"adaptive_normalized_MSE":0.03193235,"oracle_beta_0_5_MSE":0.02978788,"adaptive_reduction_vs_uniform":0.05029,"paired_difference_t":1.813,"scope":"Directionally positive but not strong enough here for a conventional 5% two-sided significance claim."},
+    "phase_length_10":{"streams":100,"uniform_normalized_MSE":0.03314004,"adaptive_normalized_MSE":0.03076857,"oracle_beta_0_5_MSE":0.02835293,"adaptive_reduction_vs_uniform":0.07156,"paired_difference_t":4.084},
+    "phase_length_20":{"streams":80,"uniform_normalized_MSE":0.03303450,"adaptive_normalized_MSE":0.02984594,"oracle_beta_0_5_MSE":0.02951001,"adaptive_reduction_vs_uniform":0.09652,"paired_difference_t":7.266},
+    "phase_length_50":{"streams":50,"uniform_normalized_MSE":0.03382763,"adaptive_normalized_MSE":0.02979762,"oracle_beta_0_5_MSE":0.02950722,"adaptive_reduction_vs_uniform":0.11913,"paired_difference_t":11.272},
+    "phase_length_20_tracking":{"median_runs_until_schedule_argmax_matches_new_dominant_generation":2.0,"q90_runs":4.0,"mean_runs":2.32,"mean_L1_schedule_distance_to_beta_0_5_oracle_as_fraction_of_budget":0.03476},
+    "contrast_with_aggressive_unhedged_controller":"A separate validation of floor-constrained KKT allocation driven by the same lagged proxy lost about 14.9% versus uniform at phase length 5, was approximately neutral at length 10, and gained about 6.6% at length 20. This is engineering evidence that stale-estimate sensitivity, not the square-root law itself, is the main fast-drift failure mode."
+  },
+  "fixed_overhead_latency_rule":{
+    "derivation":"Let asymptotic variance be V=sum_p A_p/N_p, variable compute cost be B=sum_p k_p N_p, and unavoidable per-run overhead be C0=sum_p c0_p. For fixed B, the optimal continuous allocation is N_p = B*sqrt(A_p/k_p)/S where S=sum_s sqrt(A_s k_s), giving V*=S^2/B. To reach a fixed confirmation variance using repeated independent runs, idealized total compute is proportional to V*(C0+B)=S^2*(1+C0/B).",
+    "diminishing_return":"The only overhead penalty after within-run optimal allocation is C0/B. Increasing particle budget cannot improve the asymptotic variable-cost term S^2; it only amortizes fixed overhead.",
+    "stop_buying_rule":"If one is willing to leave at most epsilon fractional overhead relative to variable compute, stop increasing B once C0/B <= epsilon, equivalently B >= C0/epsilon. The maximum remaining latency improvement available from taking B to infinity is C0/(B+C0).",
+    "fixed_budget_implication":"When uniform and adaptive schedules use the same B and same fixed C0, their confirmation-latency ratio is approximately their variance/MSE ratio. Thus the phase-length-20 synthetic result corresponds to about 9.7% lower idealized confirmation time at equal per-run cost; phase-length-50 corresponds to about 11.9%."
+  },
+  "negative_scope":[
+    "The synthetic online proxy uses exact finite-state continuation values H=Q_{p,5}(1); a real agent evaluator generally does not know these and would need an estimated continuation/influence proxy.",
+    "Lee-Whiteley's finite-N second-moment estimator is multinomial-resampling specific. The current implementation deliberately keeps stratified resampling for robustness, so the plug-in proxy is not presented as a theorem-level unbiased stratified genealogy estimator.",
+    "The 2023 stratified-resampling CLT is direct for the resampling mechanism; its recursive particle-filter variance formula is stated under a conjecture for later steps. This does not close a single-run, multi-generation stratified variance-estimation theorem.",
+    "Fast drift can erase or reverse gains if beta is too aggressive. The exact mismatch bound controls only the separable asymptotic allocation model; finite-N interactions and resampling variance can differ.",
+    "All numerical gains are for a two-state synthetic Feynman-Kac model. They imply no AGI capability or real-agent benchmark improvement.",
+    "Current-run outcome-dependent particle stopping is still outside the predictable-count correctness argument; all schedules here are fixed before the run begins."
+  ],
+  "frontier":[
+    "Derive or locate a theorem-clean single-run estimator of generation-wise variance contributions compatible with independent stratified resampling; otherwise separate a multinomial diagnostic pilot from a stratified production estimator and quantify the mismatch.",
+    "Replace fixed beta=0.5 by a predictable uncertainty-aware hedge: choose the largest beta whose stale-coefficient uncertainty set keeps a prespecified worst-case inflation bound, then ramp concentration only after stability is certified.",
+    "Stress 10-20 generations with moving shocks and genealogy collapse; compare the continuation-value proxy with ALVar-like lagged ancestry statistics and measure detection/adaptation lag.",
+    "Extend the fixed-overhead rule to random wall-clock tool costs k_p and parallel descendants; choose N_p proportional to sqrt(A_p/k_p) using past-only cost estimates and evaluate confirmation latency rather than only sample variance.",
+    "Map to multi-turn agent trajectories only when base/proposal transition likelihoods, high-fidelity label semantics, and a computable per-generation influence/continuation proxy are explicit."
+  ],
+  "exact_next_action":"Construct a 10-20 generation moving-shock model and implement two past-only diagnostics side by side: (1) the current continuation-value CV^2 proxy and (2) an ALVar-style lagged ancestry dispersion statistic computed from the same stratified particle cloud but treated as heuristic until a stratified theorem is established. Use a predictable uncertainty set over the coefficient vector to choose beta by a worst-case variance-inflation cap, rather than fixing beta=0.5. Evaluate adaptation lag, normalized MSE and fixed-overhead confirmation latency under abrupt, gradual and recurring bottleneck motion. In parallel continue searching for a rigorous stratified single-run variance estimator; do not import multinomial genealogy guarantees unchanged." 
+}
