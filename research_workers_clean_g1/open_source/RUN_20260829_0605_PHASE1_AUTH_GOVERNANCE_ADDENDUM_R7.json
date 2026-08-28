@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "packet_class": "open_source_clean_checkpoint_addendum",
+  "role": "open_source",
+  "status": "active",
+  "observed_at": "2026-08-28T21:05:00Z",
+  "control_revision": 22,
+  "config_revision": 7,
+  "assignment_task_id": "phase1-clean-open-source-auth-governance-boundaries",
+  "base_checkpoint": "research_workers_clean_g1/open_source/RUN_20260829_0601_PHASE1_AUTH_GOVERNANCE_R7.json",
+  "classifier_v2": "research_workers_clean_g1/open_source/AUTH_GOVERNANCE_LATTICE_20260829_0604_R7_V2.py",
+  "late_public_findings": [
+    {
+      "system": "Authzed Materialize",
+      "sources": [
+        "https://authzed.com/docs/authzed/concepts/materialize/snapshots",
+        "https://authzed.com/docs/authzed/concepts/materialize/lookup-permission-sets",
+        "https://authzed.com/docs/authzed/concepts/materialize/recommended-architecture",
+        "https://authzed.com/docs/authzed/concepts/materialize/permission-set-lifecycle"
+      ],
+      "observation": "Materialized permission data is anchored to a ZedToken revision. The recommended consumer stores computed permission data, stream cursor and revision transactionally; restart resumes from the stored cursor/revision, and batched consumers advance the durable revision only after the final batch. Snapshot-to-watch handoff starts watching from the stored snapshot revision to avoid gaps.",
+      "classification": "MATERIALIZED_REVISION_TXN_CHECKPOINT",
+      "boundary": "This is durable replication/recovery provenance. It does not authorize an unrelated external effect at the stored revision."
+    },
+    {
+      "system": "Zanzibar / SpiceDB content-change protocol",
+      "sources": [
+        "https://authzed.com/docs/spicedb/concepts/consistency"
+      ],
+      "observation": "Authzed recommends storing the returned ZedToken alongside protected resource content and explicitly points to Zanzibar ContentChangeCheck as the content-change pattern. The safe interpretation is a causal binding between newly written content and the authorization snapshot used for that content change.",
+      "classification": "AUTH_DECISION_CONTENT_EPOCH_BINDING",
+      "boundary": "The checked public evidence does not show an external content-storage API atomically consuming the prior authorization revision as its mutation precondition, so this remains distinct from PRIOR_AUTH_REVISION_EFFECT_GATE."
+    },
+    {
+      "system": "GitLab",
+      "sources": [
+        "https://docs.gitlab.com/api/merge_request_approvals/",
+        "https://docs.gitlab.com/api/merge_trains/",
+        "https://docs.gitlab.com/user/project/merge_requests/approvals/settings/"
+      ],
+      "observation": "The merge-request approval endpoint accepts sha and returns 409 when it does not match the current MR HEAD. Merge-train admission likewise accepts sha and requires it to match source HEAD. GitLab approval settings can remove approvals when commits are added, with patch identity used for reset decisions.",
+      "classification": "SAME_CONTENT_APPROVAL_EFFECT_CAS",
+      "boundary": "Head-SHA binding proves content identity continuity for the approval/effect chain; it does not by itself prove all current project/rule requirements are satisfied."
+    }
+  ],
+  "refined_model": {
+    "independent_axes": [
+      "authorization-state revision provenance and causal content binding",
+      "approval provenance/content identity binding",
+      "effect-state exact precondition and request-local authorization",
+      "ambiguous-effect retry identity"
+    ],
+    "rule": "Do not collapse any one axis into another. A prior allow, policy/model ID, decision ID, approval object, object etag/resourceVersion, content SHA, or idempotency key is authoritative only for the provider semantics explicitly attached to that token.",
+    "true_external_gate_status": "No real public PRIOR_AUTH_REVISION_EFFECT_GATE was proven in this fresh revision-7 evidence set. The strongest near-miss is causal authorization-to-content epoch binding; the strongest observed effect boundary remains request-local authorization composed with state CAS."
+  },
+  "acceptance_and_counterexamples": [
+    "A ZedToken that can replay an authorization read is not enough to authorize a later unrelated write.",
+    "A content record stored together with the authorization revision that justified that content change is a stronger causal binding, but is still not an external effect-server atomic revision gate unless the effect API consumes the token.",
+    "Materialized permission data + cursor without committing the corresponding revision in the same transaction is incomplete restart evidence.",
+    "GitLab approval with an omitted/stale head SHA must not be treated as the same-content approval primitive; the SHA-bound form is the fail-closed form.",
+    "A merge-train/merge request head-SHA precondition does not substitute for current approval/rules evaluation.",
+    "An idempotency key solves ambiguous repetition, not authorization freshness or target-state equality."
+  ],
+  "self_test": {
+    "artifact": "research_workers_clean_g1/open_source/AUTH_GOVERNANCE_LATTICE_20260829_0604_R7_V2.py",
+    "result": "PASS 11 fixtures before persistence",
+    "new_fixture_coverage": [
+      "Zanzibar/SpiceDB causal content-epoch binding",
+      "Authzed Materialize transactional revision checkpoint",
+      "GitLab same-head approval/effect CAS",
+      "negative case where different approval/effect content identifiers do not qualify as same-content CAS"
+    ]
+  },
+  "semantic_freeze": {
+    "frozen_main_sha": "a7822270302a5a1110fe1bacc2aa56f3027fad12",
+    "frozen_root_blob_sha": "e4f6eec9e10b91d265065d40e9b957fcaaebb727",
+    "frozen_role_config_blob_sha": "4fcc3620926d2a23363117ce623d0c8e91dddb07",
+    "newer_control_semantics_adopted": false
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap first. If control revision 22/config revision 7 and assignment phase1-clean-open-source-auth-governance-boundaries remain current, continue from this addendum with provider_source_version=1. First search for a real PRIOR_AUTH_REVISION_EFFECT_GATE whose effect-serving API atomically consumes the exact prior authorization decision revision/epoch; reject causal-read tokens, client-stored content epochs, object/policy CAS, and current request reauthorization as substitutes. Then inspect Authzed Materialize/WatchPermissionSets retention and invalidation edge cases and one additional Zanzibar-style authorization service for revision propagation. Next compare another open-source collaboration/approval system for both approval-time and submit-time exact content preconditions. Preserve the connected Stripe public-provider-vs-connected-write idempotency gap unless a non-interactive schema/read path proves caller-controlled retry identity. Persist new fail-closed fixtures and a nonempty frontier.",
+  "independence": {
+    "clean_exploration": true,
+    "prior_packet_semantics_imported_after_reset": false,
+    "read_other_worker_state": false,
+    "read_o_or_o_derived_semantics": false,
+    "read_downstream_semantics": false,
+    "read_legacy_semantics": false,
+    "read_shared_aggregate_ledger": false
+  },
+  "mutation_scope": {
+    "desired_state_modified": false,
+    "source_repo_modified": false,
+    "branch_ref_pr_issue_release_workflow_modified": false,
+    "other_worker_or_downstream_modified": false,
+    "own_namespace_only": true
+  }
+}
