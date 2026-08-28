@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "probe": "phase1_failure_evidence_fencing_and_pointer_reconstruction",
+  "execution_model": "deterministic local Python; single-process SQLite fencing arm plus synthetic hashed checkpoint-pointer arm",
+  "fencing": {
+    "scenario": "B(gen2) commits, then delayed A(gen1) resumes",
+    "no_fence": {
+      "final_value": "A_stale",
+      "last_writer": "A_gen1",
+      "stale_overwrite_committed": true
+    },
+    "fenced": {
+      "B_rowcount": 1,
+      "A_rowcount": 0,
+      "final_value": "B_current",
+      "final_fence": 2,
+      "stale_overwrite_rejected": true
+    }
+  },
+  "cached_latest": {
+    "cached_pointer": {
+      "checkpoint_id": "cp1",
+      "seq": 1,
+      "hash": "f5de27bc32dc2916c746eafbe479b4712692ac11c67789942824e8fd3003ebed"
+    },
+    "authoritative_pointer": {
+      "checkpoint_id": "cp2",
+      "seq": 2,
+      "hash": "42f5547617373238573746f5e088ff593e7e672591c8109b768e1c362a252510"
+    },
+    "naive_cache_only_resume": {
+      "selected_checkpoint_id": "cp1",
+      "selected_seq": 1,
+      "stale_resume": true
+    },
+    "guarded_resume": {
+      "pointer_mismatch_detected": true,
+      "resume_refused_until_revalidated": true,
+      "authoritative_object_provenance_ok": true,
+      "selected_checkpoint_id_after_revalidation": "cp2",
+      "selected_seq_after_revalidation": 2
+    }
+  },
+  "scope_guard": {
+    "fencing": "Directly tests a deterministic protected-resource generation check in one local SQLite process; it does not reproduce Redis lease expiry, clock skew, GC pauses, network partitions, or distributed database fencing semantics.",
+    "cached_latest": "Directly tests reconstruction logic over synthetic hashed checkpoint objects; it does not establish that this repository or GitHub serves stale cache entries in production."
+  }
+}
