@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "sequence": 98,
+  "created_at": "2026-08-28T18:02:53.521808+09:00",
+  "frozen_control": {
+    "note_main_sha": "7e893018d47b993fe17b3bdad4768d8d8eca4d3f",
+    "control_revision": 15,
+    "role_config_revision": 7,
+    "role_config_blob_sha": "c5d194b341a70356da196cfb88636ab41fc1bc9f"
+  },
+  "primary_public_system": {
+    "repository": "skillberry-ai/cap-evolve",
+    "revision": "323ed3b5e1236b99544827f9c6b25820dc5aab8f",
+    "classification": "executable self-improvement/evaluation harness with adaptive VAL selection and a run-local sealed TEST finalize"
+  },
+  "source_bound_findings": {
+    "real_cli_wiring": {
+      "status": true,
+      "evidence": [
+        "core/pyproject.toml defines cap-evolve = cap_evolve.cli:main",
+        "core/cap_evolve/cli.py is a real sequencer over phase skill run.py scripts and exposes run/resume/tail/watch/replay surfaces"
+      ]
+    },
+    "selection_and_final_test_separation": {
+      "status": true,
+      "scope": "audited harness path",
+      "evidence": [
+        "hill_climb_loop repeatedly evaluates candidates on val and gates acceptance there",
+        "gate.decide refuses non-val acceptance gating",
+        "finalize evaluates the already-selected best candidate on test after the search loop"
+      ]
+    },
+    "post_score_pre_commit_double_look_guard": {
+      "status": true,
+      "mechanism": "begin_test_attempt checks for any persisted rollouts/test/*.json before a finalize retry; if found it refuses the retry unless CAPEVOLVE_ALLOW_TEST_RESCORE is explicitly enabled",
+      "importance": "This closes the specific seal-on-success blind spot where TEST was already observed but commit_test never ran.",
+      "test_evidence": "core/tests/test_test_seal_rescore_guard.py pins retry-before-scoring allowed, retry-after-any-test-rollout refused, and normal FINAL + FINAL_seed scoring allowed inside one finalize attempt."
+    },
+    "crash_recoverability_boundary": {
+      "provider_accepted_before_first_local_rollout": "unresolved in audited path; no durable logical evaluation intent is written before adapter execution, so begin_test_attempt has nothing to detect until at least one rollout file exists",
+      "partial_test_rollouts_before_crash": "fail-closed rather than resumable; the next finalize attempt is refused because any persisted test rollout means the holdout has already been observed",
+      "after_final_json_before_commit_test": "retry is refused by existing test rollouts, preventing a second look; operator can read persisted artifacts, but the normal finalize path does not source-reconcile and complete the missing commit automatically",
+      "design_implication": "A stronger terminal OUTER needs pre-dispatch logical attempt reservation plus immutable per-cell outcomes and resume/reconciliation of only missing cells under stable request identity."
+    },
+    "mechanical_terminal_outer": {
+      "status": false,
+      "reasons": [
+        "The Claude plugin PreToolUse hook for sealed artifacts matches Edit|Write|MultiEdit|NotebookEdit, not Read or Bash, so it protects against poisoning but is not a filesystem/query non-disclosure boundary.",
+        "The test seal is stored per RunDir. A new run creates new run-local state/splits, so the audited mechanism does not establish a global once/cache-only lockbox across repeated research campaigns.",
+        "CAPEVOLVE_ALLOW_TEST_RESCORE is an explicit escape hatch, so even within a run the second-look refusal is policy-overridable."
+      ],
+      "scope_guard": "These points show missing structural enforcement; they do not show that a normal optimizer actually reads TEST or that every adapter exposes TEST answers on disk."
+    },
+    "statistical_gate": {
+      "status": "fixed-look adaptive validation gate",
+      "details": "The paired mode accepts when mean per-task delta > k * SE(delta), default k=1.0; SE=0 falls back to any positive delta with a warning. Candidates are screened repeatedly on the same VAL surface.",
+      "anytime_valid_candidate_eprocess": false,
+      "candidate_crossing_online_error_ledger_in_audited_gate_path": false,
+      "scope_guard": "This is a statement about the audited gate/hill-climb path, not a repository-wide impossibility claim."
+    }
+  },
+  "contrast_public_system": {
+    "repository": "ethan-haas/self-improving-agent-harness",
+    "revision": "942d5d33da5ea63ea269995dc6f355dfded2d975",
+    "finding": "host/runner.ps1 uses tier6 Invoke-HoldoutScoring as a promotion gate requiring holdout delta >= +0.02 for ordinary candidates; that holdout is therefore a promotion surface, not a fourth terminal OUTER in this path."
+  },
+  "minimal_stronger_contract": [
+    "Persist a content-bound logical outer-evaluation attempt before the first provider/evaluator dispatch.",
+    "Bind attempt identity to frozen candidate artifact, evaluator/scorer digest, split/case/trial, and request semantics.",
+    "Persist immutable per-cell outcomes and derive aggregate final result from them.",
+    "On restart, reconcile provider-accepted/unknown work and execute only cells with no authoritative outcome; never create a second logical attempt for the same outer query.",
+    "Make pre-final OUTER access structurally impossible for optimizer/read/shell paths, not merely unwritable.",
+    "Make the lockbox authority durable across research runs/generations, not only within one RunDir.",
+    "Keep adaptive candidate acceptance on VAL/CERTIFY with anytime-valid evidence and durable candidate-crossing error spending; OUTER remains reporting-only."
+  ],
+  "public_source_paths": [
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/pyproject.toml",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/cap_evolve/cli.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/cap_evolve/rundir.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/cap_evolve/harness.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/cap_evolve/gate.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:core/tests/test_test_seal_rescore_guard.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:plugins/cap-evolve/hooks/deny_sealed_edits.py",
+    "skillberry-ai/cap-evolve@323ed3b5e1236b99544827f9c6b25820dc5aab8f:plugins/cap-evolve/hooks/hooks.json",
+    "ethan-haas/self-improving-agent-harness@942d5d33da5ea63ea269995dc6f355dfded2d975:host/runner.ps1"
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next invocation, first resolve fresh control. Then search for a public self-improver/eval service that combines cap-evolve-style post-score consumption detection with a pre-dispatch logical evaluation WAL and cell-level resume/reconciliation, while enforcing OUTER non-readability/non-queryability across runs. In parallel, search cap-evolve issues/PRs for the explicit second-look incident and any planned durable attempt/resume design; if no implementation exists, construct a kill-point matrix for before-dispatch, provider-accepted, first-local-outcome, partial-cells, final.json, and seal-commit boundaries." 
+}
