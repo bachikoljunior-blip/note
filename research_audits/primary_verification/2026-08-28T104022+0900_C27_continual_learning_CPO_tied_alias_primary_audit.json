@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "recorded_at": "2026-08-28T10:40:22+09:00",
+  "frozen_control": {
+    "note_main_sha": "3bd3bbbd49b6e04f09a2824213d0ab97b3ed9c91",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_state_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 5,
+    "bootstrap_valid": true,
+    "h1_equals_h2": true
+  },
+  "wave_binding": {
+    "wave_id": "clean-g1-wave-c27-20260828T085556JST-3382c2d1",
+    "source_set_digest": "3382c2d16ec73d0b8fd5ece1adfa31d33a11d1692703fbb54c65a14de9b0e0dc",
+    "namespace": "continual_learning",
+    "source_path": "research_workers_clean_g1/continual_learning/RUN_20260828T080811_JST.md",
+    "source_blob": "738106f5c97ad8f0d8712001b1ce61f18d126263"
+  },
+  "primary_sources": {
+    "cpo_repository": "MaolinLuo/CPO",
+    "cpo_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "compute_importance_mask_path": "src/compute_importance_mask.py",
+    "compute_importance_mask_blob": "5f17be7ad91bdc162a0d1e466198c1bdb2ded921",
+    "trainer_path": "src/trainer/grpo_trainer_cl.py",
+    "trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+    "gspo_4b_compute_mask_path": "scripts/GSPO-CL-4B/compute_mask.sh",
+    "gspo_4b_compute_mask_blob": "fceae547e892b2ceebaf38a6791f08fdfed10780",
+    "gspo_4b_run_path": "scripts/GSPO-CL-4B/run_cl.sh",
+    "gspo_4b_run_blob": "f9bb0b605dcc67365543df44d739e17d8b4e06d0",
+    "qwen3_vl_4b_config": {
+      "source": "Qwen/Qwen3-VL-4B-Instruct config.json",
+      "tie_word_embeddings": true,
+      "vocab_size": 151936,
+      "hidden_size": 2560,
+      "tied_matrix_numel": 388956160
+    }
+  },
+  "status": "primary_verified_with_tied_alias_storage_and_metric_masking_scope_correction",
+  "verified_primary_facts": [
+    "The public CPO mask builder loads model.state_dict() and iterates every floating state-dict key that appears in both current and previous checkpoints; it does not canonicalize keys through duplicate-free named_parameters().",
+    "The public Qwen3-VL-4B GSPO mask launcher sets top_percent=10.0 and the run script binds the 4B path to Qwen/Qwen3-VL-4B-Instruct.",
+    "The official Qwen3-VL-4B-Instruct config has tie_word_embeddings=true, vocab_size=151936 and hidden_size=2560, so the tied token/output matrix contains exactly 388,956,160 scalars.",
+    "For each state-dict key the builder independently allocates a dense bool tensor, and after union independently clones reference values under that same key before torch.save. There is no alias canonicalization or shared-output-storage reuse in this code path.",
+    "The trainer constructs _mask_flat_idx, n_tensors and n_pos from every serialized mask key before it iterates unwrapped.named_parameters() to inject gradients. Because default named_parameters() deduplicates a tied Parameter, an extra state-dict alias can inflate serialized mask/ref state and printed mask counts while not receiving a separate effective regularizer hook.",
+    "A source-equivalent local PyTorch 2.10.0+cpu fixture independently reproduced the mechanism: a tied Embedding/Linear pair appeared twice in state_dict but once in named_parameters; the two generated masks had distinct storage and the two cloned reference tensors had distinct storage.",
+    "Conditional on the alias key having at least one nonzero selected movement, its dense bool mask alone costs exactly 388,956,160 bytes = 0.36224365234375 GiB of raw tensor payload. If all requested 10% positions are nonzero, the alias adds 38,895,616 reference positions, making raw saved mask+float32-reference payload 544,538,624 bytes = 0.50714111328125 GiB and trainer-resident bool+float32-ref+int64-index auxiliary payload 855,703,552 bytes = 0.79693603515625 GiB.",
+    "The percentage summary can mathematically hide the alias duplication: when the duplicated tied key has the same selected-count fraction as its canonical key, adding that alias multiplies numerator and denominator by the same fraction contribution, leaving the reported selected percentage unchanged even though absolute n_pos, disk/RAM and build work increase."
+  ],
+  "scope_corrections": [
+    {
+      "claim": "The tied alias mask is guaranteed to be bitwise identical to the canonical mask across environments/runs.",
+      "assessment": "not_guaranteed",
+      "reason": "The local fixture produced identical masks, but CPO calls torch.topk(..., sorted=False). PyTorch documents that indices of tied elements are not guaranteed stable and may vary across invocations. The storage/count duplication mechanism does not require bitwise-identical selected indices."
+    },
+    {
+      "claim": "The worker's projected 8.764585% denominator inflation is fully independently verified here.",
+      "assessment": "not_promoted",
+      "reason": "This audit independently verified the tied-matrix size and the alias mechanism, but did not independently reconstruct the worker's full-model physical parameter count 4,437,815,808 from the complete Qwen3-VL-4B checkpoint. The exact full-model denominator-inflation percentage therefore remains source-worker arithmetic pending full-model count binding."
+    },
+    {
+      "claim": "The raw storage projections are measurements of the public CPO PyTorch-2.8/Qwen3-VL-4B training environment.",
+      "assessment": "not_supported",
+      "reason": "The executed fixture used local PyTorch 2.10.0+cpu and no real Qwen checkpoint. The byte calculations above are exact tensor-payload arithmetic conditional on support count, not measured task_k.pt archive size, RSS or wall clock in the paper/release environment."
+    },
+    {
+      "claim": "The alias defect changed the published CPO paper-table quality numbers.",
+      "assessment": "unverified",
+      "reason": "The public release exhibits the mechanism, but this audit does not bind the paper-table generation environment to this exact July-29 code path or measure quality impact on the released 4B tasks."
+    }
+  ],
+  "downstream_use": {
+    "safe_to_use": [
+      "Current public CPO mask-generation and trainer namespaces disagree on tied aliases: state_dict-side mask/ref construction can preserve a duplicate alias that named_parameters-side regularization does not consume as a separate parameter.",
+      "For Qwen3-VL-4B, any materialized dead tied-alias mask has a dense-bool lower-bound payload of about 0.362 GiB before reference/index storage; at full nonzero 10% support the exact raw payload calculations are about 0.507 GiB saved and 0.797 GiB trainer auxiliary state for that alias alone.",
+      "Selected-percentage logging is not a reliable detector of this alias duplication because duplicated numerator and denominator contributions can preserve the displayed fraction."
+    ],
+    "do_not_promote_without_more_evidence": [
+      "Exact real task_k.pt archive-byte overhead, CPU/GPU RSS, build-time or per-step copy overhead without a pinned real-model run.",
+      "Bitwise equality of alias/canonical top-k masks across runs or devices.",
+      "The worker's full-model 8.764585% denominator inflation until the complete physical parameter count is independently bound.",
+      "Any claim that this release bug caused the paper's reported continual-learning quality differences."
+    ]
+  },
+  "exact_next_verification": "Rotate to a different sealed C27 namespace. Prefer a candidate with an exact primary code/raw artifact where direct recomputation can change evidence status; do not revisit CPO tied-alias storage unless a PyTorch-2.8 or real Qwen3-VL-4B artifact becomes available. Never write exploration state or feedback."
+}
