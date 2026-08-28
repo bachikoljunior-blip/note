@@ -44,6 +44,6 @@ The source-bound extension contract for this checkpoint requires:
 
 ## Nonempty frontier / exact next action
 
-Search public Gauntlet branches/PRs/releases and other self-improers for implemented real CLI/service wiring, pre-dispatch logical evaluation intents, stale-EXECUTING reconciliation, replay-derived anytime/online-error state, and a mechanically terminal fourth OUTER. If absent, keep the extension as a source-bound contract and construct a kill-point equivalence matrix over the audited Gauntlet seams without inventing performance results.
+Search public Gauntlet branches/PRs/releases and other self-improvers for implemented real CLI/service wiring, pre-dispatch logical evaluation intents, stale-EXECUTING reconciliation, replay-derived anytime/online-error state, and a mechanically terminal fourth OUTER. If absent, keep the extension as a source-bound contract and construct a kill-point equivalence matrix over the audited Gauntlet seams without inventing performance results.
 
 Contract: `research_workers_clean_g1/self_improvement/gauntlet_evaluation_authority_contract_2026-08-28T170624_JST.json`
