@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 92,
+  "created_at": "2026-08-28T11:10:02.674613+09:00",
+  "frozen_control": {
+    "note_main_sha": "db40813f753acc29a570374d3cde527725bed313",
+    "control_revision": 13,
+    "role_config_revision": 6,
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "source": {
+    "id": "AUDITABLE-AUTORESEARCH-7A6DBC8",
+    "repository": "cxcscmu/Auto-Research-AI-Scientist",
+    "revision": "7a6dbc8543172042d7be4f14b39f8f4c0abd6c92"
+  },
+  "classification": "EXECUTABLE_INNER_SELECTION_PLUS_SEPARATE_OUTER_CERTIFICATION_WITH_TERMINALITY_AND_EXACTLY_ONCE_GAPS",
+  "verified_positive_evidence": [
+    "Campaign run() evaluates candidates only through development inner-CV; the manifest states holdout_policy='never evaluated by run(); explicit certify command only'.",
+    "Each trial starts from the current frozen best source tree in a non-overwritten workspace, with source_sha256 and append-only ledger records.",
+    "certify() rechecks the exact best source tree hash before holdout evaluation and writes a certificate bound to trial_id and source_sha256.",
+    "The public test explicitly runs one trial, resumes to a second trial, verifies no holdout_certification exists during run(), then invokes certify().",
+    "The method contract states an outer fold is sealed, candidates are selected using inner K-fold CV, exact source tree/hash are frozen, and one explicit certification scores the outer fold.",
+    "The public paper artifact claims all retained trials, frozen winners and certification scores are released with hash-verification scripts."
+  ],
+  "critical_gaps": [
+    "There is no separate CERTIFY surface between adaptive development selection and OUTER; the holdout itself is the certification result, so this is a three-surface rather than LOGOS four-surface design.",
+    "certify() executes evaluator.holdout(workspace) before checking whether holdout_certification.json already exists, so repeated certify calls re-query the outer holdout even when a prior certificate is present.",
+    "The public test itself calls certify() twice; it verifies deterministic certificate identity but therefore also exercises repeated outer evaluation rather than enforcing one-shot consumption.",
+    "run() does not check that holdout certification has occurred and does not close/finalize the campaign after certification; executable code therefore does not prevent run-after-certify continuation.",
+    "holdout_certification.json is written with ordinary write_text after the evaluator returns. A crash after outer evaluation but before durable write can consume the outer surface without a local certificate, allowing retry to re-query it.",
+    "No candidate-local anytime-valid gate or cross-candidate statistical spending governs development selection."
+  ],
+  "design_update": {
+    "rule": "A separate certification command is not sufficient to make OUTER a terminal lockbox. The evaluator consumption must be monotone and terminal in the campaign state machine.",
+    "outer_lockbox_contract": [
+      "outer_preterminal_query_count == 0",
+      "first outer query requires immutable selected artifact identity and explicit terminal transition intent",
+      "logical_outer_query_id and query budget are durably prepared before evaluator dispatch",
+      "outer result is consumed at most once logically; retry must reconcile the same logical query rather than create a fresh evaluation",
+      "after first outer result becomes observable, search/tune/promotion/rollback/router/stopping state cannot be reopened using that result",
+      "repeated certify is either a pure read of the stored certificate or is rejected, never a new evaluator call",
+      "campaign state records a monotone transition such as SEARCH_OPEN -> FROZEN -> CERTIFYING -> CERTIFIED/CLOSED"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Search for a public self-improvement system that enforces a monotone terminal outer-lockbox state machine in code/tests, preferably with durable pre-dispatch logical query accounting. Combine this with the still-missing LOGOS-like candidate-local anytime-valid CERTIFY and cross-candidate durable spending. Specifically look for implementations where repeated certify is cache/read-only or rejected, run-after-certify is impossible, and crash between outer dispatch/result persistence cannot create a second logical outer query."
+}
