@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "control_revision": 13,
+  "config_revision": 5,
+  "semantic_tuple": {
+    "note_main_sha_frozen": "6aef4f0f0cdf4846fa2bbdb75e3537dd50e8af81",
+    "desired_state_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "role_config_blob": "a28a0cef2712c1561973bde4c83cea6e14a4c024",
+    "later_control_semantics_adopted": false
+  },
+  "created_at": "2026-08-28T12:43:21+09:00",
+  "title": "Arbitrary unseen drift makes nontrivial per-run reallocation safety impossible; decision-contrast stress isolates temporal staleness as the dominant failure mode",
+  "continued_from": "research_workers_clean_g1/cross_field/2026-08-28T123109+0900-r128.json",
+  "public_sources": [
+    {
+      "title": "Hedging the Drift: Learning to Optimize under Non-Stationarity",
+      "authors": "Wang Chi Cheung, David Simchi-Levi, Ruihao Zhu",
+      "url": "https://arxiv.org/abs/1903.01461",
+      "use": "Nonstationary optimization obtains dynamic-regret control by explicitly quantifying or adapting to temporal variation and using forgetting/sliding-window mechanisms. This is consistent with the new impossibility boundary: next-run guarantees require structure on drift or a weaker cumulative objective."
+    },
+    {
+      "title": "Adaptive Neyman Allocation",
+      "authors": "Jinglong Zhao",
+      "url": "https://arxiv.org/abs/2309.08808",
+      "use": "Multi-stage observations can estimate current variance and guide later-stage allocation with theory for estimation/inference. This is a precedent for escaping unseen-drift impossibility by purchasing current-round pilot information before the main allocation, not a theorem transfer to the particle filter."
+    },
+    {
+      "title": "Off-Policy Confidence Sequences",
+      "authors": "Nikos Karampatziakis, Paul Mineiro, Aaditya Ramdas",
+      "url": "https://proceedings.mlr.press/v139/karampatziakis21a.html",
+      "use": "Anytime-valid sequential evidence remains appropriate for cumulative or average proxy upgrade decisions, but does not manufacture a next-run guarantee when the latent environment may jump arbitrarily after the observed history."
+    },
+    {
+      "title": "Learning Polyhedral Conformal Sets for Robust Optimization",
+      "authors": "Shuyi Chen, Wenbin Zhou, Shixiang Zhu",
+      "url": "https://arxiv.org/abs/2605.08506",
+      "use": "Decision-aware uncertainty geometry and independent recalibration support orienting uncertainty toward the queried allocation contrast. The finite-sample theorem is not transferred to the dependent stratified particle setting."
+    }
+  ],
+  "analytic_results": [
+    {
+      "id": "cf-g1-r129a-uniform-next-run-safety-impossibility",
+      "claim": "Let q0 and q be positive simplex allocations and V(q;A)=sum_i A_i/q_i for arbitrary nonnegative coefficient vectors A. If V(q;A)<=V(q0;A) for every A, taking A=e_i implies 1/q_i<=1/q0_i for every i, so q_i>=q0_i coordinatewise. Since both allocations sum to one, q=q0. Thus the defensive backbone is the unique allocation that can be uniformly noninferior to itself over an unrestricted next-run coefficient vector. Any nontrivial reallocation requires a restriction/uncertainty set on A, a pre-run signal, or a weaker cumulative/time-average safety semantics."
+    },
+    {
+      "id": "cf-g1-r129b-indistinguishable-history-corollary",
+      "claim": "If two environments have identical observable history through run t-1 but can choose different next-run coefficient vectors after the allocation is fixed, any predictable controller chooses the same q_t in both. By the previous result, a nontrivial q_t cannot be noninferior to q0 for both arbitrary choices. Therefore no amount of past-only martingale calibration can remove the first unseen abrupt-change transient without an assumption on drift or additional information before committing the allocation."
+    },
+    {
+      "id": "cf-g1-r129c-conditional-decision-rule-remains-exact",
+      "claim": "The r128 greedy simplex-box contrast remains exact conditionally: whenever the true normalized A lies in the pre-run box and the rule chooses beta>0.5 with robust contrast <=0, post-hoc q-vs-q0 degradation is mathematically impossible. Observed false upgrades can therefore only arise from box miss/numerical error; the exact algebra removes numerical/optimization ambiguity and exposes uncertainty coverage as the sole safety bottleneck."
+    }
+  ],
+  "synthetic_reconstruction": {
+    "model": "Exact reconstruction of the r125 twelve-generation two-state Feynman-Kac harness from the role-local certificate: initial [0.8,0.2], transition [[0.94,0.06],[0.25,0.75]], mild potential [0.8,1.2], shock [0.08,8], independent stratified resampling, total budget 768, q_beta=(1-beta)/T+beta*sqrt(center)/sum sqrt(center). The five-generation exact coefficient vectors from r124 were reproduced to displayed precision before running the new tests.",
+    "old_controller_reproduction": "On fresh 40-stream closed-loop runs, the recreated old uncertainty controller produced mean ratios 0.85173 abrupt, 0.81236 gradual, 0.86409 recurring and box coverages 0.9025/0.6829/0.8491, close to the prior role-local benchmark; fixed beta=0.5 gave 0.88737/0.85721/0.87589."
+  },
+  "engineering_results": [
+    {
+      "id": "cf-g1-r129d-decision-contrast-closed-loop",
+      "setup": "40 independent streams per scenario. New controller uses the same past-only center/box but replaces the generic <=1.30 box-ratio criterion with the largest continuous beta in [0.5,0.9] whose exact simplex-box worst-case contrast versus beta=0.5 is <=0. No hyperparameter tuning.",
+      "results": {
+        "abrupt": {
+          "old": {"mean_ratio":0.8517327554,"p95_ratio":0.9631055509,"worst_ratio":1.2056027568,"mean_beta":0.8697708333,"false_upgrade_vs_q0":0.0166666667},
+          "decision_contrast": {"mean_ratio":0.8522964237,"p95_ratio":0.9409142840,"worst_ratio":1.2105342172,"mean_beta":0.8580203505,"false_upgrade_vs_q0":0.0166666667},
+          "fixed_q0": {"mean_ratio":0.8873733218,"worst_ratio":1.0582685508}
+        },
+        "gradual": {
+          "old": {"mean_ratio":0.8123550268,"p95_ratio":0.9008429929,"worst_ratio":1.0,"mean_beta":0.9,"false_upgrade_vs_q0":0.0},
+          "decision_contrast": {"mean_ratio":0.8141932935,"p95_ratio":0.9018443409,"worst_ratio":1.0,"mean_beta":0.8745079594,"false_upgrade_vs_q0":0.0},
+          "fixed_q0": {"mean_ratio":0.8572094711,"worst_ratio":1.0}
+        },
+        "recurring": {
+          "old": {"mean_ratio":0.8640929136,"p95_ratio":1.0656836081,"worst_ratio":1.3343237154,"mean_beta":0.77496875,"false_upgrade_vs_q0":0.085625},
+          "decision_contrast": {"mean_ratio":0.8546706414,"p95_ratio":1.0594620557,"worst_ratio":1.3064896474,"mean_beta":0.7805454576,"false_upgrade_vs_q0":0.083125},
+          "fixed_q0": {"mean_ratio":0.8758905481,"worst_ratio":1.0859155130}
+        }
+      },
+      "interpretation": "Decision-specific robust optimization is directionally useful rather than uniformly more conservative: it improved recurring mean ratio by about 0.00942 absolute versus the old generic cap and reduced recurring p95/worst, while giving up about 0.00056 abrupt mean and 0.00184 gradual mean. It did not solve first-change safety because the same heuristic box still undercovers. By construction, false upgrades conditional on box coverage are zero."
+    },
+    {
+      "id": "cf-g1-r129e-measurement-vs-staleness-separation",
+      "setup": "16 fresh decision-controller streams per scenario. Normalize scalar contrast error by the predictable range R=max c-min c. 'measurement' compares current completed diagnostic d_t against current true A_t after the run; 'staleness' compares the pre-run EWMA center against current true A_t.",
+      "results": {
+        "measurement_error_q95": {"abrupt":0.0115294,"gradual":0.0119599,"recurring":0.0140821},
+        "measurement_error_q99": {"abrupt":0.0211361,"gradual":0.0191338,"recurring":0.0223112},
+        "staleness_error_q95": {"abrupt":0.0074507,"gradual":0.0113010,"recurring":0.1029895},
+        "staleness_error_q99": {"abrupt":0.1233885,"gradual":0.0146467,"recurring":0.1554894},
+        "staleness_max": {"abrupt":0.1729370,"gradual":0.0202841,"recurring":0.1822865}
+      },
+      "interpretation": "Current-run scalar projection noise is small in this model; recurring q95 pre-run staleness is roughly seven times the current-run measurement q95. Abrupt q95 hides the single rare transition, but q99 jumps to 0.123. The safety bottleneck is therefore temporal surprise, not the dimensionality/noise of the completed scalar diagnostic."
+    },
+    {
+      "id": "cf-g1-r129f-l1-bridge-power-negative",
+      "setup": "16 fresh streams per scenario, using the actual post-hoc ||A-d||_1 in the exact r128 bound D_A<=D_d+R||A-d||_1/2. This is an oracle engineering power check, not an online certificate.",
+      "results": {
+        "bridge_certified_fraction_of_true_safe_aggressive": {"abrupt":0.2303,"gradual":0.2576,"recurring":0.3865},
+        "median_actual_l1_error": {"abrupt":0.0985,"gradual":0.0980,"recurring":0.0991}
+      },
+      "interpretation": "Even with the exact realized L1 error, the generic total-variation bridge certifies only about one quarter to two fifths of true-safe aggressive runs. A direct one-dimensional contrast error certificate is therefore substantially more promising than first certifying the whole normalized coefficient vector."
+    },
+    {
+      "id": "cf-g1-r129g-calibrated-scalar-margin-collapses-to-backbone",
+      "setup": "A normalized robust-gap margin kappa was tuned only on 8 discovery streams/scenario over {0.05,0.055,0.06,0.065,0.07,0.075}; kappa=0.055 was the most efficient candidate with observed overall false-upgrade rate below 1% on discovery. Validation used 24 disjoint streams/scenario and post-hoc true A only for scoring.",
+      "validation": {
+        "abrupt": {"mean_ratio":0.8853599040,"p95_ratio":0.9407413867,"worst_ratio":1.0833268973,"mean_beta":0.51469448,"false_upgrade":0.00277778,"fixed_mean":0.8867814116,"fixed_worst":1.0580490634},
+        "gradual": {"mean_ratio":0.8561039569,"p95_ratio":0.9326164189,"worst_ratio":1.0,"mean_beta":0.511789835,"false_upgrade":0.0,"fixed_mean":0.8571453987,"fixed_worst":1.0},
+        "recurring": {"mean_ratio":0.8750459678,"p95_ratio":1.0,"worst_ratio":1.0879660107,"mean_beta":0.510588409,"false_upgrade":0.01302083,"fixed_mean":0.8758776424,"fixed_worst":1.0760204084},
+        "overall_false_upgrade": 0.00604167,
+        "weighted_mean_improvement_vs_fixed_fraction": 0.0012267
+      },
+      "interpretation": "A margin large enough to nearly suppress observed false upgrades drives beta to about 0.51 and recovers only about 0.12% weighted mean efficiency versus the fixed backbone while not improving worst recurring loss. Without a pre-run drift signal, stronger scalar calibration mostly collapses to q0, exactly as the impossibility result predicts."
+    },
+    {
+      "id": "cf-g1-r129h-discarded-current-run-pilot-negative",
+      "setup": "Exploratory two-stage escape route: run an independent uniform pilot on the current environment, discard it from the final estimator, then allocate an independent production filter from the fresh pilot diagnostic. Across 23 half-step shock positions, n_pilot=16 per generation and beta=0.65 gave allocation-only mean ratio 0.86553 and p95 1.01652 before charging pilot cost.",
+      "result": "With a full-cost pilot, 192 of 768 particle-units are consumed and the mean total-cost ratio exceeds one. The mean break-even pilot cost is about 0.538 of a production particle versus full uniform, and in scenario-specific comparison against the already-available fixed beta=0.5 historical controller the pilot would need to be essentially free in gradual/abrupt stress and roughly below 5% of production-particle cost in recurring stress. Rare pilot noise also produced large maxima despite near-one p95.",
+      "interpretation": "Current-run information is the right escape from unseen drift, but a discarded full-fidelity pilot is too expensive in this budget. The viable route is a much cheaper low-fidelity pilot or an estimator that can safely reuse pilot samples in the final estimate."
+    }
+  ],
+  "negative_or_scope_evidence": [
+    "The no-free-lunch statement is about per-run noninferiority for an unrestricted next coefficient vector. It does not rule out cumulative regret guarantees, probabilistic models, bounded-variation environments, pre-run covariates, or within-run pilot information.",
+    "The decision-contrast controller is still conditional on the heuristic coefficient box. Its remaining false upgrades are caused by box miss under drift, not by the robust optimization solver.",
+    "The staleness and measurement quantiles are model-specific engineering diagnostics from the reconstructed two-state Feynman-Kac stress; they are not universal constants.",
+    "The kappa margin was calibrated with synthetic post-hoc true A and is not an online theorem. It demonstrates the efficiency cost of demanding near-backbone safety without a predictive drift feature.",
+    "The pilot experiment discards pilot samples and ignores fixed overhead; it is a negative screening result, not a theorem against adaptive multi-stage allocation generally.",
+    "No real-agent or AGI performance claim follows from these synthetic results."
+  ],
+  "frontier": [
+    "Stop searching for assumption-free next-run noninferiority from past-only diagnostics: it is impossible for any nontrivial allocation under arbitrary unseen coefficient drift. Make the safety semantics explicit as one of: conditional-on-set, bounded-drift, pre-run-covariate, or cumulative/time-average.",
+    "Prioritize a one-dimensional decision-contrast uncertainty object. The current-run scalar measurement error is much smaller than vector L1 error; future work should certify c dot A directly and model temporal drift separately.",
+    "For conditional per-run safety, replace the generic 1.30 cap with the exact robust contrast rule, but invest effort in coverage of the decision direction rather than all 12 coordinates. Consider independent recalibration of directional/polyhedral uncertainty on sparse high-fidelity labels.",
+    "For nonstationary safety, introduce an explicit scalar variation budget or pre-run context feature and use local/strongly-adaptive evidence with drift widening. Quantify the unavoidable first-change loss when no pre-run signal exists.",
+    "Explore within-run two-stage allocation only if the pilot is cheap or reusable. Derive a correctness-preserving sample-splitting/importance-weighted way to reuse pilot information, or use a low-fidelity pilot whose per-sample cost is far below production evaluation.",
+    "Continue the theorem search for a scalar contrast or influence functional under independent stratified particle dependence; do not pursue a full-vector theorem unless it is required by another decision."
+  ],
+  "exact_next_action": "Recast the controller around the no-free-lunch boundary. Keep q0=beta0.5 as the only unconditional per-run guarantee. Use the exact decision-contrast robust rule as the conditional upgrade whenever a pre-run directional uncertainty set is available. On the synthetic harness, build a scalar directional calibration dataset: for each run store the pre-run predicted contrast, completed-run contrast, post-hoc true contrast, predictable range R, and whether a regime change occurred. Separate measurement error from temporal drift and test a prespecified variation-budget/window rule on discovery streams, then validate once on disjoint streams. In parallel derive a two-stage sample-splitting design in which a cheap or reusable current-run pilot estimates only the scalar contrast before the production allocation; include pilot cost and prove estimator correctness before claiming that it escapes the first-change transient."
+}
