@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "scope": "Fail-closed capability taxonomy derived from the inspected GitHub, GitLab, and Gerrit public contracts; not a claim of provider-wide equivalence",
+  "states": [
+    {
+      "name": "INTENT_HEAD_BOUND",
+      "meaning": "The effect request is bound to an exact reviewed source/head or patch-set revision.",
+      "not_enough_for": "Does not prove request acceptance, queue admission, or final repository effect."
+    },
+    {
+      "name": "SERVER_OPERATION_ID_BOUND",
+      "meaning": "A server-assigned durable/recoverable operation identifier is tied to the requested work.",
+      "not_enough_for": "Does not prove that the operation completed or what target-ref commit resulted."
+    },
+    {
+      "name": "QUEUE_OR_TRAIN_ADMITTED",
+      "meaning": "Server has admitted the change into asynchronous queue/train processing.",
+      "not_enough_for": "Does not prove final branch effect."
+    },
+    {
+      "name": "CI_STATE_BOUND",
+      "meaning": "A pipeline/check execution is bound to the queue/train candidate state.",
+      "not_enough_for": "Pipeline/check SHA can be a synthetic merge-group/train state and must not be assumed to be the final target-ref SHA."
+    },
+    {
+      "name": "FINAL_TARGET_REF_EFFECT_EXACT",
+      "meaning": "The exact protected/target ref transition that actually landed has been observed and durably recorded.",
+      "not_enough_for": "Does not by itself prove which policy path or bypass allowed the effect."
+    },
+    {
+      "name": "POST_EFFECT_POLICY_EXACT",
+      "meaning": "Server-derived policy/submit evidence is exact-read and bound to the landed effect or the submitted group.",
+      "not_enough_for": "Provider semantics still matter; pass, bypass, override and evaluate-only states must remain distinct."
+    }
+  ],
+  "providers": {
+    "github": {
+      "INTENT_HEAD_BOUND": "sync/async merge sha expected-head precondition",
+      "SERVER_OPERATION_ID_BOUND": "async merge UUID; 409 recovery requires pending option comparison",
+      "QUEUE_OR_TRAIN_ADMITTED": "terminal async status enqueued",
+      "CI_STATE_BOUND": "merge-group/check-run evidence; merge-group SHA is queue-group state, not final base SHA",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "exact base-ref before_sha->after_sha transition chain",
+      "POST_EFFECT_POLICY_EXACT": "Rule Suite exact tuple/id readbacks; result pass vs bypass and evaluation_result separated",
+      "recovery_caveat": "async result endpoint explicitly expires after 24h; persist UUID/terminal response immediately"
+    },
+    "gitlab": {
+      "INTENT_HEAD_BOUND": "merge-train add sha or merge-request merge sha",
+      "SERVER_OPERATION_ID_BOUND": "merge-train car/entry integer id",
+      "QUEUE_OR_TRAIN_ADMITTED": "active merge-train car returned/listed",
+      "CI_STATE_BOUND": "train pipeline id/SHA/status; pipeline can be canceled/recreated when earlier cars change",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "merged MR attribution plus exact target-branch ref evidence; merge_commit_sha/squash_commit_sha are merge-method-sensitive",
+      "POST_EFFECT_POLICY_EXACT": "train pipeline outcome plus merged MR state; this taxonomy does not claim a GitHub-Rule-Suite-equivalent per-ref policy object",
+      "recovery_caveat": "inspected API exposes active and complete train scopes and does not state a GitHub-style 24h expiry; no indefinite-retention claim"
+    },
+    "gerrit": {
+      "INTENT_HEAD_BOUND": "POST /changes/{change-id}/revisions/{revision-id}/submit addresses one exact patch-set revision",
+      "SERVER_OPERATION_ID_BOUND": "ChangeInfo.submission_id is set on MERGED changes and identifies changes submitted together; callers must not rely on its string format",
+      "QUEUE_OR_TRAIN_ADMITTED": "not modeled as a merge queue in the inspected Gerrit submit contract; submit directly executes Gerrit submit semantics",
+      "CI_STATE_BOUND": "submit requirements / plugin submit rules are evaluated server-side, but a pre-submit requirement snapshot is not a reusable effect lease",
+      "FINAL_TARGET_REF_EFFECT_EXACT": "must still read the destination ref because Gerrit submit type may merge, rebase, fast-forward or cherry-pick and can create a commit different from the reviewed revision",
+      "POST_EFFECT_POLICY_EXACT": "MERGED ChangeInfo + submission_id + submit-requirement/override provenance when preserved; historical ChangeInfo can be addressed by NoteDb meta SHA",
+      "recovery_caveat": "submission may include topic/dependent closure; capture Submitted Together/member closure and submission_id, not only the triggering change"
+    }
+  },
+  "cross_provider_invariants": [
+    "Pre-effect authorization or policy-read evidence is never promoted into a reusable lease unless the effect API itself atomically consumes that exact revision/epoch.",
+    "Expected-head/revision binding and server operation identity are independent evidence axes.",
+    "Queue/train admission and CI success are not final target-ref effect.",
+    "Final effect is proven against the target repository ref, not a synthetic merge-group/train pipeline SHA.",
+    "Group operations require a durable ordered/member closure; a single triggering PR/MR/change is insufficient when the server may submit multiple members.",
+    "Post-effect policy states must preserve bypass/override/evaluate-only distinctions instead of collapsing them into green/pass.",
+    "Ambiguous mutation responses are recovered by exact operation/intention readback before any retry."
+  ],
+  "primary_sources": [
+    "https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously",
+    "https://docs.github.com/en/rest/repos/rule-suites",
+    "https://docs.gitlab.com/api/merge_trains/",
+    "https://docs.gitlab.com/api/merge_requests/",
+    "https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html",
+    "https://gerrit-review.googlesource.com/Documentation/cross-repository-changes.html",
+    "https://gerrit-review.googlesource.com/Documentation/config-submit-requirements.html"
+  ]
+}
