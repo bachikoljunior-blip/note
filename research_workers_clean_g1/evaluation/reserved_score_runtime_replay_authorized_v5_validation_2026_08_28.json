@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T12:21:32+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "446f2a10c7197cde199d10a4af8f7a0e657736e0",
+    "control_revision": 13,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "artifacts": {
+    "verified_close_wrapper": {
+      "path": "research_workers_clean_g1/evaluation/reservation_compliance_close_replay_runtime_provenance_v4_verified_graph_2026_08_28.py",
+      "blob": "c65203aa9cac3b83e9cc1413046e1a71b7ddaca8"
+    },
+    "replay_authorized_gate": {
+      "path": "research_workers_clean_g1/evaluation/durable_launch_capability_gate_replay_authorized_v1_2026_08_28.py",
+      "blob": "f31436df64a0e19474d399bb191471cbb4342ff6"
+    },
+    "first_runtime_sketch_superseded": {
+      "path": "research_workers_clean_g1/evaluation/reserved_score_runtime_replay_authorized_v4_2026_08_28.py",
+      "blob": "8787b64510dfd06791fba24250368396a5bca06f",
+      "reason": "accepted trusted certificate registry/current runtime as per-call inputs, so an unprivileged caller could manufacture its own trust root if this API were exposed as the authority boundary"
+    },
+    "trust_rooted_runtime": {
+      "path": "research_workers_clean_g1/evaluation/reserved_score_runtime_replay_authorized_v5_trust_rooted_2026_08_28.py",
+      "blob": "2785ec4ee5642fb4e54426cf700a683690752a2e"
+    }
+  },
+  "runtime_validation": {
+    "authorization_root_digest": "520f2dd5258278999dcb50a7d3f66761da428e6d3f63700bb325cff7b90676fc",
+    "closed_score": 0.103,
+    "invalidation_rejected": true,
+    "old_epoch_permit_rejected": true,
+    "result": "passed",
+    "runtime_drift_rejected": true,
+    "same_attempt_id_after_fresh_epoch": true,
+    "same_score_after_fresh_epoch": true,
+    "scorer_calls": 2,
+    "unprivileged_deterministic_replay_rejected": true
+  },
+  "additional_checks": {
+    "post_v3_history_schema_v2_admit": "passed: new gate admitted b3 after historical->v1->v2 CLOSE history and registry resolved recognized_schema_v2/replay_authorized_v1",
+    "cross_process_authorization_object_rehydration": "passed: authorization is treated as data and reconstructed into each process epoch module type before validation",
+    "runtime_graph_preflight_files": 7,
+    "close_graph_preflight_files": 13,
+    "v4_runtime_per_call_trust_root": "rejected design; v5 moves registry + runtime snapshot/invalidation providers to RuntimeContext bootstrap authority"
+  },
+  "measurement_validity_rules": [
+    "A deterministic-replay certificate is not safe merely because its digest is bound into an attempt. The trust root deciding which certificate digests are authoritative must not be caller-supplied at the score/reservation API boundary.",
+    "The live runtime fingerprint used to authorize a retry must be derived by a context-owned provider at retry time; accepting a caller-provided current fingerprint lets the caller assert away runtime drift.",
+    "Authorization objects should be persisted/transported as validated data, not relied on as Python dataclass instances across module reloads/process epochs.",
+    "Process epoch HMAC invalidation and deterministic replay authorization are complementary: an old permit must die on restart, and only a newly authorized same-attempt permit may be issued.",
+    "FAIL_CLOSED must remain usable without any deterministic replay authority and must not be silently upgraded by a replay contract."
+  ],
+  "scope_limitations": [
+    "The v5 trust root is fixed at RuntimeContext construction but the bootstrap mechanism supplying that registry/provider is still outside this artifact. Production use needs a privileged immutable/config-verified bootstrap.",
+    "The deterministic scorer in validation was a hash(attempt_id) toy implementing the declared score-level determinism. No LLM runtime determinism certificate was established.",
+    "File-identity verification is pre/post filename hashing and is not an adversarial secure loader against a writer racing mutation during a call.",
+    "No default runtime was switched; these are forward-only evaluation candidates. FAIL_CLOSED remains the safe active path.",
+    "Crash injection for the new v5 end-to-end runtime has not yet been exhaustively rerun at every ADMIT/RESERVE/SLOT/COMMIT/CLOSE byte boundary."
+  ],
+  "frontier": [
+    "Run exhaustive torn-tail/crash injection across the v5 trust-rooted lifecycle, especially deterministic replay crash-before-SLOT, SLOT-before-COMMIT reconciliation, and v3 verified CLOSE boundaries.",
+    "Make the bootstrap trust root durable and content-addressed: certificate registry generation/digest plus runtime snapshot provider implementation must themselves be verified code/config, not ambient caller objects.",
+    "Replace pre/post filename hashing with immutable content-addressed module loading or verified image/package digest to remove the remaining TOCTOU window.",
+    "Stress a deliberately stochastic scorer under a falsely trusted certificate to quantify the consequence and make the certificate-trust assumption explicit in release criteria; do not treat registry membership as empirical proof of determinism.",
+    "Only after crash/torn-tail and trust-bootstrap checks pass should any integration consider enabling DETERMINISTIC_REPLAY; preserve FAIL_CLOSED as default."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Crash-test v5 using a fixed privileged registry/snapshot provider: create replay-authorized ADMIT, durable DETERMINISTIC_REPLAY RESERVE, then inject crash/torn writes before/after score, SLOT, COMMIT, and verified CLOSE. Require scorer-call count <=1 before fresh authorized replay, identical protected statistic on authorized replay, no evidence from torn SLOT/CLOSE, and no replay after COMMIT."
+}
