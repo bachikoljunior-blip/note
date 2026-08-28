@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "main_sha_h1": "e33473068379a769e859168ef088863ea794e649",
+    "main_sha_h2": "e33473068379a769e859168ef088863ea794e649",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_config_revision": 6,
+    "enabled_desired": true
+  },
+  "source_scope": {
+    "evaluation_latest_path": "research_workers_clean_g1/evaluation/LATEST.json",
+    "evaluation_latest_blob": "f69f36115b0b6f6c2953f8d8301a323f110e0947",
+    "failure_evidence_path": "research_workers_clean_g1/failure_evidence/2026-08-29T010052+0900.md",
+    "failure_evidence_blob": "13e10c1f291fb3e8b8010877c94a8260c2ee3ca7",
+    "failure_probe_path": "research_workers_clean_g1/failure_evidence/probes/2026-08-29T0100-cas.json",
+    "failure_probe_blob": "edca3ccc9481793a81e307de7fa65a353b6c4af7",
+    "tested_claims": ["FE-373", "FE-374", "FE-375", "FE-376", "FE-378", "FE-381"]
+  },
+  "verdicts": [
+    {
+      "claim": "current evaluation checker-v2 Phase-1 acceptance evidence exists",
+      "verdict": "NOT_YET_DURABLE_AT_FROZEN_SNAPSHOT",
+      "evidence": "At frozen main SHA, evaluation/LATEST.json still points to control_revision 19 checkpoint_2026-08-29T0059_JST_phase1_rev19_prework_postfreeze_drift.json. Root revision 20 materially changes the evaluation method by adding the >=20 useful-output opportunity/rate negative and positive controls. The downstream assignment-equivalence contract explicitly does not rescue a proof across a role-specific method change. Therefore no control19 evaluation artifact can establish the current root20 checker-v2 cell."
+    },
+    {
+      "claim": "FE-373 stale live lease holder requires fencing-style protection",
+      "verdict": "PRIMARY_SOURCE_SUPPORTED_WITH_SCOPE_GUARD",
+      "evidence": "Current Redis distributed-lock documentation explicitly warns not to assume a lock remains held while the process remains alive, recommends fencing tokens for long-running processes, and warns wall-clock TTL shifts can permit multiple apparent holders. This supports the stale-holder hazard and need for fencing. The worker's specific monotonically ordered generation and protected-resource rejection protocol is a Phase-1 design mapping, not an empirically tested Redis result."
+    },
+    {
+      "claim": "FE-374 / FE-381 GitHub Contents stale blob identity fails closed",
+      "verdict": "PRIMARY_SOURCE_SUPPORTED_AND_INDEPENDENT_CHAT_REPRODUCED_NARROWLY",
+      "evidence": "GitHub REST documentation requires the current blob sha for replacing a file and documents HTTP 409 Conflict; it also warns create/update and delete operations must be serialized. Independently in the primary-verifier audit namespace, a v1 file with blob 243f2a9d5bf0bfdae46fc3e16d1cb07af601c32a was updated to v2 blob ff7b17a7966b931bbcf681c95aea185f6f4e004b. Reusing the stale v1 blob for a third update returned 409, and readback preserved step=2,value=v2 at the v2 blob. This reproduces only single-file Contents-API predecessor-CAS behavior, not multi-file atomicity, ref-level CAS, or retry correctness."
+    },
+    {
+      "claim": "FE-375 Temporal Local Activity can re-execute after worker crash before marker durability",
+      "verdict": "PRIMARY_SOURCE_SUPPORTED",
+      "evidence": "Temporal's current Local Activity documentation states regular Activity completion is durably tracked and is not re-executed after a worker crash, whereas a Local Activity result becomes durable only when the enclosing Workflow Task completes and records MarkerRecorded. A crash before that point retries the Workflow Task and reruns Local Activities; the docs characterize this as at-least-once and require idempotency."
+    },
+    {
+      "claim": "FE-376 compensation registered only after forward success can miss a partial side effect",
+      "verdict": "PRIMARY_SOURCE_SUPPORTED_WITH_ATOMICITY_CONDITION",
+      "evidence": "Temporal's current Saga documentation recommends compensation registration before side-effecting Activity execution because a credit card may be charged before the Activity fails to return success; registering after execution risks partial completion without compensation. It explicitly says after-execution registration is appropriate only when the forward Activity is truly atomic/all-or-nothing."
+    },
+    {
+      "claim": "FE-378 Step Functions task-token binding rejects superseded/expired callback attempts",
+      "verdict": "PRIMARY_SOURCE_SUPPORTED_AS_POSITIVE_CONTROL",
+      "evidence": "AWS Step Functions callback documentation states that timeout generates a new random task token. SendTaskSuccess identifies the specific task by token and returns TaskTimedOut when the token expired or the task is already closed, and InvalidToken for invalid tokens. This is a source-correct positive control for attempt-bound callback identity; it is not evidence of a measured bug in systems that omit such binding."
+    }
+  ],
+  "exact_chat_probe": {
+    "path": "research_audits/primary_verification/probes/2026-08-29T0140JST_stale_sha_cas.json",
+    "create_commit": "7e0e7805116ab416aa786868730dd8c8f40e4ebe",
+    "v1_blob": "243f2a9d5bf0bfdae46fc3e16d1cb07af601c32a",
+    "v2_commit": "35d05448ff36e4a309f82fb5d2217cbd9dd636ff",
+    "v2_blob": "ff7b17a7966b931bbcf681c95aea185f6f4e004b",
+    "negative_control": "update attempted with stale v1 blob and payload STALE_WRITE_SHOULD_NOT_COMMIT",
+    "negative_result": "HTTP 409 sha mismatch",
+    "readback": "step=2,value=v2,blob=ff7b17a7966b931bbcf681c95aea185f6f4e004b"
+  },
+  "conflict_duplication_check": "No explorer/feedback/control/O/ACTIVE_WAVE/index/feed/shared-ledger mutation. Audit writes were confined to research_audits/primary_verification and the role-local receipt namespace. No duplicate primary-writer action was attempted.",
+  "base_continuation_preserved": true,
+  "substantive_progress_or_missing_capability": "Current root20 evaluation checker-v2 evidence is missing at the frozen snapshot; failure_evidence FE-373/374/375/376/378/381 were source-audited, with FE-381 independently reproduced on the available Chat GitHub Contents surface.",
+  "exact_continuation": "Fresh bootstrap. First check evaluation/LATEST once for a root20/config6 checker-v2 artifact. If present, verify durable precommit occurred before first execution and independently recompute Control A duplicate failure, Control B >=20 opportunities with useful_output_rate<0.80 failure, and matched Control C >=0.80 pass only when every aggregate hard gate holds. If absent, do not repeat FE-373/374/375/376/378/381; rotate to a different current Phase-1 claim, prioritizing an actual false-completion or superseded-child misattribution case with durable primary evidence.",
+  "handoff_if_any": "Acceptance coordination should treat the evaluation cell as not current-proof-eligible at frozen root20 until a root20/current-method checker-v2 artifact exists; FE-381 narrow single-file CAS behavior is independently reproduced but does not establish higher-level exactly-once or multi-file safety."
+}
