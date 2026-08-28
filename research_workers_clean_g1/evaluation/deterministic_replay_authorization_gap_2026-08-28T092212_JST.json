@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:22:12+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "exact_source_observation": "durable_attempt_reservation_ledger_2026-08-28.py accepts retry_policy=deterministic_attempt_id_replay based on the caller-supplied policy string, records it durably, and later allows a fresh process epoch to reissue a new permit MAC for the same attempt_id. No deterministic-runtime certificate or runtime-fingerprint proof is required by that module.",
+  "validated_positive_case": {
+    "scorer": "deterministic hash of attempt_id",
+    "first_score": 0.458,
+    "fresh_epoch_replay_score": 0.458,
+    "same_attempt_id": true,
+    "final_scientific_score": 0.458
+  },
+  "unsafe_counterexample": {
+    "scorer_model": "iid Bernoulli(0.5), not deterministic in attempt_id",
+    "policy": "observe the first in-memory score before SLOT durability; if score=1 persist it, if score=0 crash/drop before SLOT and invoke one deterministic-replay recovery attempt",
+    "single_attempt_success_probability": 0.5,
+    "accepted_success_probability_with_one_outcome-adaptive_replay": 0.75,
+    "formula_for_at_most_k_attempts_when_replaying_after_failure": "1 - 2^(-k)",
+    "interpretation": "The replay option becomes a choose-among-retries channel if actual scorer output is not fixed by attempt_id and retry/crash control can depend on the pre-durable result."
+  },
+  "measurement_validity_rule": "DETERMINISTIC_REPLAY must be treated as a separate pre-score scientific authorization, not a convenience retry flag. A runtime/fingerprint-specific determinism contract must be fixed before scoring and checked again when a fresh epoch reissues a permit. Otherwise the only safe default is fail_closed_unresolved_no_relaunch.",
+  "candidate_contract_fields": [
+    "determinism_contract_schema/version",
+    "runtime_fingerprint_digest fixed before score",
+    "scorer/decoder configuration digest",
+    "attempt_id derivation version",
+    "what equality is guaranteed on replay: raw output, protected statistic, or score",
+    "certificate/evidence reference establishing that equality for the declared scope",
+    "explicit invalidation conditions such as runtime/hardware/config change"
+  ],
+  "scope_limitations": [
+    "The 0.75 counterexample is an existence construction showing that same attempt_id is insufficient; it is not an estimate of the current runtime's actual bias.",
+    "If a scorer is truly deterministic for the protected statistic under the exact declared fingerprint, fresh-epoch replay can be scientifically equivalent even though the permit MAC changes.",
+    "This artifact does not define a complete certification procedure; it identifies the missing authorization boundary that a superseding runtime should enforce."
+  ]
+}
