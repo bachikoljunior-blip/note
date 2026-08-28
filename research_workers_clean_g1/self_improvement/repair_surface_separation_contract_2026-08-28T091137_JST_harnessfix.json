@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "contract_id": "SIG89-HARNESSFIX-TRAIN-VAL-TEST-SEPARATION",
+  "created_at": "2026-08-28T09:11:37+09:00",
+  "generation": "clean_g1",
+  "role": "self_improvement",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "0ee54b2ba30142266aca7fa1581256df1183e161",
+    "control_revision": 12,
+    "role_config_revision": 6,
+    "role_config_blob": "9298edd872e0ab5e2d9e67aceb9f6cffbf02516f"
+  },
+  "public_source": {
+    "repository": "HarnessFix/HarnessFix",
+    "commit": "9167a0b9a58748c73b56c3ee04fdc3437ba0c56e",
+    "files": {
+      "swe_split_sampler": "data/sample_swebench.py@0807489f69a7f9016596bd039a950a2b5d35c0d9",
+      "swe_pipeline": "run_pipeline_swe.py@b5a904ca66c69cc8f8639ec9dde1289e8f0d5d1c",
+      "validation_gate": "failure_analysis/check_val_gate.py@2e2573e05b066be22d734540aabbc52c5f90e32c",
+      "rq1": "exp/rq1_effectiveness.md@7cf743a3c0b4c870bdb9bad527a00fe6d6b5b31a",
+      "rq3": "exp/rq3_ablation.md@bddab929a163e37bdb7895ba0ec3107c8f93cbaf"
+    }
+  },
+  "surface_contract": {
+    "TRAIN": "Trace collection, failure analysis and repair-plan generation. Current base and candidate are evaluated for diagnostic/reporting feedback.",
+    "VAL": "Promotion/selection surface. Candidate vs current base is compared here; regression IDs and metric deltas are persisted and explicitly fed into subsequent iteration guidance/plan generation.",
+    "TEST": "A non-overlapping split sampled before adaptation and reserved by the paper/artifact for final held-out evaluation rather than repair iteration or validation decisions."
+  },
+  "observed_adaptivity": [
+    "The pipeline calls VAL comparison 'promotion evidence' and uses it to decide whether the candidate becomes the next base.",
+    "Iteration reports persist VAL regressions, improvements, metric changes and promotion failure reasons.",
+    "The next aggregate step can consume prior iteration reports and explicit validation-regression analyses, so VAL feedback is intentionally adaptive TUNE/selection information rather than a one-shot certification surface.",
+    "The SWE split sampler constructs train, validation and test as non-overlapping subsets and labels test as held out for final evaluation."
+  ],
+  "quantitative_evidence": {
+    "held_out_test_scores_percent": {
+      "H0": {"GAIA":43.3,"SWE":45.3,"AppWorld":36.7,"TB2":17.6},
+      "without_regression_aware_acceptance": {"GAIA":55.6,"SWE":53.3,"AppWorld":39.3,"TB2":24.5},
+      "full_HarnessFix": {"GAIA":61.7,"SWE":57.3,"AppWorld":43.0,"TB2":26.5}
+    },
+    "increment_full_minus_no_acceptance_pp": {"GAIA":6.1,"SWE":4.0,"AppWorld":3.7,"TB2":2.0},
+    "paper_artifact_note": "Values are the repository's held-out test tables. Public raw trajectories/evaluation outputs are intentionally excluded, so this is author-released result evidence plus executable split/pipeline evidence, not an independently replayed run."
+  },
+  "comparison_to_evalvitals_SIG88": {
+    "useful_difference": "HarnessFix names and uses VAL as an adaptive promotion surface, then keeps a separate TEST for final evaluation. EvalVitals' inspected path calls CONFIRM held-out/selection-independent while FixAgent itself uses the same CONFIRM cases and outcomes to generate and iteratively refine fixes before computing their e-values.",
+    "remaining_gap_in_HarnessFix": "HarnessFix does not provide candidate-local anytime-valid certification on a fresh CERTIFY surface, nor proposal-across-time statistical spending. Its VAL is repeatedly queried and feeds later repair iterations, so it should be treated as TUNE/selection, not as a reusable statistical certificate.",
+    "outer_test_strength": "TEST is a distinct non-overlapping task split and is not referenced by the inspected repair pipeline. The public artifact does not provide a first-class query-consumption ledger proving zero pre-final access under every external script, so protocol isolation is stronger than no split but weaker than a physically sealed/query-audited lockbox."
+  },
+  "design_update": {
+    "minimum_for_generalization_claim": ["adaptive TRAIN/TUNE or TRAIN/VAL", "separate untouched OUTER test"],
+    "minimum_for_statistical_promotion_claim": ["adaptive TUNE", "frozen-candidate CERTIFY with valid sequential/post-selection evidence", "separate OUTER"],
+    "long_horizon_additions": ["durable query/feedback ledger", "cross-candidate error/query spending", "immutable promoted artifact identity", "restart-safe evaluation consumption"]
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "Search for a public repair/self-improvement system that adds a frozen CERTIFY surface with anytime-valid candidate evidence between HarnessFix-style adaptive VAL/TUNE and an untouched TEST/OUTER surface. Require exact executable evidence that CERTIFY outcomes do not feed proposal generation before terminal certification and that OUTER is not used by promotion, rollback, routing, stopping or recovery."
+}
