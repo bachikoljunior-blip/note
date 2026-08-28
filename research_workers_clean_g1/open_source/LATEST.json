@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "control_revision": 12,
-  "config_revision": 5,
+  "control_revision": 13,
+  "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_0902_EVENT_LOG_STABLE_SNAPSHOT_TRI_STATE.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0802_EVENT_SNAPSHOT_PLATFORM_SPLIT.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1106_EVENT_LOCK_PORTALOCKER_TRI_STATE.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_0902_EVENT_LOG_STABLE_SNAPSHOT_TRI_STATE.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -16,32 +16,27 @@
       "ahead_by_observed": 0
     },
     {
-      "repository": "apache/kafka",
-      "commit": "db8a0925513a76d1a4f13df00867c7491a4b3ce7",
-      "verified_current_trunk": true,
-      "source_scope": "StateStore managed changelog offsets / RocksDB offsets column family / atomic flush precedent from preceding role-local run"
-    },
-    {
-      "repository": "JasperFx/marten",
-      "commit": "fce5ceb7c63635ebbc027b659759b966e744fdf3",
-      "verified_current_master": true,
-      "source_scope": "contiguous high-water / outstanding-sequence gap regression precedent from preceding role-local run"
+      "repository": "wolph/portalocker",
+      "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+      "source_scope": "current cross-platform lock semantics used to refine candidate009/010; POSIX default flock, Windows exclusive msvcrt path, Windows shared locks require optional pywin32 in portalocker 4.x"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Before any next substantive work, re-bootstrap under current control and require compliance with the root incident-bearing-role local-guard rule because this run accidentally created branch should-not-create outside the authorized role-local namespaces. If allowed, map planner-verdict persistence evidence to FOUND/ABSENT/UNKNOWN in tests/life/test_planner_verdict_outbox_regression.py; UNKNOWN must keep the outbox pending without re-emitting. Consolidate a shared stable-generation event-log snapshot primitive: POSIX shared lock -> pin handles+end offsets -> unlock+scan, Windows correctness-first exclusive msvcrt event lock through scan. Reuse it for candidate009 writer locking, candidate010 readers, and Mission View candidate006/007; continue candidate008 durability and candidate005 transition_id provenance separately.",
+  "exact_continuation": "Start with the typed planner persistence-evidence and shared event-lock design as one coupled patch map: make FOUND/ABSENT/UNKNOWN authoritative in LifeSupervisor retry, add invalid-UTF8 and malformed-target regressions, then map a real-Windows event-log exclusive-lock regression into the existing PORTABLE_TESTS matrix. Audit whether core.file_lock.exclusive_file_lock can safely gain an indefinite-wait mode for event-log authority without changing bounded callers; otherwise use an event-specific portalocker wrapper. Move iter_call_events and Mission View candidate006/007 to the same stable-generation primitive. Continue candidate008 durability and candidate005 transition_id provenance separately.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_010_planner_verdict_direct_consequence": "planner_verdict_was_persisted glob/open-later scan collapses renamed-generation omission and OSError into False; Supervisor treats False as permission to emit the planner verdict again before acknowledging the outbox",
-    "candidate_010_tri_state_contract": "FOUND => no re-emit; ABSENT only after complete stable snapshot => retry emit allowed; UNKNOWN => keep outbox pending and do not append another verdict",
-    "candidate_010_argus_positive_control": "legacy Manager-handoff recovery already takes shared events.lock, opens retained generation handles under lock, then scans pinned handles after unlock; common event readers can consolidate this pattern",
-    "candidate_010_posix_snapshot": "shared events.lock -> enumerate -> open all selected generations and capture fstat end offsets -> unlock -> scan handles only to captured offsets",
-    "candidate_010_windows_snapshot": "event_log.py lacks msvcrt fallback while daemon_lock.py has tested msvcrt byte-range exclusive locking; correctness-first event-log reader/writer should reuse a Windows exclusive lock rather than assume POSIX-style handle pinning semantics",
-    "candidate_009_status": "unify Windows independent-sink writer/rollover protection with the same cross-platform event-log lock foundation",
+    "candidate_010_single_production_caller": "planner_verdict_was_persisted has one checked production caller outside its module: LifeSupervisor._retry_pending_planner_verdict; therefore a typed evidence helper can replace the critical boolean without broad migration",
+    "candidate_010_tri_state_contract": "FOUND => no re-emit; ABSENT only after complete stable snapshot => retry emit allowed; UNKNOWN => keep outbox pending and do not append another planner verdict",
+    "candidate_010_corruption_refinement": "current UTF-8 text scan catches only OSError; invalid UTF-8 raises UnicodeDecodeError, and malformed JSON containing the target delivery_id is skipped to False. Target-relevant decode/parse ambiguity must be UNKNOWN, not ABSENT",
+    "candidate_010_scan_shape": "scan stable snapshot as bytes, prefilter exact delivery-id bytes, parse candidate rows; malformed unrelated rows whose bytes cannot contain the target need not poison a target-specific absence proof",
+    "candidate_009_lock_reuse": "Argus already ships portalocker>=3 and core.file_lock.exclusive_file_lock; current portalocker default POSIX lock is flock and Windows exclusive works via msvcrt without pywin32, while Windows shared locks require optional pywin32. Reuse exclusive primitive for writer/Windows correctness path and preserve POSIX shared-flock pinning behind one event API",
+    "candidate_009_timeout_caveat": "exclusive_file_lock defaults to 30s but current event writer blocks indefinitely on POSIX flock; reusing it unchanged could convert prolonged reconciliation contention into event write failure. Add explicit indefinite mode or an event-specific indefinite wrapper before replacing writer locking",
+    "candidate_009_ci_gap": "Argus Windows/macOS portable CI already covers core file/daemon locks but no event-log module; add portable event-lock regression to PORTABLE_TESTS so no undeclared pywin32 dependency can hide",
+    "candidate_010_iter_call_events": "iter_call_events also enumerates generation pathnames then opens later; rollover can yield a false missing/partial exact call trace and event_log_query returns exit 1 on empty result. Move it to the same stable snapshot",
     "candidate_007_status": "Mission View reconciliation should consume the same stable-generation primitive and preserve events.lock -> mission-view.lock ordering plus legacy-baseline migration",
     "candidate_008_status": "unchanged separate durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "connector_mutation_incident": "A prohibited branch-creation action was invoked during persistence preparation and branch should-not-create was created in bachikoljunior-blip/note pointing at then-current main. No files/commits were added on that branch. Available connector tools exposed no branch-delete action, so it remains and must be remediated by a control plane with delete-ref capability. The incident was not used semantically."
+    "connector_mutation_incident": "Prior invocation created prohibited branch should-not-create. Root control13 plus role config6 now carry and this invocation enforced the explicit local read-only discovery/write-boundary guard; this invocation performed no connector probe mutation and wrote only authorized open_source state/receipt destinations. The old branch remains an external remediation item for a control plane with delete-ref capability."
   },
   "independence": {
     "clean_exploration": true,
