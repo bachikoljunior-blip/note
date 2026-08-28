@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "created_at": "2026-08-29T03:44:26+09:00",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "a28ec40762783e5fb78c38ccef414a709d5ae2d6",
+    "h2": "a28ec40762783e5fb78c38ccef414a709d5ae2d6",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_key": "primary_source_verifier",
+    "role_config_revision": 6,
+    "enabled_desired": true,
+    "semantic_tuple_frozen": true
+  },
+  "initial_phase1_check": {
+    "evaluation_latest_path": "research_workers_clean_g1/evaluation/LATEST.json",
+    "evaluation_latest_blob": "35b069de1d9eb3f70a9a460f304792629325bbc9",
+    "checkpoint_path": "research_workers_clean_g1/evaluation/checkpoint_2026-08-29T0257_JST_phase1_rev20_postfreeze_drift_no_semantic_work.json",
+    "checkpoint_blob": "e645c0391f0855a1d2740147ff4e0a3fbf5b627d",
+    "checker_v2_current_proof_status": "NOT_MATERIALIZED_IN_TESTED_SNAPSHOT",
+    "basis": "The current control20/config6 checkpoint explicitly records checker_v2_authored_this_run=false and checker_v2_executed_this_run=false after post-freeze drift. No checker-v2 acceptance claim was inferred."
+  },
+  "audited_leaf": {
+    "worker": "multi_agent",
+    "latest_path": "research_workers_clean_g1/multi_agent/LATEST.json",
+    "latest_blob": "435700d4a47453b4c0bdfa92afb96e24d70baecd",
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_WIDE_SHARDED_RESERVATION_20260829_030207_JST.md",
+    "checkpoint_blob": "1474c97c6814e615a40cd2b93c0f1ce3f1cb8ae4",
+    "script_path": "research_workers_clean_g1/multi_agent/phase1_wide_sharded_reservation_20260829_030207.py",
+    "script_blob": "7c3daf80adc69180711751287f36c4956e2b71ab",
+    "result_path": "research_workers_clean_g1/multi_agent/phase1_wide_sharded_reservation_20260829_030207.json",
+    "result_blob": "091ca1939acf9cce143ddbc59b12649773202fec",
+    "worker_frozen_tuple": {
+      "main_sha": "9ca1695fe221fab5042a26664d1b2dd3a40b93c6",
+      "root_control_revision": 20,
+      "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+      "role_config_revision": 6,
+      "role_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c"
+    },
+    "verdict": "SUPPORTED_WITH_MATERIAL_SCOPE_CORRECTIONS"
+  },
+  "primary_source_verification": [
+    {
+      "source": "AWS DynamoDB TransactWriteItems API",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html",
+      "status": "SUPPORTED",
+      "verified": [
+        "up to 100 action requests",
+        "no two actions can target the same item",
+        "tables must be in the same AWS account and Region",
+        "aggregate item size cannot exceed 4 MB",
+        "all actions complete atomically or all fail",
+        "ClientRequestToken gives idempotency for 10 minutes after the first request completes; after 10 minutes the same token is treated as a new request"
+      ]
+    },
+    {
+      "source": "AWS DynamoDB constraints / TTL documentation",
+      "urls": [
+        "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Constraints.html",
+        "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/data-modeling-blocks.html",
+        "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html"
+      ],
+      "status": "SUPPORTED",
+      "verified": [
+        "transaction ACID guarantees are Region-scoped and global replicas can transiently observe partial replication",
+        "TTL deletion is asynchronous and can take over 48 hours",
+        "AWS explicitly says not to rely on TTL deletes for lock records or state management when stale data must be removed in less than 48 hours"
+      ]
+    },
+    {
+      "source": "CockroachDB transaction-record / intent architecture and Parallel Commits",
+      "urls": [
+        "https://www.cockroachlabs.com/blog/how-cockroachdb-distributes-atomic-transactions/",
+        "https://www.cockroachlabs.com/blog/parallel-commits/"
+      ],
+      "status": "SUPPORTED_AS_ARCHITECTURAL_PRECEDENT_ONLY",
+      "verified": [
+        "transaction records and per-key write intents separate provisional writes from commit visibility",
+        "Parallel Commits introduces STAGING and permits implicit commit only when every listed write is proven successful",
+        "recovery consults listed writes and resolves to COMMITTED or ABORTED"
+      ],
+      "scope_correction": "The 2015 distributed-transactions blog explicitly warns that it describes a pre-beta design and points readers to newer architecture material. It remains a historical architectural precedent, not current drop-in application protocol evidence."
+    }
+  ],
+  "mechanical_code_audit": {
+    "scenario_count": {
+      "reported": 3456,
+      "verified": true,
+      "derivation": "2*3*2*3*2*3*2*2*2*2 = 3456"
+    },
+    "reported_full_lattice_counts_match_result_artifact": true,
+    "material_model_scope_defect": {
+      "name": "alias_factor_is_enumerated_but_unused_by_all_protocol_functions",
+      "severity": "material_scope_correction",
+      "evidence": "The script includes alias in every scenario but atomic_txn, per_shard, intent_shards, staged_integrator and naive_partial never read s['alias']. Only targeted-slice predicates filter alias. Therefore the full-lattice results cannot be evidence that duplicate-item/alias inputs are canonicalized, rejected, or fail-closed.",
+      "consequence": "Because alias is balanced and semantically ignored, every full-lattice protocol count is duplicated across alias=false/true. In particular, 108 of the 216 atomic safe terminals are alias=true by symmetry, yet DynamoDB forbids two actions on the same item. Those alias=true terminals are valid only under an external preprocessing assumption that the executable does not implement or test.",
+      "claim_status_change": "The checkpoint's qualitative rule that same-item canonicalization is required is source-supported by AWS, but the finite model does NOT test that rule. Treat canonicalization/fail-closed-on-alias as NOT_DIRECTLY_TESTED by this artifact."
+    },
+    "deadlock_microtest": {
+      "reported_arbitrary_order": {"deadlock": 24, "both_done": 12, "pairs": 36},
+      "reported_canonical_global_order_deadlock_count": 0,
+      "code_observation": "The arbitrary-order 36-pair count is computed. The result field canonical_global_order_deadlock_count is literal 0 rather than produced by a second simulation loop.",
+      "independent_recomputation": "Using the same simulate_orders semantics with both workers on canonical order (s1,s2,s3) yields both_done, not deadlock; thus the qualitative zero-deadlock canonical-order claim is independently reproduced for this toy scheduler despite not being mechanically generated in the worker result."
+    }
+  },
+  "scope_preserving_verdicts": [
+    {
+      "claim": "A single DynamoDB-style transaction is a strong all-or-nothing reservation primitive only while the complete action set stays within documented transaction limits.",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "claim": "TTL deletion itself is not a fencing proof for prompt stale-lock invalidation.",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "claim": "In the worker's synthetic grammar, bare per-shard reservation loses reconstructibility after restart when only reservation_id survives and no durable expected-shard contract exists.",
+      "verdict": "SUPPORTED_AS_SYNTHETIC_MODEL_RESULT",
+      "scope": "finite executable grammar only; not a production incident rate"
+    },
+    {
+      "claim": "In the worker's synthetic grammar, partial shard authority is unsafe in 3036 of 3168 terminalized cases and produces 1056 duplicate-effect cases.",
+      "verdict": "SUPPORTED_AS_SYNTHETIC_MODEL_RESULT",
+      "scope": "finite executable grammar only; equal-weight stress cells, not probabilities"
+    },
+    {
+      "claim": "A durable intent plus shard receipts is production-safe across independently expiring/takeover-capable shards.",
+      "verdict": "NOT_ESTABLISHED",
+      "reason": "The worker correctly excludes the verification-to-root-commit takeover race from this leaf and leaves it as the exact continuation."
+    },
+    {
+      "claim": "The executable tests canonicalization or alias/collision fail-closed behavior.",
+      "verdict": "CONTRADICTED_BY_IMPLEMENTATION_SCOPE",
+      "reason": "alias is a no-op factor in protocol evaluation"
+    }
+  ],
+  "conflict_duplication_check": {
+    "exploration_worker_write": false,
+    "exploration_feedback_write": false,
+    "desired_state_write": false,
+    "primary_o_write_or_lease_action": false,
+    "active_wave_index_feed_write": false,
+    "shared_execution_ledger_write": false,
+    "shared_ledger_reason": "automation_control/EXECUTION_LEDGER.json declares automation_optimizer as sole aggregate-ledger reconciler, so primary_source_verifier must not mutate it"
+  },
+  "base_continuation_preserved": true,
+  "substantive_progress_or_missing_capability": "Material model-scope correction found: alias/duplicate-item input is enumerated but unused, so source-supported canonicalization safety is not mechanically tested by the current artifact. Primary-source facts for bounded atomicity, idempotency window, TTL limits and Cockroach transaction-intent precedent were verified.",
+  "handoff_if_any": {
+    "target": "Phase-1 acceptance coordination via durable downstream audit artifact only",
+    "instruction": "Do not count this leaf as evidence for duplicate-item/alias canonicalization. Count only the bounded-transaction facts and finite-model claims in their exact tested scope; keep cross-shard verification-to-commit fencing unresolved."
+  },
+  "exact_continuation": "Fresh-bootstrap control first. Check evaluation/LATEST once for a control20/config6 checker-v2 artifact. If still absent, do not repeat this wide-shard leaf; verify the multi_agent follow-up only if it actually materializes the promised cross-shard verify->takeover/expiry->root-commit race, otherwise rotate to another current Phase-1 assignment-bound artifact with actual Chat/repository state-transition evidence.",
+  "termination": {
+    "global_completion": false,
+    "phase1_frontier_nonempty": true,
+    "reason": "completed one non-conflicting primary-source verification leaf under frozen tuple"
+  }
+}
