@@ -4,15 +4,14 @@
   "control_revision": 15,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1707_SIGNAL_PROJECTION_CONTRACT.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1602_PORTALOCKER_42_UTF8_BOUNDARY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1805_CANONICAL_MULTIWRITER_AUTHORITY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1707_SIGNAL_PROJECTION_CONTRACT.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
       "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
-      "verified_current_main": true,
-      "ahead_by_observed_from_previous": 7
+      "verified_current_main": true
     },
     {
       "repository": "wolph/portalocker",
@@ -23,22 +22,23 @@
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "First settle candidate013 as a durable-vs-live projection contract: promote round.review.started to signal, split payload-conditional engineer.progress out of durable Mission View semantics, and add the default-sink + Web snapshot invariant/regression. Then source-map/implement candidate009/011 shared event authority with portalocker>=4.2, existing os.open(...,0600) raw fd + LOCK_EX|LOCK_NB, retrying only AlreadyLocked, pre-rotation one-byte delimiter isolation, and byte-based stable physical-row iteration. POSIX readers may pin handles/end offsets under shared flock; Windows correctness scans hold exclusive event authority. Next enforce events.lock -> mission-view.lock, then finish PlannerVerdict FOUND/ABSENT/UNKNOWN and explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 transition provenance separate.",
+  "exact_continuation": "Fresh-bootstrap first. Then verify the canonical events.jsonl writer inventory is complete and specify the smallest core event-authority API shared by JsonlEventSink, AgentIOLogger, and ensure_project_events_standardized without import cycles. The shared authority must carry candidate011 pre-record delimiter isolation and commit-boundary cleanup. Next map candidate013 regression files, then candidate009/011 cross-platform authority + byte-stable reader, events.lock -> mission-view.lock, PlannerVerdict FOUND/ABSENT/UNKNOWN, and explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 provenance separate.",
   "run_findings": {
-    "candidate_013_signal_projection_contract": "Default JsonlEventSink applies signal filtering before _append, while persistent Mission View projection runs only inside _append. Current durable projected set is therefore not closed under the default persistence policy.",
-    "candidate_013_exact_static_mismatch": "round.review.started is a projected type but not a SIGNAL_EVENT_TYPE and its production emitter has no text/error marker, so it is deterministically omitted by default signal before Mission View projection. engineer.progress is also projected but only conditionally persisted when its payload carries a signal marker; ordinary progress is not durable.",
-    "candidate_013_snapshot_effect": "role_activity reconstructs active-role evidence from events.jsonl and recognizes round.review.started, agent.io.start, and engineer.progress. WebAPI build_snapshot derives roles from role_activity and feeds them into snapshot_mission_view. Thus the periodic durable snapshot misses reviewer-start evidence under default signal through both persistent Mission View and the log-backed roles overlay. This does not claim downstream live sinks miss the event; JsonlEventSink still forwards filtered events downstream.",
-    "candidate_013_fix_boundary": "Promote low-volume round.review.started to signal; split high-frequency/payload-conditional engineer.progress from the durable Mission View contract or provide a separate live-only overlay. Add an invariant that every durable Mission View event type is unconditionally default-persisted, plus an end-to-end default-sink/Web snapshot regression. Do not project non-canonical filtered events into durable mission-view.json.",
-    "candidate_012_dependency_floor": "portalocker>=4.2 remains the first defensible floor for Argus's inspected raw-fd Windows locking surface; current Argus still declares portalocker>=3.",
-    "candidate_009_mode_preservation": "With a >=4.2 floor, event authority can preserve os.open(...,0600) and pass the raw fd directly to low-level Portalocker. Retry only AlreadyLocked, propagate permanent acquire failures, and prevent all post-commit unlock/fd-close cleanup failures from turning a committed append into an apparent failure.",
-    "candidate_011_ordering_revised": "Boundary isolation remains before _maybe_roll(): if nonempty current log does not end in newline, append exactly one newline under event authority before rotation, never truncate damaged bytes. Stable reading must be byte-based so torn UTF-8 cannot poison later valid rows.",
-    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable clean scan; UNKNOWN covers snapshot/open/decode/target-relevant parse ambiguity, leaves outbox pending, and returns PLAN_RETRY without Planner invocation.",
-    "candidate_007_windows_bootstrap_race": "Mission View cross-platform reconciliation still needs event authority plus strict events.lock -> mission-view.lock and a writer projection entry point that does not recursively reacquire event authority.",
+    "candidate_014_multiwriter_authority": "Canonical project events.jsonl has at least three source-visible append paths: JsonlEventSink under events.lock (POSIX-only cross-process today), AgentIOLogger direct Path.open('a') under an instance-local lock, and ensure_project_events_standardized under a distinct migration lock. Event authority/tail isolation must cover all canonical appenders, not only JsonlEventSink.",
+    "candidate_014_agent_io_scope": "AgentCliBackend resolves its project agent-I/O log directly to <project_root>/events.jsonl; start/complete/error plus usage.recorded, provider completion and budget settlement rows use AgentIOLogger._jsonl_append. Separate AgentCliBackend instances may be concurrent, so their instance-local locks are not a same-file authority.",
+    "candidate_014_tail_probe": "A source-shaped local probe seeded an unterminated JSON record then performed the AgentIOLogger direct append shape. The valid new row merged into the damaged tail and became JSONDecodeError; inserting exactly one newline delimiter preserved the damaged row and made the new row parseable. Candidate011 isolation must therefore live in a shared canonical append primitive.",
+    "candidate_014_migration_scope": "ensure_project_events_standardized scans canonical event identities and appends migration rows under events.migration-v2.lock rather than events.lock. To make its de-dup snapshot stable against normal writers/rotation, the shared canonical authority should cover the identity scan plus append while retaining the one-shot migration lock.",
+    "candidate_013_settled_patch_boundary": "Promote round.review.started to default signal; remove payload-conditional engineer.progress from the durable Mission View event contract; assert every Mission View-handled EventType passes the actual default signal filter with a minimal payload; add default-sink reviewer-active persistence/Web regression and ordinary-progress negative regression.",
+    "candidate_013_clarification": "agent.io.start/complete used by role_activity are written by AgentIOLogger directly to canonical events.jsonl, not through JsonlEventSink signal filtering. Reviewer-start remains affected because round.review.started is a sink event.",
+    "candidate_012_dependency_floor": "portalocker>=4.2 remains the first defensible floor for the inspected raw-fd Windows locking surface; current Argus still declares portalocker>=3.",
+    "candidate_009_authority_shape": "Use os.open(...,0600) for events.lock, low-level Portalocker LOCK_EX|LOCK_NB, retry only AlreadyLocked, propagate permanent acquire errors, and prevent post-commit unlock/fd-close cleanup from turning an accepted append into apparent failure. A core-level primitive is preferable so life, adapters and core migration code can share it without a life<->adapter cycle.",
+    "candidate_011_ordering_revised": "Under shared event authority, if nonempty current canonical log does not end in newline append exactly one delimiter before any rotation/new record; never truncate damaged bytes. Stable reading remains byte-based so torn UTF-8 cannot poison later valid rows.",
+    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after complete stable clean scan; UNKNOWN covers snapshot/open/decode/target-relevant parse ambiguity, leaves outbox pending, and returns PLAN_RETRY without Planner invocation.",
+    "candidate_007_windows_bootstrap_race": "Mission View reconciliation still needs strict events.lock -> mission-view.lock and a writer projection entry point that does not recursively reacquire event authority.",
     "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "public_head_delta": "Argus main moved from ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98 to 2894b434affaff3a28c1fbbcd5c39f2e7a832236 (observed 7 commits ahead); inspected event_log, Mission View locking/dispatch, planner-verdict outbox and dependency floor retain the relevant prior shapes.",
-    "control_freeze": "semantic work froze on note SHA a90288aa7a262cdb009ee7a4d35236516dea11c3 control15/config6; later note head 9ffc88c7a49c8c1da276ba6f66efdf22d0d3096f was used only for authorized write coordination and was not adopted semantically",
-    "connector_mutation_boundary": "This invocation mutated only authorized research_workers_clean_g1/open_source and automation_control/receipts/open_source destinations; no branch, source repository, control file, other-worker state, downstream state, legacy state, or shared aggregate ledger mutation."
+    "control_freeze": "semantic work froze on note SHA 7e893018d47b993fe17b3bdad4768d8d8eca4d3f control15/config6. Later note head e39bf32aba5eaff753c79c96e25873abc0d39dbc was observed only for authorized write coordination; semantic work stopped on drift and newer control was not adopted.",
+    "connector_mutation_boundary": "This invocation writes only research_workers_clean_g1/open_source and automation_control/receipts/open_source destinations. No branch/ref/source repository/control/other-worker/downstream/legacy/shared-ledger mutation is authorized or performed."
   },
   "independence": {
     "clean_exploration": true,
