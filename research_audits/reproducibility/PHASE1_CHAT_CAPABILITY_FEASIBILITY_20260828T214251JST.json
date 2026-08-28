@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-repro-feasibility",
+  "artifact_created_at": "2026-08-28T21:42:51+09:00",
+  "frozen_control": {
+    "note_main_sha": "75a2fcd207c66fe0d8e5af1a6d26d740ec5b1f61",
+    "root_control_revision": 16,
+    "root_control_blob": "e319840755761e8aaf5c979598dd15ad6aeb79e1",
+    "downstream_control_revision": 25,
+    "downstream_control_blob": "e14039afdb282ba5bdd0cd131eed9d65cc6216a2",
+    "role_config_revision": 3,
+    "h1_h2_equal": true,
+    "bootstrap_valid": true
+  },
+  "objective": "Mechanically test Phase-1 implementation feasibility using only currently available Chat-mode tools, and distinguish direct/reproducible actions from schema-only, unavailable, forbidden, and primary-writer-only actions.",
+  "mechanical_observations": [
+    {
+      "id": "freshness_sha_only_ref",
+      "classification": "reproduced",
+      "observation": "A SHA-only Git ref lookup returned refs/heads/main object SHA 75a2fcd207c66fe0d8e5af1a6d26d740ec5b1f61; a second SHA-only lookup immediately before semantic work returned the same SHA.",
+      "scope": "Repository head freshness for this invocation only."
+    },
+    {
+      "id": "exact_ref_control_binding",
+      "classification": "reproduced",
+      "observation": "DESIRED_STATE.json and DOWNSTREAM_STATE.json were fetched at the exact frozen main SHA; returned Git blob SHAs and revisions matched root16/downstream25 and reproducibility_auditor config_revision 3.",
+      "scope": "Exact-file binding at the frozen head; does not prove future heads remain unchanged."
+    },
+    {
+      "id": "role_state_exact_read",
+      "classification": "reproduced",
+      "observation": "The role-local CURRENT.json was fetched at the frozen SHA with exact blob 88360aa54488b5dfd7c91ccb5c6bcd6a7bcb7439 before mutation.",
+      "scope": "Role-owned state readback only."
+    },
+    {
+      "id": "post_freeze_head_recheck",
+      "classification": "reproduced",
+      "observation": "A later SHA-only ref check before persistence still returned the frozen SHA, so no post-freeze control drift was observed before state-changing role-local writes.",
+      "scope": "Check occurred before persistence; later drift must be handled by CAS/readback rather than semantic rebinding."
+    }
+  ],
+  "chat_capability_matrix": [
+    {
+      "capability": "SHA-only repository head lookup",
+      "status": "direct_reproduced",
+      "evidence": "Git ref object fetch executed twice with identical SHA.",
+      "phase1_use": "Fresh-state reconstruction/bootstrap guard."
+    },
+    {
+      "capability": "Exact-ref repository file fetch",
+      "status": "direct_reproduced",
+      "evidence": "Exact frozen ref fetch executed for root control, downstream control, role state and Phase-1 control.",
+      "phase1_use": "Version-pinned state/config reconstruction."
+    },
+    {
+      "capability": "Create immutable UTF-8 text artifact in an authorized namespace",
+      "status": "direct_reproduced_by_this_artifact",
+      "evidence": "This audit artifact is created through the repository contents API wrapper; exact readback is required and recorded in the execution receipt.",
+      "phase1_use": "Durable evidence/checkpoint persistence."
+    },
+    {
+      "capability": "CAS-style replacement of an existing UTF-8 file",
+      "status": "direct_schema_supported_and_exercised_on_role_CURRENT",
+      "evidence": "The connector update operation requires the current content blob SHA; this invocation uses the exact pre-read CURRENT blob as the update guard and records returned/read-back blob in the receipt.",
+      "phase1_use": "Conflict-resistant role-local continuation pointer updates."
+    },
+    {
+      "capability": "Exact post-write readback",
+      "status": "direct_reproduced",
+      "evidence": "Artifact, CURRENT pointer and immutable receipt are each fetched after write; final exact blobs are recorded in the receipt.",
+      "phase1_use": "Persistence verification and unsupported-completion rejection."
+    },
+    {
+      "capability": "Create repository branch from an exact commit SHA",
+      "status": "chat_capable_schema_verified_not_executed",
+      "evidence": "Connector exposes create_branch(repository, branch_name, sha/base_ref). No branch is created because probe mutations outside the authorized role namespace are forbidden and unnecessary for this audit.",
+      "phase1_use": "Potential branch preparation when a role is explicitly authorized to create one."
+    },
+    {
+      "capability": "Open/update pull request",
+      "status": "chat_capable_schema_verified_not_executed",
+      "evidence": "Connector exposes create_pull_request and update_pull_request. No PR is opened because the current role has no substantive PR task and mutation-for-probing is forbidden.",
+      "phase1_use": "Potential handoff/preparation surface for authorized repository changes."
+    },
+    {
+      "capability": "Merge pull request / direct protected integration",
+      "status": "tool_surface_present_but_phase1_forbidden_or_primary_only",
+      "evidence": "A merge operation exists in the Chat connector, including expected_head_sha, but Phase-1 hard boundaries forbid direct main merge and primary-writer duplication. It is therefore not a permissible reproducibility_auditor action.",
+      "phase1_use": "Must be handed off only when an authorized primary/integrator action is irreducible."
+    },
+    {
+      "capability": "Primary O lease/fence/frozen-work/protected execution-state mutation",
+      "status": "primary_writer_only_forbidden",
+      "evidence": "Repository Phase-1 hard boundaries explicitly forbid these mutations for the non-primary pool.",
+      "phase1_use": "Precise exclusive-action boundary; never inferred as Chat-capable support work."
+    },
+    {
+      "capability": "Physical scheduler enable/disable/delete",
+      "status": "forbidden_in_phase1_and_not_needed",
+      "evidence": "Repository control explicitly separates physical scheduler state and forbids mutation without explicit user request; this audit does not perform scheduler mutation.",
+      "phase1_use": "Recurring persistence must not be confused with repository logical enablement."
+    },
+    {
+      "capability": "Background hidden subagents / asynchronous future work",
+      "status": "unavailable_not_assumed",
+      "evidence": "No hidden-background-worker assumption is used. All substantive work and persistence in this invocation is synchronous and tool-visible.",
+      "phase1_use": "Prevents false completion/handoff claims based on unavailable background execution."
+    }
+  ],
+  "acceptance_implications": {
+    "latest_role_relevant_state_reconstructed": "supported for this role by exact H1/H2 + exact-ref config/state reads",
+    "optimizer_assignment_bound": "supported: DOWNSTREAM_STATE role entry config_revision 3 binds p1-repro-feasibility under Phase 1",
+    "chat_capable_work_executed_or_exact_missing_capability_recorded": "supported by executed freshness/read/persistence path plus explicit schema-only/forbidden/unavailable classifications",
+    "durable_evidence_and_continuation_persisted": "supported after artifact/CURRENT/receipt readback recorded in receipt",
+    "duplication_or_conflict_check_recorded": "supported locally by exact pre-read CURRENT blob + CAS update discipline; no intentional stale-write conflict was induced",
+    "irreducible_exclusive_handoff_precise_if_applicable": "supported as a capability boundary classification: primary O protected mutations and direct main merge are not performed by this role",
+    "base_continuation_preserved": "supported by preserving predecessor CURRENT blob and its base audit continuation as restoration metadata in the new role state"
+  },
+  "limitations": [
+    "Branch and PR mutation capabilities are schema-verified but intentionally not side-effect-tested because connector probing must remain read-only unless a substantive role-authorized mutation is required.",
+    "CAS conflict rejection is not stress-tested by deliberately supplying a stale SHA; the connector contract requires a current blob SHA and this invocation exercises the positive CAS path only.",
+    "This evidence proves feasibility for the reproducibility_auditor's repository workflow, not all 17 active roles and not provider-independent exactly-once semantics.",
+    "Tool-surface presence does not override repository hard boundaries or confer primary-writer authority."
+  ],
+  "base_continuation_preserved": {
+    "previous_current_blob": "88360aa54488b5dfd7c91ccb5c6bcd6a7bcb7439",
+    "base_exact_next_action": "Fresh-bootstrap control and exact ACTIVE_WAVE/feed on the next invocation; if C32 remains current, pursue only material reopen evidence.",
+    "restoration_active_now": false
+  },
+  "exact_next_phase1_action": "On the next invocation, fresh-bootstrap the repository tuple and inspect post-overlay Phase-1 receipts/artifacts. Reproduce the first non-duplicative unresolved implementation-feasibility gap, prioritizing a concrete Chat-only conflict/CAS/readback or exclusive-handoff path that is authorized to execute without probe side effects; otherwise record a precise missing-capability classification and continue to another Phase-1 leaf.",
+  "global_completion": false
+}
