@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T10:11:08.161678+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "77c59f68c701cfea3560d5d3b1f969e7f3fa0567",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T100626_JST_replay_authorization_facade_forward_provenance_gap.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/deterministic_replay_authorization_facade_v1_2026_08_28.py",
+      "blob": "f21613ebb6db487d70983ad46caf063ac86c804b",
+      "result": "Forward-only replay authorization remains non-default and pins the historical attempt ledger. It requires a trusted pre-score determinism contract and exposes the exact authorization-bound request binding required for RESERVE, score launch and SLOT."
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reservation_runtime_provenance_contract_registry_v2_2026_08_28.py",
+      "blob": "c4d0439dba3ddf2183835c3fbaa3b3012ec1f468",
+      "validation_blob": "f1136a2955e25c23bc684abaa22f33903261b773",
+      "result": "Added an allowlisted version registry for pre-score runtime provenance. Historical/no-contract stays historical; existing schema-v1 resolves only the exact frozen compliance binding; schema-v2 recognizes replay_authorized_v1 only by exact binding_id/digest. Unknown ids, digest mismatch and v1/v2 downgrade/upgrade mismatches fail closed."
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/reservation_compliance_auditor_runtime_provenance_v2_2026_08_28.py",
+      "blob": "b74465bd5f68882cee4c5b3fbd2a98d73a684b81",
+      "validation_blob": "ee942cfcb30e00a34bbe73502650f0b17c8ee4e1",
+      "result": "Added a version-aware runtime-provenance auditor that delegates scientific SLOT/COMMIT compliance to the frozen base auditor, then enforces the ADMIT-selected runtime binding. Provenance failure forces score=1 and disables recovery reconciliation."
+    }
+  ],
+  "validated_contracts": [
+    "No-contract historical ADMITs are not reinterpreted by contract registry v2 or auditor v2.",
+    "Existing schema-v1 ADMITs are accepted only against the exact current compliance_runtime_v1 RESERVE binding.",
+    "New schema-v2 replay ADMITs can select only the allowlisted replay_authorized_v1 binding whose digest includes auth facade blob f21613ebb6db487d70983ad46caf063ac86c804b.",
+    "Caller-supplied arbitrary runtime bindings are rejected; registry authority is canonicalized internally and callers receive mutation-isolated copies.",
+    "Replay-v2 ADMIT with missing/v1 RESERVE provenance fails closed; v1 ADMIT with replay-v2 RESERVE also fails closed.",
+    "Runtime-provenance mismatch cannot be repaired by adding a COMMIT: v2 auditor sets scientific score to 1 and reconcilable=false before close.",
+    "Base scientific reservation compliance remains the lower-layer authority; v2 auditor changes only provenance selection/enforcement."
+  ],
+  "measurement_validity_rules": [
+    "A runtime provenance upgrade must be selected in ADMIT before scoring and resolved from an allowlisted version registry, not inferred from whatever RESERVE implementation later happened to run.",
+    "Version compatibility is asymmetric and explicit: historical, v1 and replay-v2 are distinct predicates; none is silently upgraded or downgraded.",
+    "Provenance mismatch is a scientific failure, not metadata debt, because it means the score was generated under a runtime authorization predicate different from the one frozen pre-score.",
+    "Recovery reconciliation is permitted only for base-scientifically valid, provenance-valid slots. Provenance-failed slots are not reconcilable even if a bound SLOT exists.",
+    "FAIL_CLOSED remains the default runtime path until the CLOSE/replay layer recognizes the new contract/auditor version end to end."
+  ],
+  "scope_limitations": [
+    "Contract-registry and auditor tests used injected exact-shape test doubles around frozen source contracts; the full sibling runtime graph has not yet been byte-executed with these new modules.",
+    "No active/default runtime has been changed to use schema-v2 replay authorization.",
+    "No new CLOSE/replay module exists yet for schema-v2, so replay-authorized blocks must not be launched in the active V3 path.",
+    "Trusted determinism certification remains an independent prerequisite; provenance versioning does not itself prove determinism."
+  ],
+  "frontier": [
+    "Implement superseding CLOSE/replay v3 that can replay three durable histories without reinterpretation: historical/no-contract, current schema-v1 runtime-provenance CLOSE, and new schema-v2 replay-authorized CLOSE.",
+    "For schema-v2 ADMITs, allow only the new v2 auditor/reporting binding and reject downgrade to current-v1 or historical CLOSE; for schema-v1 preserve the current-v1 close path; preserve already-durable historical/current CLOSE replay exactly.",
+    "Then implement a replay-authorized compliance runtime whose ADMIT contract, RESERVE provenance and auditor expected binding all use replay_authorized_v1, while FAIL_CLOSED remains on the current V3-compatible path.",
+    "Only after full CLOSE/replay and crash/restart tests, persist a ProcessStableRuntime V4 surface that rejects deterministic replay on generic APIs and exposes only pre-score-authorized replay methods.",
+    "Materialize the exact sibling graph and run byte-execution plus deterministic/stochastic inference traces at the declared protected statistic."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement reservation_compliance_close_replay_runtime_provenance_v3 as a forward-only superseding replay layer. Its recover() must accept already-durable historical binding and current-v1 runtime-provenance binding exactly as before, accept the new v2 auditor binding only when the active ADMIT resolves to replay_authorized_v1, and reject every downgrade/cross-version CLOSE. Its prepare_close() should be restricted to recognized schema-v2 replay_authorized_v1 ADMITs and use auditor v2."
+}
