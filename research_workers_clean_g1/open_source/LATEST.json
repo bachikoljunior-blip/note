@@ -4,38 +4,41 @@
   "control_revision": 15,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1602_PORTALOCKER_42_UTF8_BOUNDARY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1512_PORTALOCKER_FLOOR_SCOPE.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1707_SIGNAL_PROJECTION_CONTRACT.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1602_PORTALOCKER_42_UTF8_BOUNDARY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
-      "commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+      "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
       "verified_current_main": true,
-      "ahead_by_observed": 0
+      "ahead_by_observed_from_previous": 7
     },
     {
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+      "verified_current_develop": true,
       "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.1.0", "v4.2.0", "v4.3.0"],
       "source_scope": "Windows raw-fd API/position semantics, release-level locking correctness, dependency floor selection"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Treat portalocker>=4.2 as the first defensible dependency floor for the inspected Windows low-level locking surface, then source-map/implement the event authority with existing os.open(...,0600) raw fd + LOCK_EX|LOCK_NB, retrying only AlreadyLocked. Add candidate011 pre-rotation one-byte delimiter isolation, but make stable generation iteration byte-based so a torn UTF-8 code point cannot poison later valid rows. POSIX readers may pin handles/end offsets under shared flock; Windows correctness scans hold exclusive event authority. Then enforce events.lock -> mission-view.lock and finish PlannerVerdict FOUND/ABSENT/UNKNOWN plus explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 transition provenance separate.",
+  "exact_continuation": "First settle candidate013 as a durable-vs-live projection contract: promote round.review.started to signal, split payload-conditional engineer.progress out of durable Mission View semantics, and add the default-sink + Web snapshot invariant/regression. Then source-map/implement candidate009/011 shared event authority with portalocker>=4.2, existing os.open(...,0600) raw fd + LOCK_EX|LOCK_NB, retrying only AlreadyLocked, pre-rotation one-byte delimiter isolation, and byte-based stable physical-row iteration. POSIX readers may pin handles/end offsets under shared flock; Windows correctness scans hold exclusive event authority. Next enforce events.lock -> mission-view.lock, then finish PlannerVerdict FOUND/ABSENT/UNKNOWN and explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 transition provenance separate.",
   "run_findings": {
-    "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_012_dependency_floor": "Revised to portalocker>=4.2 as the first defensible floor for Argus's inspected raw-fd Windows locking surface. Upstream 4.0 fixed raw-fd current-position mutual-exclusion failure; 4.1 changed no runtime behavior; 4.2 fixed further Windows locker correctness including shifted fallback LK_* values and one cached OVERLAPPED reused across calls/threads. Argus Python>=3.11 has no Python-version cost, and current Windows CI resolves latest rather than the declared minimum.",
-    "candidate_012_scope_guard": "This does not prove every Argus path fails on portalocker 3.2/4.0/4.1. Inspected raw-fd acquisitions start at offset zero and workspace_lease advances only after acquisition. The claim is dependency-policy based: a <4.2 floor knowingly admits upstream-known low-level Windows defects in the API family Argus directly uses.",
-    "candidate_009_mode_preservation": "With a >=4.2 floor, event authority can preserve os.open(...,0600) and pass the raw fd directly to low-level Portalocker; separate os.fdopen conversion is unnecessary for Windows byte-zero correctness. Retry only AlreadyLocked, propagate permanent acquire failures, and treat unlock failure after committed append as cleanup before close.",
-    "candidate_011_ordering_revised": "Boundary isolation remains before _maybe_roll(): if nonempty current log does not end in newline, append exactly one newline under event authority before rotation, never truncate the damaged bytes.",
-    "candidate_011_utf8_coupling": "Delimiter isolation alone is insufficient when process interruption tears a multibyte UTF-8 sequence. A local probe showed strict UTF-8 iteration raises UnicodeDecodeError before a later valid Planner verdict row, while binary physical-row iteration still reaches it. Stable generation reading must therefore be byte-based with per-row decode/parse status.",
+    "candidate_013_signal_projection_contract": "Default JsonlEventSink applies signal filtering before _append, while persistent Mission View projection runs only inside _append. Current durable projected set is therefore not closed under the default persistence policy.",
+    "candidate_013_exact_static_mismatch": "round.review.started is a projected type but not a SIGNAL_EVENT_TYPE and its production emitter has no text/error marker, so it is deterministically omitted by default signal before Mission View projection. engineer.progress is also projected but only conditionally persisted when its payload carries a signal marker; ordinary progress is not durable.",
+    "candidate_013_snapshot_effect": "role_activity reconstructs active-role evidence from events.jsonl and recognizes round.review.started, agent.io.start, and engineer.progress. WebAPI build_snapshot derives roles from role_activity and feeds them into snapshot_mission_view. Thus the periodic durable snapshot misses reviewer-start evidence under default signal through both persistent Mission View and the log-backed roles overlay. This does not claim downstream live sinks miss the event; JsonlEventSink still forwards filtered events downstream.",
+    "candidate_013_fix_boundary": "Promote low-volume round.review.started to signal; split high-frequency/payload-conditional engineer.progress from the durable Mission View contract or provide a separate live-only overlay. Add an invariant that every durable Mission View event type is unconditionally default-persisted, plus an end-to-end default-sink/Web snapshot regression. Do not project non-canonical filtered events into durable mission-view.json.",
+    "candidate_012_dependency_floor": "portalocker>=4.2 remains the first defensible floor for Argus's inspected raw-fd Windows locking surface; current Argus still declares portalocker>=3.",
+    "candidate_009_mode_preservation": "With a >=4.2 floor, event authority can preserve os.open(...,0600) and pass the raw fd directly to low-level Portalocker. Retry only AlreadyLocked, propagate permanent acquire failures, and prevent all post-commit unlock/fd-close cleanup failures from turning a committed append into an apparent failure.",
+    "candidate_011_ordering_revised": "Boundary isolation remains before _maybe_roll(): if nonempty current log does not end in newline, append exactly one newline under event authority before rotation, never truncate damaged bytes. Stable reading must be byte-based so torn UTF-8 cannot poison later valid rows.",
     "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable clean scan; UNKNOWN covers snapshot/open/decode/target-relevant parse ambiguity, leaves outbox pending, and returns PLAN_RETRY without Planner invocation.",
     "candidate_007_windows_bootstrap_race": "Mission View cross-platform reconciliation still needs event authority plus strict events.lock -> mission-view.lock and a writer projection entry point that does not recursively reacquire event authority.",
     "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA 3ec8df30be44c52bebc80f18dcfb2b8dba4a05df control15/config6; later note heads were used only for authorized write coordination and were not adopted semantically",
-    "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation used discovery read-only and mutated only authorized open_source state/receipt destinations."
+    "public_head_delta": "Argus main moved from ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98 to 2894b434affaff3a28c1fbbcd5c39f2e7a832236 (observed 7 commits ahead); inspected event_log, Mission View locking/dispatch, planner-verdict outbox and dependency floor retain the relevant prior shapes.",
+    "control_freeze": "semantic work froze on note SHA a90288aa7a262cdb009ee7a4d35236516dea11c3 control15/config6; later note head 9ffc88c7a49c8c1da276ba6f66efdf22d0d3096f was used only for authorized write coordination and was not adopted semantically",
+    "connector_mutation_boundary": "This invocation mutated only authorized research_workers_clean_g1/open_source and automation_control/receipts/open_source destinations; no branch, source repository, control file, other-worker state, downstream state, legacy state, or shared aggregate ledger mutation."
   },
   "independence": {
     "clean_exploration": true,
