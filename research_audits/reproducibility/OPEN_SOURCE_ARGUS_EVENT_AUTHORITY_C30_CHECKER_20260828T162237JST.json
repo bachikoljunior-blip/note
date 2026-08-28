@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:22:37+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "637a4cb210b6ec3f14ca04b768c61f27ee7ac37a",
+    "root_control_revision": 15,
+    "downstream_control_revision": 24,
+    "role_config_revision": 2
+  },
+  "target": {
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
+    "source_blob": "657a5833dacbdd65560b9162603eeb1233bffce1",
+    "argus_repo": "lbx154/Argus",
+    "argus_commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+    "portalocker_v3_commit": "582adc26d8f9980999081e900a81608fec0b590e",
+    "portalocker_current_head_observed": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
+    "portalocker_latest_release_observed": "v4.3.0"
+  },
+  "independent_checks": {
+    "argus_source_identity": {
+      "main_sha": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+      "status": "exactly matches worker source identity during audit"
+    },
+    "event_lock_windows_gap": {
+      "event_log_behavior": "JsonlEventSink._append takes a process-local threading.Lock, opens events.lock with mode 0600, and calls fcntl.flock only when fcntl imported successfully.",
+      "windows_implication": "On Windows fcntl is absent, leaving only the process-local lock; there is no cross-process authority in the pinned Argus implementation.",
+      "status": "source-structural reproduction"
+    },
+    "mission_view_lock_windows_gap": {
+      "mission_view_behavior": "mission_view._view_state._locked likewise uses a process-local threading.Lock and conditionally fcntl.flock; _snapshot can bootstrap and atomically replace mission-view.json, while update_mission_view_event separately takes that same mission-view authority and replaces the view.",
+      "windows_implication": "Separate Windows processes can therefore execute bootstrap and projection writes without a shared interprocess mission-view lock. The stale-bootstrap overwrite interleaving described by the worker is source-reachable.",
+      "status": "source-structural reproduction; no production incident inferred"
+    },
+    "portalocker_v3_lower_bound": {
+      "finding": "Portalocker v3.0.0 Windows lock() calls tell(), seek() and fileno() on the supplied object before LockFileEx. A raw integer fd therefore does not satisfy that Windows path; wrapping os.open with os.fdopen is compatible with the checked lower bound while preserving explicit 0600 creation.",
+      "status": "exact primary-source support"
+    },
+    "portalocker_range_change": {
+      "finding": "Current Portalocker documentation/source states that since 4.0.0 the default Windows exclusive locker uses built-in msvcrt and pywin32 is optional for shared locking, while Argus declares portalocker>=3. A lower-bound Windows test is therefore materially distinct from a current-resolver Windows test.",
+      "status": "exact range-boundary support"
+    },
+    "unterminated_tail_reproduction": {
+      "procedure": "Independently created an events.jsonl file containing an unterminated JSON prefix and then applied Argus's current append shape: text append of json.dumps(new_event) + newline.",
+      "result": "The new JSON object was concatenated onto the prior partial physical line and the combined line raised JSONDecodeError. This independently reproduces candidate011's framing failure without running worker code.",
+      "status": "reproduced"
+    },
+    "invalid_utf8_scope_boundary": {
+      "finding": "Delimiter isolation can preserve the next event's byte-level line boundary even after an invalid-byte tail, but current iter_call_events opens generations as UTF-8 text and does not catch UnicodeDecodeError raised by iteration/decoding. Thus candidate011's bytewise repair alone does not make the existing iter_call_events reader recover past arbitrary invalid UTF-8 bytes.",
+      "scope": "This narrows the worker's regression item for invalid-byte tails; it does not undermine the repair for ordinary UTF-8 partial JSON or Mission View's byte-reading _tail_jsonl path, which handles decode/JSON failures per line.",
+      "repair": "Either constrain candidate011's recovery claim to UTF-8-decodable damaged tails, or make iter_call_events read bytes/split lines and decode each row under a per-row exception boundary."
+    }
+  },
+  "scope_guard": "No production Windows incident, power-loss durability guarantee, or fully implemented Argus patch is claimed. Findings are pinned to Argus ae2daa1f... and Portalocker compatibility endpoints checked here."
+}
