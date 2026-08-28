@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "record_schema": "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/failure_memory_record.schema.json",
+  "base_handoff_packet": {
+    "negative_branches": [
+      {
+        "uri": "branch://bkdv-spectral-source",
+        "digest": "sha256:c10dea2b0abeecf7bbe64a386fdb35122b7fe589e6e233b57175934e80d6c247",
+        "immutable": true,
+        "status": "failed"
+      }
+    ]
+  },
+  "base_record": {
+    "schema_version": 1,
+    "record_id": "nk-cross-domain-spectral-001",
+    "source_branch_digests": [
+      "sha256:c10dea2b0abeecf7bbe64a386fdb35122b7fe589e6e233b57175934e80d6c247"
+    ],
+    "transfer_class": "cross_domain",
+    "source_scope": {
+      "domain": "source-pde",
+      "mechanism": "Fourier split treatment of a dispersive linear operator",
+      "assumptions": ["source linear symbol is non-antidiffusive"],
+      "tested_scope": "A source-domain solver configuration where the spectral split was empirically stable."
+    },
+    "target_scope": {
+      "domain": "target-pde",
+      "mechanism": "candidate reuse of the source spectral split",
+      "assumptions": ["target linearized symbol remains non-antidiffusive under target sign convention"],
+      "tested_scope": "Only the current target task after an explicit sign/mechanism check and short target-side probe."
+    },
+    "target_context_signature": "sha256:1f77f99b907bd568cd1ddba456e9dba09d850bf504b178a2cac29a856dd78cc6",
+    "ruled_out_route": "Do not treat source-domain spectral success as sufficient evidence for target-domain stability.",
+    "recommended_alternative": "Check the target linearized operator and run a bounded target-side probe before adoption.",
+    "risk_if_misapplied": "A sign or mechanism mismatch can turn a stable source method into target-side UV amplification.",
+    "receiver_decision": "adopt",
+    "use_mode": "advisory",
+    "revalidation": {
+      "required": true,
+      "status": "pass",
+      "checks": [
+        {
+          "name": "mechanism_assumption_compatibility",
+          "result": "pass",
+          "evidence": {
+            "uri": "analysis://target-linearization",
+            "digest": "sha256:90cf699e252180290ccde7e8a04dad4b3b560a21dbd92976df6bc2135c5cfb6c",
+            "kind": "analysis"
+          }
+        },
+        {
+          "name": "target_probe",
+          "result": "pass",
+          "evidence": {
+            "uri": "measurement://bounded-target-probe",
+            "digest": "sha256:a8078a2a2166a0bcd3f1be28bcdcedd4fab950c62716c23c06c44590fed6dcaa",
+            "kind": "measurement"
+          }
+        }
+      ]
+    },
+    "curator_record_digest": "sha256:3a2755b4053c69aca72380115141323cc7634d0ad33ec3d9eaeb37288fbcd851"
+  },
+  "base_context": {
+    "current_target_context_signature": "sha256:1f77f99b907bd568cd1ddba456e9dba09d850bf504b178a2cac29a856dd78cc6",
+    "required_cross_domain_checks": [
+      "mechanism_assumption_compatibility",
+      "target_probe"
+    ]
+  },
+  "cases": [
+    {
+      "name": "valid_cross_domain_record",
+      "mutations": [],
+      "should_pass": true,
+      "expected_failure_codes": []
+    },
+    {
+      "name": "cross_domain_adopt_without_target_probe",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["revalidation", "status"], "value": "not_run"},
+        {"target": "record", "op": "delete_index", "path": ["revalidation", "checks"], "index": 1}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_REVALIDATION_REQUIRED"]
+    },
+    {
+      "name": "mechanism_sign_mismatch_contradicts_memory",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["revalidation", "status"], "value": "fail"},
+        {"target": "record", "op": "set", "path": ["revalidation", "checks", 0, "result"], "value": "fail"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_REVALIDATION_REQUIRED", "FAILURE_MEMORY_CONTRADICTED"]
+    },
+    {
+      "name": "target_context_changed_after_revalidation",
+      "mutations": [
+        {"target": "context", "op": "set", "path": ["current_target_context_signature"], "value": "sha256:7b4e0eda03ac0ac3d1d83758436036bf0aa556690f220c48b4b117e7b8f92484"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_TARGET_STALE"]
+    },
+    {
+      "name": "typed_record_detached_from_raw_failure_artifact",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["source_branch_digests", 0], "value": "sha256:7b4e0eda03ac0ac3d1d83758436036bf0aa556690f220c48b4b117e7b8f92484"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_PROVENANCE_MISSING"]
+    },
+    {
+      "name": "rejected_memory_cannot_be_enforced",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["receiver_decision"], "value": "reject"},
+        {"target": "record", "op": "set", "path": ["use_mode"], "value": "constraint"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_ENFORCEMENT_INVALID"]
+    }
+  ]
+}
