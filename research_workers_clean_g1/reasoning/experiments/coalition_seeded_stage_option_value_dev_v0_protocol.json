@@ -1,0 +1,61 @@
+{
+  "schema": "coalition_seeded_stage_option_value_dev_v0_protocol",
+  "created_at": "2026-08-28T13:08:22+09:00",
+  "frozen_semantic_control": {
+    "note_main_sha": "0dd97c62678923281362091099cbee26402dd4d0",
+    "desired_state_control_revision": 13,
+    "desired_state_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "reasoning_config_revision": 6,
+    "reasoning_config_blob": "cc8b37410994561a016a72c467b25ff0582d6462"
+  },
+  "purpose": "Development-only audit of stage-boundary option value after the frozen v1 policy would stop at challenger compile index 65. Test whether FINISH_STAGE1 is a meaningful compute action even when no challenger endpoint yet beats the retained incumbent, because stage completion may unlock a second local-search stage. This v0 audit does not fit or tune a policy.",
+  "fresh_development": {
+    "n16": {
+      "cubic": {"generator": "random_regular_graph", "degree": 3, "seeds": [916000,916001,916002,916003,916004,916005,916006,916007,916008,916009,916010,916011,916012,916013,916014,916015,916016,916017,916018,916019]},
+      "quartic": {"generator": "random_regular_graph", "degree": 4, "seeds": [916100,916101,916102,916103,916104,916105,916106,916107,916108,916109,916110,916111,916112,916113,916114,916115,916116,916117,916118,916119]},
+      "watts": {"generator": "watts_strogatz_graph", "k": 4, "p": 0.2, "seeds": [916200,916201,916202,916203,916204,916205,916206,916207,916208,916209,916210,916211,916212,916213,916214,916215,916216,916217,916218,916219]},
+      "erdos": {"generator": "erdos_renyi_graph", "p": 0.25, "seeds": [916300,916301,916302,916303,916304,916305,916306,916307,916308,916309,916310,916311,916312,916313,916314,916315,916316,916317,916318,916319]}
+    },
+    "n18": {
+      "cubic": {"generator": "random_regular_graph", "degree": 3, "seeds": [917000,917001,917002,917003,917004,917005,917006,917007,917008,917009,917010,917011,917012,917013,917014,917015,917016,917017,917018,917019]},
+      "quartic": {"generator": "random_regular_graph", "degree": 4, "seeds": [917100,917101,917102,917103,917104,917105,917106,917107,917108,917109,917110,917111,917112,917113,917114,917115,917116,917117,917118,917119]},
+      "watts": {"generator": "watts_strogatz_graph", "k": 4, "p": 0.2, "seeds": [917200,917201,917202,917203,917204,917205,917206,917207,917208,917209,917210,917211,917212,917213,917214,917215,917216,917217,917218,917219]},
+      "erdos": {"generator": "erdos_renyi_graph", "p": 0.25, "seeds": [917300,917301,917302,917303,917304,917305,917306,917307,917308,917309,917310,917311,917312,917313,917314,917315,917316,917317,917318,917319]}
+    }
+  },
+  "search_contract": "Identical frozen local-search substrate used by the preceding challenger studies: construct verified two-arm incumbent from natural/RCM starts; construct an independent seeded start; ROBDD objective is reachable live nodes; relocation neighborhood moves one variable; candidates require vertex-separation width <= current_width + 1; a stage evaluates the complete legal relocation neighborhood before accepting only a strict live-node improvement; at most two accepted moves; every challenger BDD candidate compilation is charged; cross-order Hamming-rank oracle plus endpoint-local exhaustive truth oracle.",
+  "frozen_v1_reference": {
+    "source": "coalition_seeded_challenger_voc_v1_holdout_protocol.json",
+    "first_decision": "Evaluate through challenger compile index min(H,65). If a verified endpoint already beats the incumbent, v1 finishes the challenger. Otherwise, when best_gap65 > 11 v1 stops with the incumbent; when best_gap65 <= 11 v1 continues.",
+    "audit_population": "Only states where v1 would stop at index 65: challenger remains, no certificate has appeared, and best_gap65 > 11. These states receive full counterfactual tail audit with development propensity 1.0. Other cases are recorded for denominator/context but are not used as stop-region option-value examples."
+  },
+  "stage_aware_action_semantics": {
+    "STOP": "Return the retained two-arm incumbent with zero additional challenger work after index 65.",
+    "FINISH_STAGE1": "Pay exactly the remaining legal BDD compilations needed to complete the current relocation neighborhood and decide whether a strict seeded self-improvement exists. This may have zero immediate incumbent reward but can create a gateway order from which stage 2 becomes legal.",
+    "SEARCH_STAGE2": "Legal only if stage 1 accepts a strict seeded self-improvement. Search the second relocation stage; for this v0 audit the full stage is observed so later sequential-prefix policies can be designed without selective labels.",
+    "OUTPUT_MERGE": "Always return min(retained incumbent, best verified challenger endpoint witnessed so far); therefore experimental challenger work cannot worsen final live-node quality relative to the incumbent."
+  },
+  "predeclared_fields_per_stop_state": [
+    "n", "family", "seed", "incumbent_live", "challenger_live_at_65", "gap65",
+    "stage1_end_compile", "stage1_end_live", "stage1_self_improvement", "stage1_immediate_incumbent_gain",
+    "stage1_remaining_cost_from_65", "stage2_exists", "first_incumbent_certificate_compile",
+    "first_incumbent_certificate_gain", "final_challenger_compile", "final_challenger_live", "exhaustive_gain",
+    "gateway_positive"
+  ],
+  "gateway_positive_definition": "exhaustive_gain > 0 AND stage1_immediate_incumbent_gain == 0 AND stage2_exists. This is descriptive option value: completing stage 1 unlocks a stage 2 that eventually beats the incumbent even though stage 1 itself does not.",
+  "co_primary_metrics": [
+    "stop-region count and exhaustive-positive count",
+    "gateway-positive count / exhaustive-positive count",
+    "aggregate exhaustive gain arising from gateway-positive cases / total stop-region exhaustive gain",
+    "stage1 remaining compile cost distribution and fraction of full audited tail cost",
+    "first-certificate stage/index distribution",
+    "family-specific exhaustive gain and gateway-positive rate, with watts/erdos reported separately",
+    "per-case no-harm invariant from retained incumbent merge"
+  ],
+  "mechanism_hypothesis": "If most valuable stop-region cases are gateway-positive, arbitrary small fixed prefixes and immediate certificate reward are misaligned. The next controller should price stage completion as an option-purchase action and learn future value conditional on an unlock, rather than require immediate incumbent improvement.",
+  "development_only": true,
+  "no_model_fit_in_v0": true,
+  "no_use_for_confirmation": ["914xxx/915xxx prior v2 confirmation remains frozen confirmation evidence and is never used to fit a future stage-aware policy"],
+  "future_policy_rule": "Any learned stage-aware policy must be specified in a new preregistered protocol after this audit. It must use a wholly new confirmation split after fitting. No threshold, budget, lambda, or action cutoff may be selected on future confirmation outcomes.",
+  "scope": "Synthetic positive-monotone graph 2-CNF ROBDD variable-order search only. Stage-aware conclusions are mechanism evidence for compute allocation, not a theorem-proving performance result."
+}
