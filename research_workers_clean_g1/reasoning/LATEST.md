@@ -1,50 +1,43 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-28T0907JST.md`
-Current invocation chain: `2026-08-28T0907JST.md` -> `2026-08-28T0848JST.md` -> `2026-08-28T0737JST.md` -> `2026-08-28T0729JST.md` -> `2026-08-28T0614JST.md` -> earlier immutable clean reasoning history.
+Newest checkpoint: `2026-08-28T1013JST.md`
+Current invocation chain: `2026-08-28T1013JST.md` -> `2026-08-28T0907JST.md` -> `2026-08-28T0848JST.md` -> `2026-08-28T0737JST.md` -> earlier immutable clean reasoning history.
 
 Read `STATE.md`, then the minimum predecessor chain needed for unresolved-frontier continuity, then the newest checkpoint. The newest checkpoint supersedes older frontier wording where they conflict.
 
-Frozen semantic control for the newest invocation: note main `bacec85e03c37c8d4ed3944e1f5214f2fb3e26a8`; DESIRED_STATE control rev 12 / blob `5c91671e1470d0fa4e2a53f918493004dd3750c3`; reasoning config rev 6 / blob `cc8b37410994561a016a72c467b25ff0582d6462`. The SHA-only pre-semantic freshness recheck matched. Later reasoning-local writes advanced note main but were not adopted as a new semantic control tuple.
+Frozen semantic control for the newest invocation: note main `7478136278c6f26fd36fd3227200dca28d6bf4fe`; DESIRED_STATE control rev 12 / blob `5c91671e1470d0fa4e2a53f918493004dd3750c3`; reasoning config rev 6 / blob `cc8b37410994561a016a72c467b25ff0582d6462`. The SHA-only pre-semantic freshness recheck matched. Later note-main advances were not adopted as a new semantic control tuple.
 
 ## Top unresolved frontier
 
-1. Freeze **C589–C600** and all associated confirmation/disagreement splits. Never recalibrate and retest a policy on the split that exposed its failure/success.
-2. Preserve the preferred **retained verified incumbent + optional challenger + sequential value-of-computation** architecture. Incumbent recall is the hard no-harm mechanism; learned allocation is only allowed to change optional compute spend.
-3. Retire the first 31-feature absolute-scale logistic as a policy candidate. Its aggregate n=16 holdout passed but was decision-equivalent to v1; its only identified n=18 policy disagreement was a high-confidence false positive that spent 519 extra candidate compilations for zero gain.
-4. Any next learned continuation model must be **scale-normalized / horizon-aware / uncertainty-aware** and evaluated for incremental decision value over the simple frozen v1 rule, not only aggregate gain recovery. Prefer dimensionless verifier/search-trajectory features over raw `n`, raw live counts, raw gaps and raw remaining-neighbor counts.
-5. Use public Lean routing evidence as the nearest formal-transfer target: the current `eth-sri/optimizing-lean-agents` code implements `p - lambda*c` action scoring and trajectory probability models with normalized proof similarity, compiler-error diversity and attempt count. Inspect its feature ablations, oracle gap and restart/decomposition semantics before importing any idea.
-6. Preserve a nonzero audit/exploration propensity for rejected regions and exact action propensity logging. Use cumulative anytime-valid inference; sparse one-batch zero discoveries are not evidence of zero tail value.
-7. Search formal-proof systems for a retained-incumbent analogue: kernel-verified partial proof/lemma DAG or saved proof state remains durable while independent breakdown/restart/repair challengers compete for bounded compute.
-8. Preserve the original n=20 order-portfolio holdout unchanged for its original protocol.
-9. Replay C588 with corrected oracle semantics: Hamming rank is invariant across orders; raw truth is checked in each endpoint's own relabeled coordinates.
-10. Rebuild control: keep `periodic_32` as exact baseline and test relative-to-fresh allocation/live/Apply-cache growth triggers on new seeds/sizes.
-11. Continue exact rank-polynomial/TDD-like representation work and search for a materializable TDD/TiDiDi implementation.
-12. Execute `experiments/lemma_library_policy_matrix_v0.json` unchanged; causal future-task fixed-compute proving remains promotion/demotion authority.
-13. Replay `result-graph`, C263 full `StructuredController`, and frozen OPA/Regorus fixtures when compatible source-to-runtime transfer exists.
-14. Preserve deterministic journal/recovery and epsilon=0 semantic-equivalence gates; randomized controller collection remains blocked until they pass. Keep evidence channels separate, connector discovery read-only, and the frontier nonempty.
+1. Freeze **C589–C605** and all associated confirmation/disagreement pools. Never recalibrate and retest a policy on the split that exposed its failure/success.
+2. Preserve the preferred **retained verified incumbent + optional challenger + sequential value-of-computation** architecture. Incumbent/simple-policy recall is the hard no-harm mechanism; learned allocation may only change optional compute spend.
+3. The first 31-feature absolute-scale logistic remains retired. Its aggregate n=16 holdout passed but was decision-equivalent to v1; its only identified n=18 policy disagreement was a high-confidence false positive that spent 519 extra candidate compilations for zero gain.
+4. A new immutable preregistration exists at `experiments/coalition_seeded_tail_value_model_scaled_dev_v1_protocol.json`. Deterministically replay the exact 120 allowed development states and persist the row table/hash before fitting. Do not use any successful confirmation/disagreement pool or unrevealed C599 agreement tails.
+5. The next learned model is queried only where frozen v1 would stop and must estimate **incremental future gain over v1**, using scale-normalized/horizon-aware features plus conservative OOD and bootstrap-stability abstention. If development thresholds fail, freeze the negative result rather than retuning it into passing.
+6. Correct the public Lean routing evidence to current arXiv v3: **28.9%** average cost decrease and **7.9%** accuracy improvement at parity cost on its 85-problem PutnamBench subset. Its evaluated action space is binary `Attempt/Terminate`; the **62.0%** zero-noise oracle is a privileged current-target success-probability oracle, not a rich-action oracle.
+7. Use the v3 trajectory evidence as a transfer guide only: normalized proof similarity, compiler-error diversity and inverse attempt count are the evaluated quality features; error diversity has the strongest ablation. Keep cost scope explicit because the paper treats Lean compilation as negligible and models next-attempt generation cost.
+8. VERITAS now supplies a direct formal-proof analogue of baseline preservation: Best-of-N Phase 1 successes are retained and Critic-MCTS Phase 2 runs only on Phase-1 failures. Search for the missing combination: **VERITAS-like monotonicity + adaptive amount of Phase-2 compute**.
+9. Preserve nonzero audit/exploration propensity for rejected regions and exact action propensity logging. Use cumulative anytime-valid inference; sparse one-batch zero discoveries are not evidence of zero tail value.
+10. Preserve the original n=20 order-portfolio holdout unchanged for its original protocol and all older rebuild/TDD/lemma/result-graph/C263/OPA-Regorus/deterministic-safety frontiers.
 
 ## Newest synthesis
 
-- **C592:** retaining the completed two-arm endpoint while evaluating a seeded challenger makes optional diversity no-harm relative to the two-arm objective; the remaining decision is how much challenger compute to buy.
-- **C593:** first staged VoC holdout used 6.91% exhaustive challenger compute but recovered only 20% gain and failed its preregistered recovery target; initial-gap rejection was a brittle failure mode.
-- **C594:** revised preregistered v1 on untouched n=16 recovered **33/43 = 76.74%** of exhaustive challenger gain at **26.37%** exhaustive challenger compute with zero per-case harm; fixed128 recovered only 1/43 at comparable compute.
-- **C595:** a precommitted p=.2 audit on new n=18 maintained nonzero support but happened to miss all three beneficial rejected branches; actual missed gain was20 and realized HT estimate0. With three beneficial rejects, p=.2 has 51.2% probability of auditing none. Sparse one-batch auditing is not reliable tail monitoring.
-- **C597:** the first frozen logistic looked promising in development: LOFO positive recall81.25%, gain-weighted recall87.5%, replayed gain35/40 at47.3% exhaustive challenger compute. But cubic held-out recall was only2/3.
-- **C598:** untouched n=16 aggregate model confirmation recovered **23/26 = 88.46%** gain at **20.17%** exhaustive compute with no harm, but the frozen hand-coded v1 rule made exactly the same quality/compute decisions. Conditional model recall among actual index65 tail decisions was only50%.
-- **C599:** preregistered 160-case n=18 policy-disagreement screening found exactly one model-v1 disagreement. The frozen model assigned p=0.962 to `erdos 892331` (gap65=16) and continued; the full challenger never beat the incumbent, so the model paid **519 extra tail compilations for zero gain**. No evidence remains that this model adds incremental decision value over v1. Do not retune on this pool.
-- **C600:** current public Lean router code independently implements a trajectory-aware cost-quality control plane: real proof actions use `p - lambda*c`, decomposition is a neutral fallback and termination a final fallback; the public example tracks normalized tactic similarity, compiler-error diversity and attempt count. The associated paper reports 25.8% average cost reduction versus fixed-step on a PutnamBench subset while preserving performance. This supports the allocation formulation while also highlighting the synthetic model's avoidable dependence on raw scale.
-- Scope guard: synthetic ROBDD results motivate controller architecture only. Formal-proof claims come solely from the cited public Lean implementation/paper and must retain their own benchmark/configuration scope.
+- **C601:** current v3 supersedes C600's version-sensitive 25.8% figure with **28.9%** average cost decrease; the exact public split is 85 problems = 42 train / 43 test.
+- **C602:** the evaluated v3 controller is `Attempt/Terminate`; its 62.0% zero-noise oracle bounds better current-target/next-attempt difficulty estimation inside that architecture, not model switching, repair, retrieval or decomposition choices.
+- **C603:** normalized proof similarity, compiler-error diversity and attempt count are directly evaluated trajectory signals; public code also contains richer behavioral features, but they do not yet have the same control-plane ablation evidence. Transfer the relative/verifier-grounded state idea, not benchmark-specific thresholds or a cost model that ignores verifier/runtime overhead by assumption.
+- **C604:** VERITAS preserves every theorem solved by its own Best-of-N Phase 1 and runs Phase-2 MCTS only on Phase-1 failures, giving a direct formal-proof retained-incumbent analogue. Its second-stage budget is still fixed, leaving sequential VoC open.
+- **C605:** `coalition_seeded_tail_value_model_scaled_dev_v1_protocol.json` preregisters the next synthetic controller as incremental-over-v1, dimensionless, OOD-conservative and bootstrap-stability gated. No model has been fit yet because exact development rows must be deterministically replayed first.
+- Scope guard: synthetic ROBDD results motivate controller architecture only. Formal-proof claims remain source/config/benchmark qualified.
 
 ## Exact continuation
 
-1. Build a new development-only **dimensionless continuation state**: relative gap/improvement, normalized horizon/attempt count, recency/stagnation, trajectory diversity, and an OOD/uncertainty indicator. Do not reuse any successful confirmation or disagreement pool for fitting.
-2. Optimize the next controller against **incremental value over v1**, not raw eventual-gain labels. A calibrated abstention/fallback to v1 is preferable to high-confidence extrapolation.
-3. Inspect exact public Lean router feature ablations, cost model, oracle experiments and restart/decomposition semantics at fixed public revision; search for saved-state or verified-incumbent variants.
-4. Preregister any learned policy before a wholly new split, charge every probe/candidate compilation, report regret and compute jointly, and retain two-arm/v1/simple uniform-prefix comparators.
-5. Add exact propensity logging and cumulative anytime-valid confidence sequences for audit outcomes; test risk-stratified audits while retaining a nonzero uniform support floor.
-6. Preserve all older rebuild/TDD/lemma/replay/safety frontiers and the original n=20 holdout.
+1. Deterministically replay the exact 120 allowed development cases for `coalition_seeded_tail_value_model_scaled_dev_v1_protocol.json`; persist row table/hash before any fit.
+2. Fit/evaluate the preregistered scale-normalized incremental-over-v1 logistic with LOFO development only. Freeze failure if the joint positive-recall and gain-weighted-recall thresholds are not met.
+3. If development passes, freeze scaler/coefs/threshold/OOD bounds/bootstrap contract before a wholly-new confirmation split. Confirmation must report incremental verified gain over v1 and extra compute over v1 jointly.
+4. Search formal-proof systems for learned or sequential **amount-of-second-stage-compute** control under a retained verified baseline; keep VERITAS as the closest current monotonicity precedent.
+5. Inspect public Lean routing artifacts only for evidence actually evaluated under richer actions; do not infer experimental support from code extensibility alone.
+6. Preserve exact propensity logging, cumulative audit inference, all older replay/safety frontiers, and the untouched n=20 holdout.
 
-`2026-08-28T0907JST.md` is newest and is not global completion.
+`2026-08-28T1013JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
