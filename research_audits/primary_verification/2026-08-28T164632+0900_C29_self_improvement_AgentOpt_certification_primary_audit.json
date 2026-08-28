@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "audit_scope": "C29 self_improvement AgentOpt certification-boundary checkpoint; public code/protocol audit only",
+  "created_at": "2026-08-28T16:46:32+09:00",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "05b161bcc20b609b474b2c8a175729c9a338b605",
+    "root_control_revision": 15,
+    "root_control_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 5,
+    "bootstrap_valid": true,
+    "h1_h2_equal_before_semantic_start": true
+  },
+  "clean_source_checkpoint": {
+    "path": "research_workers_clean_g1/self_improvement/checkpoint_2026-08-28T113057_JST_agentopt_certification_boundary.md",
+    "blob": "e494ec3afb2e9140ad4ca4989551d147647dba9f",
+    "contract_path": "research_workers_clean_g1/self_improvement/agentopt_certification_surface_contract_2026-08-28T112930_JST.json",
+    "contract_blob": "b6c84275639856d2369859e4e0afb095492272a9"
+  },
+  "primary_source": {
+    "repository": "vickykumar123/agentopt",
+    "revision": "a9bea3e3dfc329950f6061fb972d93496c2ed0f5",
+    "revision_reachable": true,
+    "files_inspected": [
+      "docs/ARCHITECTURE.md",
+      "packages/python/src/agentopt/evals/models.py",
+      "packages/python/src/agentopt/evals/significance.py",
+      "packages/python/src/agentopt/improver/gate.py",
+      "packages/python/src/agentopt/improver/scoregain.py",
+      "packages/python/src/agentopt/improver/loop.py",
+      "packages/python/src/agentopt/improver/decision_report.py"
+    ]
+  },
+  "verdict": "partially_verified_with_material_scope_correction",
+  "verified_claims": [
+    {
+      "claim": "The Python quality gate uses paired same-case behavior deltas, a default 1.0 percentage-point effect floor, z=1.645, and activates the paired significance check at n>=5.",
+      "status": "verified_for_uniform_or_unweighted_case_scope"
+    },
+    {
+      "claim": "Regression checks use ordinary 95% Wilson intervals and adaptively resample an inconclusive raw drop until interval separation or the per-case attempt cap; the inspected path contains no anytime-valid replacement for those repeated looks.",
+      "status": "verified_for_inspected_python_path",
+      "scope": "This does not say one pre-specified Wilson interval is invalid; the certification claim is only that repeated adaptive inspection is not made anytime-valid by this code."
+    },
+    {
+      "claim": "Auto-split holdout membership can rotate when train is clean and a holdout case fails or is recalled as flaky; explicit split='holdout' pins remain on holdout under salt rotation.",
+      "status": "verified",
+      "scope": "Establishes that the auto holdout is not a permanently untouched terminal outer lockbox; it does not establish empirical overfitting."
+    },
+    {
+      "claim": "GateResult/GainDecision is the authoritative runtime verdict; decision/evidence persistence occurs afterward and OSError can yield a missing decision_ref without reversing the verdict.",
+      "status": "verified",
+      "scope": "Establishes that persisted decision/evidence artifacts are not the sole crash-replay authority."
+    },
+    {
+      "claim": "Accepted edits are versioned/reversible and rollback checks current hashes against recorded post-write hashes before restoring pre-images unless forced.",
+      "status": "verified_from_architecture_contract"
+    }
+  ],
+  "material_scope_correction": {
+    "title": "Nonuniform case weights enter the significance bound despite the source docstring saying they do not",
+    "source_mechanism": [
+      "gate.py constructs case_weights from every train case with weight != 1.0 and passes aligned weights to assess_quality_gain.",
+      "scoregain.py states that weights scale effect size only and 'never touch the significance test'.",
+      "But assess_quality_gain sets mean_delta to the weighted mean when weights are present, then uses that same mean_delta as the center of mean_delta - 1.645 * (sample_stddev(raw_deltas)/sqrt(n)).",
+      "The standard error remains computed from unweighted raw deltas. Thus the resulting lower bound is a hybrid: its center is weighted while its standard error is unweighted."
+    ],
+    "mechanical_counterexample": {
+      "deltas": [0.1, 0.1, 0.1, -0.1, -0.1],
+      "weights": [10, 10, 10, 1, 1],
+      "n": 5,
+      "unweighted_mean": 0.02,
+      "weighted_mean": 0.0875,
+      "sample_stddev_raw_deltas": 0.10954451150103323,
+      "standard_error_raw_deltas": 0.048989794855663564,
+      "z": 1.645,
+      "unweighted_lcb_pp": -6.058821253756657,
+      "code_path_weighted_center_lcb_pp": 0.6911787462433427,
+      "default_effect_floor_pp": 1.0,
+      "interpretation": "Both 2.0pp unweighted and 8.75pp weighted means clear the 1.0pp effect floor, but only the weighted-center code path clears the significance check. Therefore nonuniform weights can flip the significance verdict even though the docstring says weights do not touch significance."
+    },
+    "scope_revision": "The checkpoint phrase 'one-sided 95% lower confidence bound on the mean paired delta' is accurate for uniform/no-weight cases. With nonuniform configured case weights, the inspected Python implementation does not compute a standard 95% lower confidence bound for either the unweighted mean or a properly weighted mean; treat it as an implementation-specific hybrid heuristic unless separately justified.",
+    "impact_boundary": "No claim is made here about Node parity, empirical failure frequency, or end-to-end acceptance rates. Other lexicographic gates can still reject a candidate before/after this quality check."
+  },
+  "not_verified_or_not_claimed": [
+    "No paper benchmark performance result was audited.",
+    "No empirical overfitting claim follows from holdout rotation alone.",
+    "No claim is made that the single-look Wilson formula itself is incorrectly implemented.",
+    "No repository-wide theorem-level absence claim is made for confidence sequences/e-processes; the negative statement is limited to the inspected certification path and docs.",
+    "Node/TypeScript parity for the weighted-significance mismatch was not inspected in this invocation."
+  ],
+  "post_freeze_control_observation": {
+    "observed_main_sha_after_semantic_work": "3b94b871e6833813465ae73f641ef0bf0161cb6a",
+    "frozen_main_sha": "05b161bcc20b609b474b2c8a175729c9a338b605",
+    "head_drifted": true,
+    "action": "Stopped substantive semantic work under the frozen tuple; did not fetch/adopt newer semantic control."
+  },
+  "exact_next_verification": "On the next fresh bootstrap, first bind to current DESIRED_STATE/DOWNSTREAM_STATE. If still enabled and authorized, inspect the AgentOpt Node/TypeScript quality-gain path and tests at the exact source revision to determine whether the weighted-center/unweighted-SE significance mismatch is Python-only or cross-language; then rotate away from AgentOpt unless that check materially changes scope.",
+  "exploration_worker_writes": 0,
+  "feedback_writes": 0,
+  "desired_state_edits": 0
+}
