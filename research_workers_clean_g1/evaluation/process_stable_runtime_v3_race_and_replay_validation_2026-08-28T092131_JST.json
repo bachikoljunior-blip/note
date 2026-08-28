@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:21:31+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "candidate": "research_workers_clean_g1/evaluation/blob_pinned_process_runtime_context_v3_2026-08-28.py",
+  "ordinary_commit_api_parity": {
+    "scorer_calls": 1,
+    "result_score": 0.3,
+    "commit_slot_digest_match": true,
+    "audit_score": 0.3,
+    "final_reporting_rows": 1,
+    "final_tail_status": "clean_eof"
+  },
+  "multiprocessing_duplicate_race": {
+    "processes_per_phase": 6,
+    "duplicate_admit": {
+      "durable_winners": 1,
+      "losers": 5,
+      "loser_error": "StableLockCASMismatch: append CAS mismatch"
+    },
+    "duplicate_reserve_same_slot": {
+      "durable_winners": 1,
+      "losers": 5,
+      "loser_error": "StableLockCASMismatch: append CAS mismatch",
+      "authorized_scorer_calls": 1,
+      "winner_score": 0.2
+    },
+    "fresh_context_reconciliation": {
+      "recovery_commit_from_durable_slot": true,
+      "final_audit_score": 0.2,
+      "completed_compliant": 1,
+      "final_tail_status": "clean_eof"
+    }
+  },
+  "late_slot_vs_deadline_close": {
+    "both_frames_prepared_from_same_main_prefix": true,
+    "close_wins_append": {
+      "prepared_failclosed_score": 1.0,
+      "late_slot_append": "StableLockCASMismatch: append CAS mismatch",
+      "final_block_score": 1.0,
+      "completed_canonical": 0
+    },
+    "slot_wins_append": {
+      "stale_close_append": "StableLockCASMismatch: append CAS mismatch",
+      "retry_close_before_commit": "RecoveryCommitRequired: reconcile bound SLOT COMMITs before CLOSE: ('s',)",
+      "recovery_commit_without_rescore": true,
+      "final_block_score": 0.2,
+      "completed_canonical": 1
+    },
+    "interpretation": "Physical ordering may legitimately change whether the deadline-frozen block resolves with the late-but-valid durable SLOT or fail-closes it, but CAS plus recovery rules prevent both histories from becoming scientific at once."
+  },
+  "deterministic_replay_policy": {
+    "retry_policy": "deterministic_attempt_id_replay",
+    "fresh_epoch_rejects_old_permit": "AttemptReservationError: launch permit is invalid for this process epoch",
+    "fresh_epoch_reissues_new_mac_for_same_attempt_id": true,
+    "deterministic_test_scorer_first": 0.458,
+    "deterministic_test_scorer_replay": 0.458,
+    "same_attempt_id": true,
+    "final_audit_score": 0.458,
+    "counterexample_if_runtime_is_not_deterministic_by_attempt_id": {"first_score":0.1,"replay_score":0.9,"same_attempt_id":true}
+  },
+  "interpretation": "V3 restores the ordinary COMMIT API while retaining V2's replay-authority correction. Under single-host cooperative processes, StableSidecarJournalIO plus whole-prefix CAS gives one durable ADMIT and one durable reservation winner in duplicate races; only the reservation winner can score because its permit MAC is valid only in that process epoch. The resulting durable bound SLOT can be reconciled by a fresh context without score replay. Deterministic-replay recovery is a distinct contract: a fresh process can reissue a permit for the same attempt_id, but scientific validity requires the scorer/runtime to be independently certified deterministic with respect to that attempt_id. Same attempt_id alone is not evidence of same output.",
+  "measurement_validity_rules": [
+    "Count authorized scorer calls, not merely durable reservations. A concurrency control that allows one durable RESERVE but multiple pre-CAS scorer calls would still be invalid for stochastic evaluation.",
+    "Process-local permit affinity is a useful one-winner property in the tested duplicate-reservation race, but it means reservation and first score launch must occur in the same process unless deterministic replay is explicitly authorized.",
+    "A deterministic-replay permit may cross a fresh process epoch only by reissuing a new epoch MAC for the exact same durable attempt identity. This does not itself prove output determinism.",
+    "Deadline CLOSE and SLOT append races must be resolved by durable-prefix order. Stale frames lose CAS; no post-hoc choice between the two scientific histories is permitted."
+  ],
+  "scope_limitations": [
+    "The multiprocessing campaign is single-host with cooperative POSIX flock/CAS and six processes per phase; it is not a proof for noncooperative writers or multi-host filesystems.",
+    "The deterministic replay test uses a deliberately deterministic hash-based scalar scorer. Real LLM determinism by attempt_id must be separately established under the actual runtime fingerprint.",
+    "The late-SLOT/CLOSE experiment controlled the two append orders directly rather than sampling scheduler timing distributions."
+  ]
+}
