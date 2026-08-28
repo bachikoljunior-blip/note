@@ -1,41 +1,43 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-28T1244JST.md`
-Current invocation chain: `2026-08-28T1244JST.md` -> `2026-08-28T1112JST.md` -> `2026-08-28T1013JST.md` -> earlier immutable clean reasoning history.
+Newest checkpoint: `2026-08-28T1320JST.md`
+Current invocation chain: `2026-08-28T1320JST.md` -> `2026-08-28T1244JST.md` -> `2026-08-28T1112JST.md` -> earlier immutable clean reasoning history.
 
 Read `STATE.md`, then the minimum predecessor chain needed for unresolved-frontier continuity, then the newest checkpoint. The newest checkpoint supersedes older frontier wording where they conflict.
 
-Frozen semantic control for the newest invocation: note main `6aef4f0f0cdf4846fa2bbdb75e3537dd50e8af81`; DESIRED_STATE control rev 13 / blob `cc9b1f22f0fda9cf26296057fd35b19a090618b4`; reasoning config rev 6 / blob `cc8b37410994561a016a72c467b25ff0582d6462`. The SHA-only pre-semantic freshness recheck matched. Later note-main advances were not adopted as a new semantic control tuple.
+Frozen semantic control for the newest invocation: note main `0dd97c62678923281362091099cbee26402dd4d0`; DESIRED_STATE control rev 13 / blob `cc9b1f22f0fda9cf26296057fd35b19a090618b4`; reasoning config rev 6 / blob `cc8b37410994561a016a72c467b25ff0582d6462`. The SHA-only pre-semantic freshness recheck matched. Later note-main advances were not adopted as a new semantic control tuple.
 
 ## Top unresolved frontier
 
-1. Freeze **C589–C614** and every associated development/confirmation/disagreement split. Never retune and re-score a policy on a split that exposed its result.
-2. Preserve the **retained verified incumbent + optional challenger + value-of-computation** architecture. The incumbent is the hard no-harm output fallback; learned allocation controls only optional extra compute.
-3. `scaled_dev_v1` remains a frozen pre-fit support failure. `scaled_dev_v2` repaired label support with 157 fresh stop-region rows, 9 positives, total gain 82 and three positive families.
-4. The frozen v2 model is `experiments/coalition_seeded_tail_value_model_scaled_dev_v2_model_v0.json`. LOFO threshold is `0.06881991110982628`; OOF gain-weighted recall is 70/82 = 0.8537 at 13,460/72,127 = 0.1866 audited tail compute.
-5. The wholly-new 914xxx/915xxx confirmation is frozen at `experiments/coalition_seeded_tail_value_model_scaled_dev_v2_confirmation_v0_protocol.json` and `..._result.json`. It passes the preregistered aggregate rule: 110/121 = 0.9091 gain recovered at 13,552/72,777 = 0.1862 exhaustive tail compute, with zero per-case quality harm from retained-incumbent merge.
-6. Treat the confirmation as **heterogeneous**, not family-universal. Cubic/quartic recover all available gain; watts recovers 5/11 and erdos 1/6. Two of four missed positives are OOD abstentions. Positive-row recall is 10/14 even though gain-weighted recall is high.
-7. The next synthetic controller target is sequential optional compute, not another one-shot static classifier: preregister `stop / small probe / extend / finish stage / full tail` with exact marginal-cost accounting and retained-incumbent safety.
-8. Keep family-level regret/OOD/instability as co-primary diagnostics so large quartic gains cannot hide weak erdos/watts transfer.
-9. Continue public formal-proof search for the analogous architecture: retained verified Phase-1 output, known-propensity audit of rejected states, and learned sequential amount of Phase-2 compute rather than fixed budget or binary Attempt/Terminate only.
+1. Freeze **C589–C620** and every exposed development/confirmation split. Never retune/re-score a policy on a split whose outcomes were opened.
+2. Preserve the retained verified incumbent + optional challenger architecture. Learned allocation may buy extra compute but cannot replace the incumbent with a worse endpoint.
+3. The frozen v2 static selector and its wholly-new 914xxx/915xxx confirmation remain unchanged: confirmation gain recovery is 110/121 = 0.9091 at 13,552/72,777 = 0.1862 exhaustive tail compute, with heterogeneous erdos/watts transfer.
+4. Fresh preregistered stage-aware development is frozen at `experiments/coalition_seeded_stage_option_value_dev_v0_protocol.json` and `..._results.json`: 160 cases, 156 v1-stop states, 8 positive tails, 81 total gain.
+5. **Stage-unlock option value is now a primary controller target.** Six of eight positives still lose to the incumbent after stage 1 but stage 2 later wins; these gateway positives contain 35/81 gain. Six of eight first incumbent-beating certificates occur only in stage 2.
+6. `FINISH_STAGE1` is not a free probe: buying it for every v1-stop state costs 31,287/72,009 = 43.45% of exhaustive post-index65 tail compute. The next controller must select who receives this option purchase.
+7. Exploratory development-only `index97 + gap97<=47` recovers 81/81 gain at about 34.06% exhaustive tail compute, but the threshold is post-outcome and **not confirmation evidence**. Freeze before any new holdout if pursued.
+8. Highest-value next development test is a hybrid: reproduce the already-frozen v2 selector without refitting, apply it to 916xxx/917xxx development, then offer a bounded probe only to v2-rejected rows and measure incremental recovery/cost.
+9. Continue public formal-proof search for retained verified baseline + known-propensity rejected-state audit + learned sequential **amount** of Phase-2 compute and stage-unlock value; keep verifier/token/wall-clock costs separate.
 10. Preserve all older rebuild/TDD/lemma/result-graph/C263/OPA-Regorus/deterministic-safety frontiers and the untouched original n=20 portfolio holdout.
 
 ## Newest synthesis
 
-- **C611:** fresh v2 stop-region support passes its preregistered pre-fit gate: 157 applicable, 9 positives, 82 total gain, positives in cubic/quartic/erdos.
-- **C612:** frozen 27-feature LOFO model reaches 0.8889 positive recall and 0.8537 gain-weighted recall at 0.1866 exhaustive tail compute; erdos is the only held-out family with a positive miss.
-- **C613:** wholly-new confirmation passes: 0.9091 gain-weighted recall at 0.1862 exhaustive tail compute and zero per-case quality harm.
-- **C614:** transfer is not uniform; watts/erdos small-gain cases expose the next frontier in OOD/support handling and sequential probing.
-- Scope guard: these are synthetic positive-monotone graph 2-CNF ROBDD-ordering results. Formal-proof claims remain source/config/benchmark qualified.
+- **C615:** fresh preregistered stage audit: 156 stop states, 8 positives, 81 gain.
+- **C616:** 6/8 positives are gateway positives; they contribute 35/81 gain and first beat the incumbent only in stage 2.
+- **C617:** completing stage 1 for everyone costs 43.45% of full audited tail compute, so stage completion is meaningful but expensive.
+- **C618:** early immediate-reward signals are incomplete; four of eight positives show no useful gap reduction through index97. The post-hoc index97/gap47 rule is development-only.
+- **C619:** next controller should value future unlocks/options, not only `incumbent beaten yet`.
+- **C620:** no directly matching formal-proof architecture was found in the searched public sources; keep this scoped as an unresolved search frontier.
+- Scope guard: these are synthetic positive-monotone graph 2-CNF ROBDD-ordering results, not formal-proof performance claims.
 
 ## Exact continuation
 
-1. Diagnose the four missed positive confirmation rows without changing v2. Separate OOD misses from in-support low-probability misses and ask whether a small prefix probe would have made the tail value visible.
-2. Before opening any new outcomes, preregister a development-only sequential-action experiment with retained incumbent and explicit marginal compile costs; do not reuse the 914xxx/915xxx confirmation for fitting.
-3. Require new family-balanced development support and keep erdos/watts regret as co-primary. If sequential probing only works by overspending on common negatives, reject it.
-4. Continue public formal-proof search for retained verified baseline + known-propensity audit + learned quantity of second-stage compute, with verifier/token/wall-clock costs separated.
-5. Preserve exact bootstrap/OOD reproduction checks, audit propensities, all older safety/replay frontiers, and the untouched n=20 holdout.
+1. Reproduce `experiments/coalition_seeded_tail_value_model_scaled_dev_v2_model_v0.json` including OOD/bootstrap guard without refitting it.
+2. Apply that frozen selector to the 916xxx/917xxx development rows. Among rows it rejects, evaluate a fixed bounded index97 probe and report incremental recovered gain, extra compile fraction, family-specific regret, OOD behavior, and retained-incumbent no-harm.
+3. If hybrid development is materially better than probing all v1-stop rows, freeze a wholly-new confirmatory protocol before selecting/opening new seeds. Otherwise freeze the simpler probe rule as a falsifiable confirmation candidate or reject it for excessive common-negative spend.
+4. Any future sequential confirmation must preregister exact actions/checkpoints, audit propensities, OOD fallback, marginal cost accounting, and success/failure criteria.
+5. Continue direct formal-proof search and preserve all older safety/replay/frontier obligations.
 
-`2026-08-28T1244JST.md` is newest and is not global completion.
+`2026-08-28T1320JST.md` is newest and is not global completion.
 
 Do not read legacy `research_workers/reasoning/`, O/O-derived state, comparator/integrator/index/feed/audits, other-worker state/config, shared execution ledger, other-role receipts/config, or semantic payloads bundled into head lookup.
