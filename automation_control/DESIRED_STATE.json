@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "control_revision": 14,
-  "updated_at": "2026-08-28T14:35:45+09:00",
+  "control_revision": 15,
+  "updated_at": "2026-08-28T15:46:00+09:00",
   "purpose": "Sanitized root control manifest. It is intentionally safe for clean exploration workers to read because substantive role policies are not co-located here.",
   "config_resolution": {
     "clean_exploration_role_path_template": "automation_control/roles/{role}.json",
@@ -18,27 +18,12 @@
     "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus the role's designated config at that exact SHA. Before the first substantive semantic read, repeat the SHA-only ref lookup; if control_revision or the role config_revision changed, refetch and restart the pre-semantic bootstrap on the newer tuple. The first role-local/public-source semantic read is a hard semantic-freeze barrier: from that point the selected {main SHA, control revision, config revision, config blob} is immutable for the physical invocation. If control changes after the barrier, do not adopt it, reinterpret results, or continue semantic work under it; checkpoint under the frozen tuple and defer the newer control to the next invocation. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead.",
     "one_semantic_config_per_invocation": true,
     "receipt_chronology": "Durable receipts must use actual observed offset-aware timestamps, not rounded filename labels, for invocation_started_at/started_at and checkpointed_at/ended_at/receipt_written_at. Any terminal receipt timestamp must be greater than or equal to the invocation start timestamp. If exact chronology cannot be established, preserve the raw observations and mark chronology_valid=false; never fabricate or backdate a terminal timestamp.",
-    "connector_discovery_read_only": "Capability/schema/tool discovery is observation-only. Never create, update, delete, move, or otherwise mutate repository refs, branches, files, pull requests, issues, releases, workflows, external resources, or account state merely to test whether a connector capability exists. Use schema/list/discovery functions and read-only lookups. A managed role may mutate only the exact destinations explicitly authorized by its frozen role config for substantive role work, with the required CAS/readback discipline; temporary/noop probe mutations are forbidden. If any role records a connector-discovery mutation incident, that role must carry an equivalent explicit role-local read-only discovery/write-boundary guard before its next substantive invocation; the root guard alone is not sufficient evidence of executed enforcement."
+    "connector_discovery_read_only": "Capability/schema/tool discovery is observation-only. Never create, update, delete, move, or otherwise mutate repository refs, branches, files, pull requests, issues, releases, workflows, external resources, or account state merely to test whether a connector capability exists. Use schema/list/discovery functions and read-only lookups. A managed role may mutate only the exact destinations explicitly authorized by its frozen role config for substantive role work, with the required CAS/readback discipline; temporary/noop probe mutations are forbidden. If any role records a connector-discovery mutation incident, that role must carry an equivalent explicit role-local read-only discovery/write-boundary guard before its next substantive invocation; the root guard alone is not sufficient evidence of executed enforcement.",
+    "recurring_scheduler_persistence": "For repository-enabled recurring managed roles, one invocation ending, checkpointing, finding no new evidence, hitting a response/runtime boundary, or stopping semantic work on post-freeze head drift is never successful completion of the recurring objective. A role with enabled_desired=true must not request, perform, or imply platform scheduler disable/delete on that basis. Physical scheduler state is controlled separately; only an explicit user stop, a repository enabled_desired=false decision reconciled by the authorized controller, or a deliberate measured topology reallocation may justify physical disablement."
   },
   "clean_exploration_boundary": {
-    "semantic_inputs_allowed": [
-      "own role-local clean state",
-      "public sources",
-      "own sanitized feedback",
-      "this sanitized root manifest",
-      "own role-local config"
-    ],
-    "semantic_inputs_forbidden": [
-      "O or O-derived state",
-      "other clean-worker state or role config",
-      "downstream comparator/integrator/index/feed/audit state",
-      "DOWNSTREAM_STATE.json",
-      "O_OPERATIONS.json",
-      "legacy/pre_independence research",
-      "shared EXECUTION_LEDGER.json",
-      "other-role receipts",
-      "commit messages/diffs/file snippets or other semantic payload obtained only while resolving repository head SHA"
-    ],
+    "semantic_inputs_allowed": ["own role-local clean state", "public sources", "own sanitized feedback", "this sanitized root manifest", "own role-local config"],
+    "semantic_inputs_forbidden": ["O or O-derived state", "other clean-worker state or role config", "downstream comparator/integrator/index/feed/audit state", "DOWNSTREAM_STATE.json", "O_OPERATIONS.json", "legacy/pre_independence research", "shared EXECUTION_LEDGER.json", "other-role receipts", "commit messages/diffs/file snippets or other semantic payload obtained only while resolving repository head SHA"],
     "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content; each receipt must identify exactly one frozen semantic control/config tuple for the invocation and satisfy global_safe_policy.receipt_chronology",
     "feedback_rule": "own sanitized feedback is mechanical self-local quality control only and cannot convey novelty, relevance, acceptance/rejection, ranking, preferred mechanisms, O knowledge, or other-worker information",
     "own_state_resolution": "Use role-local LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology and minimum predecessor chain. Quarantine accidentally opened stale/cross-role observability content and do not use it semantically.",
@@ -47,17 +32,11 @@
     "connector_mutation_boundary": "Connector discovery and capability probing must be read-only. Clean roles may write only their own role-local state/output namespace and immutable own receipt namespace when substantive role work requires it; creating temporary/noop branches, refs, PRs, issues, files outside those namespaces, or other probe side effects is prohibited."
   },
   "migration": {
-    "from_control_revision": 13,
-    "reason": "Revision 14 repairs a current execution/topology failure under revision 13: self_improvement config 6 correctly refused substantive work because its own durable frontier requires an explicit self_improvement-local connector-discovery/write-boundary guard, but the role config did not yet carry that guard. Revision 14 adds the required local guard as self_improvement config 7. No research direction, tested scope, downstream behavior, O behavior, Work-routing semantics, or physical scheduler state is changed by this repository mutation.",
+    "from_control_revision": 14,
+    "reason": "Revision 15 addresses a repeated configured-versus-executed scheduler regression: cross_field was physically re-enabled by the optimizer while enabled_desired=true and a nonempty frontier existed, then became physically disabled again after its next platform invocation; long_horizon is also repository-enabled with an open durable frontier and is now physically disabled. Existing role policy already says checkpoints are not global completion, but it did not explicitly prohibit role-side scheduler disable. Revision 15 adds an explicit recurring-scheduler persistence guard globally and locally for the two observed roles without changing their research direction, evidence scope, O behavior, downstream semantics or schedules.",
     "clean_role_default_config_revision": 5,
-    "clean_role_config_overrides": {
-      "evaluation": 6,
-      "multi_agent": 6,
-      "open_source": 6,
-      "reasoning": 6,
-      "self_improvement": 7
-    },
+    "clean_role_config_overrides": {"cross_field": 6, "evaluation": 6, "long_horizon": 6, "multi_agent": 6, "open_source": 6, "reasoning": 6, "self_improvement": 7},
     "downstream_state_control_revision": 24,
-    "rollback": "Restore DESIRED_STATE blob cc9b1f22f0fda9cf26296057fd35b19a090618b4 and self_improvement role blob 9298edd872e0ab5e2d9e67aceb9f6cffbf02516f only if the local read-only discovery guard prevents an explicitly authorized self_improvement role-local substantive write or safe checkpointing. Preserve the root connector-mutation prohibition, SHA-only head transport, semantic freeze, receipt chronology, CLEAN independence and exact tested scope on rollback. Physical scheduler state is separate and must be reconciled through the automation control plane rather than inferred from repository rollback."
+    "rollback": "Restore DESIRED_STATE blob f2753c00db2daa7635e0ad993a292d55019fd538, cross_field role blob a28a0cef2712c1561973bde4c83cea6e14a4c024, and long_horizon role blob 268523da20c78ce3091344c492ad3d51f6f9e667 only if the explicit scheduler-persistence guard prevents safe role-local checkpointing or an explicitly authorized repository logical-disable transition. Preserve SHA-only transport, receipt chronology, connector read-only discovery, CLEAN isolation and exact tested scope on rollback. Physical scheduler state remains separate and must be reconciled through the control plane."
   }
 }
