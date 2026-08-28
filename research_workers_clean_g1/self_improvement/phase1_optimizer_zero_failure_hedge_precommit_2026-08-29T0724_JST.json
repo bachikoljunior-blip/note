@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "sequence": 112,
+  "role": "self_improvement",
+  "created_at": "2026-08-29T07:24:00+09:00",
+  "base_selector_version": "CAL-LEX-3ARM-v1",
+  "selector_version": "CAL-ZFH-3ARM-v1",
+  "adapter_version": "CAL-ZFH-3ARM-FRESH-v1",
+  "purpose": "Test a parameter-free finite-sample zero-failure hedge after sequence 111 falsified treating observed 8/8 direct success as sufficient evidence for a no-fallback direct arm.",
+  "nonfitting_statement": "No parameter, threshold, model, workload target, seed or acceptance gate below is fitted to or simulated on sequence-111 confirmation rows. The only inherited information is the falsified mechanism class: finite calibration can observe zero failures despite nonzero future failure probability.",
+  "statistical_basis": {
+    "principle": "A finite binomial sample with zero observed failures does not establish true success probability 1.0; small-sample binomial confidence procedures such as Wilson/Agresti-Coull explicitly retain nonzero uncertainty at an observed proportion of 1.",
+    "public_reference": "https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm",
+    "decision_rule_is_parameter_free": true
+  },
+  "harness": {
+    "path": "research_workers_clean_g1/self_improvement/phase1_optimizer_zero_failure_hedge_harness_v1_2026-08-29T0722_JST.py",
+    "git_blob_sha": "f0d3fcc612e12506f53963ad90bd784a3ef11d7f",
+    "dependency": "research_workers_clean_g1/self_improvement/phase1_optimizer_three_arm_stability_harness_v1_2026-08-29T0712_JST.py",
+    "dependency_git_blob_sha": "a9cf195b1cab0deb86c64347c4a3e82862b214f8",
+    "readback_before_measurement": true
+  },
+  "frozen_policy_constants": {
+    "fixed_cap_multiplier": 0.5,
+    "conditional_cap_multiplier": 1.5,
+    "deadline_formula": "0.5*direct_runtime_median + 1.05*alternative_runtime_p90",
+    "p90_quantile_method": "higher",
+    "policies": ["direct", "fixed", "conditional"]
+  },
+  "selector_rules": {
+    "callex_v1": "maximize calibration deadline-success rate, then minimize calibration mean capped time, then tie priority direct/fixed/conditional",
+    "cal_zfh_v1": "start from the same max calibration success set. If maximal success is exactly 1.0 and both direct and conditional are in that max-success set, exclude direct because finite zero failures do not justify dropping the available fallback. Then minimize mean capped time among remaining max-success arms; remaining exact tie priority fixed/conditional/direct. Otherwise use the original max-success then mean-time ordering."
+  },
+  "public_workloads": {
+    "anes96_alt_needed": {
+      "source": "statsmodels.datasets.anes96",
+      "source_doc": "https://www.statsmodels.org/dev/datasets/generated/anes96.html",
+      "observations": 944,
+      "target_definition": "vote, 0=Clinton and 1=Dole",
+      "features": "all bundled ANES96 columns except vote",
+      "metric": "balanced_accuracy",
+      "success_target": 0.70,
+      "direct": "DummyClassifier(strategy=most_frequent)",
+      "alternative": "StandardScaler+LogisticRegression(C=1,max_iter=2000,solver=lbfgs)"
+    },
+    "star98_direct_good": {
+      "source": "statsmodels.datasets.star98",
+      "source_doc": "https://www.statsmodels.org/stable/datasets/generated/star98.html",
+      "observations": 303,
+      "target_definition": "NABOVE > NBELOW",
+      "features": "all bundled Star98 columns except NABOVE/NBELOW",
+      "metric": "balanced_accuracy",
+      "success_target": 0.60,
+      "direct": "StandardScaler+LogisticRegression(C=1,max_iter=2000,solver=lbfgs)",
+      "alternative": "RandomForestClassifier(n_estimators=400,max_features=sqrt,n_jobs=1)"
+    }
+  },
+  "measurement": {
+    "cv": "StratifiedKFold(3,shuffle=True,random_state=seed)",
+    "timing": "sum of time.perf_counter_ns fit+predict around each of 3 folds",
+    "calibration_panels": {
+      "panel_a": [20000,20001,20002,20003,20004,20005,20006,20007],
+      "panel_b": [20100,20101,20102,20103,20104,20105,20106,20107],
+      "panel_c": [20200,20201,20202,20203,20204,20205,20206,20207]
+    },
+    "confirmation_seeds": [21000,21001,21002,21003,21004,21005,21006,21007,21008,21009,21010,21011],
+    "order": "persist/readback exact harness+precommit -> environment -> all calibration raw -> persist/readback three snapshots -> all confirmation raw -> persist/readback raw -> exactly one confirmation simulation"
+  },
+  "candidate_rule": {
+    "zfh_choice_stable_across_panels_each_scenario": true,
+    "zfh_uses_at_least_two_distinct_arms_each_panel": true,
+    "every_panel_success_and_cost_competitive": "for each calibration snapshot, pooled ZFH confirmation success must be >= pooled CAL-LEX-v1 success; and ZFH mean capped time must be <=1.05x the fastest universal arm whose confirmation success is >= ZFH success (automatic pass if no universal arm is as successful); and the ZFH scenario choices must use >=2 distinct arms",
+    "pass": "all gates true"
+  },
+  "no_retune_rule": "After the first calibration timing, any defect or failed gate is a negative result. Do not alter selector rule, workload, target, model, seed, cap/deadline constant, or acceptance gate; any repair requires a new selector/adapter version and entirely fresh seeds."
+}
