@@ -1,0 +1,204 @@
+{
+  "suite_version": 3,
+  "created_at": "2026-08-29T05:30:00+09:00",
+  "schema": "verifier_observability_record_v3.schema.json",
+  "validator": "verifier_observability_validator_v3.py",
+  "base_context": {
+    "evidence_requirement_digest": "sha256:aa11",
+    "requirement_artifact_manifest_digest": "sha256:bb22",
+    "visible_evidence_digest": "sha256:cc33"
+  },
+  "base_record": {
+    "verification_id": "verify-control-v3-001",
+    "claim_id": "claim-001",
+    "claim_evidence_requirements": [
+      "field_quality",
+      "qoi_metric"
+    ],
+    "requirement_artifact_manifest": {
+      "field_quality": [
+        "velocity_contour",
+        "residual_plot"
+      ],
+      "qoi_metric": [
+        "profile_plot",
+        "metric_table"
+      ]
+    },
+    "visible_artifacts": {
+      "velocity_contour": "sha256:1001",
+      "residual_plot": "sha256:1002",
+      "profile_plot": "sha256:1003",
+      "metric_table": "sha256:1004"
+    },
+    "coverage_status": "complete",
+    "disposition": "PROCEED",
+    "falsifying_evidence": [],
+    "evidence_requirement_digest": "sha256:aa11",
+    "requirement_artifact_manifest_digest": "sha256:bb22",
+    "visible_evidence_digest": "sha256:cc33",
+    "cached_authorization": false
+  },
+  "cases": [
+    {
+      "id": "control_complete_multi_artifact",
+      "mutations": {},
+      "expected_codes": []
+    },
+    {
+      "id": "complete_claim_missing_second_required_artifact",
+      "mutations": {
+        "visible_artifacts": {
+          "velocity_contour": "sha256:1001",
+          "residual_plot": "sha256:1002",
+          "profile_plot": "sha256:1003"
+        }
+      },
+      "expected_codes": [
+        "VERIFIER_MULTI_ARTIFACT_COVERAGE_INCOMPLETE"
+      ]
+    },
+    {
+      "id": "hard_reject_with_globally_visible_but_wrong_requirement_artifact",
+      "mutations": {
+        "disposition": "REJECT",
+        "falsifying_evidence": [
+          {
+            "requirement": "qoi_metric",
+            "artifact_id": "velocity_contour",
+            "type": "contradiction",
+            "evidence_digest": "sha256:1001"
+          }
+        ]
+      },
+      "expected_codes": [
+        "VERIFIER_FALSIFIER_WRONG_REQUIREMENT_MEMBERSHIP"
+      ]
+    },
+    {
+      "id": "hard_reject_right_membership_stale_digest",
+      "mutations": {
+        "disposition": "REJECT",
+        "falsifying_evidence": [
+          {
+            "requirement": "qoi_metric",
+            "artifact_id": "metric_table",
+            "type": "contradiction",
+            "evidence_digest": "sha256:9999"
+          }
+        ]
+      },
+      "expected_codes": [
+        "VERIFIER_FALSIFYING_EVIDENCE_UNBOUND"
+      ]
+    },
+    {
+      "id": "manifest_membership_drift_invalidates_cached_result",
+      "mutations": {
+        "requirement_artifact_manifest_digest": "sha256:dddd",
+        "cached_authorization": true
+      },
+      "expected_codes": [
+        "VERIFIER_ARTIFACT_MANIFEST_DIGEST_STALE",
+        "VERIFIER_CACHED_RESULT_INVALID"
+      ]
+    },
+    {
+      "id": "ai_cfd_style_generic_figures_do_not_cover_specialized_deliverables",
+      "mutations": {
+        "claim_evidence_requirements": [
+          "run_completion",
+          "qoi_deliverable"
+        ],
+        "requirement_artifact_manifest": {
+          "run_completion": [
+            "residual_plot"
+          ],
+          "qoi_deliverable": [
+            "specialized_profile",
+            "metric_table"
+          ]
+        },
+        "visible_artifacts": {
+          "residual_plot": "sha256:2001",
+          "velocity_contour": "sha256:2002"
+        },
+        "coverage_status": "complete"
+      },
+      "expected_codes": [
+        "VERIFIER_MULTI_ARTIFACT_COVERAGE_INCOMPLETE"
+      ]
+    },
+    {
+      "id": "hard_reject_with_partial_multi_artifact_surface",
+      "mutations": {
+        "visible_artifacts": {
+          "velocity_contour": "sha256:1001",
+          "residual_plot": "sha256:1002",
+          "profile_plot": "sha256:1003"
+        },
+        "coverage_status": "partial",
+        "disposition": "REJECT",
+        "falsifying_evidence": [
+          {
+            "requirement": "qoi_metric",
+            "artifact_id": "profile_plot",
+            "type": "contradiction",
+            "evidence_digest": "sha256:1003"
+          }
+        ]
+      },
+      "expected_codes": [
+        "VERIFIER_HARD_REJECT_WITH_INCOMPLETE_EVIDENCE",
+        "VERIFIER_HARD_REJECT_UNSUPPORTED"
+      ]
+    },
+    {
+      "id": "declared_requirement_without_manifest_must_fail",
+      "mutations": {
+        "claim_evidence_requirements": [
+          "field_quality",
+          "qoi_metric",
+          "source_provenance"
+        ]
+      },
+      "expected_codes": [
+        "VERIFIER_REQUIREMENT_ARTIFACT_MANIFEST_MISSING"
+      ]
+    },
+    {
+      "id": "manifest_for_undeclared_requirement_must_fail",
+      "mutations": {
+        "requirement_artifact_manifest": {
+          "field_quality": [
+            "velocity_contour",
+            "residual_plot"
+          ],
+          "qoi_metric": [
+            "profile_plot",
+            "metric_table"
+          ],
+          "other_claim": [
+            "other_artifact"
+          ]
+        },
+        "visible_artifacts": {
+          "velocity_contour": "sha256:1001",
+          "residual_plot": "sha256:1002",
+          "profile_plot": "sha256:1003",
+          "metric_table": "sha256:1004",
+          "other_artifact": "sha256:1005"
+        }
+      },
+      "expected_codes": [
+        "VERIFIER_MANIFEST_HAS_UNDECLARED_REQUIREMENT"
+      ]
+    }
+  ],
+  "attribution_boundary": "Protocol semantics only; no matched benchmark effect size is claimed.",
+  "local_semantic_probe": {
+    "expected_outcomes_passed": "9/9",
+    "schema_valid_cases": "9/9",
+    "note": "Probe executed locally against logic identical to verifier_observability_validator_v3.py; all test records were Draft 2020-12 structurally valid."
+  }
+}
