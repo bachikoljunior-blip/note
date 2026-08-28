@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "sequence": 97,
+  "created_at": "2026-08-28T17:06:24.855585+09:00",
+  "source_revision": {
+    "repository": "Tyler-R-Kendrick/epoch",
+    "commit": "f03a7b6fecc23e2478df23b8438113a904ec757b",
+    "main_verified_current": true
+  },
+  "classification": "library_substrate_not_end_to_end_executable_control_plane",
+  "correction_to_sequence_96": {
+    "previous_overstatement": "Sequence 96 described gauntlet-loop too strongly as a public executable control plane.",
+    "corrected_statement": "At the audited revision it is a substantial typed/tested control-plane library and workflow substrate, but the declared CLI does not expose the campaign/experiment/evaluate/promote/release/replay/workflow service families required by the bundled campaign workflow."
+  },
+  "findings": {
+    "cli_wiring": {
+      "status": "missing_end_to_end_wiring",
+      "facts": [
+        "pyproject exposes gauntlet = gauntlet.cli:main.",
+        "cli_families.register_all registers only spec_group and profile_group.",
+        "README and bundled campaign-baseline plan describe/invoke campaign, experiment, evaluate, and promote commands.",
+        "workflow runtime integration tests inject FakeStepExecutor rather than invoking the real gauntlet CLI.",
+        "Repository searches found ExperimentService and PromotionKernel construction only in unit tests in the audited revision."
+      ]
+    },
+    "evaluation_write_ahead": {
+      "status": "missing",
+      "facts": [
+        "CommandEvaluator.run dispatches the evaluator subprocess before creating EvaluationResultV1.evaluation_id.",
+        "No durable logical evaluation intent/query ID is persisted before evaluator dispatch in this path.",
+        "A controller crash after evaluator consumption but before local result persistence can therefore consume the evaluation surface without a durable logical-query record."
+      ]
+    },
+    "comparison_authority": {
+      "status": "insufficient_as_statistical_source_of_truth",
+      "facts": [
+        "ExperimentService.compare accepts caller-supplied baseline_metrics and candidate_metrics arrays.",
+        "ComparisonV1 stores derived deltas but does not bind exact evaluation IDs, evaluator digests, split/case IDs, raw paired outcomes, or a logical request digest.",
+        "The filesystem LedgerStore is immutable per record, but immutability of a post-hoc derived record does not source-bind its inputs."
+      ]
+    },
+    "effect_hardkill": {
+      "status": "exception_safe_but_process_hardkill_recovery_gap",
+      "facts": [
+        "Executor durably transitions intent to EXECUTING and persists EffectPlanV1 before adapter execution.",
+        "The public external-success-before-local-persistence adversarial test uses a RuntimeError that Executor catches and converts to OUTCOME_UNKNOWN; it is not a real process death.",
+        "A true SIGKILL/BaseException after external success but before local result persistence can leave the durable intent in EXECUTING.",
+        "Executor.execute only accepts COMMITTED and reconcile only accepts OUTCOME_UNKNOWN, so the audited source lacks an explicit stale-EXECUTING recovery path.",
+        "Saga.recover has the stronger rule for started non-idempotent steps: mark unknown/needs-reconciliation and never rerun."
+      ]
+    },
+    "terminal_outer": {
+      "status": "not_mechanically_enforced_in_gauntlet",
+      "facts": [
+        "Gauntlet SplitKind has SEARCH, CALIBRATION, PROMOTION only.",
+        "The bundled baseline workflow evaluates search and sealed promotion before promotion; there is no fourth terminal OUTER namespace.",
+        "GSME reports one sealed test after evolution but its paper explicitly states mechanical enforcement of withholding is future work."
+      ]
+    }
+  },
+  "minimal_extension_contract": {
+    "records": [
+      "LogicalEvaluationIntentV1",
+      "EvaluationDispatchV1",
+      "EvaluationOutcomeV1",
+      "PairedObservationV1",
+      "ComparisonV2",
+      "StatisticalLedgerFrontierV1",
+      "TerminalOuterQueryV1"
+    ],
+    "requirements": [
+      "Create a stable logical_evaluation_id and canonical request digest before any evaluator/provider dispatch.",
+      "Bind candidate commit/artifact digest, evaluator identity+version+digest, split, case/trial IDs, scoring protocol, and query/statistical budget reservation to the logical evaluation intent.",
+      "Use explicit planned/dispatching/completed/outcome_unknown/reconciled states and never refund a consumed logical query after crash.",
+      "Derive paired observations only from immutable evaluation outcomes; ComparisonV2 must reference exact observation/evaluation IDs and cannot accept free metric arrays.",
+      "Derive candidate-local anytime-valid evidence and cross-candidate online error control deterministically from the ordered immutable observation log.",
+      "Bind promotion to exact artifact identity, evidence-log frontier/hash, statistical policy digest, and verdict.",
+      "On restart, stale EXECUTING plus persisted plan and no terminal result must become outcome_unknown/needs-reconciliation, never reset to COMMITTED and never blindly rerun.",
+      "Expose a real coordinator/CLI path whose integration test invokes the bundled campaign workflow against the real CLI, not FakeStepExecutor.",
+      "Add a fourth OUTER service/namespace that durably rejects every pre-final query and permits a frozen candidate to be evaluated once or cache-only after finalization."
+    ]
+  },
+  "falsification_tests": [
+    "SIGKILL controller after provider/evaluator accepts but before local outcome persistence; restart must show provider dispatch count=1, logical query spend=1, no refund, same candidate lineage.",
+    "SIGKILL after outcome persistence but before statistical update; replay must derive identical e-process/online-FDR state from immutable outcomes.",
+    "Same logical evaluation ID with different semantic request digest must fail closed.",
+    "Attempt any OUTER query before final frozen-candidate state; request must be durably rejected and query count remain zero.",
+    "Run bundled campaign-baseline workflow with the real CLI; every documented command must resolve and execute through production services."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Search public Gauntlet branches/PRs/releases and other self-improvers for implemented real CLI/service wiring, pre-dispatch logical evaluation intents, stale-EXECUTING reconciliation, replay-derived anytime/online-error state, and a mechanically terminal fourth OUTER. If absent, keep this as a source-bound extension contract and next construct a kill-point equivalence matrix over the audited Gauntlet seams without inventing performance results."
+}
