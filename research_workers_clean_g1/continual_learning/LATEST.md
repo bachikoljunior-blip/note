@@ -1,40 +1,38 @@
 # Continual Learning — clean_g1 latest
 
-Latest checkpoint: `RUN_20260828T100410_JST.md`
+Latest checkpoint: `RUN_20260828T110305_JST.md`
 
 Base state: `STATE.md`
 
 Current high-priority reconciliation:
 - CPO paper-spec uses global TopP support plus globally normalized masked L1; public release `MaolinLuo/CPO@9429452cb536a9e713b73b91c0011b96df44962c` uses per-tensor TopP plus per-tensor normalization.
-- Public CPO main remains at the same release SHA; no upstream repair was present in this run.
-- Public 4B/8B ZeRO-3 owner-only regularizer path still has the previously established `1/world_size` attenuation unless explicitly corrected; treat this separately from transport/state optimization.
-- Public mask bookkeeping remains dense/global by default: dense bool masks + global int64 flat indices + fp32 refs are retained on every rank; 4B tied aliases can add dead state/build work.
-- Streaming derive-index-and-release-mask previously reduced synthetic peak RSS and final auxiliary tensor bytes without changing tested algebra.
-- Public ZeRO-3 CPU-offload path still copies full global idx/ref to every rank before filtering and copies the local BF16 partition to the compute device for masked drift.
-- **New rank-local equivalence result:** source-equivalent randomized harness, 1,000 trials / 8,529 rank cases, produced **0 bitwise pending-gradient failures, 0 partial-loss failures, 0 partition-coverage failures** when idx/ref were prepartitioned once by rank while preserving the **global masked-count denominator**.
-- **Do not use local support count as the denominator.** It changes semantics and creates rank-dependent coordinate scaling under support imbalance; distributed `world_size` correction must remain a separate explicit axis.
-- **New searchsorted result:** because `_mask_flat_idx` is sorted and refs are aligned in the same mask order, rank partitioning can use two CPU `searchsorted` bounds plus `clone()` rather than an O(s) partition boolean. 5,000 randomized trials / 82,760 rank cases produced **0 idx/ref mismatches**. Cloning is required so rank slices do not pin global storage.
-- Conditional Qwen3-VL-4B / 10% / W=8 steady-state auxiliary capacity changes from about **9.093 GiB/rank** for current dense-mask+global-idx/ref state to about **0.620 GiB/rank** after canonical namespace + dense-mask release + balanced rank-local sparse idx/ref, a **93.18% conditional reduction**. This is not measured RSS and support balance must be profiled.
-- Current safest repair order: (1) fail-closed canonical trainer namespace; (2) derive indices and release dense masks; (3) searchsorted+clone rank-local idx/ref while retaining `global_n_masked`; (4) validate hooks/reduce-scatter under PyTorch 2.8 + DeepSpeed 0.16.4; (5) profile current-vs-ranklocal transfers; (6) evaluate CPU-local masked drift; (7) choose packed/sparse/hybrid persistence from measured support; (8) separately correct distributed scaling and run paired-seed quality factorial.
+- Public 4B/8B ZeRO-3 owner-only regularizer path retains the previously established `1/world_size` attenuation unless explicitly corrected; keep this separate from transport/state optimization.
+- Public mask bookkeeping is dense/global by default: dense bool masks + global int64 flat indices + fp32 refs are retained on every rank; tied state-dict aliases can add dead state/build work.
+- **New end-to-end sparse-canonical prototype:** release-format masks are converted only for duplicate-free trainer-visible `named_parameters`; state-dict-only tied aliases and floating buffers are dropped, while distinct Parameters sharing storage remain distinct. Dense masks can then be released.
+- **New fail-closed runtime contract:** canonical namespace digest, name/shape/numel/dtype, idx/ref alignment, rank/world-size, and optional `ds_numel` are checked before rank-local use.
+- **New equivalence result:** searchsorted+clone rank partitioning and global-denominator regularizer algebra produced 544/544 matching partition cases, 544/544 bitwise pending-gradient matches, and 544/544 partial-loss matches under the available torch 2.10 CPU runtime.
+- `global_n_masked` must remain global. Replacing it with rank-local support changes coordinate scaling under support imbalance.
+- **New persistence correction:** sparse runtime state and sparse disk persistence must be separated. Global int64 idx+fp32 refs beats the current dense-bool+fp32-ref file only below 12.5% support; int32 sparse only below 25%. With bit-packed mask+fp32 refs, sparse loses above 1.5625%/3.125% respectively.
+- A 5M-scalar `torch.save` test confirmed the crossover: at 10% support release/int64/int32/bitpacked were 7.00/6.00/4.00/2.63 MB; at 19% they were 8.80/11.40/7.60/4.43 MB; at 34.39% they were 11.88/20.64/13.76/7.50 MB.
+- Therefore the strongest current repair candidate is **bit-packed global persistence + fp32 refs on disk, then one-time conversion to canonical rank-local sparse idx/ref at load**, subject to measured real support and PyTorch 2.8/DeepSpeed 0.16.4 validation.
 
 New durable artifacts:
-- `CPO_ZERO3_RANKLOCAL_EQUIVALENCE_HARNESS_20260828T100121_JST.py`
-- `CPO_ZERO3_RANKLOCAL_EQUIVALENCE_RESULT_20260828T100121_JST.json`
-- `CPO_ZERO3_SEARCHSORTED_PREPARTITION_RESULT_20260828T100345_JST.json`
-- `RUN_20260828T100410_JST.md`
+- `CPO_SPARSE_CANONICAL_RANKLOCAL_PROTOTYPE_20260828T110122_JST.py`
+- `CPO_SPARSE_CANONICAL_RANKLOCAL_RESULT_20260828T110122_JST.json`
+- `CPO_PERSISTENCE_CROSSOVER_RESULT_20260828T110250_JST.json`
+- `RUN_20260828T110305_JST.md`
 
 Exact CPO continuation:
-1. Implement the source-equivalent rank-local load prototype combining canonical namespace, `searchsorted+clone`, dense-mask release, stored `global_n_masked`, and runtime tuple checks.
-2. Run under PyTorch 2.8.0, then DeepSpeed 0.16.4; compare actual hook/reduce-scatter pending gradients before changing compute placement.
-3. Instrument real per-parameter support by rank and persistence. Do not assume balanced `s/W` in measured capacity.
-4. Profile current H2D/D2H vs rank-local idx/ref while leaving partition compute placement unchanged; then separately test CPU-local masked drift on offloaded partitions.
-5. Execute explicit world-size scaling correction only as a separate correctness/quality axis.
-6. Measure real Qwen3-VL mask files, RSS, GPU peak, bus bytes, build/conversion time and steady runtime.
-7. Continue read-only paper-table provenance search, then DeMix/OpenCompass Track A1 and earlier continual-learning branches.
+1. Integrate the sparse-canonical loader into a source-equivalent trainer shim while preserving public-code scaling.
+2. Run under PyTorch 2.8.0, then DeepSpeed 0.16.4; compare hook-input and post-reduce-scatter gradients for current global-filter vs rank-local prepartition paths.
+3. Measure real support per parameter/rank and real `task_k.pt` bytes; choose persistence per tensor from measured support instead of globally adopting int64 sparse storage.
+4. Profile current vs rank-local H2D/D2H, CPU RSS, GPU peak, build/conversion time and per-step runtime; then separately test CPU-local masked drift.
+5. Execute world-size scaling correction only as a separate correctness/quality axis after transport/state equivalence.
+6. Measure real Qwen3-VL storage/runtime and continue historical paper-table provenance, DeMix/OpenCompass Track A1, SAFE-Merge and earlier branches.
 
 Remaining frontier:
-- Public-runtime rank-local ZeRO-3 state/hook validation.
-- Actual support imbalance/persistence measurement.
+- Public-runtime rank-local ZeRO-3 state/hook validation under the pinned versions.
+- Real support imbalance/persistence measurement and per-tensor hybrid-format selection.
 - Current-vs-ranklocal bus/RSS/runtime profiling and CPU-local masked drift.
 - Distributed scaling quality factorial.
 - Real Qwen3-VL storage/runtime measurement.
