@@ -1,0 +1,128 @@
+{
+  "mechanism_slices": {
+    "cancel_only": {
+      "crash_then_canonical_move_after_success_slice": {"crash_outcome_unresolved": 504, "n": 504},
+      "integrator_takeover_no_parent_change_slice": {"false_parent_terminalization": 42, "n": 42},
+      "late_after_parent_transition_slice": {"n": 2448, "orphan_accepted_child_result": 1224},
+      "parent_transition_cancel_delayed_slice": {"false_parent_terminalization": 1428, "n": 1428},
+      "parent_transition_cancel_observed_slice": {"false_parent_terminalization": 0, "n": 1428},
+      "parent_transition_old_cas_slice": {"false_parent_terminalization": 1428, "n": 2856},
+      "parent_transition_with_storage_conflict_slice": {"false_parent_terminalization": 714, "n": 1428}
+    },
+    "cas_only": {
+      "crash_then_canonical_move_after_success_slice": {"crash_outcome_unresolved": 980, "n": 980},
+      "integrator_takeover_no_parent_change_slice": {"false_parent_terminalization": 42, "n": 42},
+      "late_after_parent_transition_slice": {"n": 2448, "orphan_accepted_child_result": 2448},
+      "parent_transition_cancel_delayed_slice": {"false_parent_terminalization": 1428, "n": 1428},
+      "parent_transition_cancel_observed_slice": {"false_parent_terminalization": 1428, "n": 1428},
+      "parent_transition_old_cas_slice": {"false_parent_terminalization": 2856, "n": 2856},
+      "parent_transition_with_storage_conflict_slice": {"false_parent_terminalization": 1428, "n": 1428}
+    },
+    "generation_leaf_integrator_epoch_fenced": {
+      "crash_then_canonical_move_after_success_slice": {"crash_outcome_unresolved": 0, "n": 14},
+      "integrator_takeover_no_parent_change_slice": {"false_parent_terminalization": 0, "n": 42},
+      "late_after_parent_transition_slice": {"n": 2448, "orphan_accepted_child_result": 0},
+      "parent_transition_cancel_delayed_slice": {"false_parent_terminalization": 0, "n": 1428},
+      "parent_transition_cancel_observed_slice": {"false_parent_terminalization": 0, "n": 1428},
+      "parent_transition_old_cas_slice": {"false_parent_terminalization": 0, "n": 2856},
+      "parent_transition_with_storage_conflict_slice": {"false_parent_terminalization": 0, "n": 1428}
+    }
+  },
+  "model": {
+    "event_order": [
+      "integrator_read(g1, integrator_epoch=1, child A1/B1 current)",
+      "optional parent_supersede_or_cancel",
+      "optional integrator_takeover(epoch=2)",
+      "optional late old-child completion",
+      "integrator_CAS(with optional storage conflict + one retry)",
+      "optional crash_before_readback",
+      "optional later canonical move",
+      "resume_reconcile",
+      "optional explicit superseded-child revalidation"
+    ],
+    "protocol_contracts": {
+      "cancel_only": "CAS-only plus best-effort cancellation signal; old work is blocked only if cancellation is observed before the authoritative write",
+      "cas_only": "same-file blob-SHA CAS; blind refresh+retry on storage conflict; no parent-generation, leaf-epoch, or integrator-epoch authority check; current-content-only crash readback",
+      "generation_leaf_integrator_epoch_fenced": "revalidate current parent generation + leaf slot/epoch + integrator epoch immediately before CAS; preserve monotonic applied_integration_id for crash reconciliation; superseded child adoption requires explicit exact task_hash + input_digest + effect_contract proof"
+    },
+    "scenario_count": 2940,
+    "scope": "finite balanced mechanism lattice; not an operational incidence estimate"
+  },
+  "negative_control": {
+    "fenced_but_name_match_auto_adopt": {
+      "auto_admitted": 2304,
+      "orphan_authority": 2160,
+      "superseded_late_child_scenarios": 2304
+    }
+  },
+  "one_gate_ablation": {
+    "remove_applied_integration_id_log": {"new_crash_outcome_unresolved": 14},
+    "remove_child_slot_single_assignment": {"new_duplicate_authoritative_child_integration": 18},
+    "remove_exact_revalidation_gate": {"new_orphan_authority": 2160},
+    "remove_integrator_epoch_gate": {"new_false_parent_terminalization": 42},
+    "remove_parent_generation_gate": {"new_false_parent_terminalization": 1428}
+  },
+  "protocols": {
+    "cancel_only": {
+      "cas_conflict_was_retried": 756,
+      "crash_outcome_unresolved": 504,
+      "current_parent_terminal": 1386,
+      "duplicate_authoritative_child_integration": 1296,
+      "false_parent_terminalization": 1470,
+      "late_accepted": 1296,
+      "old_cas_attempted": 1512,
+      "old_cas_succeeds": 1512,
+      "orphan_accepted_child_result": 1224,
+      "recoverable": 1432,
+      "safe_state": 1432,
+      "scenarios": 2940,
+      "terminal_is_safe": 42
+    },
+    "cas_only": {
+      "cas_conflict_was_retried": 1470,
+      "crash_outcome_unresolved": 980,
+      "current_parent_terminal": 2730,
+      "duplicate_authoritative_child_integration": 2520,
+      "false_parent_terminalization": 2898,
+      "late_accepted": 2520,
+      "old_cas_attempted": 2940,
+      "old_cas_succeeds": 2940,
+      "orphan_accepted_child_result": 2448,
+      "recoverable": 4,
+      "safe_state": 4,
+      "scenarios": 2940,
+      "terminal_is_safe": 42
+    },
+    "generation_leaf_integrator_epoch_fenced": {
+      "cas_conflict_was_retried": 1470,
+      "current_parent_terminal": 210,
+      "late_accepted": 162,
+      "old_cas_attempted": 2940,
+      "old_cas_succeeds": 42,
+      "recoverable": 2940,
+      "safe_revalidated_new_parent_terminal": 168,
+      "safe_state": 2940,
+      "scenarios": 2940,
+      "terminal_is_safe": 210
+    }
+  },
+  "provenance": {
+    "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+    "control_change_after_semantic_start": true,
+    "frozen_config_revision": 6,
+    "frozen_control_revision": 17,
+    "frozen_note_main_sha": "5d503a3b9ec6270a126e214205a28f624228a682",
+    "frozen_role_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c",
+    "newer_control_revision": "not_read_this_invocation",
+    "newer_observed_note_main_sha": "be134635d3bc2cba97aad352340ee8bb20b364e1",
+    "phase_id": "phase_1_chat_parity",
+    "role": "multi_agent",
+    "root_problem_id": "o-chat-parity-root-v2-active-pool"
+  },
+  "revalidation": {
+    "accepted_with_nonexact_equivalence": 0,
+    "accepted_without_explicit_revalidation": 0,
+    "safe_adoptions": 144,
+    "superseded_late_child_scenarios": 2304
+  }
+}
