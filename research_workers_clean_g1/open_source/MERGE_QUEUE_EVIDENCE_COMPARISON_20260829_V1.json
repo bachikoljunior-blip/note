@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "scope": "Public documented server surfaces inspected 2026-08-29; capability comparison, not provider-wide equivalence",
+  "systems": {
+    "github_async_merge_and_merge_queue": {
+      "intent_head_precondition": "async body sha binds expected PR head; sync merge likewise supports expected head",
+      "request_identity": "async UUID; 409 may return an existing UUID whose options can differ, so pending details must be compared before adoption",
+      "request_states": ["pending", "merged", "enqueued", "failed"],
+      "queue_admission_vs_final_effect": "enqueued is terminal for async request but only queue admission; final merge outcome must be tracked separately",
+      "request_result_retention": "24 hours after most recent async-result update",
+      "queue_grouping": "stack may be split across consecutive merge groups",
+      "post_effect_policy_surface": "Rule Suites keyed by ref/before_sha/after_sha with result and evaluation_result; list discovery time_period max month; exact detail by suite ID",
+      "strongest_durable_capsule": "expected head + async UUID/pending tuple + terminal result + full stack member vector + exact base-ref transition chain + exact Rule Suite IDs/readbacks",
+      "known_chat_surface_boundary": "current connected GitHub mutation schema exposes sync expected-head merge and auto-merge, not async/stack/queue mutation; direct /stacks read is allowlist-blocked"
+    },
+    "gitlab_merge_trains": {
+      "intent_head_precondition": "add-to-merge-train accepts sha; if supplied it must match source-branch HEAD",
+      "request_identity": "merge-train entry/car integer id returned with merge request, pipeline, target_branch and status",
+      "request_states": ["idle", "fresh", "stale", "merging", "merged", "skip_merged"],
+      "queue_admission_vs_final_effect": "complete-scope merge-train entry exposes merged status and merged_at; final repository effect should still be linked through exact merged MR/target-branch evidence rather than treating train pipeline SHA as target tip",
+      "request_result_retention": "inspected Merge Trains API documents active and complete scopes; no GitHub-style 24h result expiry was stated in the inspected contract",
+      "queue_grouping": "REST objects represent one merge request/car, not an entire train; REST has no explicit queue position, sort by id ascending or use GraphQL MergeTrainCar.index",
+      "post_effect_policy_surface": "merge-train pipeline status and merged MR state; MR API exposes merge_commit_sha and squash_commit_sha, but exact target-branch effect remains merge-method-sensitive",
+      "strongest_durable_capsule": "project/MR IID + source head SHA + train-entry id + target branch + train pipeline id/SHA/status + complete-scope train status/merged_at + merged MR commit fields + exact target-branch ref evidence",
+      "known_chat_surface_boundary": "no GitLab connector/action was available in the current connected tool set; pattern is public API evidence for an external handoff, not a directly exercised Chat mutation"
+    }
+  },
+  "comparison": {
+    "durable_operation_identity": "GitLab exposes a server-side merge-train entry id in both active/complete listing contracts; GitHub async exposes a UUID whose result endpoint explicitly expires after 24h. This makes GitLab's documented train-entry identity a stronger recovery anchor in the inspected contracts, but not by itself proof of final target-branch effect.",
+    "final_effect_rule": "Neither queue pipeline SHA nor request acceptance is final effect authority. Preserve/verify the target branch's exact landed commit transition after merge.",
+    "retry_rule": "Always bind queue admission to expected source/head SHA where the API supports it. After ambiguous responses, search/read existing server operation identity and verify its intent fields before resubmission.",
+    "scope_guard": "Do not generalize retention, permissions, policy semantics or connector availability beyond these inspected endpoints and documented fields."
+  },
+  "primary_sources": [
+    "https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously",
+    "https://docs.github.com/en/rest/repos/rule-suites",
+    "https://github.github.com/gh-stack/reference/merge-api/",
+    "https://docs.gitlab.com/api/merge_trains/",
+    "https://docs.gitlab.com/api/merge_requests/",
+    "https://docs.gitlab.com/ci/pipelines/merge_trains/"
+  ]
+}
