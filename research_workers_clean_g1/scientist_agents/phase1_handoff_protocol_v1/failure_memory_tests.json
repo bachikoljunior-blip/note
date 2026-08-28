@@ -21,13 +21,17 @@
     "source_scope": {
       "domain": "source-pde",
       "mechanism": "Fourier split treatment of a dispersive linear operator",
-      "assumptions": ["source linear symbol is non-antidiffusive"],
+      "assumptions": [
+        "source linear symbol is non-antidiffusive"
+      ],
       "tested_scope": "A source-domain solver configuration where the spectral split was empirically stable."
     },
     "target_scope": {
       "domain": "target-pde",
       "mechanism": "candidate reuse of the source spectral split",
-      "assumptions": ["target linearized symbol remains non-antidiffusive under target sign convention"],
+      "assumptions": [
+        "target linearized symbol remains non-antidiffusive under target sign convention"
+      ],
       "tested_scope": "Only the current target task after an explicit sign/mechanism check and short target-side probe."
     },
     "target_context_signature": "sha256:1f77f99b907bd568cd1ddba456e9dba09d850bf504b178a2cac29a856dd78cc6",
@@ -67,7 +71,18 @@
     "required_cross_domain_checks": [
       "mechanism_assumption_compatibility",
       "target_probe"
-    ]
+    ],
+    "current_curator_record_digests": {
+      "nk-cross-domain-spectral-001": "sha256:3a2755b4053c69aca72380115141323cc7634d0ad33ec3d9eaeb37288fbcd851"
+    },
+    "prequalified_domain_general_digests": [
+      "sha256:3a2755b4053c69aca72380115141323cc7634d0ad33ec3d9eaeb37288fbcd851"
+    ],
+    "available_evidence_digests": [
+      "sha256:90cf699e252180290ccde7e8a04dad4b3b560a21dbd92976df6bc2135c5cfb6c",
+      "sha256:a8078a2a2166a0bcd3f1be28bcdcedd4fab950c62716c23c06c44590fed6dcaa"
+    ],
+    "contradicted_evidence_digests": []
   },
   "cases": [
     {
@@ -118,6 +133,55 @@
       ],
       "should_pass": false,
       "expected_failure_codes": ["FAILURE_MEMORY_ENFORCEMENT_INVALID"]
+    },
+    {
+      "name": "domain_general_prequalified_bypass",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["transfer_class"], "value": "domain_general"},
+        {"target": "record", "op": "set", "path": ["revalidation", "required"], "value": false},
+        {"target": "record", "op": "set", "path": ["revalidation", "status"], "value": "not_run"},
+        {"target": "record", "op": "delete_index", "path": ["revalidation", "checks"], "index": 1},
+        {"target": "record", "op": "delete_index", "path": ["revalidation", "checks"], "index": 0}
+      ],
+      "should_pass": true,
+      "expected_failure_codes": []
+    },
+    {
+      "name": "domain_general_unqualified_cannot_bypass",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["transfer_class"], "value": "domain_general"},
+        {"target": "record", "op": "set", "path": ["revalidation", "required"], "value": false},
+        {"target": "record", "op": "set", "path": ["revalidation", "status"], "value": "not_run"},
+        {"target": "record", "op": "delete_index", "path": ["revalidation", "checks"], "index": 1},
+        {"target": "record", "op": "delete_index", "path": ["revalidation", "checks"], "index": 0},
+        {"target": "context", "op": "set", "path": ["prequalified_domain_general_digests"], "value": []}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_DOMAIN_GENERAL_UNQUALIFIED"]
+    },
+    {
+      "name": "stale_curator_record_digest",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["curator_record_digest"], "value": "sha256:7b4e0eda03ac0ac3d1d83758436036bf0aa556690f220c48b4b117e7b8f92484"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_CURATOR_STALE"]
+    },
+    {
+      "name": "target_probe_evidence_missing_from_registry",
+      "mutations": [
+        {"target": "record", "op": "set", "path": ["revalidation", "checks", 1, "evidence", "digest"], "value": "sha256:7b4e0eda03ac0ac3d1d83758436036bf0aa556690f220c48b4b117e7b8f92484"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_REVALIDATION_EVIDENCE_MISSING"]
+    },
+    {
+      "name": "target_probe_external_contradiction_overrides_pass_label",
+      "mutations": [
+        {"target": "context", "op": "append", "path": ["contradicted_evidence_digests"], "value": "sha256:a8078a2a2166a0bcd3f1be28bcdcedd4fab950c62716c23c06c44590fed6dcaa"}
+      ],
+      "should_pass": false,
+      "expected_failure_codes": ["FAILURE_MEMORY_REVALIDATION_EVIDENCE_CONTRADICTED", "FAILURE_MEMORY_CONTRADICTED"]
     }
   ]
 }
