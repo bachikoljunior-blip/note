@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-08-28T02:05:06Z",
+  "scope": "source-level proof for the public CPO ZeRO-3 path under the paper README's pinned training environment; not a distributed runtime execution",
+  "cpo": {
+    "repository": "MaolinLuo/CPO",
+    "commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "trainer_blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+    "readme_blob": "17178a21b514a99892d8903f15be03682107c9a8",
+    "training_environment": {
+      "torch": "2.8.0",
+      "deepspeed": "0.16.4",
+      "rl_gpus": 8
+    },
+    "owner_only_hook": "For each ZeRO-3 parameter, CPO computes a pending regularizer only for masked coordinates inside the current rank's partition and injects those global coordinates in that rank's full pre-reduce gradient. For any protected coordinate, exactly its owner rank carries the regularizer contribution."
+  },
+  "deepspeed": {
+    "repository": "deepspeedai/DeepSpeed",
+    "tag": "v0.16.4",
+    "commit": "e2dc3eeb1923073e32739596a4fd051417d4ff92",
+    "stage3_path": "deepspeed/runtime/zero/stage3.py",
+    "coalesced_collectives_path": "deepspeed/runtime/comm/coalesced_collectives.py",
+    "coalesced_collectives_blob": "2fadce52222cda680600253ae840f84b89bda7ed",
+    "reduction_fact": "reduce_scatter_coalesced divides the full coalesced gradient buffer in-place by world_sz before reduce-scatter; ZeRO-3 requires gradient_predivide_factor==1.0 and postscale_gradients==true for reduce_scatter."
+  },
+  "derivation": {
+    "single_rank_desired_coordinate_regularizer": "g = lambda / global_n_masked / normalizer * sign(diff)",
+    "public_zero3_before_reduce_scatter": "owner rank has g at the coordinate; all other ranks have 0",
+    "pinned_deepspeed_reduce_scatter": "predivide every rank's full gradient by W, then sum/reduce-scatter corresponding partitions",
+    "public_zero3_after_reduce_scatter": "g / W",
+    "owner_only_correction_to_match_single_rank_regularizer": "inject W * g on the owner rank before reduce-scatter",
+    "for_W_8_lambda_100_effective_regularizer_coefficient": 12.5
+  },
+  "logging": {
+    "public_code_behavior": "Each rank accumulates only its partition's abs(diff)/global_n_masked partial contribution, then gather(...).nanmean() is logged after multiplying by lambda.",
+    "exact_partition_cover_case": "The sum of rank partials equals the full masked L1 contribution, while nanmean divides that sum by W. Therefore the logged ZeRO-3 mask_loss is also 1/W of the full masked-L1 value when partitions cover the support once.",
+    "W_8_log_scale": 0.125
+  },
+  "contrast_with_zero2": "In the non-ZeRO-3 path every data-parallel rank injects the same full regularizer contribution before gradient averaging, so the replicated regularizer survives averaging at its original magnitude; the owner-only ZeRO-3 partitioning is what introduces the extra 1/W factor.",
+  "scope_guard": [
+    "This proves the scaling algebra for the cited public source paths and pinned version source, not that the paper's unpublished result-generating run used an identical code revision.",
+    "The proposed W multiplier must be tested under the pinned distributed runtime before adoption, especially with gradient accumulation, alternative communication modes, or any non-default reduction path.",
+    "This scaling correction is independent of the paper-spec global-TopP/global-normalization discrepancy and independent of state/transport optimizations."
+  ]
+}
