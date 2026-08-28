@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "generated_at": "2026-08-28T15:59:22+09:00",
+  "frozen_control": {
+    "note_main_sha": "de9e30da0cf440b63273a6542799cfe809c8980e",
+    "root_control_revision": 14,
+    "root_control_blob": "f2753c00db2daa7635e0ad993a292d55019fd538",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "bootstrap_valid": true
+  },
+  "target": {
+    "path": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
+    "blob": "657a5833dacbdd65560b9162603eeb1233bffce1",
+    "public_argus_revision": "lbx154/Argus@ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98"
+  },
+  "source_checks": {
+    "event_log": {
+      "source": "argus_skill/life/event_log.py@ae2daa1f",
+      "event_lock_create_mode": "0o600",
+      "cross_process_lock": "fcntl.flock only when fcntl import succeeds",
+      "windows_behavior": "fcntl is absent, so only process-local threading.Lock remains",
+      "append": "text append line + newline with no existing-tail newline validation",
+      "projection": "update_mission_view_event is called while event-log lock scope is still active"
+    },
+    "mission_view": {
+      "source": "argus_skill/core/mission_view/_view_state.py and _snapshot.py@ae2daa1f",
+      "cross_process_lock": "fcntl.flock only when available; Windows retains only process-local thread lock",
+      "write": "tempfile + fsync + os.replace, so concurrent processes are last-writer-wins absent a cross-process lock",
+      "bootstrap": "snapshot_mission_view reads persisted view; when bootstrapped is false, rebuilds from event tails, marks bootstrapped=true, then publishes under mission-view lock only"
+    },
+    "portalocker_v3": {
+      "version": "3.0.0",
+      "windows_low_level_lock_requires": ["tell()", "seek()", "fileno()"],
+      "raw_integer_fd_compatible_with_windows_branch": false,
+      "windows_dependency": "pywin32>=226"
+    },
+    "portalocker_v4_current": {
+      "checked_version": "4.3.0",
+      "windows_default": "MsvcrtLocker for exclusive locking; Win32/shared locking optional via pywin32",
+      "raw_fd_support": "_prepare_windows_file supports int and HasFileno through os.lseek"
+    },
+    "argus_dependency": "portalocker>=3"
+  },
+  "independent_models": {
+    "mission_view_stale_bootstrap": {
+      "initial_canonical_events": ["E0"],
+      "A_reads_bootstrap_snapshot": ["E0"],
+      "B_appends_and_projects": ["E0", "E1"],
+      "B_publishes_view_count": 2,
+      "A_late_publishes_stale_view_count": 1,
+      "canonical_final_count": 2,
+      "materialized_final_count": 1,
+      "lost_projection_without_lost_canonical_event": true,
+      "classification": "source-reachable deterministic interleaving on Windows, not a production incident"
+    },
+    "candidate011_tail_isolation": {
+      "partial_prefix": "{\"type\":\"partial\"",
+      "next_valid_event": {"type":"life.planner.verdict","call_id":"c1","verdict":"ok"},
+      "ordinary_append_physical_lines": 1,
+      "ordinary_append_parse_result": "JSONDecodeError",
+      "delimiter_isolation_physical_lines": 2,
+      "delimiter_isolation_line1": "JSONDecodeError retained for forensics",
+      "delimiter_isolation_line2": "valid JSON event parses independently",
+      "containment_mechanism_valid": true
+    }
+  },
+  "new_reader_boundary": {
+    "iter_call_events_current_behavior": "For newline-terminated rows, invalid JSON raises ValueError and aborts the scan.",
+    "mission_view_tail_reader_current_behavior": "_tail_jsonl skips malformed rows.",
+    "consequence": "Candidate011's delimiter insertion protects the next physical JSONL record and Mission View's tolerant bootstrap, but by itself does not guarantee that iter_call_events or a PlannerVerdictPersistenceEvidence implementation built on the current iter_call_events can reach the later valid row. The malformed isolated row must be explicitly handled/marked by the stable-generation reader before claiming FOUND from a later row."
+  },
+  "limits": [
+    "No Windows Argus process-level reproduction was executed by this auditor.",
+    "No production incident report was identified or claimed.",
+    "The proposed cross-platform authority, lock ordering, and tail repair are not implemented at the pinned Argus revision."
+  ]
+}
