@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-28T09:05:40+09:00",
+  "frozen_control": {
+    "note_main_sha": "d8f5bd8767761ef946ed8dc9189e8ff5ed594914",
+    "control_revision": 12,
+    "desired_state_blob": "5c91671e1470d0fa4e2a53f918493004dd3750c3",
+    "config_revision": 5,
+    "role_config_blob": "7a52dca4879a2496b6639b4d75f66df1b6cc71b0"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "torch": "2.10.0+cpu",
+    "measurement": "separate subprocess resource.getrusage(RUSAGE_SELF).ru_maxrss"
+  },
+  "source_contract": {
+    "cpo_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "release_pattern": "load all dense bool masks and refs, then dict-comprehension all int64 nonzero indices while retaining masks",
+    "streaming_repair_pattern": "load same artifact, process mask tensors smallest-first, derive int64 nonzero indices, pop/release each dense mask immediately; retain refs + indices + key membership only"
+  },
+  "runs": [
+    {
+      "support_fraction": 0.1,
+      "total_numel": 100000000,
+      "support": 10000000,
+      "release": {
+        "initial_after_mask_ref_build_peak_rss_mb": 426.2734375,
+        "peak_rss_mb": 503.8984375,
+        "conversion_elapsed_s": 0.10466263,
+        "logical_final_aux_bytes": 220000000
+      },
+      "streaming_no_explicit_gc": {
+        "initial_after_mask_ref_build_peak_rss_mb": 426.41015625,
+        "peak_rss_mb": 446.734375,
+        "conversion_elapsed_s": 0.092703762,
+        "logical_final_aux_bytes": 120000000
+      },
+      "observed_peak_rss_reduction_mb": 57.1640625,
+      "observed_peak_rss_reduction_fraction": 0.113445,
+      "logical_final_aux_reduction_fraction": 0.4545454545
+    },
+    {
+      "support_fraction": 0.3333333333,
+      "total_numel": 50000000,
+      "support": 16666670,
+      "release": {
+        "initial_after_mask_ref_build_peak_rss_mb": 403.71875,
+        "peak_rss_mb": 532.21875,
+        "conversion_elapsed_s": 0.07529017,
+        "logical_final_aux_bytes": 250000040
+      },
+      "streaming_no_explicit_gc": {
+        "initial_after_mask_ref_build_peak_rss_mb": 403.75,
+        "peak_rss_mb": 506.078125,
+        "conversion_elapsed_s": 0.03835052,
+        "logical_final_aux_bytes": 200000040
+      },
+      "observed_peak_rss_reduction_mb": 26.140625,
+      "observed_peak_rss_reduction_fraction": 0.049116,
+      "logical_final_aux_reduction_fraction": 0.199999968
+    }
+  ],
+  "byte_model": {
+    "release_steady_aux": "N + 12s bytes (bool dense mask + fp32 refs + int64 indices)",
+    "mask_drop_steady_aux": "12s bytes (fp32 refs + int64 indices)",
+    "steady_saving": "N bytes exactly for the masked tensor domain, independent of support fraction",
+    "initial_after_torch_load": "N + 4s bytes before index materialization, ignoring serialization/Python overhead",
+    "streaming_peak_lower_bound": "max(N+4s, 12s) plus at most one tensor's temporary index-before-mask-release term; processing smaller tensors first reduces transient peak"
+  },
+  "scope": [
+    "This is a source-equivalent synthetic memory-lifetime benchmark, not a TRL/DeepSpeed run.",
+    "ru_maxrss contains Python/Torch process baseline and allocator behavior; logical tensor bytes are the cleaner scaling quantity.",
+    "No explicit gc.collect was needed for the lower-peak 10% streaming run; Python refcount/tensor destruction released mask objects sufficiently in this CPU test.",
+    "The 33.3% run used every third position, not an exact 35% support case.",
+    "Real CPO mask-domain/support, CUDA/CPU-offload allocator behavior and PyTorch 2.8 remain unmeasured."
+  ]
+}
