@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "audited_at": "2026-08-28T12:50:19+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "e80265321f6d945f9e2b0a98b91cb79c095c3f51",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_state_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 5
+  },
+  "wave": {
+    "wave_id": "clean-g1-wave-c29-20260828T120235JST-5128e23b",
+    "source_set_digest": "5128e23baea2dc10f1bf1c3cac76e4df1b7b368b26a89e251efb19e0a01547b4"
+  },
+  "source_candidate": {
+    "namespace": "failure_evidence",
+    "source_path": "research_workers_clean_g1/failure_evidence/2026-08-28T110534+0900.md",
+    "source_blob": "f0117d16e4749574e5633cc7f1a74ac3e440cc5c",
+    "source_local_candidate_ids": ["FE-330", "FE-331"]
+  },
+  "primary_source": {
+    "citation": "Yanki Margalit et al., Governed Shared Memory for Multi-Agent LLM Systems, arXiv:2606.24535v1, 2026-06-23",
+    "url": "https://arxiv.org/abs/2606.24535",
+    "pdf": "https://arxiv.org/pdf/2606.24535"
+  },
+  "verified": [
+    "The paper explicitly documents a dated GET-by-id sub-tenant enforcement gap: the gateway resolved an agent-scoped caller identity, but get_memory checked tenant identity only and did not consult caller fleet/agent, row visibility scope or trust level. A trust-1 agent therefore fetched a cross-fleet row that the trust ladder should deny.",
+    "The remediation re-probe on 2026-05-31 used 96 GET-by-id probes across four fleets and both trust levels: trust-1 cross-fleet 0/36 allowed, trust-2 cross-fleet 36/36 allowed, same-fleet controls 12/12, total leaks 0/96.",
+    "The same evaluation reports semantic-search cross-fleet surfacing 72/164 = 43.9% and same-fleet misses 4/28 = 14.3% under the search/ranking path. These are separate path-specific measurements and support endpoint/path-complete authorization testing rather than assuming one identity layer implies uniform enforcement.",
+    "For contradiction handling, the conditional result is exactly 90/90 supersession when both contradictory writes are admitted, while overall detection is 98/200 = 0.490.",
+    "The paper identifies a real ordering mechanism: a synchronous pre-commit near-duplicate gate can return 409 before the post-commit asynchronous contradiction detector sees the second write. Natural contradictions of the form 'X is A' then 'X is B' can be near-identical and therefore vulnerable to this ordering.",
+    "Four independent N=200 contradiction runs gave both-admitted counts 90-91 and detections 96-100, corresponding to overall detection rates about 0.48-0.50."
+  ],
+  "material_scope_corrections": [
+    {
+      "claim": "The original agent-scoped GET gap is reproducible from the committed traces.",
+      "status": "not_replayable_after_remediation",
+      "correction": "The paper states that the open agent-scoped state is no longer reproducible against the live service and rests on the dated probe plus handler inspection. The tenant-key behavior and the 2026-05-31 remediation are trace-backed; the transient pre-fix agent-scoped gap is dated/inspected evidence, not a replayable current failure."
+    },
+    {
+      "claim": "The entire 98/200 versus 90/90 end-to-end gap is cleanly attributable to semantic dedup starving contradiction detection.",
+      "status": "overstated",
+      "correction": "The paper reports 206/400 writes rejected by the synchronous dedup gate, but says those rejections are partly the genuine dedup-preempts-contradiction effect and partly limited prose diversity/exact-content duplicates in the workload generator; it does not cleanly separate those causes. The robust source claim is conditional 90/90 correctness when both writes are admitted plus source-demonstrated possibility of ordering starvation."
+    },
+    {
+      "claim": "98 detections should equal the 90 both-admitted fact-runs.",
+      "status": "source_explains_difference",
+      "correction": "The paper says overall detections exceed both-admitted because sequential and concurrent scenarios share subject/predicate; eight cross-scenario detections arise where each scenario admitted only one of its two writes. Do not treat 98-90 as a counting inconsistency."
+    },
+    {
+      "claim": "These rates establish general multi-agent-memory endpoint failure prevalence.",
+      "status": "unsupported_generalization",
+      "correction": "The measurements are one live service in a single tenant, with a dated remediation timeline and the paper's harness/workload. They support path-specific enforcement and mechanism-ordering stress tests, not prevalence across systems."
+    }
+  ],
+  "status": "primary_verified_with_transient_gap_replayability_and_ordering_attribution_scope_corrections",
+  "tested_scope": "arXiv:2606.24535v1 MemClaw/ArgusFleet dated live-service evaluation; no independent service replay or general production prevalence estimate",
+  "downstream_note": "FE-330 is strong path-asymmetry evidence but the original pre-fix GET state is historical and non-replayable. FE-331 strongly supports end-to-end mechanism-ordering tests, but the 0.49 overall rate cannot be assigned solely to genuine contradiction-starvation because the paper explicitly retains workload-diversity confounding.",
+  "worker_feedback_written": false
+}
