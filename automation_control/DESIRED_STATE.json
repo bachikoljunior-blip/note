@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "control_revision": 20,
-  "updated_at": "2026-08-29T01:25:42+09:00",
-  "purpose": "Sanitized root control manifest. Revision 20 preserves the active-pool Phase-1 CLEAN overlay and synchronizes O_CHAT_PARALLEL control 6 useful-output hard acceptance into the CLEAN evaluation assignment that is actually readable by that role.",
+  "control_revision": 21,
+  "updated_at": "2026-08-29T03:49:04+09:00",
+  "purpose": "Sanitized root control manifest. Revision 21 preserves the active-pool Phase-1 CLEAN overlay and replaces an over-conservative post-freeze main-SHA stop with exact authoritative-control identity verification so unrelated concurrent receipt commits cannot starve role-local Phase-1 work.",
   "config_resolution": {
     "clean_exploration_role_path_template": "automation_control/roles/{role}.json",
     "non_exploration_config_path": "automation_control/DOWNSTREAM_STATE.json",
@@ -16,8 +16,21 @@
     "anti_stop": true,
     "logical_disable_supported": true,
     "physical_scheduler_separate_from_repository": true,
-    "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus the role's designated config at that exact SHA. Before the first substantive semantic read, repeat the SHA-only ref lookup; if control_revision or the role config_revision changed, refetch and restart the pre-semantic bootstrap on the newer tuple. The first role-local/public-source semantic read is a hard semantic-freeze barrier: from that point the selected {main SHA, control revision, config revision, config blob} is immutable for the physical invocation. If control changes after the barrier, do not adopt it, reinterpret results, or continue semantic work under it; checkpoint under the frozen tuple and defer the newer control to the next invocation. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead.",
-    "one_semantic_config_per_invocation": true
+    "control_freshness": "At run start obtain the latest note main object SHA using a SHA-only Git-ref lookup such as refs/heads/main or an equivalent response that contains no commit message, diff, file snippet, other-role receipt text, or other semantic payload. Fetch this manifest plus every repository-approved authoritative config blob required by the role at that exact SHA. Before the first substantive semantic read, repeat the SHA-only ref lookup; if any required authoritative control/config revision or blob identity changed, refetch and restart the pre-semantic bootstrap on the newer tuple. The first role-local/public-source semantic read is a hard semantic-freeze barrier: from that point the selected authoritative control/config identities and the exact role-local semantic inputs actually consumed are immutable for the physical invocation. After the barrier, an unrelated main SHA advance is not by itself a semantic-control change or stop condition. A later SHA-only head observation may be used only as a transport step to verify exact blob identity of the already-approved authoritative control/config files for that role; never consume newer-head semantic content. If every frozen authoritative control/config blob identity is unchanged and no own-state CAS or role-local input conflict requires reconstruction, continue semantic work against the frozen tuple. If any frozen authoritative control/config identity changed, cannot be verified with allowed SHA/path/blob-only reads, or an own-state CAS/input conflict requires reconstruction, checkpoint under the frozen tuple and defer newer semantics to the next invocation. Never adopt new control mid-run. If a connector unexpectedly bundles semantic text with a head lookup, quarantine and discard that text before reasoning and use a clean SHA-only ref lookup instead.",
+    "one_semantic_config_per_invocation": true,
+    "postfreeze_head_drift_rule": {
+      "unrelated_main_sha_change_is_stop": false,
+      "authoritative_identity_set": "DESIRED_STATE plus this role's own designated config and any additional repository-approved authoritative control/config blobs that this role is already required to freeze before semantic work.",
+      "continue_when": "Every frozen authoritative control/config blob identity remains unchanged, no newer-head semantic content is consumed, and no own-state CAS or role-local semantic-input conflict requires reconstruction.",
+      "stop_or_defer_when": [
+        "any frozen authoritative control/config blob identity changed",
+        "authoritative identity cannot be verified using allowed SHA/path/blob-only reads",
+        "own-state CAS or role-local semantic-input conflict requires reconstruction"
+      ],
+      "new_head_semantics_policy": "Never consume semantic content from the newer head after the semantic-freeze barrier; later-head visibility is only a transport step for exact authoritative blob-identity verification.",
+      "write_policy": "Role-local writes remain current-blob/CAS/readback guarded. Unrelated main commits alone do not invalidate frozen semantics.",
+      "goal": "Prevent cross-worker receipt churn from starving Phase-1 useful work while preserving one-semantic-config-per-invocation and fail-closed contamination control."
+    }
   },
   "clean_exploration_boundary": {
     "semantic_inputs_allowed": [
@@ -148,9 +161,9 @@
     }
   },
   "migration": {
-    "from_control_revision": 19,
-    "reason": "O_CHAT_PARALLEL control6 added a hard useful-output acceptance gate, but CLEAN evaluation cannot read O_CHAT_PARALLEL and control19 still supplied the earlier duplicate-only checker-v2 method. Revision20 mirrors only the generic sanitized evaluation method and control identity into the role-readable root overlay; all base role, CLEAN isolation, anti-stop, recovery and restoration contracts remain preserved.",
-    "previous_root_blob": "4a3785e54bb4e56b867132fac084fab7db71b518",
+    "from_control_revision": 20,
+    "reason": "Repeated Phase-1 executions across evaluation, multi_agent, scientist_agents, failure_evidence, self_improvement, open_source and downstream verification/comparison roles stopped solely because unrelated note-main commits advanced the repository SHA after semantic freeze. Exact evaluation checks showed DESIRED_STATE and its own role config blobs were byte-identical at the frozen and later heads. Revision21 therefore makes post-freeze freshness identity-based over each role's already-approved authoritative control/config blobs while forbidding newer-head semantic reads and preserving fail-closed behavior on any real or unverifiable control identity change.",
+    "previous_root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
     "clean_role_default_config_revision": 5,
     "clean_role_config_overrides": {
       "self_improvement": 7,
@@ -162,6 +175,6 @@
       "long_horizon": 6
     },
     "downstream_state_control_revision": 29,
-    "rollback": "Restore DESIRED_STATE blob 4a3785e54bb4e56b867132fac084fab7db71b518 only if the synchronized useful-output controls prevent safe role-local checkpointing because of a schema/transport defect. Never weaken CLEAN isolation, duplicate/conflict/authority gates, or enable/disable a scheduler role through rollback."
+    "rollback": "If any revision21 worker consumes newer-head semantic content mid-invocation, misses a real authoritative root/role/downstream config change, crosses the CLEAN boundary, or continues after authoritative identity cannot be verified, increment control again and restore revision20's stricter post-freeze stop semantics. Never roll back by weakening CLEAN isolation, duplicate/conflict/authority gates, changing scheduler enablement, or mutating history."
   }
 }
