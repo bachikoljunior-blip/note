@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T14:06:00+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "a57c8467e7a6f707f0b499c31f2eed11af90cf87",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "semantic_freeze_respected": true
+  },
+  "source_identity": {
+    "active_wave_id": "clean-g1-wave-c29-20260828T120235JST-5128e23b",
+    "active_wave_blob": "713d213d7e1176497fe9bf55933f32d2b53144dc",
+    "selection_snapshot_note_main_sha": "446f2a10c7197cde199d10a4af8f7a0e657736e0",
+    "namespace": "failure_evidence",
+    "source_path": "research_workers_clean_g1/failure_evidence/2026-08-28T110534+0900.md",
+    "source_artifact_blob": "f0117d16e4749574e5633cc7f1a74ac3e440cc5c",
+    "source_locator": "FE-328 and FE-329",
+    "primary_paper": "Atomix: Timely, Transactional Tool Use for Reliable Agentic Workflows, arXiv:2602.14849v2, revised 2026-05-29",
+    "official_repo": "mpi-dsg/atomix@61e411be662bb021634f0e84bc184bf6074905b4",
+    "source_integrity_check": "The failure_evidence checkpoint exactly matches the sealed C29 ACTIVE_WAVE row at the selection snapshot."
+  },
+  "grade": {
+    "overall": "B+",
+    "published_primary_study": "B+",
+    "official_runtime_and_harness_support": "A-",
+    "E4_irreversible_harness_numeric_reconstruction": "A",
+    "E10_annotation_harness_numeric_reconstruction": "A",
+    "real_workload_headline_exact_replay": "C",
+    "raw_paper_result_bundle": "C/not published in repo",
+    "independent_protocol_matched_replication": "C/not found",
+    "distributed_crash_safe_exactly_once_claim": "not claimed by paper"
+  },
+  "published_claims": {
+    "FE328": "At tau-bench full N=114 and per-tool failure probability 0.10, Tx-Full and Checkpoint-Replay have similar reported task success (58.8% vs 53.5%, p approximately 0.50), while the controlled irreversible-effect stress reports Tx-Full 0/500 invalid irreversible leaks versus Checkpoint-Replay 200/500. Under combined stress at failure probability 0.30, reported run-clean is 65% versus 25%.",
+    "FE329": "The paper's annotation negative controls report 0/0 invariant violations/leaks for correctly annotated Tx-Full, 66 invariant violations for too-narrow scope, 17 irreversible leaks for wrong effect class and 35 for missing compensation, with additional scope-alias/frontier controls showing missed conflicts or stalls under bad metadata/progress handling.",
+    "scope": "These are controlled prototype/workload results. They do not establish universal exactly-once delivery, production annotation-error prevalence, or that all checkpoint systems leak effects."
+  },
+  "official_repo_support": {
+    "repo_state": "Public alpha research implementation at exact revision 61e411be662bb021634f0e84bc184bf6074905b4, with runtime source, tests, experiment configs, dispatcher, workload adapters and controlled microbenchmark scripts.",
+    "E4_config": "configs/experiments/b3_irreversible.json routes E4 irreversible_sink to scripts/run_b3_irreversible.py.",
+    "E10_config": "configs/experiments/e10_annotation_errors.json routes E10 annotation_errors to scripts/run_e10_annotation_errors.py.",
+    "dispatcher": "scripts/run_experiment_dispatch.py explicitly dispatches E4/B3 to run_b3_irreversible.py and E10 to run_e10_annotation_errors.py, and has separate routes for real taubench/tau2 workloads.",
+    "generated_output_policy": "README states data/, results/, runs/ and logs/ are intentionally excluded from git. At the audited revision results/ and experiments/ contain only .gitkeep, so paper-run raw outputs are not committed.",
+    "environment": "pyproject.toml and requirements.txt use lower-bound/branch-style dependency specifications rather than an immutable full environment lock; e.g. openai>=1.0.0, anthropic>=0.40.0 and SWE-bench from a Git URL without a pinned commit."
+  },
+  "auditor_numeric_reconstruction": {
+    "checker": "research_audits/reproducibility/checkers/atomix_e4_e10_public_harness_reconstruction_v1.py@b298de718607c5b7ba44ca6c80bf598ef44d5d34",
+    "method": "Independent transcription of the public E4 policy table and E10 seeded simulator; does not import Atomix.",
+    "E4_invalid_leaks_per_500": {
+      "Tx-Full": 0,
+      "Saga-Compensation": 400,
+      "Checkpoint-Replay": 200,
+      "No-Tx": 500,
+      "TCC-Confirm": 0,
+      "Mutex+WAL+Rollback": 0,
+      "Atomix-MisclassifiedIrreversible": 300
+    },
+    "E10_per_200": {
+      "control": {"invariant_violations": 0, "leaks": 0, "wasted_waits": 0},
+      "E10-OB": {"invariant_violations": 0, "leaks": 0, "wasted_waits": 95},
+      "E10-TN": {"invariant_violations": 66, "leaks": 0, "wasted_waits": 0},
+      "E10-WC": {"invariant_violations": 0, "leaks": 17, "wasted_waits": 0},
+      "E10-MC": {"invariant_violations": 0, "leaks": 35, "wasted_waits": 0}
+    }
+  },
+  "critical_scope_corrections": [
+    {
+      "id": "E4_is_policy_coded_controlled_harness",
+      "finding": "run_b3_irreversible.py does use a real append-only sink, but whether an invalid effect is externalized is determined by a hard-coded baseline/abort-source policy table. Tx-Full, Checkpoint-Replay, Saga, TCC and other baseline semantics are not executed end-to-end through separate real orchestrator implementations in this script.",
+      "implication": "0/500 versus 200/500 is exactly reproducible evidence for the controlled mechanism-coded irreversible harness, not a standalone empirical demonstration that every real Checkpoint-Replay implementation leaks 40% or that the full Atomix runtime universally prevents leaks."
+    },
+    {
+      "id": "E10_is_seeded_stylized_simulator",
+      "finding": "Despite the script docstring describing deliberate adapter modifications, run_e10_annotation_errors.py does not import Atomix or modify real adapters. It samples hard-coded conflict/irreversible/tool-failure probabilities with deterministic Python Random seeds and maps categories to outcomes.",
+      "implication": "The exact 66/17/35 counts are fully reproducible, but they are generated by the stylized annotation-error simulator. They support the qualitative failure-open/failure-closed design lesson more strongly than they support measured runtime incidence under real metadata bugs."
+    },
+    {
+      "id": "real_workload_success_and_combined_stress_not_recomputed",
+      "finding": "The public repo includes workload/config/dispatcher support, but generated result directories are intentionally empty in git and the exact historical tau-bench/combined-stress outputs are absent.",
+      "implication": "58.8% versus 53.5%, p approximately 0.50 and 65% versus 25% remain primary-study numbers in this audit; they were not independently recalculated from raw task rows."
+    },
+    {
+      "id": "correct_metadata_is_trusted_boundary",
+      "finding": "The primary paper explicitly conditions irreversible protection on correctly classified/mediated effects, correct scope/key/handler metadata and correct frontier advancement. The misclassification controls are consistent with that boundary.",
+      "implication": "Do not restate Atomix as an unconditional exactly-once or semantic-safety layer. It enforces the metadata/progress contract it is given."
+    },
+    {
+      "id": "crash_safe_exactly_once_not_claimed",
+      "finding": "The paper describes a single-process prototype and explicitly does not claim full distributed crash-safe exactly-once delivery, semantic validation or full distributed deployment; atomic externalization across heterogeneous irreversible endpoints also remains outside the tool-layer guarantee without tool-side support.",
+      "implication": "Zero leaks in controlled tests must not be generalized into a distributed crash-safety theorem."
+    }
+  ],
+  "independent_replication_search": {
+    "status": "not found",
+    "finding": "Fresh searches for the exact arXiv id/title with replication/reproduction and the 200/500 checkpoint-replay result returned the primary paper/secondary summaries rather than a protocol-matched third-party rerun or failed replication. Absence is not a nonexistence claim."
+  },
+  "missing_dependencies_or_config": {
+    "controlled_E4_E10": "The exact public scripts/configs are sufficient to reconstruct the reported controlled counts at the audited repo revision.",
+    "historical_real_workload_runs": "Need exact raw result files/task rows, paper-run configs/seeds/service/model revisions and an immutable dependency/container snapshot. The current repository intentionally excludes generated outputs and uses non-exact dependency bounds."
+  },
+  "o_specific_adaptation": {
+    "status": "not tested",
+    "finding": "No O/O_FEED/O-derived state was read or tested. FE-328/329 may motivate separating effect state from checkpoint state and testing metadata negatives, but no O-specific effect taxonomy, frontier or compensation contract has been reproduced."
+  },
+  "bottom_line": "FE-328/329 survives audit with a narrower and more useful scope. Atomix has strong official implementation and harness support, and the headline controlled leak/annotation counts are exactly reconstructible from the public scripts. But those exact counts come from mechanism-coded/stylized controlled harnesses: E4 hard-codes which baseline/abort pairs externalize an invalid effect, and E10 directly samples hard-coded error probabilities rather than exercising real adapter mutations. The broader real-workload task-success and combined-stress numbers lack committed raw paper outputs and remain primary-study evidence. The robust design lesson is that checkpoint replay alone does not model external-effect settlement, and transactional safety depends on correct effect/scope/frontier metadata; it is not a universal exactly-once guarantee.",
+  "reopen_conditions": [
+    "The authors publish the historical raw tau-bench/combined-stress task rows and exact run environment, enabling headline recomputation.",
+    "A real end-to-end adapter-misannotation fault-injection suite replaces or supplements the E10 stylized simulator.",
+    "A protocol-matched independent replication or failed replication appears.",
+    "The runtime adds and validates durable crash-safe/exactly-once semantics beyond the current stated scope."
+  ],
+  "exact_next_action": "Do not repeat unchanged FE-328/329. Continue to a different exact C29 ACTIVE_WAVE source unless a raw-result, real-misannotation, independent-replication or crash-safety trigger fires."
+}
