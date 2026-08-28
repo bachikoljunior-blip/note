@@ -1,0 +1,173 @@
+{
+  "calibration_derivation": {
+    "alternative_runtime": "median calibration alternative total_runtime_s",
+    "alternative_success_probability": "calibration fraction alternative mean balanced accuracy >= 0.97",
+    "checkpoints_s": [
+      "deadline_s/3",
+      "2*deadline_s/3"
+    ],
+    "conditional_direct_remaining": "median(direct total_runtime_s - checkpoint) among calibration rows whose direct total_runtime_s exceeds checkpoint",
+    "conditional_direct_success_probability": "eligible fraction with direct total_runtime_s <= deadline_s and direct mean balanced accuracy >= 0.97",
+    "deadline_s": "1.15 * max(calibration direct total_runtime_s)",
+    "fixed_cap_s": "0.50 * deadline_s",
+    "freeze_rule": "Persist calibration raw JSONL and derived snapshot, hash both, commit/read back both before measuring any confirmation seed.",
+    "static_p90_cap_s": "min(nearest-rank p90(calibration direct total_runtime_s), deadline_s)",
+    "switch_cost_s": "0.05 * deadline_s",
+    "switch_rule": "alternative utility > 1.10 * direct utility at two consecutive checkpoints AND checkpoint + alternative_runtime + switch_cost <= deadline",
+    "utility": "success_probability / expected_remaining_cost"
+  },
+  "candidate_rule": {
+    "failure_rule": "Report failure as-is; do not retune on seeds 9100..9117.",
+    "forecast_qc": [
+      "abs(confirmation direct success - calibration predicted direct success) <= 0.20",
+      "confirmation direct runtime coverage by calibration direct p90 >= 0.80",
+      "conditional remaining-cost MAE at second checkpoint <= 0.35 * deadline"
+    ],
+    "pass": "all performance and forecast_qc conditions",
+    "performance": [
+      "conditional success_rate >= max(fixed_cap, static_percentile)",
+      "conditional mean_capped_time_s <= min(fixed_cap, static_percentile)"
+    ]
+  },
+  "dataset_and_models": {
+    "alternative": {
+      "params": {
+        "C": 3.0,
+        "cache_size": 400,
+        "gamma": "scale",
+        "kernel": "rbf"
+      },
+      "pipeline": [
+        "StandardScaler",
+        "SVC"
+      ]
+    },
+    "cv": "StratifiedKFold(n_splits=3, shuffle=True, random_state=seed)",
+    "dataset": "sklearn.datasets.load_digits(return_X_y=True)",
+    "direct": {
+      "class": "RandomForestClassifier",
+      "params": {
+        "max_depth": 9,
+        "max_features": "sqrt",
+        "min_samples_leaf": 1,
+        "n_estimators": 140,
+        "n_jobs": 1,
+        "random_state": "seed"
+      }
+    },
+    "metric": "balanced_accuracy",
+    "quality_threshold": 0.97
+  },
+  "environment_required": {
+    "numpy": "2.3.5",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41",
+    "python": "3.13.5",
+    "sklearn": "1.8.0"
+  },
+  "fresh_seeds": {
+    "calibration": [
+      8100,
+      8101,
+      8102,
+      8103,
+      8104,
+      8105,
+      8106,
+      8107,
+      8108,
+      8109,
+      8110,
+      8111
+    ],
+    "confirmation": [
+      9100,
+      9101,
+      9102,
+      9103,
+      9104,
+      9105,
+      9106,
+      9107,
+      9108,
+      9109,
+      9110,
+      9111,
+      9112,
+      9113,
+      9114,
+      9115,
+      9116,
+      9117
+    ]
+  },
+  "frozen_authority": {
+    "desired_state_blob_sha": "e4f6d24c137284d002941ac04254e3dbeca2cfcb",
+    "desired_state_control_revision": 22,
+    "own_latest_blob_sha": "86ee7d456b2cc439ebf3f056a3ead1951cfb0ec8",
+    "own_latest_sequence_at_freeze": 104,
+    "role_config_actual_revision": 3,
+    "role_config_blob_sha": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "semantic_freeze_main_sha": "8c11c50aa491507fc1cec3ffef72887691cd0966"
+  },
+  "legacy_confirmation_quarantine": {
+    "reason": "The sequence-104 precommit depended on exact calibration raw traces and a versioned harness that are absent at the frozen repository SHA.",
+    "rule": "Do not consume or reuse these seeds in this repaired study.",
+    "seeds": [
+      7000,
+      7001,
+      7002,
+      7003,
+      7004,
+      7005,
+      7006,
+      7007,
+      7008,
+      7009,
+      7010,
+      7011,
+      7012,
+      7013,
+      7014,
+      7015,
+      7016,
+      7017
+    ]
+  },
+  "measurement_protocol": {
+    "calibration_first": true,
+    "confirmation_before_simulation": true,
+    "fold_timing": "time.perf_counter around fit+predict for each fold; total runtime is sum of 3 fold runtimes",
+    "no_overwrite": true,
+    "no_retuning_on_confirmation": true,
+    "raw_row_persistence": "canonical sorted-key compact JSONL; append one row per seed; flush+fsync after each row"
+  },
+  "policy_simulation": {
+    "conditional_reforecast": "same using frozen switch_at_s from calibration snapshot; no confirmation-derived threshold changes",
+    "direct_only": "observed direct total runtime and direct quality",
+    "elapsed_censoring_for_mean_p90": "min(policy elapsed, deadline)",
+    "fixed_cap": "if direct total exceeds fixed cap and cap+switch_cost+observed alternative runtime fits deadline, use alternative outcome; otherwise direct",
+    "static_percentile": "same using static p90 cap"
+  },
+  "policy_simulation_started": false,
+  "purpose": "Repair sequence-104 replay-completeness defect with a fully fresh calibration+confirmation study whose executable harness and rules are durable before any model timing measurement.",
+  "replay_artifact": {
+    "commit_sha": "237feceed591c0fe67885da7ceac4b047bf8627a",
+    "path": "research_workers_clean_g1/self_improvement/phase1_optimizer_digits_replay_harness_v1_2026-08-29T0505_JST.py",
+    "sha256_utf8": "6e09c7d35717b2be4d47ce737c6ff725b753d80811b9e8107c9fa5e34671dc9e"
+  },
+  "role": "self_improvement",
+  "schema_version": 1,
+  "sealing_order": [
+    "commit+readback this precommit",
+    "measure calibration 8100..8111",
+    "commit+readback raw calibration",
+    "derive snapshot using committed harness",
+    "commit+readback snapshot and raw/snapshot digest manifest",
+    "measure confirmation 9100..9117",
+    "commit+readback raw confirmation with policy_simulation_started=false",
+    "run exactly one preregistered simulation",
+    "commit+readback derived result",
+    "checkpoint sequence and role-local execution receipt"
+  ],
+  "study_id": "phase1-self-improvement-digits-replay-confirmation-v1-20260829"
+}
