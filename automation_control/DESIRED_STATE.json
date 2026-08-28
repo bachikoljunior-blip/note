@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "control_revision": 21,
-  "updated_at": "2026-08-29T03:49:04+09:00",
-  "purpose": "Sanitized root control manifest. Revision 21 preserves the active-pool Phase-1 CLEAN overlay and replaces an over-conservative post-freeze main-SHA stop with exact authoritative-control identity verification so unrelated concurrent receipt commits cannot starve role-local Phase-1 work.",
+  "control_revision": 22,
+  "updated_at": "2026-08-29T04:30:24+09:00",
+  "purpose": "Sanitized root control manifest. Revision 22 preserves the active-pool Phase-1 CLEAN overlay and control21 identity-based post-freeze continuation, while making exact frozen root/config provenance a fail-closed receipt requirement and targeting evaluation's observed post-freeze drift/provenance defect.",
   "config_resolution": {
     "clean_exploration_role_path_template": "automation_control/roles/{role}.json",
     "non_exploration_config_path": "automation_control/DOWNSTREAM_STATE.json",
@@ -30,6 +30,12 @@
       "new_head_semantics_policy": "Never consume semantic content from the newer head after the semantic-freeze barrier; later-head visibility is only a transport step for exact authoritative blob-identity verification.",
       "write_policy": "Role-local writes remain current-blob/CAS/readback guarded. Unrelated main commits alone do not invalidate frozen semantics.",
       "goal": "Prevent cross-worker receipt churn from starving Phase-1 useful work while preserving one-semantic-config-per-invocation and fail-closed contamination control."
+    },
+    "clean_receipt_provenance_contract": {
+      "required_binding": "Every CLEAN receipt/checkpoint must report the parsed control_revision and Git blob SHA of the exact frozen DESIRED_STATE file plus the parsed config_revision and Git blob SHA of that role's exact frozen role config.",
+      "bootstrap_valid_rule": "Set bootstrap_valid=true only when the reported revision/blob pairs equal the exact frozen files and all required authority identities were verified. Any mismatch, invented future revision, or unverifiable identity requires bootstrap_valid=false and diagnostic-only classification.",
+      "phase1_evidence_rule": "A bootstrap_valid=false or provenance-mismatched run may preserve diagnostics and continuation but cannot count as positive Phase-1/parity acceptance evidence.",
+      "cleanliness_rule": "Provenance verification uses only the role's already-approved root/config authority identities; it does not authorize reading other roles, downstream state, O state, shared ledger, commit messages, diffs or newer-head semantic content."
     }
   },
   "clean_exploration_boundary": {
@@ -53,7 +59,7 @@
       "other-role receipts",
       "commit messages/diffs/file snippets or other semantic payload obtained only while resolving repository head SHA"
     ],
-    "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content; each receipt must identify exactly one frozen semantic control/config tuple for the invocation",
+    "receipt_rule": "write only immutable role-local receipts without reading shared or other-role observability content; each receipt must identify exactly one frozen semantic root/config tuple by actual parsed revisions plus exact Git blob SHAs, must expose bootstrap_valid, and any mismatch/unverifiable identity is diagnostic-only and cannot count as positive Phase-1 evidence",
     "feedback_rule": "own sanitized feedback is mechanical self-local quality control only and cannot convey novelty, relevance, acceptance/rejection, ranking, preferred mechanisms, O knowledge, or other-worker information",
     "own_state_resolution": "Use role-local LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology and minimum predecessor chain. Quarantine accidentally opened stale/cross-role observability content and do not use it semantically.",
     "scope_guard": "never broaden positive or negative evidence beyond tested scope",
@@ -108,10 +114,10 @@
       "evaluation": {
         "task_id": "phase1-clean-evaluation-parity-metrics",
         "objective": "Develop and test generic evaluation criteria for state reconstruction, useful Chat-capable work, durable continuation, duplication/conflict avoidance and precise exclusive-action handoff without O/downstream semantics.",
-        "method": "CHECKER-V2 AGGREGATE-FIRST, DURABLE-PRECOMMIT-BEFORE-EXECUTION. Preserve existing per-record hard findings and derive hard_pass from both per-record findings and every trace-level aggregate hard gate. Before the first checker-v2 execution, author the checker without executing it, durably precommit and exact-readback the checker identity plus three control oracles, then persist and exact-readback the checker artifact. Control A: reuse the unchanged checker-v1 cross-record duplicate committed-effect trace and require failure. Control B: use an unchanged-format trace with at least 20 useful-output opportunities and useful_output_rate below 0.80 while all other hard gates pass, and require failure. Control C: use a matched no-duplicate/no-conflict/no-false-completion trace with at least 20 useful-output opportunities and useful_output_rate at least 0.80, and allow pass only when every hard gate holds. Require exact parse/assert checks for duplicate_effect_rate==0, unsafe_conflict_commit_rate==0, false_completion_rate==0, no protected-authority violation, useful_output_opportunity_count>=20 and useful_output_rate>=0.80 before any worker_pass/root-acceptance use. Persist current phase/root/task-bound role-local code, precommit, controls, results, checkpoint and immutable own receipt with exact readback.",
-        "expected_output": "Checker-v2 executable/inspectable evaluation artifact whose first execution is preceded by durable precommit/readback; unchanged duplicate negative-control failure; >=20-opportunity useful_output_rate<0.80 negative-control failure; matched >=0.80 positive-control pass only when all hard gates hold; explicit aggregate metrics and hard-gate results; exact tested scope, durable continuation and immutable own receipt.",
+        "method": "CHECKER-V2 AGGREGATE-FIRST, DURABLE-PRECOMMIT-BEFORE-EXECUTION. First freeze the exact DESIRED_STATE path/parsed control_revision/blob and exact evaluation config path/parsed config_revision/blob. After the first role-local/public semantic read, unrelated main-SHA drift is not a stop: verify only those two frozen blob identities at the later head using SHA/path/blob-only transport; if unchanged and no own-state conflict exists, record postfreeze_authority_identity_verified=true and continue frozen semantics without reading newer-head semantic bodies. Preserve existing per-record hard findings and derive hard_pass from both per-record findings and every trace-level aggregate hard gate. Before the first checker-v2 execution, author the checker without executing it, durably precommit and exact-readback the checker identity plus three control oracles, then persist and exact-readback the checker artifact. Control A: reuse the unchanged checker-v1 cross-record duplicate committed-effect trace and require failure. Control B: use an unchanged-format trace with at least 20 useful-output opportunities and useful_output_rate below 0.80 while all other hard gates pass, and require failure. Control C: use a matched no-duplicate/no-conflict/no-false-completion trace with at least 20 useful-output opportunities and useful_output_rate at least 0.80, and allow pass only when every hard gate holds. Require exact parse/assert checks for duplicate_effect_rate==0, unsafe_conflict_commit_rate==0, false_completion_rate==0, no protected-authority violation, useful_output_opportunity_count>=20 and useful_output_rate>=0.80 before any worker_pass/root-acceptance use. Persist current phase/root/task-bound role-local code, precommit, controls, results, checkpoint and immutable own receipt with exact root/config revision+blob binding, bootstrap_valid and exact readback.",
+        "expected_output": "Checker-v2 executable/inspectable evaluation artifact whose first execution is preceded by durable precommit/readback; unchanged duplicate negative-control failure; >=20-opportunity useful_output_rate<0.80 negative-control failure; matched >=0.80 positive-control pass only when all hard gates hold; explicit aggregate metrics and hard-gate results; exact frozen root/config provenance with bootstrap_valid; exact tested scope, durable continuation and immutable own receipt.",
         "completion_reassignment": "next unresolved Phase-1 evaluation/verification leaf; never base restoration",
-        "method_switch_reason": "O_CHAT_PARALLEL control6 made useful-output adequacy a hard root gate, but control19 still exposed the earlier duplicate-only checker-v2 assignment to CLEAN evaluation. The 00:59 execution correctly froze control19 and therefore could only continue the stale duplicate-only method; revision20 synchronizes the role-readable assignment without exposing O/downstream semantics."
+        "method_switch_reason": "Revision21 correctly defined identity-based post-freeze continuation, but the first evaluation execution under it still stopped solely on unrelated main-SHA drift before checker-v2 work and its receipt claimed config_revision7 while the repository's exact evaluation config remained revision6. Open-source and multi-agent CLEAN runs on the same root successfully verified unchanged frozen root/config blobs across later-head drift and continued without newer-head semantics, so revision22/config7 applies a targeted evaluation identity/provenance repair rather than a pool-wide semantic change."
       },
       "multi_agent": {
         "task_id": "phase1-clean-multi-agent-concurrency-claims",
@@ -161,20 +167,20 @@
     }
   },
   "migration": {
-    "from_control_revision": 20,
-    "reason": "Repeated Phase-1 executions across evaluation, multi_agent, scientist_agents, failure_evidence, self_improvement, open_source and downstream verification/comparison roles stopped solely because unrelated note-main commits advanced the repository SHA after semantic freeze. Exact evaluation checks showed DESIRED_STATE and its own role config blobs were byte-identical at the frozen and later heads. Revision21 therefore makes post-freeze freshness identity-based over each role's already-approved authoritative control/config blobs while forbidding newer-head semantic reads and preserving fail-closed behavior on any real or unverifiable control identity change.",
-    "previous_root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "from_control_revision": 21,
+    "reason": "The first evaluation run under control21 still terminated solely on unrelated post-semantic-freeze main-SHA advancement instead of verifying the unchanged frozen root/config identities, authored/executed no checker-v2 work, and its receipt self-reported config_revision7 while the exact repository evaluation config was revision6/blob 1cbb89f303e6a61a68f83b888bd6344ca1a49af4. Other CLEAN roles on control21 successfully used exact root/config blob identity verification across later-head drift, proving the mechanism is Chat-executable. Revision22 therefore keeps control21 semantics, adds fail-closed exact CLEAN receipt provenance, and points evaluation to targeted config7.",
+    "previous_root_blob": "87e2d9e19b16d39b495a4a5512d871069d7521ee",
     "clean_role_default_config_revision": 5,
     "clean_role_config_overrides": {
       "self_improvement": 7,
       "open_source": 6,
       "reasoning": 6,
-      "evaluation": 6,
+      "evaluation": 7,
       "multi_agent": 6,
       "cross_field": 6,
       "long_horizon": 6
     },
     "downstream_state_control_revision": 29,
-    "rollback": "If any revision21 worker consumes newer-head semantic content mid-invocation, misses a real authoritative root/role/downstream config change, crosses the CLEAN boundary, or continues after authoritative identity cannot be verified, increment control again and restore revision20's stricter post-freeze stop semantics. Never roll back by weakening CLEAN isolation, duplicate/conflict/authority gates, changing scheduler enablement, or mutating history."
+    "rollback": "If revision22/config7 consumes newer-head semantic content mid-invocation, misses a real authoritative root/evaluation-config change, falsely marks mismatched provenance bootstrap_valid=true, crosses the CLEAN boundary, or blocks authorized role-local checkpointing, increment control again and restore control21 plus evaluation config6 behavior as the diagnostic baseline. Never roll back by weakening CLEAN isolation, checker-v2 duplicate/conflict/useful-output/authority gates, changing scheduler enablement, or mutating history."
   }
 }
