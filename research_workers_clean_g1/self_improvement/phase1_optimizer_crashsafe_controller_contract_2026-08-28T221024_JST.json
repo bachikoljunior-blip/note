@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "frozen_control": {
+    "note_main_sha": "6d644e7795db8ae4e681c2a801423074202139a2",
+    "root_control_revision": 16,
+    "role_config_revision": 7
+  },
+  "executed_reference": {
+    "local_source": "/tmp/phase1_optimizer_controller_reference.py",
+    "source_sha256": "0a2ea85b84101b8f2619a150082c919199463df54ef123499dc8ee88a8c5c2dd",
+    "local_report": "/tmp/phase1_optimizer_controller_sigkill_report.json",
+    "report_sha256": "43bb4c3931d5b11fd8d9de259c16669ff0fb3585088064ee01f6b7976a9f9bc8",
+    "provider_model": "separate SQLite provider simulator with stable evaluation IDs, same-key idempotency, and reconcile-by-evaluation-ID",
+    "controller_model": "SQLite WAL with synchronous=FULL for attempt, evaluation intent/outcome, forecast snapshot, switch decision, and incumbent history"
+  },
+  "ordering_contract": [
+    "Persist stable attempt identity and baseline restore pointer before evaluation work.",
+    "Persist evaluation intent before provider execution.",
+    "Persist completed outcome before allowing it to update the best-safe incumbent.",
+    "Persist forecast snapshot before it can authorize a switch.",
+    "Persist switch decision before alternative evaluation dispatch.",
+    "On restart, if local outcome is absent for an existing intent, reconcile the provider by the same stable evaluation identity before any replay.",
+    "Only a completed immutable evaluation outcome may advance the incumbent restore pointer."
+  ],
+  "hard_exit_injection_points": [
+    "before_reforecast",
+    "after_reforecast_persisted",
+    "before_alternative_dispatch",
+    "after_alternative_provider_effect_before_local_outcome"
+  ],
+  "observed_result": {
+    "all_four_cases_passed": true,
+    "safe_incumbent_immediately_after_each_crash": "direct-v1 / sha256:direct / artifact://direct-v1",
+    "final_incumbent_after_fresh_resume": "transversal-v1 / sha256:transversal / artifact://transversal-v1",
+    "provider_effect_rows_final": 2,
+    "controller_outcome_rows_final": 2,
+    "provider_execute_calls_per_stable_eval_id": 1,
+    "forecast_rows_final": 1,
+    "distinct_forecast_digests_final": 1,
+    "switch_rows_final": 1,
+    "final_switch_state": "APPLIED",
+    "final_attempt_state": "COMPLETE",
+    "post_provider_effect_crash_recovery": "alternative effect was recovered by reconcile; no second execute call occurred"
+  },
+  "bounded_inference": "For the tested local durable-controller plus idempotent/reconcilable-provider model, persisting forecast/switch authority before alternative dispatch and reconciling by stable evaluation identity prevents duplicate completed evaluation effects across these four hard-exit boundaries while preserving a usable safe incumbent restore pointer.",
+  "scope_limit": "This does not prove exactly-once behavior for arbitrary remote providers, filesystems, network partitions, or providers without durable idempotency/reconciliation. It also does not validate the statistical quality of the forecast itself."
+}
