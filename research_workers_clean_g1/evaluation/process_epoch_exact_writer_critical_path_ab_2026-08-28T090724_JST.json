@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:07:24+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "exact_sources_executed": {
+    "reserved_score_runtime_compliance_provenance_2026-08-28.py": "f9a3b7a120c36fe3ff37c8fe7167d1c4e66e8d6f",
+    "reserved_score_runtime_compliance_2026-08-28.py": "3e58813f34079e7f92eb0728bd7f9c27810d5418",
+    "durable_attempt_reservation_ledger_2026-08-28.py": "f51cc37e5897d8dc0f395da95c1f6dd1c12da791",
+    "stable_sidecar_journal_io_2026_08_28.py": "a7fc9e82ccb636e0aaa55bf1793a28dac8ac58fc"
+  },
+  "critical_path_results": {
+    "default_path": {
+      "result": "AttemptReservationError: launch permit is invalid for this process epoch",
+      "scorer_calls": 0,
+      "durable_reservation_ledger_bytes": 1523
+    },
+    "process_stable_injection_equivalent": {
+      "result": "scored",
+      "scorer_calls": 1,
+      "durable_reservation_ledger_bytes": 1523
+    },
+    "fresh_process_epoch": {
+      "old_permit_result": "AttemptReservationError: launch permit is invalid for this process epoch",
+      "recovery_disposition": "fail_closed_unresolved_no_relaunch"
+    },
+    "stable_sidecar_lock_files_created": true
+  },
+  "interpretation": "The process-epoch defect and the core repair now reproduce while the reservation append uses the exact stable-sidecar writer implementation. The default path durably reserves once, then rejects its own permit before scorer execution because SCORE reloads a fresh attempt module. Reusing the exact attempt-module instance across RESERVE and SCORE permits exactly one scorer call. A fresh module epoch rejects the old permit and recovery remains fail-closed/no-relaunch.",
+  "scope_limitations": [
+    "Gate, score-wrapper and pipeline semantics in this critical-path harness remain deterministic stubs; exact top/base/attempt/writer bytes are executed. This is not yet the complete exact-sibling ProcessStableRuntimeContext lifecycle.",
+    "The writer validation here covers a clean durable append path, not a new crash campaign; stable-sidecar crash/race behavior was established by earlier role-local tests.",
+    "No claim is made for multi-host/distributed fencing."
+  ],
+  "next_required_checks": [
+    "Materialize the remaining exact siblings and execute ProcessStableRuntimeContext.load() with no stubs.",
+    "Run real ADMIT -> RESERVE -> SCORE using the exact compliance gate, reporter, journal and pipeline; require exactly one scorer call.",
+    "Instantiate a second fresh ProcessStableRuntimeContext and verify old-permit rejection plus no-relaunch recovery against the same durable ledger.",
+    "Resume two-slot crash injection around SLOT/COMMIT/CLOSE once the no-stub path passes."
+  ]
+}
