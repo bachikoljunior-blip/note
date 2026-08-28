@@ -4,8 +4,8 @@
   "control_revision": 13,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1308_EVENT_LOCK_MIN_VERSION_COMMIT_BOUNDARY.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1206_PLANNER_EVIDENCE_LOCK_CLASSIFICATION.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1405_EVENT_AUTHORITY_BOOTSTRAP_ATOMICITY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1308_EVENT_LOCK_MIN_VERSION_COMMIT_BOUNDARY.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -19,25 +19,26 @@
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
       "minimum_version_source_checked": "v3.0.0",
-      "source_scope": "cross-version low-level file-handle contract, AlreadyLocked/permanent-failure retry semantics, high-level Lock behavior drift, and Windows exclusive-lock portability"
+      "latest_release_checked": "v4.3.0",
+      "source_scope": "cross-version Windows backend/API contract, low-level exclusive lock semantics, lower-bound real-file-handle requirement, and current portability documentation"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "First pin an event-specific cross-platform exclusive lock using a real file object and low-level Portalocker calls: retry indefinitely only on AlreadyLocked, propagate permanent errors, and preserve post-commit success across unlock failure. Add deterministic contention/permanent-error/real-handle/post-commit-release regressions, then a spawned-process portable test and explicit Portalocker-3.0.0 lower-bound coverage strategy. Next finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN without assuming a global SHA-only delivery-id format, then wire the same stable-generation primitive into iter_call_events and Mission View. Continue candidate008 durability and candidate005 transition_id provenance separately.",
+  "exact_continuation": "First implement/source-map one event-specific authority wrapper that preserves the current 0600 events.lock creation mode via os.open plus a real file object, retries only AlreadyLocked, propagates permanent acquire errors, and keeps a successful canonical append successful across unlock failure. Add a spawned-process portable test and explicit Windows portalocker==3.0.0 coverage. Under the same authority add candidate011 bytewise isolation for an unterminated current JSONL tail. Next cross-platformize Mission View authority and enforce events.lock -> mission-view.lock for cold bootstrap/projection without nested event-lock acquisition; add the deterministic stale-bootstrap overwrite regression. Then finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN and move iter_call_events/Mission View reconciliation to the stable-generation primitive. Continue candidate008 durability and candidate005 transition_id provenance separately.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_009_real_handle_requirement": "Portalocker 3.0.0 Windows low-level lock calls tell/seek/fileno on the supplied object, so a raw integer fd is not a safe contract across Argus's declared portalocker>=3 range; event authority should open events.lock as a real file object",
-    "candidate_009_high_level_lock_rejected": "Portalocker 3.0.0 high-level Lock retries all LockException and timeout=None is finite default, while current Portalocker retries only AlreadyLocked; canonical event semantics must not depend on resolved Portalocker version",
-    "candidate_009_low_level_contract": "Use low-level portalocker.lock(real_handle, LOCK_EX|LOCK_NB); retry only AlreadyLocked; propagate permanent LockException/other backend errors; writer contention can wait indefinitely",
-    "candidate_009_commit_boundary": "After canonical append succeeds, unlock failure must not turn the persistence acknowledgement false; best-effort unlock plus guaranteed handle close avoids retrying an already-landed event",
-    "candidate_009_core_helper_scope": "Do not generalize core.exclusive_file_lock first: it catches all LockException and some callers such as daemon command execution explicitly interpret TimeoutError as acquired=false, so permanent-error classification is a broader compatibility change",
-    "candidate_009_portable_ci_gap": "Current macOS/Windows portable CI installs -e '.[qr]' and therefore tests a current resolver result, not the declared minimum Portalocker 3.0.0; latest-Windows CI could miss raw-int lower-bound incompatibility",
-    "candidate_010_id_scope": "write_planner_verdict_outbox preserves a caller-provided delivery_id, so the evidence helper should byte-filter the exact UTF-8 id rather than globally assuming every id is lowercase SHA-256 hex unless production validation separately proves that invariant",
-    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation",
-    "candidate_007_status": "Mission View reconciliation should consume the same stable-generation primitive and preserve events.lock -> mission-view.lock ordering plus legacy-baseline migration",
-    "candidate_008_status": "unchanged separate power-loss durability hypothesis; Mission View fsyncs its temp file but not the parent directory, and canonical event append still lacks explicit fsync ordering; no incident reproduced",
+    "candidate_009_mode_preservation": "A plain Path.open('a+b') would weaken the current explicit 0600 creation semantics for events.lock. Preserve mode with os.open(O_CREAT|O_RDWR|O_BINARY-if-present, 0600), then wrap that fd as a real file object for Portalocker 3.0.0 compatibility.",
+    "candidate_009_version_span": "Argus declares portalocker>=3. Portalocker 3.0.0 Windows uses pywin32/LockFileEx and requires a real IO object; Portalocker 4.0+ switched default exclusive Windows locking to msvcrt without pywin32. Current-resolver Windows CI therefore does not prove lower-bound compatibility.",
+    "candidate_009_ci_requirement": "Add explicit Windows portalocker==3.0.0 coverage in addition to the existing macOS/Windows portable matrix, which installs -e '.[qr]' and resolves a current dependency.",
+    "candidate_007_windows_bootstrap_race": "Mission View _locked is fcntl-only cross-process; on Windows it is process-local. After event writer locking is fixed, a concurrent cold snapshot can still overwrite a newer projected event with an older bootstrapped=true view. Bootstrap/reconciliation must share event authority and use events.lock -> mission-view.lock ordering.",
+    "candidate_007_no_nested_event_lock": "Do not make update_mission_view_event blindly reacquire events.lock when JsonlEventSink already holds it. Separate-open flock calls can conflict even within one POSIX process; writer projection should use an internal authority-held path.",
+    "candidate_011_partial_tail": "Current canonical append does not isolate an unterminated prior JSONL tail. A crash-truncated partial record can concatenate with the next complete JSON object and make the new event unreadable too. Under event authority, after rotation, append one delimiter newline when a nonempty current file does not end in newline; preserve partial bytes for forensics rather than truncating them.",
+    "candidate_011_scope": "Source-shaped deterministic simulation reproduced concatenated invalid JSON; no production crash/power-loss incident is claimed. This is process-crash record-boundary containment, separate from candidate008 durability.",
+    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation.",
+    "candidate_010_id_scope": "Planner outbox preserves caller-provided delivery_id, so evidence matching must stay exact-string/UTF-8 based unless a separate production invariant proves SHA-only IDs.",
+    "candidate_008_status": "unchanged separate power-loss durability hypothesis; canonical event append lacks explicit fsync ordering and Mission View lacks parent-directory fsync; no incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA 0dd97c62678923281362091099cbee26402dd4d0 control13/config6; later note head 4fd657520f1db4474d77642efb5286129dcfe42a was observed only for write coordination and not adopted",
+    "control_freeze": "semantic work froze on note SHA ced3c20fcf614bae9e36535a40560a55d496222b control13/config6; later note head afc22197727fa16561a61bed4655f77933fdc7f7 was observed only for write coordination and not adopted",
     "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation enforced root13 plus role config6 local read-only discovery/write boundary and mutated only authorized open_source state/receipt destinations."
   },
   "independence": {
