@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "status": "active",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "control": {
+    "control_revision": 22,
+    "config_revision": 6,
+    "enabled_desired": true,
+    "frozen_main_head": "582fc9a791ea9ba7a99a2f5a1f683e74b45c56a3",
+    "desired_state_blob": "e4f6d24c137284d002941ac04254e3dbeca2cfcb",
+    "role_config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "semantic_boundary": "own role state + public sources + own sanitized feedback only",
+    "excluded_semantics": [
+      "O",
+      "other-worker state",
+      "downstream/shared state",
+      "legacy packet semantics"
+    ]
+  },
+  "major_reset": {
+    "from_latest_blob": "adbada7407a9ec29842a4fefef77f08094e5b458",
+    "reason": "own LATEST provenance/config revision did not match the frozen authoritative control/config tuple",
+    "prior_packet_semantics_imported": false
+  },
+  "public_source_pins": {
+    "openhands_software_agent_sdk": {
+      "repository": "OpenHands/software-agent-sdk",
+      "latest_release_observed": "v1.44.1",
+      "published_at": "2026-08-28T16:10:48Z",
+      "target_commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a"
+    },
+    "model_context_protocol": {
+      "protocol_spec_observed": "2026-07-28",
+      "typescript_sdk_source_commit_inspected": "70de0c8b569b0d664a56b90be2f141d1d1645880"
+    },
+    "langgraph": {
+      "repository": "langchain-ai/langgraph",
+      "latest_github_release_observed": "sdk==0.4.4",
+      "published_at": "2026-08-27T21:25:36Z",
+      "target_commit": "d5f4b2aa960940effc8430165ab3604038e817af",
+      "scope_note": "package/monorepo release; not treated as whole-project semantic-version authority"
+    }
+  },
+  "findings": [
+    {
+      "id": "openhands-generation-fenced-writes",
+      "verdict": "PROVED",
+      "scope": "Agent Server on the supported local-filesystem coordination model",
+      "evidence": "ConversationLease stores owner_instance_id plus monotonically increasing generation; takeover increments generation; renew/guarded_write require owner+generation; EventService installs the lease-backed write guard into persistent conversation state/event writes.",
+      "boundary": "Do not generalize to NFS/network filesystems. EventLog explicitly warns LocalFileStore flock coordination is unreliable there."
+    },
+    {
+      "id": "openhands-per-file-not-cross-file-atomic",
+      "verdict": "PARTIAL",
+      "evidence": "LocalFileStore writes are per-file atomic replacements. ConversationState.append_event persists the event first, then assigns leaf_event_id, whose public-field autosave persists base_state.json separately.",
+      "boundary": "Event file plus base_state HEAD are not one atomic transaction."
+    },
+    {
+      "id": "openhands-stale-head-crash-window",
+      "verdict": "PARTIAL",
+      "evidence": "At the exact v1.44.1 target, append_event calls EventLog.append before leaf_event_id autosave. Resume deserializes persisted base_state, creates EventLog, and rebuilds the active view from path_to_root(_resolve_active_leaf()). _resolve_active_leaf returns a persisted non-null leaf_event_id directly. Therefore a crash/failure after event-file commit but before HEAD autosave can leave that just-written event outside the resumed active branch when the old leaf was non-null.",
+      "caution": "This is a code-level recoverability gap, not a claim of observed user data corruption. The source comment saying HEAD is recoverable from the just-appended event is not, by itself, evidence that this non-null stale-HEAD case is reconciled."
+    },
+    {
+      "id": "mcp-discovery-cache-envelope",
+      "verdict": "PROVED",
+      "evidence": "Modern MCP discovery exposes supported versions/capabilities plus TTL/cache scope; client behavior is protocol-version sensitive.",
+      "safe_rule": "Cache capability knowledge only under negotiated protocol + server identity when available + unexpired TTL + matching cache/authorization scope. Otherwise REVALIDATE."
+    },
+    {
+      "id": "mcp-tool-annotations-safety-boundary",
+      "verdict": "UNPROVEN_AS_SAFETY_GATE",
+      "evidence": "readOnly/destructive/idempotent/openWorld annotations are descriptive hints and are untrusted unless the server is trusted.",
+      "safe_rule": "Never bypass confirmation, authorization, sandboxing, or effect verification solely from tool annotations."
+    },
+    {
+      "id": "mcp-tasks-durable-continuation",
+      "verdict": "PARTIAL",
+      "evidence": "When the tasks extension is negotiated and the server durably creates the task before returning its handle, persisting taskId allows reconnect plus tasks/get recovery.",
+      "boundary": "A cancellation acknowledgement is cooperative intent, not proof the task stopped. Treat terminal task status/result as stronger completion evidence."
+    },
+    {
+      "id": "langgraph-replay-not-exactly-once-effect-authority",
+      "verdict": "UNPROVEN_WITHOUT_EFFECT_FENCE",
+      "evidence": "Checkpoint/replay durability does not itself make external side effects exactly once; provider/application idempotency keys, CAS/preconditions, or exact effect readback remain required.",
+      "external_issue_scope": "Issues #8234 and #8702 were used only as user-reported counterexample/risk evidence, not as maintainer-confirmed current defects."
+    }
+  ],
+  "classifier": {
+    "path": "research_workers_clean_g1/open_source/CHAT_CAPABILITY_LATTICE_20260829_0700_R6.py",
+    "creation_commit": "e9d380531eff9cd1cbe7fa72ce18452edc817c6e",
+    "blob_sha": "c44530eddf4ee9fedb15ca063915c39f2fc53dfe",
+    "self_test": "PASS 13/13"
+  },
+  "counterexamples": [
+    "A generation lease proved on local filesystem does not prove safe distributed coordination on NFS/network storage.",
+    "Atomic replacement of each file does not imply atomicity across event file + base_state snapshot.",
+    "A persisted non-null stale HEAD can exclude a later event file from the active branch after resume; legacy fallback only applies when leaf_event_id is null.",
+    "MCP capability discovery older than ttlMs or from the wrong cacheScope is stale evidence, not permanent capability authority.",
+    "A tool annotation that says readOnly/destructive/idempotent is not an enforcement mechanism.",
+    "A durable task handle proves resumability only within the server's retention/terminal-result semantics; cancel ACK is not stop proof.",
+    "Workflow/checkpoint replay without idempotency/CAS can repeat an external effect after ambiguous completion."
+  ],
+  "post_freeze_validation": {
+    "observed_heads_after_freeze": [
+      "d3f2f6778b65feda980957cd1936132b4c29c7ef",
+      "12309ba089256cdf3a64c91de59e0a5cc1cffaf1",
+      "9e0d42f6e53643205d96f950489dca6219863fc9"
+    ],
+    "latest_metadata_head_checked_before_checkpoint": "9e0d42f6e53643205d96f950489dca6219863fc9",
+    "desired_state_blob_unchanged": true,
+    "role_config_blob_unchanged": true,
+    "new_control_semantics_adopted_after_freeze": false
+  },
+  "frontier": [
+    "Turn the OpenHands stale non-null leaf_event_id crash window into a minimal exact-release regression fixture and check whether any higher-level Agent Server startup path repairs it before user-visible resume.",
+    "Pin MCP server/discover peer-identity/cacheScope/ttl downgrade fixtures and trace task-retention expiry plus cancellation-to-terminal semantics.",
+    "Find a second open-source agent/runtime that combines a durable resumable handle with generation/fencing or provider-level effect idempotency, and compare its crash/retry boundary with OpenHands.",
+    "Build a mutation matrix for ordinary connected Chat surfaces: precondition -> effect -> exact readback -> ambiguous-response recovery, separating advertised capability from executable mutation authority."
+  ],
+  "exact_continuation": "Fresh bootstrap. If DESIRED_STATE control_revision=22, open_source config_revision=6, enabled_desired=true, and assignment phase1-clean-open-source-chat-capability-patterns remain authoritative, freeze root/config blobs, then read only this role-local checkpoint plus public sources/own sanitized feedback. First build an exact-release OpenHands crash fixture for event append committed + base_state leaf_event_id stale, and inspect higher-level resume/startup for reconciliation. Then continue MCP discovery/task expiry fixtures and a second runtime comparison. Do not import stale config-7 authorization-governance packet semantics.",
+  "mutation_scope": {
+    "desired_state_edited": false,
+    "source_repositories_mutated": false,
+    "other_worker_or_downstream_state_mutated": false,
+    "shared_aggregate_ledger_mutated": false
+  }
+}
