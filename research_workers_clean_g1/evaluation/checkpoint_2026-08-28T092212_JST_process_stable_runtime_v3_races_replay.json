@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:22:12+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T091845_JST_process_stable_runtime_v2_exact_lifecycle.json",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/blob_pinned_process_runtime_context_v3_2026-08-28.py",
+      "result": "V3 retains provenance-aware next-ADMIT replay and restores ordinary prepare_commit API parity."
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/process_stable_runtime_v3_race_and_replay_validation_2026-08-28T092131_JST.json",
+      "result": "Ordinary COMMIT path, six-process duplicate ADMIT/RESERVE races, late SLOT/deadline CLOSE orderings, and deterministic-attempt replay were executed."
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/deterministic_replay_authorization_gap_2026-08-28T092212_JST.json",
+      "result": "Current attempt ledger allows deterministic replay from a caller-supplied retry policy without requiring a pre-score determinism certificate; an outcome-adaptive replay counterexample raises a fair Bernoulli success probability from 0.5 to 0.75."
+    }
+  ],
+  "validated_contracts": [
+    "V3 ordinary non-crash COMMIT path: one scorer call, bound SLOT digest equals COMMIT slot_event_digest, runtime-provenance audit score equals the generated score, clean replay.",
+    "Six simultaneous independent processes racing the same ADMIT produced exactly one durable winner and five StableLockCASMismatch losers.",
+    "Six simultaneous independent processes racing the same slot RESERVE produced exactly one durable winner, five CAS losers, and exactly one authorized scorer call. A fresh context reconciled the winner's durable SLOT to COMMIT and CLOSE without rescore.",
+    "When a deadline CLOSE frame and late SLOT frame are prepared from the same durable prefix, whichever append wins CAS determines the single scientific history: CLOSE-first fail-closes the missing slot; SLOT-first invalidates stale CLOSE and requires recovery COMMIT before compliant CLOSE.",
+    "Explicit deterministic-attempt replay can reissue a fresh-epoch permit for the same attempt_id and preserve score only when the scorer is actually deterministic in that attempt identity."
+  ],
+  "new_gap": {
+    "name": "deterministic_replay_not_bound_to_determinism_certificate",
+    "status": "nondefault authorization gap",
+    "reason": "DETERMINISTIC_REPLAY is accepted as a retry_policy string and is not cryptographically or provenance-bound to a runtime/scorer determinism certificate. Same attempt_id alone cannot guarantee same score.",
+    "existence_bias": "With a stochastic fair Bernoulli scorer, if the caller persists successes but drops failures before SLOT and replays once, accepted success rises from 0.5 to 0.75; with up to k attempts the construction gives 1-2^-k.",
+    "safe_default": "FAIL_CLOSED remains safe because it never authorizes a new stochastic launch after recovery."
+  },
+  "measurement_validity_rules": [
+    "For multi-process races, scorer invocation count is a first-class scientific metric. One durable reservation is insufficient if losing processes can already execute stochastic scoring.",
+    "Whole-prefix CAS under the stable sidecar lock converts duplicate ADMIT/RESERVE contenders into one durable winner before any permit exists for losers in the tested flow.",
+    "Process-local MAC affinity is both a safety property and an architecture constraint: the process that receives a FAIL_CLOSED permit must perform first score launch itself.",
+    "DETERMINISTIC_REPLAY must be separately authorized by a pre-score, runtime-fingerprint-specific determinism contract. Without it, retry/replay can change the estimand or create choose-among-retries bias.",
+    "Deadline races may affect resolution but may not be post-hoc selected; durable prefix order plus CAS is the authority."
+  ],
+  "scope_limitations": [
+    "Single-host cooperative POSIX only; no NFS/object-store/multi-host guarantee.",
+    "Six-process race is a concrete stress test, not an exhaustive scheduler-state proof.",
+    "Deterministic replay was positively tested with a hash-based deterministic scalar scorer; production LLM runtime determinism remains a separate empirical/certification problem.",
+    "The current V3 context is research code; no deployment/publication claim is made."
+  ],
+  "frontier": [
+    "Design a forward-only deterministic-replay authorization contract that is fixed before scoring and binds runtime fingerprint, scorer/decoder configuration, protected equality level, attempt-id version, certification evidence and invalidation conditions. Keep FAIL_CLOSED unchanged for uncertified paths.",
+    "Integrate that authorization by versioning the reserved-score runtime binding rather than silently changing the historical attempt ledger; verify historical reservations are not reinterpreted.",
+    "Stress deterministic replay with actual repeated inference traces under a fixed runtime fingerprint, measuring raw/token/score/sign equivalence separately and refusing replay authorization if the protected statistic is not deterministic.",
+    "Expand duplicate ADMIT/RESERVE races across more process counts and random stagger schedules, and add forced process death immediately after reservation ACK, after score return and after bound SLOT fsync.",
+    "Only if cross-process scoring is needed, design an explicit handoff protocol; do not weaken process-epoch MAC invalidation merely to make permits transferable."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Implement a role-local forward-only deterministic-replay authorization facade over the exact attempt ledger. Require a pre-score replay contract for DETERMINISTIC_REPLAY, bind its digest into the RESERVE event, require exact match on fresh-epoch permit reissue, and leave FAIL_CLOSED wire behavior unchanged. Then run positive deterministic and adversarial stochastic replay tests plus historical-reservation compatibility checks."
+}
