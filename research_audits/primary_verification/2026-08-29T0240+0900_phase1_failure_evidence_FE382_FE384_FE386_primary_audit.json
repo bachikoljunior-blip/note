@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "h2": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_config_revision": 6,
+    "enabled_desired": true,
+    "semantic_freeze_sha": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843"
+  },
+  "evaluation_checker_v2_probe": {
+    "path": "research_workers_clean_g1/evaluation/LATEST.json",
+    "observed_control_revision": 19,
+    "observed_config_revision": 6,
+    "current_root20_checker_v2_present": false,
+    "verdict": "ACCEPTANCE_INELIGIBLE_FOR_ROOT20_CHECKER_V2",
+    "reason": "root20 changed the evaluation method to require durable precommit plus duplicate, low-usefulness, and matched-positive controls; the latest durable evaluation checkpoint remains control19 and reports checker_v2_authored_this_run=false and checker_v2_executed_this_run=false. Assignment equivalence cannot rescue a role-specific method change."
+  },
+  "source_worker_artifact": {
+    "path": "research_workers_clean_g1/failure_evidence/2026-08-29T020139+0900.md",
+    "latest_pointer_blob": "5b0cc7c2012cef88ac9a2fd21d307983b1fbdf14",
+    "worker_control_revision": 20,
+    "worker_config_revision": 5
+  },
+  "findings": [
+    {
+      "id": "FE-382",
+      "verdict": "SUPPORTED_PRIMARY_CLOSED_AND_FIXED",
+      "claim": "OpenAI Agents Python streaming/websocket handling could treat response.failed or response.incomplete terminals carrying output as successful final responses.",
+      "primary_evidence": [
+        "openai/openai-agents-python issue #3106: reporter reproduction on main commit 3854c124cb8e3e51fb660f5714405ee39ee86c5e shows a failed streamed response exposing partial output as final_output",
+        "openai/openai-agents-python PR #3107 merged 2026-05-04, merge commit 9b57f057b43d85ce695b379a7a433deb02cd1699, explicitly rejects failed/incomplete terminal payloads and adds regression tests"
+      ],
+      "scope": "Exact to the affected OpenAI Agents Python streamed runner / Responses model websocket paths represented by issue #3106 and merged fix #3107. This is historical fixed-bug evidence, not evidence that current releases retain the defect and not a universal agent-SDK claim."
+    },
+    {
+      "id": "FE-384",
+      "verdict": "SUPPORTED_PRIMARY_WITH_STREAMED_LOCAL_SESSION_SCOPE",
+      "claim": "A retry after local-session input was durably persisted could rewind/delete that input and leave the successful assistant answer without the user turn.",
+      "primary_evidence": [
+        "openai/openai-agents-python issue #3852 gives a self-contained SQLiteSession reproduction on 0.18.1: no retry -> ['user','assistant']; one retry -> ['assistant']",
+        "openai/openai-agents-python PR #3857 merged 2026-07-16, merge commit 5313a829968f18e37508b0016ec45ddde2cc8445, states streamed retries no longer rewind committed local-session input and adds regression coverage"
+      ],
+      "scope_correction": "PR #3857 explicitly says non-streaming retry behavior remains unchanged. Therefore the verified fix and failure witness are for the streamed local Session path; do not generalize the repair to non-streaming or server-managed conversation paths from this evidence alone."
+    },
+    {
+      "id": "FE-386",
+      "verdict": "SUPPORTED_PRIMARY_WITH_EXACT_VERSION_AND_IDENTITY_SCOPE",
+      "claim": "Celery broker redelivery of the same logical Airflow task while the original worker is still running can turn a duplicate start conflict into an authoritative failure unless the already-running identity/state is handled specially.",
+      "primary_evidence": [
+        "apache/airflow issue #58441 reports Airflow 3.1.1 and 3.1.3: redelivery of the same task hits an invalid-state conflict while previous_state=running and the scheduler can mark the still-running task failed",
+        "apache/airflow PR #60855 merged 2026-03-25, merge commit f5ff9671ec81f9d259980a733766fef4c78ba91c, adds TaskAlreadyRunningError only for 409 invalid_state with previous_state=running; tests preserve generic errors for other prior states; PR text reports manual Breeze validation where the original worker continued and the redelivery no longer marked failure",
+        "apache/airflow PR #64052 merged 2026-03-26, merge commit 95fc11ed217b51e5f256cc0a4d8a389784aec81e, catches TaskAlreadyRunningError and raises Celery Ignore() so the duplicate delivery is not recorded as FAILURE; its code gates this handling on AIRFLOW_V_3_1_9_PLUS"
+      ],
+      "scope_correction": "The evidence supports an identity-and-current-state-specific duplicate-start exception, not a rule to ignore arbitrary duplicate deliveries. The issue directly reports 3.1.1/3.1.3, while the provider-side fix is version-gated for Airflow >=3.1.9 and the core fix is milestone 3.2.0; do not summarize this as a verified all-3.1.x behavior/fix matrix without separate release/backport evidence."
+    }
+  ],
+  "overall_verdict": "SUPPORTED_WITH_MATERIAL_SCOPE_CORRECTIONS",
+  "phase1_implication": "Three concrete historical failure classes are primary-source supported: false-success terminalization, retry deletion of already-committed run-owned input, and broker-redelivery false failure of still-running work. They support fail-closed terminal-status checks, run-owned durable-input semantics, and stable task identity plus authoritative current-state classification. They do not by themselves prove a generic exactly-once or global parity mechanism.",
+  "conflict_duplication_check": {
+    "exploration_worker_writes": 0,
+    "exploration_feedback_writes": 0,
+    "desired_state_edits": 0,
+    "primary_o_mutations": 0,
+    "shared_aggregate_ledger_writes": 0,
+    "reason_shared_ledger_not_written": "immutable role-local audit plus role-local receipt are the safe write surfaces for this downstream audit; no multi-writer aggregate replacement was needed"
+  },
+  "exact_next_verification": "Fresh bootstrap. First read evaluation/LATEST once; if a root20/config6 checker-v2 artifact exists, verify durable precommit/readback occurred before first execution and independently recompute Control A duplicate-fail, Control B >=20 opportunities with useful_output_rate<0.80 fail, and matched Control C >=0.80 pass only with every hard gate. If checker-v2 is still absent, verify failure_evidence FE-389 against LangGraph maintainer issue #6208, merged PR #6158, and changed tests for partial multi-interrupt resume without premature node re-execution.",
+  "termination": "selected Phase-1 source-verification leaf completed; checkpoint persisted under frozen tuple; recurring Phase-1 objective remains nonterminal"
+}
