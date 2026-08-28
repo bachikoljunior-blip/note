@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "audited_at": "2026-08-28T12:47:40+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "e80265321f6d945f9e2b0a98b91cb79c095c3f51",
+    "root_control_revision": 13,
+    "root_control_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "downstream_control_revision": 24,
+    "downstream_state_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 5
+  },
+  "wave": {
+    "wave_id": "clean-g1-wave-c29-20260828T120235JST-5128e23b",
+    "source_set_digest": "5128e23baea2dc10f1bf1c3cac76e4df1b7b368b26a89e251efb19e0a01547b4"
+  },
+  "source_candidate": {
+    "namespace": "open_source",
+    "source_path": "research_workers_clean_g1/open_source/RUN_20260828_1106_EVENT_LOCK_PORTALOCKER_TRI_STATE.md",
+    "source_blob": "ae967ab26467f26c47f382e42c2c9b2af5047570"
+  },
+  "primary_code_scope": {
+    "argus_repository": "lbx154/Argus",
+    "argus_commit": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
+    "files": {
+      "planner_verdict_outbox.py": "18786245d17002c5b6f4465dd96672848e923bc3",
+      "supervisor/_core.py": "fff427855f22451fcc35bb950a1c88982c68590c",
+      "core/file_lock.py": "ef3df4148db586e2fa65c83e18b4511bd1120e08",
+      "life/event_log.py": "8b387bf97eb861a69662d4979cce35e8e6e9a4c5",
+      "pyproject.toml": "54de38880b7fac0f5a18ecb6f8d75be449b144a8",
+      ".github/workflows/tests.yml": "007822b38606333b1419dc45076c3fcb6609d9fa"
+    },
+    "portalocker_repository": "wolph/portalocker",
+    "portalocker_commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6"
+  },
+  "verified": [
+    "planner_verdict_was_persisted() scans sorted events.jsonl* pathnames, prefilters lines by delivery_id text, skips JSONDecodeError lines, catches OSError around file scanning, and returns False after the scan when no verified matching event was found.",
+    "UnicodeDecodeError is not caught by planner_verdict_was_persisted(): the file is opened as UTF-8 and the outer exception handler catches OSError only. Thus invalid UTF-8 can escape this boolean persistence query rather than yielding a conservative unknown state.",
+    "A malformed JSON row that contains the target delivery_id is explicitly skipped on JSONDecodeError and can therefore contribute to a final False even though that damaged row cannot prove target absence.",
+    "The production retry authority in LifeSupervisor._retry_pending_planner_verdict() calls planner_verdict_was_persisted(); when it returns False, the supervisor is permitted to call _emit(event) again. This verifies the core false-absence-to-re-emission path at source level.",
+    "Repository code search at the pinned Argus commit surfaced the persistence helper definition and the supervisor core as the production-code locations for planner_verdict_was_persisted; tests reference the retry path separately.",
+    "Argus already declares portalocker>=3 and provides core.file_lock.exclusive_file_lock(), which uses portalocker.LOCK_EX|LOCK_NB with a bounded default timeout of 30 seconds.",
+    "The current event-log writer does not use that cross-platform helper: event_log.py conditionally imports fcntl and applies fcntl.flock(LOCK_EX) only when fcntl is available. iter_call_events() enumerates event_log_paths() and opens those pathnames later, so it does not itself pin generation file handles under a stable snapshot.",
+    "Argus CI already includes tests/core/test_file_lock.py and tests/daemon/test_state_portable.py in the macOS/windows-latest portable matrix installed with .[qr], so a new portable event-lock regression can be attached to an existing real-Windows test surface.",
+    "At the pinned portalocker source, the platform documentation states that POSIX defaults to fcntl.flock; Windows defaults to the standard-library msvcrt path for exclusive locks; true shared locks on Windows require the optional win32/pywin32 extra."
+  ],
+  "material_scope_corrections": [
+    {
+      "claim": "The tri-state FOUND/ABSENT/UNKNOWN repair is already implemented and tested in Argus.",
+      "status": "not_implemented_in_pinned_commit",
+      "correction": "The pinned helper remains boolean. FOUND/ABSENT/UNKNOWN, stable-generation handle snapshots and the supervisor UNKNOWN short-circuit are proposed repairs, not current guarantees."
+    },
+    {
+      "claim": "The current event writer already has cross-platform exclusion because Argus depends on portalocker.",
+      "status": "contradicted_for_event_log_writer",
+      "correction": "The generic exclusive_file_lock helper is cross-platform, but the pinned JsonlEventSink writer still directly uses fcntl when available and takes no cross-process event lock on platforms where fcntl is absent. Dependency availability is not the same as adoption on this authority path."
+    },
+    {
+      "claim": "A 30-second bounded portalocker helper can be reused unchanged without changing event-log semantics.",
+      "status": "unverified_design_choice",
+      "correction": "Current POSIX fcntl.flock(LOCK_EX) is blocking with no application timeout in the event writer, while exclusive_file_lock defaults to 30 seconds. Reusing the helper unchanged could convert long contention into a write failure; the worker correctly leaves indefinite/event-specific policy as an implementation decision."
+    },
+    {
+      "claim": "A production duplicate planner verdict has been observed.",
+      "status": "not_claimed_and_not_observed",
+      "correction": "This audit verifies a source-reachable false-absence/re-emission mechanism only. It does not estimate occurrence rate or establish a production incident."
+    }
+  ],
+  "status": "primary_code_verified_false_absence_reemit_path_with_portable_lock_repair_still_prospective",
+  "tested_scope": "pinned Argus source and pinned portalocker platform semantics; no full Argus runtime fault injection, Windows CI execution, or production incident evidence",
+  "downstream_note": "The highest-confidence current defect is boolean absence authority under incomplete/corrupt scanning: unknown evidence can either raise or collapse to False, and False authorizes re-emission. Treat the typed tri-state and stable-snapshot lock changes as repair proposals until implemented and regression-tested.",
+  "worker_feedback_written": false
+}
