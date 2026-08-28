@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:20:07+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "637a4cb210b6ec3f14ca04b768c61f27ee7ac37a",
+    "root_control_revision": 15,
+    "root_control_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "semantic_freeze_respected": true
+  },
+  "target": {
+    "namespace": "evaluation",
+    "source_path": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T141618_JST_sharded_fresh_process_capture_v4_partial.json",
+    "source_blob": "4e488420fa1ef308df02b20956e2779ccd9eda08",
+    "active_wave_id": "clean-g1-wave-c30-20260828T150101JST-ef8d11da",
+    "active_wave_blob": "5e585d93336759661e6d90e07f5c4787d06677b8",
+    "subject": "fixed-horizon sharded fresh-process toy replay capture v4"
+  },
+  "grade": {
+    "overall": "B+",
+    "precommit_and_failure_handling_contract": "A-",
+    "capture_harness_support": "A-",
+    "saved_partial_raw_evidence": "B+",
+    "fresh_process_attestation": "B-",
+    "historical_container_byte_replay": "C+",
+    "full_fixed_horizon_certificate": "not_yet_claimed",
+    "matched_independent_replication": "C"
+  },
+  "evidence_separation": {
+    "implementation_support": [
+      "The exact persisted harness reconstructs and verifies the full precommitted schedule digest before capture, uses multiprocessing spawn, Pool maxtasksperchild=1 and chunksize=1, refuses overwrite, and computes a per-shard canonical payload digest.",
+      "Current CPython primary documentation independently supports the intended worker-lifetime semantics: spawn starts a fresh interpreter and maxtasksperchild=1 causes a pool worker to exit after one task and be replaced by a fresh worker.",
+      "The independently reconstructed 1060-row schedule digest exactly matches d794f090c9c082de03c8e46e65de7baffe68a7202f26d3513156b0c503888fd4."
+    ],
+    "saved_execution_evidence": [
+      "The checkpoint records a durable contiguous 0..199 prefix, seven shard ranges, 200 challenges, 400 observations and zero protected-statistic mismatches; it explicitly marks the evidence non-certifying and keeps DETERMINISTIC_REPLAY disabled.",
+      "A persisted shard wrapper exposes the expected generation id, schedule digest, shard range, raw SHA-256 and shard-payload SHA-256."
+    ],
+    "failed_execution_evidence": [
+      "Earlier monolithic v3 runs failed to produce complete evidence and were not promoted. A local v4 protocol-test generation that observed before durable precommit was explicitly invalidated and excluded. This is good failure-scope hygiene rather than a successful replication."
+    ],
+    "O_specific_or_fixture_scope": [
+      "The protected statistic is the role-local toy_hash_score_v3 SHA-256 digest of the attempt id, not an LLM/runtime model output.",
+      "The sharding/precommit/no-ambiguous-retry protocol is a local measurement/certification design, not evidence of a general external replay standard."
+    ],
+    "independent_replication": "No protocol-matched third-party reproduction of this exact capture generation was located. A separately transcribed local multiprocessing smoke test supports the spawn+maxtasksperchild mechanism but is not a historical shard replay."
+  },
+  "key_findings": [
+    {
+      "name": "precommit_digest_exactly_reconstructs",
+      "severity": "positive",
+      "finding": "The 1060 challenge/attempt identity schedule can be independently regenerated from the persisted generation id and harness rule, and its canonical SHA-256 exactly matches the persisted precommit digest."
+    },
+    {
+      "name": "zero_mismatch_prefix_is_fixture_local",
+      "severity": "scope_boundary",
+      "finding": "A/B protected digests are computed from the same attempt_id with a pure SHA-256 expression that does not depend on side, PID or boot nonce. Thus a zero-mismatch pair is expected by construction when dispatch is correct. It validates this toy fixture/pipeline path, not arbitrary fresh-process nondeterminism or LLM replay. The worker checkpoint already states this limitation, so the audit preserves rather than broadens its claim."
+    },
+    {
+      "name": "fresh_process_identifier_not_independent_attestation",
+      "severity": "reproducibility_boundary",
+      "finding": "fresh_process_id concatenates PID with a random boot_nonce generated inside each job and the job identity. Its uniqueness is therefore not an independent proof that each observation ran in a distinct process epoch: a reused process would still ordinarily produce a new ID. CPython's maxtasksperchild=1 semantics support the intended mechanism, but the saved trace cannot independently audit that mechanism from identifiers alone.",
+      "safe_repair": "Generate a process-epoch nonce once in a worker initializer and require exactly one job per {pid,epoch_nonce}, or persist an equivalent process-start/invocation attestation."
+    },
+    {
+      "name": "wrapper_packaging_step_not_in_harness",
+      "severity": "historical_replay_boundary",
+      "finding": "The persisted harness writes canonical raw JSON bytes directly, while saved shards are lzma+base64 wrapper JSON documents. Targeted repository search did not locate the wrapping/compression implementation. The embedded raw hash helps content-integrity checking after decode, but exact wrapper-byte replay lacks a fully persisted transport chain."
+    }
+  ],
+  "exact_tested_scope": {
+    "capture_generation_id": "toy-v4-capture-20260828T140824-3c7b6914",
+    "planned_challenges": 1060,
+    "captured_challenges": 200,
+    "captured_range": [0, 199],
+    "observations": 400,
+    "observed_mismatches": 0,
+    "certifying": false,
+    "runtime_activation": "disabled"
+  },
+  "safe_conclusion": "The v4 evaluation artifact has unusually good precommit and fail-closed measurement hygiene for its exact toy fixture: the schedule commitment and capture harness are persisted, the precommit digest independently reconstructs, and the checkpoint correctly refuses to certify a 200/1060 prefix. The saved evidence should nevertheless not be described as an independently attested one-process-per-observation transcript because fresh_process_id uniqueness is job-generated and therefore cannot detect unexpected process reuse. In addition, the lzma+base64 packaging step is not present in the audited harness chain. Neither limitation demonstrates an actual process-reuse failure, and neither changes the worker's explicit non-LLM, non-certifying scope.",
+  "reopen_conditions": [
+    "complete all 1060 precommitted challenges and persist the exact aggregate/gate inputs and outputs",
+    "add process-epoch-level freshness attestation independent of per-job nonce/job identity",
+    "persist the exact wrapper/compression packager and runtime/environment lock",
+    "provide a matched independent rerun from precommit through decoded raw shard verification and gate reproduction",
+    "change the protected statistic from the toy pure hash to a genuinely runtime-sensitive target, with a new predeclared scope"
+  ],
+  "checker": "research_audits/reproducibility/EVALUATION_FRESH_PROCESS_SHARDED_CAPTURE_C30_CHECKER_20260828T162007JST.json"
+}
