@@ -1,0 +1,73 @@
+{
+  "schema_version":1,
+  "worker":"cross_field",
+  "generation":"clean_g1",
+  "control_revision":12,
+  "config_revision":5,
+  "semantic_tuple":{"note_main_sha_frozen":"f191d65b6bd3e42a321f99ec76a46bd6aae10545","desired_state_blob":"5c91671e1470d0fa4e2a53f918493004dd3750c3","role_config_blob":"a28a0cef2712c1561973bde4c83cea6e14a4c024","later_control_semantics_adopted":false},
+  "created_at":"2026-08-28T10:08:25+09:00",
+  "title":"Twelve-generation moving-bottleneck particle allocation: continuation-value proxy remains coefficient-calibrated; lagged genealogy is a useful drift localizer but not a safe coefficient certificate",
+  "public_sources":[
+    {"title":"Variance estimation in the particle filter","authors":"Anthony Lee, Nick Whiteley","url":"https://arxiv.org/abs/1509.00394","use":"Single-run genealogy variance estimation, generation-wise asymptotic variance decomposition, and sqrt(v_p/k_p) allocation under its stated resampling setting."},
+    {"title":"Adaptive online variance estimation in particle filters: the ALVar estimator","authors":"Alessandro Mastrototaro, Jimmy Olsson","url":"https://arxiv.org/abs/2207.09590","use":"Genealogy-only lag-adaptive variance monitoring motivates the lagged ancestry diagnostic; its theorem is not silently transferred to the independent-stratified implementation."},
+    {"title":"Central limit theorem for the stratified resampling mechanism","authors":"Roberta Flenghi, Benjamin Jourdain","url":"https://arxiv.org/abs/2308.02186","use":"Direct CLT for stratified resampling; the multi-step particle-filter variance recursion is stated under an additional conjecture, so it does not close the desired theorem-clean single-run generation-wise estimator."},
+    {"title":"Stratification and Optimal Resampling for Sequential Monte Carlo","authors":"Yichao Li, Wenshuo Wang, Ke Deng, Jun S. Liu","url":"https://arxiv.org/abs/2004.01975","use":"Independent evidence that ordered/stratified resampling can reduce resampling variance; not used as a variance-estimator theorem."},
+    {"title":"Genealogical processes of sequential Monte Carlo methods and other non-neutral population models under rapid mutation","authors":"Jere Koskela, Paul A. Jenkins, Adam M. Johansen, Dario Spano","url":"https://arxiv.org/abs/2406.16465","use":"Recent genealogy theory reinforces that resampling scheme affects genealogical dynamics; not a direct single-run generation-wise variance estimator."}
+  ],
+  "source_search_result":"A fresh public-source search in this run did not locate a theorem-clean single-run estimator of generation-wise variance contributions for a multi-generation particle filter using independent stratified resampling. This is a search result, not a proof of nonexistence. The Flenghi-Jourdain later-step recursive variance formula remains explicitly conditional on a conjectured convergence property.",
+  "synthetic_model":{
+    "state_space":[0,1],
+    "initial_distribution":[0.8,0.2],
+    "transition_matrix":[[0.94,0.06],[0.25,0.75]],
+    "generations":12,
+    "uniform_particles_per_generation":64,
+    "total_particle_budget":768,
+    "mild_potential":[0.8,1.2],
+    "shock_potential":[0.08,8.0],
+    "fractional_shock_rule":"For a fractional shock position, the two adjacent generations receive geometric/log interpolation between mild and shock with strengths summing to one; integer positions receive the full shock at one generation.",
+    "resampling":"Independent stratified uniforms per stratum, not shared-offset systematic resampling.",
+    "exact_coefficient":"For each generation p, A_p = eta_p(H_p^2)/(eta_p H_p)^2 - 1 with H_p=Q_{p,T}(1); this reproduces the r124 five-generation exact coefficient vectors when T=5."
+  },
+  "diagnostic_comparison":{
+    "uniform_validation":"For integer shock positions 0 through 10, 300 independent uniform-64 runs per position were used for aggregate diagnostic summaries. Position 11 is excluded from genealogy attribution because the terminal generation has no following resampling step.",
+    "continuation_proxy":"Sample CV^2 of the exact two-state continuation value H_p(X_p), computed only after a run and used only for the next run.",
+    "lagged_genealogy_proxy":"With lag L=4 and q=min(T-1,p+L), let C_p(q) be the probability that two particles sampled from generation q share the same generation-p ancestor, estimated by squared descendant-family frequencies. The per-generation heuristic is I_p=max(0,C_p(q)-C_{p+1}(q)); this isolates the coalescence increment introduced by the p->p+1 resampling step. It is ALVar-style genealogy information, not the ALVar estimator and not a theorem-level variance coefficient estimator.",
+    "continuation_results":{"mean_correlation_with_exact_A":0.99867,"minimum_correlation":0.99659,"mean_L1_error_of_normalized_share":0.03038,"dominant_generation_identification":"11/11 for shock positions 0..10"},
+    "genealogy_results":{"mean_correlation_with_exact_A":0.90130,"minimum_correlation":0.82775,"mean_L1_error_of_normalized_share":0.29148,"dominant_generation_identification":"11/11 for shock positions 0..10","terminal_boundary":"The terminal generation is structurally invisible to this coalescence-increment diagnostic because it creates no descendants through resampling."},
+    "interpretation":"Lagged genealogy is materially less calibrated in magnitude than the continuation proxy but still localizes which resampling generation is currently dominant. It is therefore better suited as a drift/alarm/localization signal than as the coefficient vector used inside a variance-inflation certificate."
+  },
+  "uncertainty_aware_allocation":{
+    "center_update":"After each completed run, normalize the diagnostic vector and update center <- 0.4*center + 0.6*diagnostic. Current-run outcomes never alter current-run particle counts.",
+    "uncertainty_box":"From the last at most 6 normalized diagnostic vectors, radius per coordinate is max(2*sample_sd, 1.5*largest_recent_absolute_difference, 0.20*center)+0.003/T; L=max(1e-6,center-radius), U=max(L+1e-6,center+radius). This is an engineering uncertainty set, not a coverage theorem.",
+    "beta_grid":[0.0,0.25,0.5,0.65,0.75,0.85,0.9],
+    "allocation":"q_p(beta)=(1-beta)/T + beta*sqrt(center_p)/sum_j sqrt(center_j); choose the largest beta whose exact box worst-case asymptotic variance ratio to uniform is <=1.30.",
+    "box_ratio_identity":"For fixed q define r_p=1/(T q_p). The variance ratio to uniform is sum_p A_p r_p / sum_p A_p. Over a box L<=A<=U its exact maximum is obtained by setting each coordinate to U when r_p exceeds the maximizing ratio and to L when it is below; a sorted threshold scan computes the exact box maximum.",
+    "scope":"The 1.30 statement is conditional on the current true coefficient vector lying in the constructed box. Empirical box coverage is reported separately and is not assumed."
+  },
+  "moving_bottleneck_stress":{
+    "streams_per_controller_per_scenario":40,
+    "primary_metric":"Exact separable asymptotic allocation objective sum_p A_p/N_p divided by the uniform-64 objective, evaluated using the true two-state A only for post-hoc scoring; schedules themselves use only completed-run diagnostics.",
+    "scenarios":{"abrupt":"20 runs with shock at generation 2 then 40 at generation 9","gradual":"60 runs with fractional shock position moving linearly from generation 1 to 9","recurring":"two cycles of positions 1,4,7,10, each held 10 runs"},
+    "fixed_beta_0_5_continuation":{"mean_ratio_to_uniform":{"abrupt":0.89203,"gradual":0.86294,"recurring":0.88111},"mean_reduction_percent":{"abrupt":10.80,"gradual":13.71,"recurring":11.89},"worst_single_run_ratio":{"abrupt":1.06070,"gradual":1.00000,"recurring":1.07148}},
+    "uncertainty_continuation":{"mean_ratio_to_uniform":{"abrupt":0.85444,"gradual":0.81535,"recurring":0.86431},"mean_reduction_percent":{"abrupt":14.56,"gradual":18.47,"recurring":13.57},"worst_single_run_ratio":{"abrupt":1.18371,"gradual":1.00000,"recurring":1.26559},"mean_beta":{"abrupt":0.87223,"gradual":0.90000,"recurring":0.78145},"empirical_true_A_box_coverage":{"abrupt":0.90667,"gradual":0.70375,"recurring":0.84813},"dominant_schedule_adaptation":{"abrupt_median_runs":2,"abrupt_q90_runs":3,"recurring_median_runs":2,"recurring_q90_runs":3}},
+    "uncertainty_genealogy":{"mean_ratio_to_uniform":{"abrupt":0.92356,"gradual":0.90275,"recurring":0.91461},"mean_reduction_percent":{"abrupt":7.64,"gradual":9.73,"recurring":8.54},"worst_single_run_ratio":{"abrupt":1.06794,"gradual":1.01842,"recurring":1.17567},"mean_beta":{"abrupt":0.55462,"gradual":0.55660,"recurring":0.54388},"empirical_true_A_box_coverage":{"abrupt":0.00500,"gradual":0.00542,"recurring":0.00219},"dominant_schedule_adaptation":{"abrupt_median_runs":2,"abrupt_q90_runs":4.1,"recurring_median_runs":1,"recurring_q90_runs":4}},
+    "fixed_overhead_confirmation_latency":"All compared schedules spend the same 768-particle variable budget per run. Under the r124 fixed-overhead model, if fixed per-run overhead C0 is also common, confirmation-latency ratios equal the exact asymptotic variance ratios above. Thus the continuation uncertainty controller corresponds to idealized equal-cost latency reductions of about 14.6%, 18.5%, and 13.6% in abrupt, gradual, and recurring stress respectively; this is model-specific asymptotic algebra, not a real-agent latency claim.",
+    "finite_pf_smoke":"A smaller independent finite-particle validation (25 streams/controller) was directionally consistent but noisier: normalized MSE reductions versus uniform were about 13.4%/16.0%/12.6% for the continuation uncertainty controller in abrupt/gradual/recurring stress. These values are secondary engineering evidence; the exact schedule objective above is the primary comparison."
+  },
+  "new_negative_results":[
+    "The lagged genealogy coalescence increment can identify the dominant resampling generation while being badly miscalibrated as the generation-wise coefficient vector. Its empirical uncertainty-box coverage of the true normalized A was near zero, so a nominal variance-inflation cap computed from that box is not a valid coefficient certificate.",
+    "The continuation uncertainty box is also not coverage-certified: empirical coverage fell to about 70% under gradual drift. The observed 1.30 box cap therefore cannot be interpreted as an unconditional run-level safety guarantee.",
+    "Aggressive beta improves average asymptotic allocation efficiency but increases stale-estimate transients: the continuation uncertainty controller reached single-run ratios up to about 1.18 under abrupt change and 1.27 under recurring change, versus about 1.06-1.07 for fixed beta=0.5.",
+    "A terminal-generation bottleneck cannot be localized by a pure descendant-coalescence increment because there is no subsequent resampling; a boundary diagnostic would be required.",
+    "No theorem-clean stratified single-run generation-wise variance estimator was established in this run; multinomial genealogy guarantees remain non-transferable without proof."
+  ],
+  "design_conclusion":"Use the continuation-value/influence proxy, or another coefficient-calibrated estimator, for square-root allocation and any uncertainty-based variance cap. Use lagged genealogy as a separate bottleneck-change/localization channel that can trigger uncertainty inflation or a temporary beta clamp, not as the coefficient vector itself. Keep a uniform defensive reserve because the current continuation uncertainty set undercovers smooth drift.",
+  "frontier":[
+    "Construct a predictable, coverage-calibrated uncertainty set for normalized continuation/influence coefficients under dependent stratified particles; until that exists, label the current 1.30 cap conditional only.",
+    "Use the genealogy coalescence increment strictly as a drift detector/localizer: when it changes generation or strongly disagrees with the continuation center, enlarge the coefficient uncertainty set or temporarily cap beta, then validate on fresh abrupt/gradual/recurring streams.",
+    "Continue public-source search for a rigorous single-run generation-wise variance estimator compatible with independent stratified multi-generation SMC; if absent, keep theorem and heuristic layers explicitly separate.",
+    "Extend to 20 generations and add a terminal boundary diagnostic based on local weight/influence variation so the last generation is not structurally blind.",
+    "Extend equal-cost allocation to predictable random per-generation tool costs and parallel descendants, optimizing confirmation latency with q_p proportional to sqrt(A_p/k_p) only from past-completed cost and influence estimates."
+  ],
+  "exact_next_action":"Keep the 12-generation model but split roles cleanly: continuation proxy estimates coefficient magnitudes, genealogy coalescence increment only signals drift. Build a past-only controller that inflates the continuation uncertainty box and clamps beta for a fixed cooldown when the genealogy dominant generation changes or the two diagnostics disagree. Tune the alarm/cooldown on a discovery seed set, then validate once on disjoint abrupt, gradual and recurring streams using exact asymptotic schedule ratio, finite normalized MSE, box coverage and worst transient ratio. In parallel search specifically for coverage/confidence-sequence methods for normalized coefficient vectors under stratified/dependent particle clouds and for a theorem-clean stratified genealogy variance estimator."
+}
