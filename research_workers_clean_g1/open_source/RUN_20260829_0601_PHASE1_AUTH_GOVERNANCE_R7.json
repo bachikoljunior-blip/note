@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "packet_class": "open_source_clean_checkpoint",
+  "role": "open_source",
+  "status": "active",
+  "observed_at": "2026-08-28T21:01:25Z",
+  "control_revision": 22,
+  "config_revision": 7,
+  "assignment": {
+    "id": "phase1-clean-open-source-auth-governance-boundaries",
+    "phase": "phase_1_clean_capability_research",
+    "objective": "Identify high-signal authorization, approval, collaboration, exact-intent, and mutable-state governance primitives from public systems, without importing prior packet framing."
+  },
+  "semantic_freeze": {
+    "frozen_main_sha": "a7822270302a5a1110fe1bacc2aa56f3027fad12",
+    "frozen_root_blob_sha": "e4f6eec9e10b91d265065d40e9b957fcaaebb727",
+    "frozen_role_config_blob_sha": "4fcc3620926d2a23363117ce623d0c8e91dddb07",
+    "pre_semantic_barrier_passed": true,
+    "post_semantic_head_sha": "9aecbfd72ebddea92de34792a4587f81e58a744c",
+    "head_drifted_after_barrier": true,
+    "newer_control_semantics_adopted": false
+  },
+  "epoch_reset": {
+    "reason": "same-role config revision changed from own prior LATEST config_revision=6 to authoritative config_revision=7",
+    "prior_packet_semantics_imported": false,
+    "provider_source_version": 1,
+    "config_source_version": 1,
+    "state_epoch": 1
+  },
+  "one_time_migration_receipt": {
+    "id": "configured-surface-auth-provider-evidence-v1",
+    "status": "completed_with_capability_gaps",
+    "discovered_at": "2026-08-28T20:56:40Z",
+    "last_verified_at": "2026-08-28T21:01:25Z",
+    "exact_rescan_trigger": "later same-role config revision or newer same-provider public evidence that contradicts accepted behavior",
+    "configured_surface_evidence": {
+      "github": {
+        "authenticated_surface_present": true,
+        "approval_commit_binding": "add_review_to_pr exposes optional commit_id",
+        "exact_merge_intent": "merge_pull_request exposes expected_head_sha",
+        "file_state_cas": "update_file requires current blob sha",
+        "provider_api_mapping_documented_by_connector": "GitHub review/merge wrappers reference REST 2022-11-28 behavior",
+        "classification": "provider capability partially exposed with exact-content preconditions"
+      },
+      "stripe": {
+        "authenticated_surface_present": true,
+        "generic_mutation": "stripe_api_write can execute discovered POST/PATCH/PUT/DELETE operations",
+        "human_confirmation_boundary": "tool schema can return an approval request and requires a subsequent approval_token invocation",
+        "caller_supplied_idempotency_key_field": "not exposed in stripe_api_write schema",
+        "account_or_user_data_read": false,
+        "classification": "public provider idempotency capability exists, but caller-controlled idempotency identity is not proven exposed through this connected write surface"
+      },
+      "stripe_documentation_connector_probe": {
+        "attempted": true,
+        "result": "blocked because connector demanded interactive user input in non-interactive execution",
+        "fallback": "public Stripe documentation only; no account content accessed"
+      }
+    }
+  },
+  "public_evidence": [
+    {
+      "system": "SpiceDB/Authzed",
+      "source": "https://authzed.com/docs/spicedb/concepts/consistency",
+      "freshness": "crawled 2026-08-26",
+      "observation": "ZedTokens represent datastore points-in-time; CheckPermission and relationship mutations return them; at_exact_snapshot and at_least_as_fresh bind later authorization reads to a revision. This is a causal/read fence, not evidence that an unrelated external effect accepts that revision as an atomic precondition."
+    },
+    {
+      "system": "OpenFGA",
+      "source": "https://openfga.dev/docs/getting-started/immutable-models and https://openfga.dev/docs/interacting/consistency",
+      "freshness": "published/crawled 2026-08-22..2026-08-27",
+      "observation": "Authorization models are immutable and callers are encouraged to pin authorization_model_id; HIGHER_CONSISTENCY bypasses query cache. These facts pin model/schema behavior and read freshness but do not expose a tuple-state snapshot token in the checked public surface."
+    },
+    {
+      "system": "Amazon Verified Permissions",
+      "source": "https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_IsAuthorized.html",
+      "freshness": "crawled 2026-08-28",
+      "observation": "IsAuthorized returns ALLOW/DENY plus determining policy IDs and errors; the checked response contract contains no authorization-store revision token. Determining policy IDs are provenance, not an effect precondition."
+    },
+    {
+      "system": "Google Cloud IAM",
+      "source": "https://docs.cloud.google.com/secure-source-manager/docs/reference/mcp/tools_list/set_securesourcemanager_repository_iam_policy and https://docs.cloud.google.com/resource-manager/docs/access-control-org",
+      "freshness": "published/crawled August 2026",
+      "observation": "getIamPolicy returns etag; setIamPolicy should send the same etag so the write is applied only if policy state still matches. This is mutable-policy optimistic concurrency, not a prior authorization-decision revision."
+    },
+    {
+      "system": "Kubernetes",
+      "source": "https://kubernetes.io/docs/reference/access-authn-authz/authorization/ ; https://kubernetes.io/docs/concepts/security/controlling-access/ ; https://kubernetes.io/docs/reference/kubernetes-api/definitions/preconditions-v1-meta/",
+      "freshness": "Kubernetes v1.37 released 2026-08-26; current docs crawled 2026-08-28",
+      "observation": "API authorization is evaluated inside kube-apiserver on the request; admission follows authorization before persistence. resourceVersion/UID preconditions guard target state and mismatches conflict. This composes current request authorization with state CAS in one effect-serving authority."
+    },
+    {
+      "system": "GitHub",
+      "source": "https://docs.github.com/en/rest/pulls/reviews and https://docs.github.com/en/rest/pulls/pulls and https://docs.github.com/en/rest/about-the-rest-api/api-versions",
+      "freshness": "current REST version 2026-03-10; docs crawled August 2026",
+      "observation": "A PR review can be anchored to commit_id; merge accepts sha that the PR head must match and returns 409 on mismatch. Current public REST supports 2026-03-10 while unversioned requests default to 2022-11-28."
+    },
+    {
+      "system": "Stripe",
+      "source": "https://docs.stripe.com/api/idempotent_requests and https://docs.stripe.com/api-v2-overview",
+      "freshness": "crawled August 2026",
+      "observation": "API v1 POST requests can be safely retried with a caller idempotency key; v1 retains keys at least 24h and compares parameters. API v2 extends idempotent keys to POST and DELETE with same-API/account/sandbox scope and a 30-day replay window. Retry identity solves ambiguous execution, not authorization freshness."
+    },
+    {
+      "system": "OPA",
+      "source": "https://www.openpolicyagent.org/docs/management-decision-logs",
+      "freshness": "crawled 2026-08-28",
+      "observation": "Decision logging adds decision_id and policy/bundle metadata for audit/debugging. A decision_id is provenance unless an effect API separately documents it as an enforcement precondition."
+    }
+  ],
+  "mechanism_lattice": [
+    {
+      "class": "DECISION_REVISION_FENCE",
+      "observed_system": "SpiceDB",
+      "guarantee": "authorization read can be replayed or fenced to a datastore revision",
+      "does_not_guarantee": "later external side effect remains authorized"
+    },
+    {
+      "class": "POLICY_MODEL_PIN_ONLY",
+      "observed_system": "OpenFGA",
+      "guarantee": "immutable authorization model identity and stronger read mode",
+      "does_not_guarantee": "mutable tuple set is the same snapshot as an earlier check"
+    },
+    {
+      "class": "PROVENANCE_ONLY",
+      "observed_system": "AWS Verified Permissions / OPA",
+      "guarantee": "decision/policy/log attribution",
+      "does_not_guarantee": "effect authorization or mutable-state equality"
+    },
+    {
+      "class": "MUTABLE_POLICY_CAS",
+      "observed_system": "Google Cloud IAM",
+      "guarantee": "read-modify-write policy update applies only to the etag-matched policy version",
+      "does_not_guarantee": "etag is an authorization-decision revision"
+    },
+    {
+      "class": "REQUEST_LOCAL_AUTH_WITH_STATE_CAS",
+      "observed_system": "Kubernetes",
+      "guarantee": "effect request is currently authorized by the serving authority and target object can be version-preconditioned",
+      "does_not_guarantee": "a detached earlier SubjectAccessReview remains valid"
+    },
+    {
+      "class": "APPROVAL_AND_EXACT_INTENT",
+      "observed_system": "GitHub",
+      "guarantee": "review provenance can name a commit and merge can fail closed if PR head moved",
+      "does_not_guarantee": "all current branch/ruleset approval requirements are satisfied without policy evidence"
+    },
+    {
+      "class": "IDEMPOTENT_EFFECT_RETRY",
+      "observed_system": "Stripe public API",
+      "guarantee": "ambiguous mutation can be retried under provider-defined idempotency scope",
+      "does_not_guarantee": "authorization or target state is unchanged"
+    },
+    {
+      "class": "PRIOR_AUTH_REVISION_EFFECT_GATE",
+      "observed_system": null,
+      "guarantee": "would require the effect-serving API to accept the exact prior authorization decision revision as an atomic precondition",
+      "status": "not observed in this fresh evidence set"
+    }
+  ],
+  "high_signal_findings": [
+    "Authorization decision provenance and mutation exactness are orthogonal axes. A system can expose a strong authorization revision without binding a later external effect, or a strong mutation CAS without exposing the authorization decision revision.",
+    "The strongest observed effect boundary in this run is request-local: Kubernetes evaluates current authorization on the mutation request and can independently enforce object version preconditions before persistence.",
+    "Approval provenance is strongest when bound to immutable content identity and paired with an effect precondition on that same evolving surface; GitHub commit_id + merge sha is a concrete example, but provider policy still must be re-evaluated/current.",
+    "Retry identity is a third independent axis. Stripe idempotency makes ambiguous execution recoverable, but connected Stripe write schema does not currently prove caller-controlled Idempotency-Key exposure.",
+    "A model ID, policy ID, decision ID, approval object, or prior allow result must never be upgraded into an authorization lease unless the effect-serving API documents a corresponding enforcement precondition."
+  ],
+  "acceptance_and_counterexample_tests": [
+    "SpiceDB ZedToken + exact snapshot => DECISION_REVISION_FENCE, not PRIOR_AUTH_REVISION_EFFECT_GATE.",
+    "Synthetic evidence is classified PRIOR_AUTH_REVISION_EFFECT_GATE only when the effect precondition explicitly consumes the prior auth revision.",
+    "OpenFGA immutable model ID + HIGHER_CONSISTENCY => POLICY_MODEL_PIN_ONLY.",
+    "Google IAM etag read-modify-write => MUTABLE_POLICY_CAS.",
+    "Kubernetes request authorization + resourceVersion precondition => REQUEST_LOCAL_AUTH_WITH_STATE_CAS.",
+    "GitHub review commit_id + merge expected head => APPROVAL_AND_EXACT_INTENT.",
+    "Stripe idempotency key replay => IDEMPOTENT_EFFECT_RETRY, not authorization proof.",
+    "OPA decision_id => PROVENANCE_ONLY.",
+    "AWS Verified Permissions determining policy IDs without revision => PROVENANCE_ONLY."
+  ],
+  "self_test": {
+    "artifact": "research_workers_clean_g1/open_source/AUTH_GOVERNANCE_LATTICE_20260829_0556_R7.py",
+    "result": "PASS 9 fixtures",
+    "executed_before_persistence": true
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap first. Re-read DESIRED_STATE.json and open_source role config at one frozen main SHA. If config revision 7 / assignment phase1-clean-open-source-auth-governance-boundaries remains current, continue with provider_source_version=1 unless fresher same-provider evidence changes accepted behavior. First search for a real public PRIOR_AUTH_REVISION_EFFECT_GATE: an effect-serving API that consumes the exact prior authorization decision revision/epoch as an atomic mutation precondition; distinguish it from request-local reauthorization, object/policy CAS, and causal authorization reads. Next audit Authzed Materialize/WatchPermissionSets and one other Zanzibar-style system for durable revision propagation; then compare one open-source collaboration system (Gerrit or GitLab) for patchset-bound approvals plus exact submit/merge preconditions. Finally revisit connected Stripe mutation schema for caller-controlled idempotency identity only if a non-interactive schema/read path can prove it; otherwise preserve the public-provider-vs-connected-surface gap. Keep at least four fail-closed counterexamples and persist a new role-local checkpoint/LATEST before termination.",
+  "independence": {
+    "clean_exploration": true,
+    "read_other_worker_state": false,
+    "read_o_or_o_derived_semantics": false,
+    "read_downstream_semantics": false,
+    "read_legacy_semantics": false,
+    "read_shared_aggregate_ledger": false,
+    "reads_used": [
+      "authoritative control/config at frozen SHA",
+      "own LATEST solely to resolve own prior state and detect config reset",
+      "public provider documentation",
+      "configured connector schemas"
+    ]
+  },
+  "mutation_scope": {
+    "source_repo_modified": false,
+    "branch_ref_pr_issue_release_workflow_modified": false,
+    "desired_state_modified": false,
+    "other_worker_or_downstream_modified": false,
+    "own_namespace_only": true
+  }
+}
