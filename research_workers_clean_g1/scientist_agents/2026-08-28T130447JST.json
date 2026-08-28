@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "generation": "clean_g1",
+  "worker": "scientist_agents",
+  "delta_checkpoint": true,
+  "invocation_started_at": "2026-08-28T13:02:02+09:00",
+  "checkpoint_observed_at": "2026-08-28T13:04:47.001366+09:00",
+  "chronology_valid": true,
+  "base_checkpoint": "research_workers_clean_g1/scientist_agents/2026-08-28T115950JST.json",
+  "base_checkpoint_blob": "7027f5cec97d70e4fdc78a98f20b830f4a1e449e",
+  "control": {
+    "root_control_revision": 13,
+    "config_revision": 5,
+    "enabled_desired": true,
+    "class": "clean_exploration",
+    "frozen_source_main_sha": "0dd97c62678923281362091099cbee26402dd4d0",
+    "desired_state_blob": "cc9b1f22f0fda9cf26296057fd35b19a090618b4",
+    "role_config_blob": "84d968713c9aa5537ba690521715e1b340fbd9d1",
+    "semantic_freeze_respected": true,
+    "later_control_semantics_adopted": false
+  },
+  "semantic_progress": {
+    "candidate_079": {
+      "name": "validation-gated surrogate arbitration with hardware requalification",
+      "mechanism_hypothesis": "Maintain multiple surrogate/acquisition experts and choose among them cycle-by-cycle using a task-local validation channel while preserving a separate untouched evaluation channel. Treat a hardware or environment change as an explicit trust invalidation event: do not reuse the prior surrogate as fully authoritative until a small target-side active-learning requalification phase demonstrates restored predictive validity.",
+      "primary_evidence": {
+        "source": "Nayeon Kim et al., SPACESHIP: Autonomous Mapping of Hardware-Dependent Synthesizable Space in Solution-Phase Gold Nanomaterials, Journal of the American Chemical Society 148(18):19170-19185 (2026), DOI 10.1021/jacs.6c03132, published online 2026-04-29.",
+        "adaptive_arbitration": "SPACESHIP compares fixed/scheduled acquisition strategies Cross, Switch and Time against Autopilot, which selects between GPC and variational GPC each acquisition cycle from validation accuracy and then uses that model's uncertainty-based acquisition score. Reported virtual-surface learning-efficiency gains relative to random are 1.4x for Cross, 2.2x for Switch, 2.3x for Time and 4.3x for Autopilot.",
+        "validation_separation": "The paper uses a separate validation set for per-cycle model arbitration (200 samples on virtual surfaces and 50 on real experimental datasets) and an independent 50-sample evaluation set that is never used for training, validation or candidate selection. Both are removed from the unlabeled pool before closed-loop learning.",
+        "physical_hardware_shift": "For morphology-aware Au nanorod synthesis, a model trained on hot-plate stirrer 1 is about 90% accurate on its source hardware but falls to about 70% when directly applied to hot-plate stirrer 2. Target-side active-learning fine-tuning restores about 90% accuracy using 14 additional acquisition cycles. This is direct physical evidence that hardware changes can invalidate a previously good synthesizability model and that limited target-side requalification can restore validity.",
+        "system_result": "The integrated autonomous Au nanoparticle/nanorod system reports 90% accuracy with 23 experiments compared with a 512-measurement ground-truth map and expands mapped synthesizable regions by factors of 8 for nanoparticles and 4 for nanorods beyond literature-defined regions.",
+        "control_relevance": "This gives candidate_078 a physical hardware-domain-shift positive control and supplies a narrower matched-style comparison for adaptive surrogate arbitration versus fixed mixtures/schedules. It also supports keeping validation used for arbitration distinct from a final evaluation channel.",
+        "limits": "The 4.3x Autopilot comparison is principally on virtual decision surfaces rather than a randomized live-lab Autopilot-versus-fixed acquisition trial. The hot-plate transfer result tests requalification/fine-tuning, not local source-reliability weighting. The repeatedly used validation set is an arbitration channel, not an untouched final holdout. Therefore this does not by itself establish candidate_073's hypothesis-discrimination-to-refinement switch or candidate_078's reliability threshold as optimal."
+      }
+    },
+    "candidate_080": {
+      "name": "outer-loop search-space reconfiguration with diversity reserve and provenance-disjoint evaluation",
+      "mechanism_hypothesis": "Separate the choice of which physical/design subspace to search from the inner optimizer that selects candidates inside that subspace. Permit prior-knowledge-guided outer-loop proposals to improve early yield when validated, but reserve explicit novelty/coverage budget so familiar high-yield families cannot collapse the search. Evaluate benefits on provenance-disjoint or newly generated target data when closed-model pretraining exposure is unknown.",
+      "primary_evidence": {
+        "source": "Yuma Iwasaki et al., Large-language-model-driven adaptive search space definition for autonomous closed-loop materials exploration, Communications Materials 7, 202 (2026), published 2026-08-25, DOI 10.1038/s43246-026-01304-9.",
+        "matched_protocol": "A 16,908-entry B2 ternary-alloy DFT dataset over 38 elements is searched with an outer loop selecting a new three-element materials space and an inner GPR+UCB Bayesian-optimization loop. Each chosen space receives 3 random measurements followed by 7 BO iterations. LLM-defined, GPR-defined and random-space strategies each use 10 independent runs, with 10 fully random runs as an additional baseline.",
+        "quantitative_results": "At observation 25, LLM outer-loop selection significantly outperforms the GPR space proposer for magnetic moment (two-sided Welch p=0.0471) and Curie temperature (p=0.0216), but not spin polarization (p=0.697). The LLM preferentially proposes Fe/Co-rich spaces early, consistent with exploiting pretrained materials knowledge before enough task-specific observations accumulate for GPR.",
+        "negative_boundary": "The same prior-driven behavior clusters exploration around known Fe/Co alloy families. The authors explicitly warn that this can reduce exploratory diversity for de-novo discovery and recommend explicit objectives or constraints for novel, diverse, uncertain or underexplored chemical spaces.",
+        "provenance_limit": "The target DFT dataset is public and the closed GPT-5.2 Instant training corpus is not known, so exposure to identical or related numerical data cannot be ruled out and the contribution of pretraining versus in-context observations cannot be quantified. The authors characterize the result as proof-of-concept and call for unpublished/newly generated data, ablations and models with more transparent training provenance.",
+        "control_relevance": "This complements candidate_074 M-open expansion and candidates_068/071 coverage reserve by moving one level outward: a scientist controller may need to revise the feasible search-space envelope itself, not only the hypothesis pool or acquisition point within a fixed space.",
+        "limits": "The demonstration is numerical rather than a robotic outer-loop experiment, the LLM/GPR comparison does not isolate all sources of prior knowledge, and the positive effect is target-property dependent. No matched test here shows that a diversity reserve preserves yield while preventing search-space collapse."
+      }
+    },
+    "candidate_078_update": {
+      "status": "threshold_sensitivity_still_open",
+      "detail": "PhaseTransfer's local reliability gate uses a fixed tau=0.6: where source reliability exceeds the threshold transferred evidence can influence the informed prior/acquisition; otherwise acquisition falls back toward the target-only boundary learner. The paper includes 50-run synthetic comparisons and one BSA-PEG physical validation, but no tau sensitivity sweep was located in this invocation. Candidate_078 remains supported as a local revocable-transfer mechanism, not as evidence that tau=0.6 is generally optimal."
+    },
+    "preregistered_panel": {
+      "task_id": "W4409116437",
+      "status": "still_pending_exact_eighth_body_transport",
+      "progress": "The public AutoResearchEval dataset card and exact file architecture were rechecked. The previously confirmed MiniMax-M3 file remains 5.69 MB and above the available 4 MiB text transport; the dataset viewer cannot substitute for arbitrary raw trajectory retrieval. No semantic MiniMax body was read, no seven-model aggregate was computed, and no later task was substituted.",
+      "coding_rule_changed": false
+    },
+    "parallel_frontier_search": {
+      "dynamic_cross_source_admission": "Advanced with SPACESHIP physical hardware shift: previously valid model performance dropped from about 90% to about 70% on new hardware and recovered to about 90% after 14 target-side active-learning cycles. Still open: direct physical always-share versus independent versus local-reliability admission/revocation under cross-instrument or cross-property shift.",
+      "adaptive_surrogate_arbitration": "Newly advanced with candidate_079. Autopilot outperforms fixed/scheduled acquisition strategies on virtual surfaces while using a separate validation channel and untouched evaluation channel. Still open: live-lab randomized arbitration ablation and robustness to repeated-validation overfitting.",
+      "outer_loop_search_space": "Newly advanced with candidate_080. Prior-informed LLM outer-loop reconfiguration improves early M/Tc search but shows no significant advantage for Sp and risks concentrating on familiar chemistry. Priority is provenance-disjoint physical validation plus an explicit diversity/novelty reserve ablation.",
+      "integrated_controller": "Still open. No single autonomous-science experiment jointly composes measurement admissibility, discovery/generalization lanes, fidelity discrepancy, evidential-risk control, revocable cross-source transfer, adaptive surrogate arbitration and outer-loop search-space reconfiguration.",
+      "gate_specific_stress_test": "Open. candidate_073 still lacks an isolated fixed-versus-confidence-gated hypothesis-discrimination/refinement switch. candidate_074 still needs residual-threshold sensitivity or a same-proposer/same-budget fixed-pool versus M-open comparison. candidate_078 still needs reliability-threshold sensitivity.",
+      "event_sourced_belief_plus_revocation": "Still open. No same-system autonomous-science experiment combining source-qualified evidence identity, belief invalidation/revocation and bounded active retrieval was identified in this invocation.",
+      "matched_mandatory_science_repair": "Still open. No same-model/same-tools/same-budget open-ended-science randomization of optional critique versus mandatory evidence-changing repair, material downgrade or hard block was identified in this invocation.",
+      "fresh_root_restart": "Still open in autonomous science. No matched science-domain comparison of continued repair against a genuinely fresh-root restart was identified in this invocation."
+    }
+  },
+  "public_source_refs": [
+    "https://doi.org/10.1021/jacs.6c03132",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC13184979/",
+    "https://www.nature.com/articles/s43246-026-01304-9",
+    "https://www.nature.com/articles/s41524-026-02154-2",
+    "https://huggingface.co/datasets/PrentisAI/AutoResearchEval"
+  ],
+  "termination_diagnostics": {
+    "frontier_exhausted": false,
+    "global_completion": false,
+    "blocker": "Exact MiniMax-M3 W4409116437 remains uncoded because its official 5.69 MB raw body exceeds the available 4 MiB text transport. This remains a transport blocker only and does not justify seven-model scoring or lexicographic advance.",
+    "blocker_class": "transport_size_limit",
+    "termination_cause": "checkpoint_after_adaptive_surrogate_and_outer_search_space_evidence"
+  },
+  "exact_next_action": "Retry exactly MiniMax-M3 W4409116437 only through an officially surfaced supported chunk/range/Xet/per-file-diff transport; do not score seven models or advance lexicographically until the eighth body is readable. In parallel, seek (1) a physical matched always-share versus independent versus locally revocable cross-instrument/cross-property transfer test under distribution shift, (2) a live-lab fixed/scheduled-versus-validation-gated surrogate arbitration ablation and repeated-validation-overfitting control for candidate_079, and (3) a provenance-disjoint outer-loop search-space experiment with explicit novelty/diversity reserve for candidate_080. Continue candidate_078 tau sensitivity, candidate_073 switch isolation, candidate_074 M-open threshold sensitivity, integrated measurement/fidelity/evidential-risk/discovery-generalization control, belief-revocation plus bounded retrieval, optional-critique-versus-mandatory-repair and fresh-root-restart comparisons."
+}
