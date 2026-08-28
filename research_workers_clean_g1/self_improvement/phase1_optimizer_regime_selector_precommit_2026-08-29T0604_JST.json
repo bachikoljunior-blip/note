@@ -1,0 +1,131 @@
+{
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "candidate_id": "CALRATE-SELECTOR-TRANSFER-V1",
+  "confirmation_candidate_rule": {
+    "calibration_qc": "alternative_success_rate >= 0.80 in every scenario",
+    "pass": "all calibration_qc, regime_discrimination, per_scenario, pooled_success and pooled_time gates true",
+    "per_scenario": "selected policy must have greater success than the unselected fixed/conditional policy, or equal success and mean capped time <= 1.05 * unselected mean",
+    "pooled_success": "selector success_rate >= both fixed and conditional",
+    "pooled_time": "selector mean_capped_time_s <= both fixed and conditional",
+    "regime_discrimination": "selector must choose different policies across the two scenarios"
+  },
+  "created_at": "2026-08-29T06:05:34.962659+09:00",
+  "environment_manifest_path": "research_workers_clean_g1/self_improvement/phase1_optimizer_regime_selector_environment_2026-08-29T0604_JST.json",
+  "environment_manifest_sha256": "b877849997049a5e34840686f4617c1f23819d47f36d0c134411605f0d728386",
+  "existing_solution_audit": [
+    {
+      "mechanism": "Algorithm-selection approaches and their parameters vary in effectiveness across scenarios; AutoFolio configures the selector itself per scenario.",
+      "source": "AutoFolio: An Automatically Configured Algorithm Selector",
+      "source_id": "AUTOFOLIO-IJCAI2017",
+      "url": "https://www.ijcai.org/Proceedings/2017/715",
+      "use_here": "Motivates selecting the switching policy from calibration-only scenario evidence instead of asserting a universal fixed or conditional rule."
+    },
+    {
+      "mechanism": "Build candidate solvers for complementary strengths relative to the current portfolio.",
+      "source": "Hydra: Automatically Configuring Algorithms for Portfolio-Based Selection",
+      "source_id": "HYDRA-AAAI2010",
+      "url": "https://ojs.aaai.org/index.php/AAAI/article/view/7565",
+      "use_here": "Motivates explicit direct-good versus alternative-needed scenarios and treating policy value as regime-dependent."
+    },
+    {
+      "mechanism": "Runtime evaluations can be capped once enough evidence exists that a challenger cannot beat the incumbent.",
+      "source": "SMAC 2.06 manual, Adaptive Capping",
+      "source_id": "SMAC-ADAPTIVE-CAPPING",
+      "url": "https://www.cs.ubc.ca/labs/algorithms/Projects/SMAC/v2.06.00b/manual.pdf",
+      "use_here": "Supports comparing fixed early capping against a later conditional cap under an explicit deadline."
+    }
+  ],
+  "frozen_authority": {
+    "desired_state_blob_sha": "e4f6d24c137284d002941ac04254e3dbeca2cfcb",
+    "desired_state_control_revision": 22,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "own_latest_blob_sha": "7ea376e6336c6f971b205f0d4f2d823a42d1329a",
+    "own_latest_sequence_at_freeze": 105,
+    "role_config_blob_sha": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "role_config_control_revision": 14,
+    "role_config_path": "automation_control/roles/self_improvement.json",
+    "role_config_revision": 7,
+    "semantic_main_sha": "2fc82034b76ce3fa753993434b38902f10c3c437"
+  },
+  "harness_path": "research_workers_clean_g1/self_improvement/phase1_optimizer_regime_selector_harness_v1_2026-08-29T0604_JST.py",
+  "harness_sha256": "b328ab49185eace6d46a7feeffa254907d5a9e4cd926ef52f75a0ba0b4f1782b",
+  "measurement_protocol": {
+    "calibration_seeds": [
+      12000,
+      12001,
+      12002,
+      12003,
+      12004,
+      12005,
+      12006,
+      12007
+    ],
+    "confirmation_seeds": [
+      13000,
+      13001,
+      13002,
+      13003,
+      13004,
+      13005,
+      13006,
+      13007,
+      13008,
+      13009,
+      13010,
+      13011
+    ],
+    "cv": "3-fold shuffled stratified CV; random_state=episode seed",
+    "datasets": [
+      {
+        "alternative": "RandomForestClassifier(n_estimators=400,max_features=sqrt,n_jobs=1)",
+        "dataset": "sklearn.datasets.load_wine",
+        "direct": "StandardScaler + LogisticRegression(C=1.0,max_iter=2000,solver=lbfgs)",
+        "hypothesized_role_only": "direct-good scenario where interrupting a fast adequate direct method can add unnecessary alternative cost",
+        "scenario": "wine_direct_good",
+        "target_balanced_accuracy": 0.96
+      },
+      {
+        "alternative": "StandardScaler + SVC(C=2.0,gamma=scale,probability=True)",
+        "dataset": "sklearn.datasets.load_breast_cancer",
+        "direct": "GaussianNB()",
+        "hypothesized_role_only": "alternative-needed scenario where a weak direct method may waste deadline before a stronger alternative",
+        "scenario": "breast_cancer_alt_needed",
+        "target_balanced_accuracy": 0.96
+      }
+    ],
+    "legacy_seed_exclusion": [
+      "7000-7017",
+      "9100-9117"
+    ],
+    "no_retuning": "No selector threshold, cap multiplier, deadline multiplier, model configuration, quality threshold or pass rule may change after first calibration measurement. Confirmation rows are holdout for this leaf and may not be reused for tuning.",
+    "runtime": "sum over folds of wall-clock fit+predict duration measured by time.perf_counter_ns",
+    "score": "mean per-fold balanced_accuracy"
+  },
+  "ordering_invariants": [
+    "Persist and exact-readback environment, harness and this precommit before any workload timing measurement.",
+    "Measure all calibration rows and persist/readback them before deriving the selector snapshot.",
+    "Persist/readback selector snapshot before any confirmation seed is measured.",
+    "Persist/readback all confirmation rows before the single confirmation simulation.",
+    "Run exactly one preregistered confirmation simulation; do not retune on confirmation."
+  ],
+  "phase_id": "phase_1_chat_parity",
+  "purpose": "Preregister a calibration-only selector that chooses fixed-cap versus conditional switching before confirmation outcomes, on two distinct public non-synthetic sklearn scenarios where early fixed switching has opposite plausible consequences.",
+  "role": "self_improvement",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "schema_version": 1,
+  "selector_rule": {
+    "choose_conditional_if": "direct_success_rate >= 0.80",
+    "choose_fixed_else": true,
+    "conditional_cap_s": "1.50 * calibration median direct_runtime_s",
+    "deadline_s": "fixed_cap_s + 1.05 * calibration p90 alternative_runtime_s using numpy quantile method=higher",
+    "fixed_cap_s": "0.50 * calibration median direct_runtime_s",
+    "metric": "per-scenario calibration direct_success_rate",
+    "selector_version": "CALRATE-0.80-v1"
+  },
+  "status": {
+    "calibration_derived": false,
+    "confirmation_measurement_started": false,
+    "policy_simulation_started": false,
+    "workload_measurement_started": false
+  }
+}
