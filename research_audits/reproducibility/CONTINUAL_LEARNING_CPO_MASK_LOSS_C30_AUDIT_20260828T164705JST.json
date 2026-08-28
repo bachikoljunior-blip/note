@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "audited_at": "2026-08-28T16:47:05+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "1708f6d3dd41033e1156cdf7a6138cf0f1d80544",
+    "root_control_revision": 15,
+    "root_control_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2,
+    "enabled_desired": true,
+    "semantic_freeze_respected": true,
+    "later_control_semantics_adopted": false,
+    "post_freeze_head_drift_observed": "3b94b871e6833813465ae73f641ef0bf0161cb6a"
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c30-20260828T150101JST-ef8d11da",
+    "active_wave_blob": "5e585d93336759661e6d90e07f5c4787d06677b8",
+    "source_set_digest": "ef8d11daa349ca6bc6c5cbc31bef6308a40cdc7a34ff150c6c2803241eb1ffb1",
+    "source_namespace": "continual_learning",
+    "source_path": "research_workers_clean_g1/continual_learning/RUN_20260828T140430_JST.md",
+    "source_blob": "ecb95b23bb6abad89369c2fd51e8fb1ef2c8850c",
+    "exact_wave_membership_verified": true
+  },
+  "subject": "released CPO mask_loss aggregation contract under ZeRO-3 versus ZeRO-2",
+  "overall_grade": "A-",
+  "published_claim": {
+    "paper": "arXiv:2607.04364, RL Forgets! Towards Continual Policy Optimization",
+    "scope": "The paper's headline concerns continual-retention/adaptation performance. The mask_loss aggregation issue audited here is an implementation/logging property, not a contradiction of the paper's published retention headline."
+  },
+  "official_artifact_support": {
+    "repository": "MaolinLuo/CPO",
+    "pinned_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "trainer": {
+      "path": "src/trainer/grpo_trainer_cl.py",
+      "blob": "2715d5f79fd45fcbc0f7e4155d82f2042042a358",
+      "finding": "In ZeRO-3, each rank adds only its partition's masked absolute deviation while dividing by the tensor's global masked-support count, then accelerator.gather(...).nanmean() is logged. In ZeRO-2/no-DeepSpeed, each rank computes the full tensor contribution and the same nanmean preserves it. The exact same trainer blob is still on public main at audit time."
+    },
+    "deepspeed_configs": {
+      "zero2": "scripts/zero2.json@2ab5307f18ab9e2d2f6cc13df790d7c0839c58cc, zero_optimization.stage=2",
+      "zero3": "scripts/zero3_offload.json@923b4187a5568a0e741b68248b29d25940f30990, zero_optimization.stage=3 with CPU optimizer/parameter offload"
+    },
+    "launchers": {
+      "qwen3_vl_2b_gspo": "scripts/GSPO-CL/gspo.sh@ecfa0dafec9bb813646ebef789dddd15e9158fe2 uses scripts/zero2.json",
+      "qwen3_vl_4b_gspo": "scripts/GSPO-CL-4B/gspo.sh@155ccbba4034fb34521f8edd0f9b85321cfa3dff uses scripts/zero3_offload.json",
+      "qwen3_vl_8b_gspo": "scripts/GSPO-CL-8B/gspo.sh@54931993f3e98259c8ce89f82999fb552be6568f uses scripts/zero3_offload.json",
+      "gpu_scope": "README states paper RL launchers are configured for eight NVIDIA H100 GPUs for 2B, 4B and 8B. The shell scripts themselves discover the number of visible GPUs rather than hard-failing on a different world size."
+    },
+    "environment": {
+      "readme_pins": "Linux, NVIDIA H100, Python 3.12, CUDA 12.8, torch 2.8.0, flash-attn 2.8.3, deepspeed 0.16.4",
+      "requirements_lock_strength": "Most Python packages are version-pinned, including accelerate 1.11.0, transformers 4.57.3 and trl 0.27.0; one dependency is a git URL without an immutable commit pin, so this is strong but not a fully content-addressed environment lock."
+    }
+  },
+  "reproduction_evidence": {
+    "clean_worker_source_equivalent_check": {
+      "cases": 600,
+      "world_sizes": [1,2,3,4,8,16],
+      "result": "0 mismatches for corrected sum versus full metric and 0 mismatches for released mean versus full/world_size at 1e-10; max corrected absolute error 5.684341886080802e-14.",
+      "scope": "Worker used torch 2.10.0+cpu and explicitly did not execute DeepSpeed."
+    },
+    "auditor_independent_check": {
+      "artifact": "research_audits/reproducibility/CONTINUAL_LEARNING_CPO_MASK_LOSS_C30_CHECKER_20260828T164705JST.json",
+      "method": "NumPy-only source-equivalent implementation; no worker-code import and no DeepSpeed",
+      "cases": 959,
+      "world_sizes": [1,2,3,4,5,8,16],
+      "max_abs_error_sum_vs_full": 8.526512829121202e-14,
+      "max_abs_error_release_ratio_vs_one_over_world_size": 2.220446049250313e-16,
+      "result": "all cases passed"
+    },
+    "formal_identity": "For each tensor i with global protected support R_i and disjoint ZeRO-3 partitions P_r, summing rank partials sum_{j in R_i∩P_r}|theta-ref|/|R_i| over r exactly reconstructs the full masked-L1 term. Therefore the released rank mean is the full value divided by world size W, up to floating-point summation error."
+  },
+  "independent_replication": "The auditor check is an independent local code path, not a third-party external reproduction. No protocol-matched external issue/report was recovered; the public repository issue search returned no mask_loss issue at audit time.",
+  "failed_replication": "None recovered for this logging property.",
+  "scope_and_corrections": [
+    "The clean worker's core algebra is confirmed. Under an eight-rank ZeRO-3 run, the released logged mask_loss is on a 1/8 scale relative to the full masked-L1 definition; under ZeRO-2 replicated parameters, nanmean preserves the full scale.",
+    "Because the README states eight GPUs for all paper RL methods and the 2B launcher uses ZeRO-2 while 4B/8B use ZeRO-3, cross-scale TensorBoard mask_loss values are not numerically comparable without correcting aggregation, conditional on those documented eight-rank launch conditions and equal underlying metric/lambda.",
+    "The source comment calling the ZeRO-3 nanmean a consistent relative measure is defensible only within a fixed world size. It is not invariant across world size or ZeRO stage.",
+    "No historical TensorBoard event files were authenticated in this audit, so this does not prove what any particular archived run logged.",
+    "This is logging-only. It neither proves nor disproves the separate owner-only regularizer-gradient scaling issue and does not by itself change training behavior."
+  ],
+  "exact_replay_readiness": {
+    "source_level_logging_contract": "A",
+    "source_equivalent_numeric_check": "A",
+    "pinned_deepspeed_runtime_execution": "C+",
+    "historical_tensorboard_replay": "C"
+  },
+  "blocker": "No pinned Python 3.12 + torch 2.8.0 + DeepSpeed 0.16.4 multi-GPU execution or historical TensorBoard event bundle was available in this audit environment.",
+  "reopen_on": "Upstream logging fix/release, pinned multi-GPU DeepSpeed reproduction, authenticated historical TensorBoard files, or a matched external report. Keep gradient-scaling experiments as a separate axis.",
+  "termination": "remaining_exact_c30_continual_learning_source_audited",
+  "exact_next_action": "With the C30 exact source frontier now audited or explicitly unchanged, do not repeat these source blobs absent reopen evidence. On the next invocation resolve the then-current ACTIVE_WAVE/feed under a fresh control tuple and audit newly selected high-value exact source members."
+}
