@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "audit_role": "reproducibility_auditor",
+  "created_at": "2026-08-28T16:20:07+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "note_main_sha": "637a4cb210b6ec3f14ca04b768c61f27ee7ac37a",
+    "root_control_revision": 15,
+    "root_control_blob": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "downstream_control_revision": 24,
+    "downstream_control_blob": "d1b181f9f13a76578fae08038606a9a261086419",
+    "role_config_revision": 2
+  },
+  "target": {
+    "namespace": "evaluation",
+    "source_path": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T141618_JST_sharded_fresh_process_capture_v4_partial.json",
+    "source_blob": "4e488420fa1ef308df02b20956e2779ccd9eda08",
+    "harness_path": "research_workers_clean_g1/evaluation/fresh_process_sharded_capture_v4_2026_08_28.py",
+    "harness_blob": "472caa55652c9ec9f4e08682166eaa6dcdba7977",
+    "precommit_path": "research_workers_clean_g1/evaluation/replay_capture_precommit_v4_2026-08-28T140824_JST.json",
+    "precommit_blob": "43dddfd6730b69d7bdf6ddd27032e8f76ba47924"
+  },
+  "independent_checks": {
+    "precommit_schedule_digest": {
+      "generation": "toy-v4-capture-20260828T140824-3c7b6914",
+      "planned_challenge_count": 1060,
+      "reconstruction": "Independently generated rows {index, challenge_id, attempt_id} for indices 0..1059 and canonicalized with sorted keys and compact separators exactly as specified by the persisted harness.",
+      "recomputed_sha256": "d794f090c9c082de03c8e46e65de7baffe68a7202f26d3513156b0c503888fd4",
+      "persisted_sha256": "d794f090c9c082de03c8e46e65de7baffe68a7202f26d3513156b0c503888fd4",
+      "status": "exact match"
+    },
+    "fresh_worker_mechanism": {
+      "harness": "mp.get_context('spawn'); Pool(..., maxtasksperchild=1); map(..., chunksize=1)",
+      "primary_runtime_contract": "Current CPython documentation states spawn starts a fresh Python interpreter process and maxtasksperchild is the number of tasks a worker completes before exiting and being replaced by a fresh worker.",
+      "independent_smoke_test": "A separately transcribed 8-job Pool test using spawn, 4 workers, maxtasksperchild=1 and chunksize=1 completed with 8 distinct observed PIDs in the audit runtime.",
+      "status": "mechanism independently supported; historical worker process identity still depends on the saved trace and environment"
+    },
+    "protected_statistic_structure": {
+      "harness_expression": "sha256(('toy_hash_score_v3|' + attempt_id).encode()).hexdigest()",
+      "side_in_digest": false,
+      "pid_in_digest": false,
+      "boot_nonce_in_digest": false,
+      "interpretation": "For a correctly dispatched challenge pair, A and B receive the same attempt_id, so equality of the protected digest is expected by pure-function construction. Zero mismatches are therefore a fixture/pipeline consistency observation, not evidence about arbitrary process-local nondeterminism or LLM runtime replay.",
+      "source_scope_consistency": "The worker checkpoint explicitly calls this a role-local toy SHA-256 fixture and says it is not an LLM runtime determinism claim."
+    },
+    "fresh_process_attestation_boundary": {
+      "saved_identifier": "pid=<pid>;boot=<secrets.token_hex(16) generated inside _child>;job=<index>:<side>",
+      "finding": "The uniqueness check on fresh_process_id is not an independent attestation of process freshness because both the boot nonce and job identity are generated/attached per task. Even if a worker process were unexpectedly reused, the composite identifier would ordinarily remain unique.",
+      "scope": "This is an evidence-design weakness, not evidence that multiprocessing reused a worker. The configured maxtasksperchild=1 mechanism itself is supported by CPython semantics.",
+      "repair": "Initialize a process-epoch nonce once in the worker initializer and record it with PID; require exactly one observation per process epoch, or persist a separate process-start attestation/invocation counter that cannot vary merely because the job varies."
+    },
+    "container_transform_boundary": {
+      "harness_output": "canonical raw JSON bytes plus newline written directly to --output",
+      "persisted_shard_form": ".lzma.json wrapper with encoding=lzma+base64, payload_b64, raw_sha256 and shard_payload_sha256",
+      "targeted_repo_search": "No source containing lossless_text_container or payload_b64 was located by repository code search during this audit.",
+      "interpretation": "A packaging/compression step exists outside the persisted capture harness. The wrapper carries a raw SHA-256, so scientific payload integrity can in principle be checked after decode, but exact historical container-byte reproduction lacks the packager implementation/settings in the audited source chain."
+    }
+  },
+  "saved_partial_evidence": {
+    "captured_range": [0, 199],
+    "captured_challenges": 200,
+    "observations": 400,
+    "mismatches": 0,
+    "planned_horizon": 1060,
+    "certifying": false,
+    "source_explicitly_disables_deterministic_replay": true
+  },
+  "missing_for_exact_historical_replay": [
+    "exact Python version/platform/runtime environment for the historical shards",
+    "a persisted packager/compressor implementation and exact LZMA/base64 settings that produced the .lzma.json wrappers",
+    "a process-epoch-level freshness attestation independent of per-job identity/nonce",
+    "the remaining 860 precommitted challenge captures required for the worker's own fixed-horizon gate",
+    "a matched independent rerun of the exact persisted historical harness/config"
+  ],
+  "scope_guard": "Do not generalize the 0/200 toy-hash mismatch prefix to LLM determinism, arbitrary runtime determinism, or full 1060-trial certification. Do not infer actual process reuse from the attestation weakness."
+}
