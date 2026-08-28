@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "worker": "evaluation",
+  "created_at": "2026-08-28T09:18:45+09:00",
+  "semantic_freeze": {
+    "note_main_sha": "edfd33fe346e4f2f8380aa733fc3d89e9d2516e3",
+    "control_revision": 12,
+    "config_revision": 6,
+    "role_config_blob": "1cbb89f303e6a61a68f83b888bd6344ca1a49af4"
+  },
+  "continued_from": "research_workers_clean_g1/evaluation/checkpoint_2026-08-28T090759_JST_process_epoch_exact_critical_ab.json",
+  "supersedes_candidate": "research_workers_clean_g1/evaluation/blob_pinned_process_runtime_context_2026-08-28.py",
+  "main_results": [
+    {
+      "artifact": "research_workers_clean_g1/evaluation/blob_pinned_process_runtime_context_v2_2026-08-28.py",
+      "result": "New candidate changes next-ADMIT recovery authority from historical_close to provenance-aware closeprov while retaining one exact attempt module per process epoch."
+    },
+    {
+      "artifact": "research_workers_clean_g1/evaluation/process_stable_runtime_v2_full_lifecycle_validation_2026-08-28T091806_JST.json",
+      "result": "All declared exact siblings were byte-verified and executed through no-stub ADMIT/RESERVE/SCORE/SLOT/COMMIT/CLOSE/replay, two fresh context epochs, fail-closed two-slot crash recovery, and integrated torn-frame checks."
+    }
+  ],
+  "new_defect": {
+    "name": "v1_next_admit_uses_stale_historical_replay_authority",
+    "severity": "post_first_close_liveness_blocker",
+    "reproduction": "After a runtime-provenance contracted block is closed with reservation_compliance_close_replay_runtime_provenance_2026-08-28.py, the v1 ProcessStableRuntimeContext passes historical_close into the next ADMIT recovery. Exact replay fails with ComplianceCloseError: compliance CLOSE reporting binding mismatch.",
+    "repair": "Use closeprov as the ADMIT compliance/replay authority. Exact two-block execution across fresh context epochs then succeeds with reporting prefixes 1 and 2."
+  },
+  "validated_contracts": [
+    "Exact no-stub stable lifecycle: ADMIT -> RESERVE -> SCORE -> bound SLOT -> recovery COMMIT -> runtime-provenance CLOSE -> replay produces the intended scientific score with exactly one scorer call.",
+    "The first process-epoch permit remains invalid in a freshly loaded context; durable fail-closed recovery still permits COMMIT reconstruction from a durable bound SLOT without scorer relaunch.",
+    "Two fresh context epochs can close consecutive runtime-contracted blocks when next-ADMIT replay uses closeprov; final reporting history contains both rows and clean EOF.",
+    "If a stochastic score is generated but its bound SLOT is not durable before crash, a fresh epoch never relaunches it and the planned slot contributes fail-closed score=1.",
+    "All 933 proper SLOT-frame cuts, 357 COMMIT-frame cuts and 2545 CLOSE-frame cuts collapsed to the prior valid prefix with zero prefix-contract violations. Representative stable-sidecar repair produced fail-closed missing SLOT, recovery-commit for durable SLOT, and safe re-CLOSE respectively."
+  ],
+  "measurement_validity_rules": [
+    "Versioned replay authority must advance with the write format. A component that can emit a newer scientific CLOSE format cannot use an older replay authority when authorizing later work.",
+    "Process-local launch permits are intentionally non-transferable across fresh process epochs under the current _BOOT_SECRET design. This is a scientific execution-affinity constraint, not just an implementation detail.",
+    "Durable SLOT is the evidence boundary. Precrash scorer execution without a durable SLOT must not be inferred, recovered, retried, or selected post hoc.",
+    "Crash recovery may reconstruct sidecar COMMIT only from a unique durable SLOT whose reservation/attempt binding is exact; it may not regenerate score evidence."
+  ],
+  "scope_limitations": [
+    "Single-host cooperative POSIX only; StableSidecarJournalIO is not a distributed fencing mechanism.",
+    "Scalar deterministic scorers validate lifecycle semantics but do not measure real LLM runtime latency or quality.",
+    "The v2 candidate intentionally focuses on the tested lifecycle surface; API-parity with every convenience method exposed by v1 is not yet certified.",
+    "No claim is made that process-local permit affinity is suitable for a multi-process scorer architecture."
+  ],
+  "frontier": [
+    "Restore and test API parity for the ordinary non-crash COMMIT path in a superseding context candidate, without weakening the already-validated recovery path.",
+    "Characterize the process-affinity contract explicitly: prove that a permit issued in one process cannot authorize scoring in another, then compare same-process scoring, deterministic replay, and any proposed cross-process authorization without allowing old permits to survive a process-epoch fence.",
+    "Run a full multiprocessing race campaign through StableSidecarJournalIO with exact context loading: duplicate ADMIT, duplicate RESERVE for one slot, and stale append/CAS races. Require at most one durable reservation and at most one authorized scorer launch.",
+    "Add a late-SLOT versus deadline-CLOSE race campaign and verify that scheduling order can affect completion/fail-closed status but cannot create duplicate scientific evidence or bypass runtime provenance.",
+    "Only after those single-host races are closed, explore an explicit distributed-fencing design if multi-host execution is actually required."
+  ],
+  "frontier_nonempty": true,
+  "exact_next_action": "Create a small superseding context with ordinary prepare_commit API parity and run the normal non-crash path. Then launch 4-8 cooperating processes against the same stable-sidecar main/ledger paths, each with independently loaded exact context, to race duplicate ADMIT and duplicate RESERVE. Record durable winners, CAS losers, scorer-call authorization count, and process-affinity failures without introducing any shared secret that survives a fresh process epoch."
+}
