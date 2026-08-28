@@ -4,40 +4,49 @@
   "control_revision": 15,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1907_EVENT_AUTHORITY_API.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1805_CANONICAL_MULTIWRITER_AUTHORITY.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1907_EVENT_AUTHORITY_API.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
       "repository": "lbx154/Argus",
-      "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
-      "verified_current_main": true
+      "commit": "eb078f89a82d52fdc9e4043e83c5753ef3c45843",
+      "verified_current_main": true,
+      "checked_at": "2026-08-28T20:00+09:00"
     },
     {
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
-      "verified_current_develop": true,
-      "versions_source_checked": ["v3.0.0", "v3.1.1", "v3.2.0", "v4.0.0", "v4.1.0", "v4.2.0", "v4.3.0"],
+      "verified_current_develop_in_prior_checkpoint": true,
+      "versions_source_checked": [
+        "v3.0.0",
+        "v3.1.1",
+        "v3.2.0",
+        "v4.0.0",
+        "v4.1.0",
+        "v4.2.0",
+        "v4.3.0"
+      ],
       "source_scope": "Windows raw-fd API/position semantics, release-level locking correctness, dependency floor selection"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Fresh-bootstrap first. Re-read root manifest and open_source config, then use RUN_20260828_1907_EVENT_AUTHORITY_API.md. First determine whether any current production path can continue writing <project_root>/.argus/events.jsonl after events.migration-v2.json exists; if yes, the existence-only marker can permanently miss later legacy rows and shared authority alone is insufficient, so specify source-signature/replay semantics or prove the writer unreachable. Then finalize the core/event_store.py API and cross-process tests, apply candidate013 regression mapping, and continue candidate009/011 byte-stable snapshot, strict events.lock -> mission-view.lock, PlannerVerdict FOUND/ABSENT/UNKNOWN, and explicit iter_call_events corruption behavior. Keep candidate008 durability and candidate005 provenance separate.",
+  "exact_continuation": "Fresh-bootstrap first. Re-read root manifest and open_source config, then use RUN_20260828_2011_EVENT_MIGRATION_REPLAY_ORDER.md. First verify whether current Argus still has core/usage.py _event_history_paths sorted(older, reverse=True); if so, map the minimal .2/.3/.1/live and cross-rollover mission-attribution regressions and keep candidate016 ahead of the larger lock refactor. Then specify migration marker v3 as a replayable pre-scan binary/fstat source snapshot: v2 forces one idempotent rescan, source/canonical open uncertainty must not advance the marker, and marker records only the boundary actually consumed. Then finalize shared core/event_store.py authority, candidate013 durability mapping, and candidate009/011/007/010 byte-stable reader + strict events.lock -> mission-view.lock + PlannerVerdict FOUND/ABSENT/UNKNOWN. Keep candidate008 durability and candidate005 provenance separate.",
   "run_findings": {
-    "candidate_014_writer_inventory": "Targeted source classification found three production events.jsonl append mechanisms and no fourth: JsonlEventSink._append; AgentIOLogger.log->_jsonl_append; ensure_project_events_standardized. Search false positives were classified as readers or writes to transcript/inbox/backlog. AgentIO raw agent_io.jsonl remains a separate bounded debug artifact and must not use canonical event authority.",
-    "candidate_014_agent_io_path_classes": "AgentCliBackend._agent_io_log_path routes a configured project to <project_root>/events.jsonl; without project usage context it may use ARGUS_SKILL_AGENT_IO_LOG or <working_dir>/.argus/events.jsonl. Separate backend instances can write concurrently, so the instance-local AgentIO lock is not a same-file authority.",
-    "candidate_014_core_api": "Smallest import-safe boundary is a core event-store primitive: EventLogAuthorityError as an OSError subclass; event_log_authority(log_path) using os.open(...,0600), a real file object, Portalocker LOCK_EX|LOCK_NB, retry only AlreadyLocked, permanent failures surfaced as the domain OSError, and best-effort post-commit unlock/close; plus isolate_unterminated_tail_unlocked(log_path). Normalization, sink-configured rotation, and Mission View semantics stay outside this low-level layer.",
-    "candidate_014_fail_soft_compat": "AgentIOLogger._jsonl_append currently catches OSError only. Letting raw Portalocker LockException escape from the shared authority would newly allow logging failure to break provider execution. A domain OSError preserves the adapter's fail-soft contract while JsonlEventSink can still return False and migration can retry later.",
-    "candidate_014_migration_scope": "ensure_project_events_standardized computes legacy sources, scans canonical identities, appends and fsyncs canonical rows under events.migration-v2.lock but not events.lock; shared canonical authority must cover canonical identity scan + delimiter isolation + append. The next unresolved question is whether existence-only migration marker semantics are safe against any continuing legacy .argus/events.jsonl writer.",
-    "candidate_013_regression_map": "Patch/test placement is concrete: event_catalog.py adds ROUND_REVIEW_STARTED to SIGNAL_EVENT_TYPES; mission_view/_dispatch.py and _view_state.py remove ENGINEER_PROGRESS from durable projection; tests/test_event_verbosity.py covers default/signal reviewer-start persistence and ordinary-progress negative; tests/core/test_mission_view.py carries the durable-event/default-signal invariant and reviewer-active state coverage.",
-    "candidate_012_dependency_floor": "portalocker>=4.2 remains the first defensible floor for the inspected raw-fd Windows locking surface; current Argus still declares portalocker>=3.",
-    "candidate_011_ordering_revised": "All canonical writers must share pre-record delimiter isolation. Sink order: authority -> delimiter -> rotation -> new row -> Mission View projection. AgentIO/migration likewise isolate before their new rows. Never truncate damaged bytes; stable reading remains byte-row based.",
-    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after complete stable clean scan; UNKNOWN covers snapshot/open/decode/target-relevant parse ambiguity, leaves outbox pending, and returns PLAN_RETRY without Planner invocation.",
-    "candidate_007_windows_bootstrap_race": "Mission View reconciliation still needs strict events.lock -> mission-view.lock and a writer projection entry point that does not recursively reacquire event authority.",
+    "candidate_016_usage_generation_order": "core/usage.py _event_history_paths currently sorts retained N>=2 generations with reverse=True, yielding .3,.2,.1,live where the canonical event-log contract and tests define .2,.3,.1,live. This order feeds ensure_project_events_standardized, _legacy_event_records, and _legacy_call_threads. _legacy_event_records is stateful across mission starts/completions and call starts, so a rollover split can misattribute call usage to the wrong mission. Minimal correction is sorted(older) plus direct order, migration-order, and cross-rollover mission-attribution regressions.",
+    "candidate_015_migration_marker": "events.migration-v2.json is existence-only and stores no consumed source signature. AgentCliBackend still has a no-usage-context/no-env fallback to <working_dir>/.argus/events.jsonl, so mixed direct/managed usage can grow legacy history after marker creation. Independently, migration silently continues on legacy source open OSError and still writes the marker, permanently hiding that generation. Replace with v3 replay semantics keyed to a pre-scan opened-handle/fstat boundary; v2 is untrusted and forces one idempotent rescan; unreadable source/canonical generations do not advance the marker; canonical identity scan+append occurs under shared event authority.",
+    "candidate_015_prescan_rule": "Never certify a post-scan stat as consumed: an append can land after EOF was observed but before that stat. Marker v3 must record the pre-scan byte boundary actually scanned, read only complete newline-terminated physical rows within that bound, and allow a later changed snapshot to replay safely.",
+    "candidate_014_writer_inventory": "Targeted classification still finds three production canonical events.jsonl append mechanisms: JsonlEventSink._append; AgentIOLogger.log->_jsonl_append; ensure_project_events_standardized. They do not yet share one cross-platform authority.",
+    "candidate_014_core_api": "Use a core event-store primitive: EventLogAuthorityError(OSError); event_log_authority(log_path) with a 0600 sidecar/real file object/Portalocker low-level exclusive nonblocking primitive, retry only AlreadyLocked, permanent failure as domain OSError, best-effort post-commit cleanup; plus isolate_unterminated_tail_unlocked(log_path).",
+    "candidate_013_regression_map": "Current head still omits ROUND_REVIEW_STARTED from SIGNAL_EVENT_TYPES. Add it to default signal; remove ordinary ENGINEER_PROGRESS from durable Mission View projection unless deliberately made fully durable; test default reviewer-start persistence and durable-projection/signal invariant.",
+    "candidate_012_dependency_floor": "Current Argus head still declares portalocker>=3. Prior public-source analysis selected >=4.2 as the first defensible floor for the inspected Windows raw-fd locking surface.",
+    "candidate_011_ordering_revised": "All canonical writers need shared pre-record delimiter isolation before rotation/append. Never truncate damaged bytes; stable reading should be physical-row bytes.",
+    "candidate_010_supervisor_contract": "Planner verdict persistence evidence: FOUND suppresses re-emit; ABSENT alone authorizes one re-emit after a complete stable clean scan; UNKNOWN keeps outbox pending and returns PLAN_RETRY without Planner invocation.",
+    "candidate_007_windows_bootstrap_race": "Mission View reconciliation still needs strict events.lock -> mission-view.lock and an internal projection path that does not recursively reacquire event authority.",
     "candidate_008_status": "unchanged separate power-loss durability hypothesis; no power-loss incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA d6a6857ade76e9f6d89a0bb42e987d44f4571a90 control15/config6. Later note heads, including 35dfba52623ca0927500aed433a53b0961105fe6 and 21cf9e514866f243b3f5ad041fb0bf7690c7de1e, were observed only for authorized write coordination; newer control semantics were not adopted.",
-    "connector_mutation_boundary": "Only role-local checkpoint/LATEST and immutable open_source receipt writes are authorized. No branch/ref/source/control/other-worker/downstream/legacy/shared-ledger mutation was performed. The first checkpoint create attempt hit a 409 due concurrent note-head movement and made no write; the retry created the checkpoint successfully."
+    "control_freeze": "This invocation froze semantic work on note SHA 6c593ed993f9d143bde084d7cc5841ed7c611c1c control15/config6. Later note head 235054a0948c38dec665c06f0955b15bf5ef6fa0 was observed only for authorized role-local write coordination; newer control semantics were not adopted.",
+    "connector_mutation_boundary": "Only role-local checkpoint/LATEST and immutable open_source receipt writes are authorized. No branch/ref/source/control/other-worker/downstream/legacy/shared-ledger mutation was performed."
   },
   "independence": {
     "clean_exploration": true,
