@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "self_improvement",
+  "sequence": 99,
+  "created_at": "2026-08-28T18:13:59+09:00",
+  "frozen_control": {
+    "note_main_sha": "6b4ee5c48a7e2987b57c5c05751657fc8738e97c",
+    "root_control_revision": 15,
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f"
+  },
+  "source_revisions": {
+    "skillberry-ai/cap-evolve": "323ed3b5e1236b99544827f9c6b25820dc5aab8f",
+    "hedypamungkas/koboi-agent": "d9356933ad0b11ab16dbb14ed449edd0580cb09c",
+    "cxcscmu/Auto-Research-AI-Scientist": "7a6dbc8543172042d7be4f14b39f8f4c0abd6c92",
+    "swiss-ai/evals-post-train": "72409217c6c9eeefc447935edcc42af80fb72712"
+  },
+  "finding": {
+    "headline": "The public pieces for crash-safe outer evaluation are now individually source-bound, but no audited system in this run composes all of them. cap-evolve has post-score consumption detection, Koboi has a durable pre-call running marker, Swiss-AI has missing-cell resume, while Auto-Research exposes a concrete certify-order counterexample that re-queries holdout before checking the prior certificate.",
+    "cap_evolve": {
+      "explicit_second_look_incident": "Current RunDir.begin_test_attempt documents a real run where finalize was killed by a foreground timeout after test had already been scored; retry scored test again and the reported number became the second look. PR #366 records the same incident as the motivation for the guard.",
+      "current_guard": "Before a finalize attempt, begin_test_attempt checks the unused seal and scans rollouts/test/*.json. If any test rollout exists while the seal is uncommitted, retry is refused unless CAPEVOLVE_ALLOW_TEST_RESCORE is explicitly set.",
+      "remaining_pre_first_outcome_gap": "evaluate_candidate reserves the test seal before evaluation but creates no content-bound durable logical evaluation intent. run_target/run_batch/run_trials can therefore dispatch/complete remotely before _persist_trial writes the first local rollout. A hard kill in that interval leaves no test rollout, so retry is allowed and can repeat the same held-out evaluation.",
+      "batch_amplification": "For run_batch/run_trials the uncertain interval can include an entire returned batch because per-cell scoring/persistence happens only after the batch call returns.",
+      "partial_resume_gap": "Once any local test rollout exists, begin_test_attempt fail-closes the whole subsequent finalize. This prevents a second look but does not resume only missing test cells.",
+      "structural_outer_gaps": [
+        "Open issue #361 documents that direct harness.evaluate_candidate(split='test') can score test outside finalize and leave the seal unburned, bricking the later legitimate finalize.",
+        "Open issue #341 documents that CAPEVOLVE_ALLOW_TEST_RESCORE claims its use is recorded in the run, but the current code does not persist/event/report the override, so a deliberate second look can be undisclosed."
+      ]
+    },
+    "koboi_bridge": {
+      "useful_mechanism": "StepJournal.record_step eagerly commits a 'running' row before each LLM call, so a crash leaves a durable pre-call marker; resume marks such rows interrupted. Its crash benchmark resumes a fresh agent and re-executes only missing tool calls after an in-process mid-turn interruption.",
+      "scope_limit": "The benchmark uses idempotent tracking tools and explicitly says a literal cross-process SIGKILL harness is future work. The step identity shown is session/turn/step, not a semantic request digest bound to a provider idempotency token. The HTTP IdempotencyRegistry is in-memory TTL only, so this is not provider-exactly-once evaluation authority by itself."
+    },
+    "autoresearch_counterexample": {
+      "strength": "The project separates inner-CV search from an explicit outer holdout certification command, freezes the selected source hash, runs evaluators in fresh subprocesses, and writes a holdout_certification.json artifact.",
+      "second_query_bug": "CampaignRunner.certify() calls evaluator.holdout(workspace) before it checks whether holdout_certification.json already exists. If the file exists, it compares the newly computed payload to the old one only after the second holdout evaluation has already occurred.",
+      "test_confirms_repeat": "tests/test_runner.py calls CampaignRunner(config).certify() twice and only asserts matching source hashes, so the current regression test explicitly permits repeated holdout execution rather than proving cache-only second access.",
+      "trial_resume_limit": "RUNBOOK says an interrupted trial directory remains for audit and next launch chooses a new trial ID. run_one appends TrialRecord only after agent execution/evaluation, so there is no durable logical trial/evaluation outcome record before the external command."
+    },
+    "swiss_ai_cell_resume_component": {
+      "mechanism": "launch_evaluations_gracefuly.sh reconstructs a COMPLETED_MAP from per-task result directories/requested_tasks manifests, computes MISSING_TASKS, and launches only missing groups; --force_tasks deliberately removes matches from COMPLETED_MAP to re-evaluate them.",
+      "scope_limit": "This is a useful missing-cell resume pattern, not a one-shot terminal outer-evaluation authority and not a pre-dispatch content-bound WAL."
+    }
+  },
+  "cap_evolve_kill_point_matrix": [
+    {
+      "boundary": "before remote/evaluator dispatch",
+      "durable_evidence": "test seal only reserved/checked; no rollout and no logical evaluation intent",
+      "restart_behavior": "retry allowed",
+      "assessment": "safe only if dispatch truly never happened",
+      "needed_change": "persist content-bound OuterEvaluationIntent before any provider/evaluator call"
+    },
+    {
+      "boundary": "provider/evaluator accepted or completed, before first local rollout write",
+      "durable_evidence": "no rollout; no logical evaluation outcome",
+      "restart_behavior": "indistinguishable from never-dispatched; retry allowed",
+      "assessment": "second-look / duplicate-execution risk",
+      "needed_change": "stable logical evaluation/cell IDs plus provider idempotency or UNKNOWN/reconciliation"
+    },
+    {
+      "boundary": "first local rollout persisted",
+      "durable_evidence": "rollouts/test/*.json exists, seal may still be uncommitted",
+      "restart_behavior": "begin_test_attempt refuses a new finalize by default",
+      "assessment": "honesty fail-closed; availability lost",
+      "needed_change": "recover same attempt and continue only missing cells without reopening completed cells"
+    },
+    {
+      "boundary": "partial set of test cells persisted",
+      "durable_evidence": "some rollout files exist",
+      "restart_behavior": "whole finalize refused, not cell-resumed",
+      "assessment": "prevents second look but strands partial evidence",
+      "needed_change": "immutable per-cell outcome authority and deterministic missing-cell set derived from frozen attempt manifest"
+    },
+    {
+      "boundary": "final result written before seal commit",
+      "durable_evidence": "test rollouts exist and final artifact may exist, seal still uncommitted",
+      "restart_behavior": "new scoring attempt is refused by rollout detection; exact automatic completion behavior of this substate was not separately proven in this invocation",
+      "assessment": "no rescore by default, but attempt completion should be recoverable without evaluator access",
+      "needed_change": "reconcile final artifact from immutable cells then commit terminal seal, without dispatch"
+    },
+    {
+      "boundary": "seal committed",
+      "durable_evidence": "test_used committed plus final evidence",
+      "restart_behavior": "normal second finalize refused; report existing result",
+      "assessment": "terminal within run by default, subject to explicit rescore override and out-of-band test-call hole",
+      "needed_change": "make test access capability-gated at core boundary and make any exceptional override durably disclosed or remove it"
+    }
+  ],
+  "minimal_composed_protocol": [
+    "Freeze candidate source hash, evaluator/config digest, dataset/split digest, ordered test cell manifest, and an attempt_id before OUTER access.",
+    "Atomically persist OuterEvaluationIntent(attempt_id, semantic_request_digest, cell_manifest, status=PLANNED) before any evaluator/provider call.",
+    "For each cell, derive stable cell_id from attempt_id plus task/trial identity; bind dispatch to a deterministic provider token when supported, otherwise persist DISPATCHING/UNKNOWN and require reconciliation rather than blind retry.",
+    "Persist each cell outcome immutably and conflict-check same cell_id against the semantic digest; restart derives completed/missing cells from the log and dispatches only provably missing cells.",
+    "Derive aggregate and certificate entirely from the immutable cell log; write certificate before terminal seal transition or complete both through a recoverable state machine.",
+    "On later certify/read calls, check terminal certificate/attempt state before any evaluator access and return the cached certificate only. Never call holdout and then compare with cache.",
+    "Make OUTER evaluator/data access capability-gated below all generic evaluation APIs, so alternate callers cannot bypass finalize/certify.",
+    "If exceptional second-look override exists, persist a non-erasable disclosure event before dispatch, bind it into report metadata, and never present its score as an independent holdout."
+  ],
+  "falsification_tests": [
+    "SIGKILL immediately before provider dispatch: retry performs exactly one logical outer evaluation.",
+    "SIGKILL after provider accepts but before local response: retry uses same provider token or enters UNKNOWN/reconcile; no blind second dispatch.",
+    "SIGKILL after first local cell: restart completes only missing cells and never reruns persisted cells.",
+    "SIGKILL after an arbitrary subset of batch cells: restart's completed/missing partition is deterministic from the immutable log.",
+    "SIGKILL after aggregate/certificate write but before terminal seal: restart commits/reconciles from cached evidence without evaluator access.",
+    "Call certify twice: instrumented holdout evaluator invocation count remains exactly one.",
+    "Call generic evaluate(test) outside finalize/certify: core rejects before touching evaluator/data.",
+    "Change candidate/evaluator/dataset/split under same attempt_id: fail closed as semantic-id conflict.",
+    "Use second-look override: disclosure is durable before dispatch and appears in machine-readable and human report outputs."
+  ],
+  "search_result_scope": "Targeted public source/issue search in this invocation did not find a single audited self-improver that simultaneously implements pre-dispatch content-bound evaluation WAL, provider reconciliation, cell-level partial resume, and mechanically cache-only/non-queryable OUTER. This is a scoped negative result, not a repository-universe impossibility claim.",
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next fresh-control invocation, first test whether Auto-Research-AI-Scientist has a newer branch/PR fixing certify-before-cache ordering or adding a durable certification attempt state. Then search evaluation services/workflow engines for a content-bound pre-dispatch evaluation/cell WAL with missing-cell resume. Prioritize an implementation where a second certify call is demonstrably cache-only (evaluator invocation count stays one), and where generic evaluation APIs cannot query OUTER outside the terminal authority. If none exists, build a minimal executable reference state machine from the six kill boundaries in this contract and test it with real cross-process SIGKILL." 
+}
