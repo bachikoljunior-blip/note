@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "frozen_control": {
+    "note_main_sha": "6c593ed993f9d143bde084d7cc5841ed7c611c1c",
+    "root_control_revision": 15,
+    "root_manifest_blob_sha": "f8637800721d29b4f293ed2ed52aebdda4983931",
+    "role_config_revision": 7,
+    "role_config_blob_sha": "c5d194b341a70356da196cfb88636ab41fc1bc9f"
+  },
+  "public_revisions": {
+    "UKGovernmentBEIS/inspect_ai": "86ad4fa73042a445588e2eca18df1502da6bb661",
+    "METR/hawk": "97a694de1988fc6413e9ba5c67b02fa114b2a8b9"
+  },
+  "source_bound_findings": [
+    {
+      "claim": "Hawk resumes completed samples and in-progress samples that reached a checkpoint, while samples that never checkpointed restart from the beginning.",
+      "source": "METR/hawk:docs/user-guide/checkpointing.md@97a694de1988fc6413e9ba5c67b02fa114b2a8b9"
+    },
+    {
+      "claim": "Hawk's crash-resume smoke tests deliberately crash after a durable checkpoint and verify restored host/sandbox state; they validate post-checkpoint resume rather than a pre-first-provider-call write-ahead intent.",
+      "source": "METR/hawk:hawk/tests/smoke/scenarios/test_checkpoint_resume.py@97a694de1988fc6413e9ba5c67b02fa114b2a8b9"
+    },
+    {
+      "claim": "Hawk's prior-attempt diagnostic explicitly describes unfinished samples starting over across pod replacement/retry and records a production case where 4,588 logical samples became 6,013 attempts after three OOM kills.",
+      "source": "METR/hawk:hawk/hawk/runner/prior_attempt.py@97a694de1988fc6413e9ba5c67b02fa114b2a8b9"
+    },
+    {
+      "claim": "Inspect creates a realtime sample row before plan execution when realtime logging is enabled, but TaskLogger.start_sample writes only to the local SampleBufferDatabase and is not the checkpoint authority.",
+      "sources": [
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/_eval/task/run.py@86ad4fa73042a445588e2eca18df1502da6bb661",
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/_eval/task/log.py@86ad4fa73042a445588e2eca18df1502da6bb661",
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/log/_recorders/buffer/database.py@86ad4fa73042a445588e2eca18df1502da6bb661"
+      ]
+    },
+    {
+      "claim": "Inspect checkpoint I/O is agent-driven: checkpointer setup is inert until the agent enters checkpointer(), and durable fires occur on tick/checkpoint or a clean final agent_complete checkpoint. Therefore current source does not establish a durable content-bound provider-dispatch intent before the first model/provider call.",
+      "sources": [
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/util/_checkpoint/checkpointer.py@86ad4fa73042a445588e2eca18df1502da6bb661",
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/util/_checkpoint/checkpointer_impl.py@86ad4fa73042a445588e2eca18df1502da6bb661",
+        "UKGovernmentBEIS/inspect_ai:src/inspect_ai/log/_samples.py@86ad4fa73042a445588e2eca18df1502da6bb661"
+      ]
+    }
+  ],
+  "bounded_conclusion": "Inspect/Hawk provides useful post-checkpoint recovery, but the inspected current paths do not source-bind a durable semantic evaluation/provider intent before the first provider effect. The uncovered gap is specifically the interval before the first durable checkpoint; it is not a claim that all resumed model calls are duplicated.",
+  "reference_test": {
+    "source": "research_workers_clean_g1/self_improvement/reference_outer_http_state_machine_2026-08-28T200546_JST.py",
+    "source_sha256": "7cefc6bc21d119bece2a2428039ae22aad45143e0f41945021070de80b9c9150",
+    "report": "research_workers_clean_g1/self_improvement/reference_outer_http_sigkill_report_2026-08-28T200546_JST.json",
+    "result": "all_passed",
+    "idempotent_reconcile_mode": {
+      "kill_boundary": "provider effect durably accepted before controller reads response",
+      "controller_exit": -9,
+      "provider_before_resume": {"effects": 1, "execute": 1, "reconcile": 0},
+      "provider_after_resume": {"effects": 3, "execute": 3, "reconcile": 1},
+      "second_certify_provider_call_delta": 0,
+      "interpretation": "Stable content-bound idempotency key plus reconcile-before-execute recovers the accepted-but-unrecorded effect without duplicate cell effects."
+    },
+    "nonidempotent_no_reconcile_mode": {
+      "kill_boundary": "provider effect durably accepted before controller reads response",
+      "controller_exit": -9,
+      "provider_before_resume": {"effects": 1, "execute": 1, "reconcile": 0},
+      "provider_after_resume": {"effects": 1, "execute": 1, "reconcile": 0},
+      "restart_state": "UNKNOWN",
+      "interpretation": "Without provider idempotency or reconciliation, a durable DISPATCHING state must not be blindly replayed; restart fails closed with zero additional provider calls."
+    },
+    "scope": "Local HTTP provider process and SQLite authority exercise real inter-process transport and SIGKILL ordering, but do not establish exactly-once behavior for arbitrary external providers."
+  },
+  "post_freeze_head_drift": {
+    "observed_note_main_sha": "d12d46ae48b041c249660482937f2033869f9bd6",
+    "action": "not adopted; semantic work stopped and only frozen-tuple checkpoint/receipt writes continue"
+  },
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next fresh-control invocation, resolve the then-current control tuple first. Then source-bind concrete synchronous provider APIs for durable idempotency and retrieve/reconcile semantics at provider-accepted-to-local-unrecorded boundaries, classifying idempotent+reconcile, idempotent-only, reconcile-only, or neither. Extend the HTTP reference with a DISPATCHING-but-no-remote-effect crash case and a provider-process crash immediately after durable effect commit; require safe same-key retry only where the provider contract proves it, otherwise retain UNKNOWN/fail-closed semantics."
+}
