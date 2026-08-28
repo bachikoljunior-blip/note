@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-29T00:40:19+09:00",
+  "role": "primary_source_verifier",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "06aa93152de791406486205127c045a30c9b0721",
+    "h2": "06aa93152de791406486205127c045a30c9b0721",
+    "root_control_revision": 19,
+    "root_blob": "4a3785e54bb4e56b867132fac084fab7db71b518",
+    "downstream_control_revision": 28,
+    "downstream_blob": "efcb4c2a6de88c800e54bc1d37f0448dda6ab6d3",
+    "role_config_revision": 6,
+    "semantic_freeze_sha": "06aa93152de791406486205127c045a30c9b0721"
+  },
+  "source_artifact": {
+    "namespace": "open_source",
+    "path": "research_workers_clean_g1/open_source/RUN_20260829_0005_PHASE1_POLICY_EVIDENCE_LATTICE.md",
+    "blob": "5bb410bf16676ae1a12b0deb982935c694dc7040",
+    "producer_frozen_main_sha": "2d54ae64052110587595e13484f464efed1bfed0",
+    "producer_root_control_revision": 18,
+    "producer_config_revision": 6,
+    "producer_assignment_task_id": "phase1-clean-open-source-chat-capability-patterns"
+  },
+  "verdict": "SUPPORTED_WITH_MATERIAL_SCOPE_CORRECTIONS",
+  "verified_claims": [
+    {
+      "claim": "GitHub GraphQL updateRefs performs multiple ref updates atomically and RefUpdate.beforeOid supplies an exact old-value precondition; if one update is rejected no ref is modified.",
+      "status": "PRIMARY_VERIFIED",
+      "scope": "GitHub public GraphQL API semantics; one repository; not current connected Chat mutation capability.",
+      "primary_source": "https://docs.github.com/en/graphql/reference/git#updateRefs"
+    },
+    {
+      "claim": "GitHub Contents update requires the blob SHA of the file being replaced and can return 409 Conflict.",
+      "status": "PRIMARY_VERIFIED",
+      "scope": "Per-file Contents API update only; not multi-file atomicity or branch-head CAS.",
+      "primary_source": "https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents"
+    },
+    {
+      "claim": "Required signed-commit enforcement checks all commits in the specified branch-update range when updating a branch.",
+      "status": "PRIMARY_VERIFIED",
+      "scope": "GitHub branch protection/ruleset required-signature semantics; creation semantics differ as documented.",
+      "primary_source": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-signed-commits"
+    },
+    {
+      "claim": "Review readiness cannot generally be reduced to counting APPROVED rows because stale dismissal, code owners, latest-push approval, merge-base changes, conversation resolution, and other open PRs sharing the same head commit can affect mergeability.",
+      "status": "PRIMARY_VERIFIED",
+      "scope": "Configured protected-branch/ruleset review policies only.",
+      "primary_source": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches"
+    },
+    {
+      "claim": "Async merge returns 202 for a newly accepted background request, 409 with the existing request UUID when another async request already exists, applies only basic PR-state checks at request creation, and retains result records for 24 hours after their most recent update.",
+      "status": "PRIMARY_VERIFIED",
+      "scope": "GitHub REST merge-async endpoint as documented in the 2026 API version.",
+      "primary_source": "https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously"
+    }
+  ],
+  "live_chat_connector_checks": [
+    {
+      "check": "review_read_binding_fixture",
+      "fixture": "github/docs#44466",
+      "result": "CONFIRMED_ASYMMETRIC_OBSERVABILITY",
+      "evidence": "Current list_pull_request_reviews returned review PRR_kwDOC01lZ88AAAABLLo96Q without commit_id, while generic public REST GET /repos/github/docs/pulls/44466/reviews?per_page=100 returned commit_id=8de09dde9df866b758749bf06fb4d82b6c4ae2dd for the same review. Current add_review_to_pr schema can optionally anchor a new review with commit_id, but normalized review readback still omits that binding in this fixture.",
+      "scope": "Observed connector schema/fixture only; does not prove every review wrapper response omits commit_id forever."
+    },
+    {
+      "check": "connected_ref_mutation_surface",
+      "result": "PUBLIC_ATOMIC_CAS_NOT_CHAT_EXPOSED",
+      "evidence": "Current connected update_ref accepts repository, branch_name, target sha and force, but exposes no expected-old OID/beforeOid. create_branch is create-only. No generic GraphQL multi-ref mutation action was discovered. Therefore connected ref mutation cannot be treated as updateRefs-style compare-and-swap.",
+      "scope": "Current GitHub connector tool schema discovered in this invocation."
+    },
+    {
+      "check": "connected_async_merge_surface",
+      "result": "NOT_EXPOSED_AS_MUTATION",
+      "evidence": "Current merge action discovery exposed synchronous merge_pull_request with optional expected_head_sha and enable_auto_merge, but no merge-async or explicit merge-queue mutation action.",
+      "scope": "Current GitHub connector action surface discovered in this invocation; public REST availability is separate."
+    }
+  ],
+  "material_scope_corrections": [
+    {
+      "topic": "409 async-merge intent recovery",
+      "producer_claim": "On 409, read result U and verify expected head SHA/method/action match the intended transaction before relying on it.",
+      "correction": "GitHub documents expected_head_sha, merge_method and merge_action in the result while the async request is still queued/pending. Once completed, the documented guarantee narrows to merged outcome/merge commit OID or failure reason; the public docs do not guarantee that the original intent tuple remains present in terminal result payloads. Therefore a 409 is safely reusable by GET-result intent comparison only when the returned result actually exposes those intent fields (or durable preexisting request metadata exists). If the request is already terminal and intent metadata is absent, preserve UNKNOWN about request identity and reconstruct only outcome from authoritative PR/queue/merge state.",
+      "severity": "material_protocol_scope"
+    },
+    {
+      "topic": "connected single-ref update versus public updateRefs CAS",
+      "producer_claim": "GraphQL updateRefs is a stronger public benchmark than connected per-object surfaces.",
+      "correction": "Supported and strengthened: the current connected update_ref mutation itself has no expected-old SHA parameter, so it is not even a single-ref old-value CAS equivalent to RefUpdate.beforeOid. The public GraphQL mechanism must remain a precedent, not a Chat capability claim.",
+      "severity": "capability_boundary"
+    }
+  ],
+  "unchanged_safe_conclusions": [
+    "Final merge readiness is a policy-family proof problem rather than one CI boolean.",
+    "A green PR-head state is insufficient when merge-queue or other unevaluated policy families remain active.",
+    "Immutable payloads followed by one per-file CAS pointer remain a safer connected staged-publication pattern than sequentially rewriting several mutable files, but this is a recovery pattern rather than multi-file atomicity."
+  ],
+  "not_verified_or_not_claimed": [
+    "No async merge mutation was executed.",
+    "No GraphQL updateRefs mutation was executed.",
+    "No user repository policy or merge readiness was assessed.",
+    "No claim is made that normalized review pagination is incomplete; only that exact commit binding was absent in the inspected normalized fixture.",
+    "Assignment-equivalence acceptance of the producer root18 artifact under root19 is not decided here; acceptance coordination remains downstream authority."
+  ],
+  "conflict_duplication_check": "No explorer feedback/state was written; no O or primary-writer state was touched; artifact path is immutable and source-qualified.",
+  "base_continuation_preserved": true,
+  "exact_next_verification": "Fresh-bootstrap, then rotate away from this open_source policy-lattice leaf unless a new current artifact changes its protocol. Highest-value next Phase-1 verification: inspect the current evaluation checker-v2 artifact once it exists under control19/config6, independently rederive aggregate hard gates and confirm the unchanged duplicate-effect negative control fails while the matched no-duplicate positive control passes. If checker-v2 is still absent/currently bootstrap-drift-only, rotate to another current Phase-1 role artifact with concrete primary-source or exact Chat/repository capability claims rather than repeating this leaf.",
+  "termination": "Completed source and connector-surface audit under frozen tuple; durable receipt required next."
+}
