@@ -12,7 +12,7 @@ SCHEMA_VERSION=1
 REGISTRY_GENERATION="evaluation-toy-hash-score-2026-08-28-g1"
 CERTIFICATE_ID="toy_hash_score_exact_v1"
 CERTIFICATE_DIGEST="378b69c152e8d36dee8928fd820a0901dd561be7f00b6acaf3980871243800ab"
-RUNTIME_SNAPSHOT={"attempt_id_version":"attempt-v1","decoder_config_digest":"64c93a49cdd811927701b5f07c69cbe08e165b62199f1ddcce19d1b65a03ef10","protected_statistic":"score","runtime_fingerprint_digest":"21015cd51044cdddf8c2f6635ad92430e4bb1e80db447d85096de49813d962a9","scorer_config_digest":"25f010a38b86a6d7335ea9d00df02351bf791740ebd4bfd3387950e3e5b03c87"}
+RUNTIME_SNAPSHOT={"attempt_id_version":"attempt-v1","decoder_config_digest":"344bd0124c1d4dc5b757060cbb1b6455932a3ea08afe015b9acd2edcfa767125","protected_statistic":"score","runtime_fingerprint_digest":"e1b56afedbc4bb74c06fbd06685b5c61459791f4354e3469b62332be6aea9153","scorer_config_digest":"9c76d9a50d2187b00d132b5491e7bd119abde18f9e6351f52ab9b869a40fb39e"}
 INVALIDATION_CONDITIONS=()
 
 def trusted_registry_payload():
