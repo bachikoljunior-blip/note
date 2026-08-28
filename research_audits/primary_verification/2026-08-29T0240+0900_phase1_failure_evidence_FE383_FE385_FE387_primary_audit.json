@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "class": "downstream_audit",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v2-active-pool",
+  "assignment_task_id": "p1-primary-verify",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "h1": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "h2": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843",
+    "root_control_revision": 20,
+    "root_blob": "d686fb31eb05333bef7853e79c26c3875c937b4c",
+    "downstream_control_revision": 29,
+    "downstream_blob": "236d43b3e3cdef4e64547fe0b21ecb4d4bffab37",
+    "role_config_revision": 6,
+    "enabled_desired": true,
+    "semantic_freeze_sha": "eeba8b7bfb4f83964427cde6bbc9bf2ae6fa9843"
+  },
+  "source_worker_artifact": "research_workers_clean_g1/failure_evidence/2026-08-29T020139+0900.md",
+  "findings": [
+    {
+      "id": "FE-383",
+      "verdict": "SUPPORTED_PRIMARY_WITH_SERVER_MANAGED_HITL_SCOPE",
+      "claim": "On HITL resume, server-conversation hydration could falsely classify a locally generated but unsent non-approval tool output as already acknowledged by the server, causing the required function_call_output to be omitted.",
+      "primary_evidence": [
+        "openai/openai-agents-python issue #3004 gives a deterministic no-API reproduction on v0.13.3 and a live-API variant: mixed parallel approval-gated and non-approval calls leave a locally generated diagnostic output that hydrate_from_state adds to server_tool_call_ids even though it was never sent; prepare_input then drops it and resume fails with No tool output found",
+        "openai/openai-agents-python PR #3006 merged 2026-04-23, merge commit 16e040929b76058e2776068eded0df40c4887445, explicitly scopes the bug to server-managed conversations and says locally generated unsent outputs had been treated as already acknowledged",
+        "PR #3006 changed code adds get_unsent_tool_call_ids_for_interrupted_state(), passes it through both non-streaming and streaming resume paths, and makes hydrate_from_state skip server-ack marking for matching local output call_ids; regression coverage was added"
+      ],
+      "scope_correction": "The verified mechanism is server-managed conversation tracker hydration during HITL resume with an interrupted ProcessedResponse. It is not generic evidence that all local-session/tool-output dedup systems have this bug. Unlike FE-384, this fix is wired through both non-streaming and streaming resume paths."
+    },
+    {
+      "id": "FE-385",
+      "verdict": "SUPPORTED_PRIMARY_WITH_AIRFLOW_DEFERRED_STATE_SCOPE",
+      "claim": "A retry after a deferred Airflow task resumed into next_method could inherit stale next_method/next_kwargs and re-enter the old continuation instead of the normal retry entry point.",
+      "primary_evidence": [
+        "apache/airflow issue #56704 is a closed kind:bug with affected_version 3.0 and 3.1 labels and a reproducing deferrable FileSensor: after complete_file_sensor raises, retry keeps next_method/next_kwargs and fails immediately rather than deferring through execute()",
+        "signed backport commit 53c05a0e80c581c24ecbfb7f9c3a4dc35d70fd2d, message '[v3-1-test] Fix task retries executing wrong method after deferred state (#56731) (#56737)', changes the state update to set next_method=None,next_kwargs=None",
+        "the same commit adds a parametrized test over UP_FOR_RETRY, FAILED, and SUCCESS and asserts both deferred fields are None after each transition"
+      ],
+      "scope_correction": "This establishes stale continuation metadata in Airflow task-instance deferred/retry state and its field-level repair. It is not evidence that every workflow engine should erase all continuation metadata on retry; generation-bound continuation can be valid under a different protocol."
+    },
+    {
+      "id": "FE-387",
+      "verdict": "SUPPORTED_REPORTER_DUPLICATION_WITH_FIX_SCOPE_CORRECTION",
+      "claim": "Argo Workflows 3.2.4 retry handling for a DAG/withParam workflow could produce duplicated collected outputs under retry.",
+      "primary_evidence": [
+        "argoproj/argo-workflows issue #7617 supplies a complete workflow reproduction on 3.2.4 and reports that with the retry workaround each of three expected outputs was repeated twice, yielding six outputs after two retries",
+        "maintainer PR #7652 merged 2022-01-27, merge commit 6a97a616177e96fb80e43bd1f98eac595f0f0a7d, is titled 'fix: Retry with DAG. Fixes #7617' and changes retryWorkflow so failed NodeTypeTaskGroup nodes are reset to running; it adds a DAG TaskGroup retry test"
+      ],
+      "scope_correction": "The duplicated 3-to-6 output observation is reporter-level but concrete. The merged PR directly tests/reset DAG TaskGroup retry state; the changed test does not assert aggregate output cardinality or a no-duplication postcondition. Therefore do not claim that PR #7652 independently proves duplicate collected outputs were eliminated, and do not translate this into duplicated external side effects."
+    }
+  ],
+  "overall_verdict": "SUPPORTED_WITH_FIX_AND_SUBSYSTEM_SCOPE_CORRECTIONS",
+  "phase1_implication": "Durable resume/retry logic needs provenance that distinguishes local-unsent from server-acknowledged outputs, attempt-local continuation metadata must not leak across retry boundaries unless explicitly validated for the new attempt, and retry aggregation must preserve logical-child identity rather than infer unique results from transport/retry artifacts. These are scoped precedents, not a generic exactly-once guarantee.",
+  "conflict_duplication_check": {
+    "exploration_worker_writes": 0,
+    "exploration_feedback_writes": 0,
+    "desired_state_edits": 0,
+    "primary_o_mutations": 0,
+    "shared_aggregate_ledger_writes": 0
+  },
+  "exact_next_verification": "Fresh bootstrap must first probe evaluation/LATEST for a root20/config6 checker-v2 and, if present, independently verify precommit-before-first-execution and recompute duplicate-negative, low-usefulness-negative, and matched-positive controls. If still absent, rotate to FE-388 and verify the LangGraph Cloud long-in-flight redispatch report at reporter/maintainer scope, then seek a merged or executable primary reproduction rather than promoting an open issue to a platform-wide failure claim.",
+  "termination": "third Phase-1 source-verification leaf completed and persisted under the frozen tuple; recurring objective remains nonterminal"
+}
