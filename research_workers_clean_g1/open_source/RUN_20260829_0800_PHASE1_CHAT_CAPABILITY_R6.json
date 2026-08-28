@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "status": "active",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "control": {
+    "control_revision": 24,
+    "config_revision": 6,
+    "enabled_desired": true,
+    "transport_mode": "exact_blob_two_pass",
+    "frozen_root_path": "automation_control/DESIRED_STATE.json",
+    "frozen_root_blob": "f3221f10748a3d2ae86d9a544e27e5a44192b007",
+    "frozen_config_path": "automation_control/roles/open_source.json",
+    "frozen_config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+    "bootstrap_valid": true,
+    "post_freeze_authority_recheck": {
+      "root_blob_unchanged": true,
+      "config_blob_unchanged": true,
+      "new_semantics_adopted_after_freeze": false
+    }
+  },
+  "predecessor": {
+    "latest_blob": "d9b10193d881287fe6c59e1b7e56b6e370e2ac20",
+    "latest_control_revision": 22,
+    "latest_config_revision": 6,
+    "prior_run": "research_workers_clean_g1/open_source/RUN_20260829_0700_PHASE1_CHAT_CAPABILITY_R6.json",
+    "prior_run_blob": "78ed53e09e43e6b8e8c3d9c3282e7dcc2b2972b6",
+    "control_refresh": "control 24 strengthens zero-residual-execution and zero-finite-quota acceptance; assignment/config remain the same",
+    "forbidden_prior_packet_semantics_imported": false
+  },
+  "public_source_pins": {
+    "openhands": {
+      "repository": "OpenHands/software-agent-sdk",
+      "release": "v1.44.1",
+      "target_commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+      "published_at": "2026-08-28T16:10:48Z",
+      "files": [
+        "openhands-sdk/openhands/sdk/conversation/state.py",
+        "openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py",
+        "openhands-sdk/openhands/sdk/conversation/event_store.py",
+        "openhands-agent-server/openhands/agent_server/event_service.py",
+        "tests/cross/test_conversation_lease_behavior.py"
+      ]
+    },
+    "mcp_tasks": {
+      "protocol_revision": "2026-07-28",
+      "extension": "io.modelcontextprotocol/tasks",
+      "spec": "https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks",
+      "release_candidate_post": "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/"
+    },
+    "temporal": {
+      "repository": "temporalio/temporal",
+      "source": "README.md on main",
+      "scope": "structural dependency check only; not treated as a current release pin"
+    }
+  },
+  "source_equivalent_classifier": {
+    "path": "research_workers_clean_g1/open_source/CHAT_RECOVERY_GAPS_20260829_0800_R6.py",
+    "creation_commit": "bc04ad2d2cf532245907c1d9d4e894f149e9d755",
+    "blob_sha": "c2b775b058c43b274c89bb0fb1f9e00939043fe9",
+    "self_test": "PASS 9/9",
+    "execution_scope": "same source string executed in the current Chat analysis runtime; not upstream OpenHands/MCP package execution"
+  },
+  "findings": [
+    {
+      "id": "openhands-action-stale-head-subclass-is-repaired",
+      "verdict": "PROVED_FOR_EXACT_SUBCLASS",
+      "scope": "OpenHands Agent Server v1.44.1, supported local-filesystem lease scope, persisted RUNNING status plus an unmatched executable ActionEvent",
+      "evidence": "EventService.start scans the full EventLog when persisted status is RUNNING, finds unmatched actions, and emits AgentErrorEvent with parent_id set explicitly to the unmatched action. An upstream integration test rewinds the persisted HEAD across an action, performs expired-lease takeover, appends a follow-up user message, and requires view manipulation to remain valid.",
+      "revision": "narrows the previous generic stale-HEAD concern: the action/RUNNING crash subclass has explicit recovery.",
+      "caution": "The integration-test docstring still contains wording describing the old sibling-error behavior; current EventService source explicitly parents the recovery error to the action."
+    },
+    {
+      "id": "openhands-user-message-stale-head-window",
+      "verdict": "UNRESOLVED_SOURCE_LEVEL_GAP",
+      "scope": "OpenHands v1.44.1 LocalConversation persistence; Agent Server startup paths inspected at exact release commit",
+      "evidence": "LocalConversation.send_message executes inside `with state`; `_on_event` persists the MessageEvent through EventLog.append before `leaf_event_id` and `last_user_message_id` are flushed in ConversationState.__exit__. On cold load, a persisted non-null leaf is returned as-is and rebuild_view follows that leaf. Agent Server startup recovery is specific to RUNNING + unmatched executable ActionEvent and does not generally advance HEAD for a later user MessageEvent.",
+      "counterexamples": [
+        "IDLE + user MessageEvent file written + crash before state-context exit -> persisted leaf can remain old and startup has no RUNNING recovery branch.",
+        "RUNNING + later user MessageEvent but no unmatched executable ActionEvent -> status changes to ERROR but the user event itself is not selected by get_unmatched_actions.",
+        "A trailing ConversationStateUpdateEvent does not make a stale non-null leaf fall back to the log tail."
+      ],
+      "caution": "This is a source-level recoverability window, not a claim of observed user data loss. Full EventLog retains the event; the issue is resumed active-branch reachability."
+    },
+    {
+      "id": "mcp-task-handle-post-receipt-resume",
+      "verdict": "PARTIAL",
+      "scope": "MCP Tasks extension current draft for protocol 2026-07-28",
+      "evidence": "Server must durably create the task before returning CreateTaskResult, and clients should durably persist task IDs so polling can resume after crash/restart.",
+      "boundary": "Resumability begins only once the client has actually received and durably stored taskId, and only while the server still retains the task."
+    },
+    {
+      "id": "mcp-task-create-response-loss-gap",
+      "verdict": "UNRESOLVED_WITHOUT_APPLICATION_IDEMPOTENCY",
+      "scope": "MCP Tasks 2026-07-28 extension contract",
+      "evidence": "A server can durably create a task and then the CreateTaskResult can be lost before the client records taskId. The modern extension intentionally has no tasks/list, and the inspected spec does not define a creation idempotency key or lookup-by-original-request.",
+      "consequence": "The client cannot recover an unknown handle through the Tasks API alone; blind retry can duplicate work unless the underlying tool/effect layer supplies its own stable idempotency key or exact effect lookup."
+    },
+    {
+      "id": "mcp-task-retention-and-terminal-semantics",
+      "verdict": "PARTIAL",
+      "evidence": "ttlMs may change; after expiry the server may fail/delete the task. tasks/cancel is an empty acknowledgement and cancellation is eventually consistent. A task with a tool result `isError:true` uses protocol status `completed`, so protocol completion is not logical success.",
+      "safe_rule": "Persist taskId immediately, refresh retention evidence, distinguish cancel intent from terminal stop, and inspect the embedded result rather than treating status=completed as success."
+    },
+    {
+      "id": "temporal-durable-runtime-fails-phase1-zero-executor-gate",
+      "verdict": "REJECTED_FOR_PHASE1_ACCEPTANCE",
+      "scope": "Temporal open-source repository architecture at public README level",
+      "evidence": "Temporal describes a Temporal Server executing Workflows and requires language Workers for Workflows/Activities; local getting-started requires starting a Temporal server.",
+      "boundary": "This is a useful durable-execution comparison, but it leaves a resident server/worker execution dependency. It therefore cannot itself be accepted as a scheduled-Chat-native replacement under control 24."
+    }
+  ],
+  "phase1_acceptance": {
+    "accepted_zero_dependency_mechanism_found_this_run": false,
+    "incremental_monetary_cost": 0,
+    "finite_monthly_quota_or_credit_dependency_for_accepted_mechanism": "none because no mechanism was accepted",
+    "quota_bearing_experiment_consumed": false,
+    "repository_api_role": "lightweight state/evidence transport only; not used as compute",
+    "residual_dependencies": [
+      "OpenHands as an execution mechanism still requires an agent/server/runtime process or user/external execution context.",
+      "MCP Tasks delegates work to an MCP server and underlying executor; task handles alone do not remove that executor.",
+      "Temporal requires a Temporal Server plus Workers."
+    ],
+    "result": "diagnostic capability patterns and unresolved children only; not a Phase-1 passing handoff"
+  },
+  "tested_fault_matrix": [
+    "OpenHands RUNNING + unmatched action + stale persisted HEAD -> repaired via explicit AgentError child",
+    "OpenHands IDLE + user message + stale persisted HEAD -> active branch remains at old leaf in source-equivalent model",
+    "OpenHands RUNNING + user message but no unmatched action -> no general HEAD repair",
+    "OpenHands user message plus state-update artifact -> no general HEAD repair",
+    "MCP taskId received+persistent -> resumable within retention",
+    "MCP task created but CreateTaskResult lost -> unknown-handle ambiguity",
+    "MCP task ttl expired -> recovery unknown/unavailable",
+    "MCP cancel ACK -> not stop proof",
+    "MCP completed+isError -> protocol complete, logical failure"
+  ],
+  "frontier": [
+    "Turn the user-MessageEvent stale non-null HEAD window into an exact upstream pytest candidate using real ConversationService/FileStore and verify current behavior at v1.44.1 without invoking an external model or hosted runner.",
+    "Compare two repair designs: Agent-Server-only descendant-chain reconciliation (remote branching unsupported) versus an event+HEAD mini-WAL/commit marker; precommit counterexamples for deliberate LocalConversation branching and non-tree state artifacts.",
+    "Inspect MCP Tasks reference SDK/server implementations for application idempotency hooks or durable original-request correlation; build a lost-CreateTaskResult fixture if an in-process reference test surface is available without external quota.",
+    "Continue the second-runtime comparison beyond Temporal by finding an open-source runtime whose durable handle can be driven entirely by Chat-exposed lightweight state/API without a resident worker; reject candidates that hide a server/worker/user execution step."
+  ],
+  "exact_continuation": "Fresh bootstrap. If DESIRED_STATE control_revision=24, open_source config_revision=6, enabled_desired=true, and phase1-clean-open-source-chat-capability-patterns remain authoritative, freeze root/config blobs using the allowed exact-SHA or exact-blob two-pass transport, then read this run plus CHAT_RECOVERY_GAPS_20260829_0800_R6.py only from own state. First build a real in-process OpenHands regression candidate for a user MessageEvent file committed while persisted leaf_event_id remains non-null and stale; verify whether Agent Server takeover leaves that message outside active_branch. Then test descendant-only reconciliation against deliberate branch navigation. Next inspect MCP Tasks reference implementations for a stable request/idempotency correlation that closes the pre-taskId response-loss window. Keep every server/worker/hosted-quota route as an unresolved child, not an accepted handoff.",
+  "mutation_scope": {
+    "desired_state_edited": false,
+    "source_repositories_mutated": false,
+    "other_worker_or_downstream_state_read": false,
+    "other_worker_or_downstream_state_mutated": false,
+    "shared_aggregate_ledger_read": false,
+    "shared_aggregate_ledger_mutated": false,
+    "authorized_role_local_writes_only": true
+  }
+}
