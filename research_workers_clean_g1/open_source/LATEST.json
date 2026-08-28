@@ -4,8 +4,8 @@
   "control_revision": 13,
   "config_revision": 6,
   "status": "active",
-  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1206_PLANNER_EVIDENCE_LOCK_CLASSIFICATION.md",
-  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1106_EVENT_LOCK_PORTALOCKER_TRI_STATE.md",
+  "latest_run": "research_workers_clean_g1/open_source/RUN_20260828_1308_EVENT_LOCK_MIN_VERSION_COMMIT_BOUNDARY.md",
+  "previous_run": "research_workers_clean_g1/open_source/RUN_20260828_1206_PLANNER_EVIDENCE_LOCK_CLASSIFICATION.md",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260826_0401.md",
   "public_source_heads": [
     {
@@ -19,24 +19,25 @@
       "repository": "wolph/portalocker",
       "commit": "c86f80c2505de8e44fb9d2493eb94ab96201fef6",
       "minimum_version_source_checked": "v3.0.0",
-      "source_scope": "AlreadyLocked versus permanent LockException semantics and Windows/POSIX lock behavior used to refine event-log authority"
+      "source_scope": "cross-version low-level file-handle contract, AlreadyLocked/permanent-failure retry semantics, high-level Lock behavior drift, and Windows exclusive-lock portability"
     }
   ],
   "frontier_nonempty": true,
-  "exact_continuation": "Start with the event-lock wrapper decision under the Portalocker exception contract: map an AlreadyLocked-only indefinite writer retry and a permanent-LockException regression, then write literal Supervisor FOUND/ABSENT/UNKNOWN planner-verdict replay tests against the existing outbox fixture. Next map a spawned-process event-lock integration test into PORTABLE_TESTS, then move iter_call_events and Mission View to the stable-generation primitive. Continue candidate008 durability and candidate005 transition_id provenance separately.",
+  "exact_continuation": "First pin an event-specific cross-platform exclusive lock using a real file object and low-level Portalocker calls: retry indefinitely only on AlreadyLocked, propagate permanent errors, and preserve post-commit success across unlock failure. Add deterministic contention/permanent-error/real-handle/post-commit-release regressions, then a spawned-process portable test and explicit Portalocker-3.0.0 lower-bound coverage strategy. Next finish PlannerVerdictPersistenceEvidence FOUND/ABSENT/UNKNOWN without assuming a global SHA-only delivery-id format, then wire the same stable-generation primitive into iter_call_events and Mission View. Continue candidate008 durability and candidate005 transition_id provenance separately.",
   "run_findings": {
     "current_public_argus_main": "ae2daa1fbc2c918b4e7126151fe55eb68fd0cb98",
-    "candidate_010_supervisor_contract": "FOUND skips planner-verdict re-emit then acknowledges; ABSENT alone authorizes one re-emit after complete stable scan; UNKNOWN keeps outbox pending and returns PLAN_RETRY without Planner invocation",
-    "candidate_010_byte_scan": "scan stable snapshots as bytes; target-relevant decode/JSON ambiguity is UNKNOWN unless a valid matching verdict is found; unrelated malformed rows whose raw bytes cannot contain the canonical SHA256 delivery id need not poison absence proof",
-    "candidate_009_lock_exception_hazard": "current core exclusive_file_lock retries every portalocker LockException; naively adding timeout=None would loop forever on permanent lock failures. Portalocker v3.0.0 already distinguishes AlreadyLocked contention from permanent LockException",
-    "candidate_009_lock_recommendation": "lowest-blast-radius path is an event-specific writer wrapper that waits indefinitely only on AlreadyLocked and propagates permanent errors; broader core-helper cleanup needs compatibility tests while preserving the 30s default for current callers",
-    "candidate_009_reader_writer_policy": "canonical writer may wait indefinitely on contention; correctness readers can be bounded where timeout maps to UNKNOWN/query failure. POSIX readers can pin handles plus end offsets under shared flock; Windows correctness-first readers may hold an exclusive lock while scanning",
-    "candidate_009_portable_test": "mirror tests/core/test_daemon_lock.py multiprocessing.get_context spawned-process pattern; it is already in PORTABLE_TESTS and therefore is a source-exact Windows CI precedent",
-    "candidate_010_iter_call_events": "stable-snapshot acquisition/read failure can naturally use event_log_query's existing exit-2 query-error path; completed no-match remains exit 1",
+    "candidate_009_real_handle_requirement": "Portalocker 3.0.0 Windows low-level lock calls tell/seek/fileno on the supplied object, so a raw integer fd is not a safe contract across Argus's declared portalocker>=3 range; event authority should open events.lock as a real file object",
+    "candidate_009_high_level_lock_rejected": "Portalocker 3.0.0 high-level Lock retries all LockException and timeout=None is finite default, while current Portalocker retries only AlreadyLocked; canonical event semantics must not depend on resolved Portalocker version",
+    "candidate_009_low_level_contract": "Use low-level portalocker.lock(real_handle, LOCK_EX|LOCK_NB); retry only AlreadyLocked; propagate permanent LockException/other backend errors; writer contention can wait indefinitely",
+    "candidate_009_commit_boundary": "After canonical append succeeds, unlock failure must not turn the persistence acknowledgement false; best-effort unlock plus guaranteed handle close avoids retrying an already-landed event",
+    "candidate_009_core_helper_scope": "Do not generalize core.exclusive_file_lock first: it catches all LockException and some callers such as daemon command execution explicitly interpret TimeoutError as acquired=false, so permanent-error classification is a broader compatibility change",
+    "candidate_009_portable_ci_gap": "Current macOS/Windows portable CI installs -e '.[qr]' and therefore tests a current resolver result, not the declared minimum Portalocker 3.0.0; latest-Windows CI could miss raw-int lower-bound incompatibility",
+    "candidate_010_id_scope": "write_planner_verdict_outbox preserves a caller-provided delivery_id, so the evidence helper should byte-filter the exact UTF-8 id rather than globally assuming every id is lowercase SHA-256 hex unless production validation separately proves that invariant",
+    "candidate_010_supervisor_contract": "FOUND skips re-emit then acknowledges; ABSENT alone authorizes one re-emit after a complete stable scan; UNKNOWN leaves the outbox pending and returns PLAN_RETRY without Planner invocation",
     "candidate_007_status": "Mission View reconciliation should consume the same stable-generation primitive and preserve events.lock -> mission-view.lock ordering plus legacy-baseline migration",
-    "candidate_008_status": "unchanged separate power-loss durability hypothesis; no incident reproduced",
+    "candidate_008_status": "unchanged separate power-loss durability hypothesis; Mission View fsyncs its temp file but not the parent directory, and canonical event append still lacks explicit fsync ordering; no incident reproduced",
     "candidate_005_transition_lineage_patch": "optional existing Manager intent ID -> stage_history transition_id remains provenance-only and separate",
-    "control_freeze": "semantic work froze on note SHA 2e9208bdb49867e32367d7c87d6737792bbda22c control13/config6; later note head 49ba40d54e8f44d860a015b3d64ce2d7cebfa42c was observed only for write coordination and not adopted",
+    "control_freeze": "semantic work froze on note SHA 0dd97c62678923281362091099cbee26402dd4d0 control13/config6; later note head 4fd657520f1db4474d77642efb5286129dcfe42a was observed only for write coordination and not adopted",
     "connector_mutation_incident": "Prior prohibited branch incident remains external remediation. This invocation enforced root13 plus role config6 local read-only discovery/write boundary and mutated only authorized open_source state/receipt destinations."
   },
   "independence": {
