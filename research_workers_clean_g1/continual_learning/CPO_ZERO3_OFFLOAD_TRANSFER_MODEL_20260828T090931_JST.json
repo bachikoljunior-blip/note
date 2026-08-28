@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-28T09:09:31+09:00",
+  "frozen_control": {
+    "note_main_sha": "d8f5bd8767761ef946ed8dc9189e8ff5ed594914",
+    "control_revision": 12,
+    "config_revision": 5
+  },
+  "public_anchors": {
+    "cpo_commit": "9429452cb536a9e713b73b91c0011b96df44962c",
+    "deepspeed_version": "0.16.4",
+    "transformers_version": "4.57.3",
+    "torch_version_paper_env": "2.8.0",
+    "zero3_config": "scripts/zero3_offload.json: offload_param.device=cpu, pin_memory=true",
+    "qwen3vl4b_hidden_size": 2560,
+    "resolved_stage3_param_persistence_threshold": 25600,
+    "world_size_public_rl": 8
+  },
+  "source_level_chain": [
+    "CPO loads masks/refs on CPU and derives CPU int64 flat indices.",
+    "In each _compute_loss, before partition filtering, CPO copies the full global flat_idx and full global ref vector to param.device.",
+    "For ZeRO-3 it also executes param.ds_tensor.to(param.device).float() on the full local parameter partition.",
+    "CPO then stores rank-local global_idx and grad back on CPU in _pending_mask_grads; the gradient hook copies both back to grad.device.",
+    "CPO public zero3_offload config sets parameter offload to CPU with pinned memory.",
+    "DeepSpeed 0.16.4 propagates offload_param_config.device into DeepSpeedZeRoOffload.offload_device, passes it as Init(remote_device=...), and creates non-persistent ds_tensor partitions on remote_device; therefore non-persistent parameter ds_tensor is CPU under this public config.",
+    "DeepSpeed local_device is the accelerator device and partitioned param.data is freed to an empty tensor on its existing param.device; CPO's param.device therefore targets the accelerator for the public ZeRO-3 path.",
+    "Transformers 4.57.3 resolves stage3_param_persistence_threshold='auto' to 10*hidden_size. Qwen3-VL-4B hidden_size=2560 => threshold 25,600 scalars, so major weight matrices are non-persistent/offloaded; small norms/biases may stay persistent."
+  ],
+  "transfer_model": {
+    "symbols": {
+      "N": "full scalar count of one non-persistent masked parameter",
+      "s": "global protected positions for that parameter",
+      "W": "data-parallel world size"
+    },
+    "current_per_rank_per_compute_loss_approx_bytes": {
+      "global_indices_h2d": "8*s",
+      "global_refs_h2d": "4*s",
+      "local_bf16_partition_h2d": "2*ceil(N/W)",
+      "rank_local_pending_idx_plus_grad_d2h": "12*ceil(s/W)",
+      "rank_local_pending_idx_plus_grad_h2d_in_hook": "12*ceil(s/W)",
+      "total_bidirectional": "12*s + 2*ceil(N/W) + 24*ceil(s/W)"
+    },
+    "note": "This counts tensor payload traffic implied by explicit .to/.cpu calls and BF16 ds_tensor size. It excludes allocator metadata, protocol overhead, asynchronous overlap and any caching not present in the shown CPO source."
+  },
+  "qwen3vl4b_10pct_full_nonpersistent_scenario": {
+    "N": 4437815808,
+    "support_fraction": 0.1,
+    "s": 443781580,
+    "W": 8,
+    "per_rank": {
+      "global_idx_plus_refs_h2d_bytes": 5325378960,
+      "global_idx_plus_refs_h2d_GiB": 4.959645643830299,
+      "local_bf16_ds_partition_h2d_bytes": 1109453952,
+      "local_bf16_ds_partition_h2d_GiB": 1.0332595109939575,
+      "pending_idx_plus_grad_d2h_bytes": 665672376,
+      "pending_idx_plus_grad_d2h_GiB": 0.6199557110667229,
+      "pending_idx_plus_grad_h2d_bytes": 665672376,
+      "pending_idx_plus_grad_h2d_GiB": 0.6199557110667229,
+      "total_bidirectional_bytes": 7766177664,
+      "total_bidirectional_GiB": 7.232816576957703
+    },
+    "aggregate_8_ranks_total_bidirectional_bytes": 62129421312,
+    "aggregate_8_ranks_total_bidirectional_GiB": 57.86253261566162,
+    "scope": "Upper-style projection treating the full canonical parameter domain as non-persistent and at exactly 10% support. Small persistent parameters and real support distribution reduce/alter this. This is not a measured PCIe/NVLink trace."
+  },
+  "repair_hypotheses": {
+    "cpu_local_partitioned_regularizer": {
+      "idea": "Precompute rank-local mask indices/ref slices once; compute diff/sign against CPU-offloaded ds_tensor locally on CPU, then transfer only rank-local pending idx+grad to the accelerator hook.",
+      "per_rank_per_call_payload": "12*ceil(s/W) H2D bytes if both int64 idx and fp32 grad are transferred in the hook",
+      "qwen4b_10pct_projection_GiB": 0.6199557110667229,
+      "projected_total_traffic_reduction_vs_current": 0.9142857136676497
+    },
+    "cache_rank_local_indices_on_accelerator": {
+      "idea": "If GPU memory permits, cache rank-local indices once and transfer only fp32 gradient values each call after CPU-side diff/sign.",
+      "per_rank_per_call_payload": "4*ceil(s/W) H2D bytes",
+      "qwen4b_10pct_projection_GiB": 0.20665190368890762,
+      "projected_total_traffic_reduction_vs_current": 0.9714285712225499
+    }
+  },
+  "scope": [
+    "Source-level transfer accounting only; no CUDA/DeepSpeed profiler trace was executed in this environment.",
+    "The model-wide Qwen projection assumes full 10% support and treats all canonical scalars as non-persistent; real support and persistence must be measured.",
+    "CPU-side regularizer computation may have its own latency/vectorization costs and must be profiled before adoption.",
+    "The CPO paper-table implementation may differ from the current public release.",
+    "This transfer issue is separate from the previously identified 1/world_size regularizer attenuation, paper-vs-code TopP/normalization mismatch, tied-alias bookkeeping, and dense-mask lifetime."
+  ]
+}
