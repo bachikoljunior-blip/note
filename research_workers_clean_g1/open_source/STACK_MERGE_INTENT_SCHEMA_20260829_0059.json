@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase1-open-source-stack-merge-intent-v1",
+  "title": "Durable GitHub stacked-PR merge intent capsule",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "repository",
+    "stack",
+    "requested",
+    "merge_method",
+    "merge_action",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "stack": {
+      "type": "object",
+      "required": [
+        "number",
+        "base_ref",
+        "base_sha",
+        "members"
+      ],
+      "properties": {
+        "id": {
+          "type": ["integer", "null"]
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "base_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "pr_number",
+              "position",
+              "head_sha",
+              "direct_base_ref",
+              "direct_base_sha"
+            ],
+            "properties": {
+              "pr_number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "position": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "head_sha": {
+                "$ref": "#/$defs/sha"
+              },
+              "direct_base_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "direct_base_sha": {
+                "$ref": "#/$defs/sha"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "requested": {
+      "type": "object",
+      "required": [
+        "pr_number",
+        "expected_head_sha"
+      ],
+      "properties": {
+        "pr_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_head_sha": {
+          "$ref": "#/$defs/sha"
+        }
+      },
+      "additionalProperties": false
+    },
+    "merge_method": {
+      "enum": [
+        "merge",
+        "squash",
+        "rebase"
+      ]
+    },
+    "merge_action": {
+      "enum": [
+        "default",
+        "direct_merge",
+        "merge_queue"
+      ]
+    },
+    "state": {
+      "enum": [
+        "STACK_SNAPSHOT",
+        "SUBMIT_UNKNOWN",
+        "ACCEPTED_U",
+        "EXISTING_U_MATCH",
+        "EXISTING_U_MISMATCH",
+        "ALREADY_200",
+        "PENDING",
+        "MERGED",
+        "QUEUED",
+        "FAILED",
+        "EXPIRED_UNKNOWN"
+      ]
+    },
+    "async_uuid": {
+      "type": ["string", "null"]
+    },
+    "pending_result": {
+      "type": ["object", "null"],
+      "properties": {
+        "expected_head_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge_method": {
+          "enum": ["merge", "squash", "rebase"]
+        },
+        "merge_action": {
+          "enum": ["default", "direct_merge", "merge_queue"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "queue_merge_groups": {
+      "type": "array",
+      "description": "Ordered merge-group evidence. A large stack may span more than one merge group.",
+      "items": {
+        "type": "object",
+        "required": ["sha"],
+        "properties": {
+          "sha": {
+            "$ref": "#/$defs/sha"
+          },
+          "member_pr_numbers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "terminal_merge_commit_oid": {
+      "anyOf": [
+        {"$ref": "#/$defs/sha"},
+        {"type": "null"}
+      ]
+    },
+    "evidence_complete": {
+      "type": "object",
+      "properties": {
+        "stack_snapshot": {"type": "boolean"},
+        "member_head_vector": {"type": "boolean"},
+        "request_identity": {"type": "boolean"},
+        "terminal_member_states": {"type": "boolean"},
+        "queue_groups": {"type": "boolean"}
+      },
+      "additionalProperties": {"type": "boolean"}
+    }
+  },
+  "$defs": {
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{40}$"
+    }
+  },
+  "additionalProperties": true
+}
