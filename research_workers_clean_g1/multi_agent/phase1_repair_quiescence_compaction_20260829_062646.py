@@ -19,43 +19,44 @@ def scenarios():
         out.append(dict(zip(keys,vals)))
     return out
 
-def classify(terminal=False,compacted=False,retained=False,
-             safe_compaction=False,aba=False,lost=False,dup=False,
-             false_quiescence=False,unresolved=False):
+def classify(compacted=False,retained=False,safe_compaction=False,aba=False,
+             lost=False,dup=False,false_quiescence=False,unresolved=False,
+             terminal=False):
     unsafe=aba or lost or dup or false_quiescence
     safe_terminal=terminal and not unsafe and not unresolved
     return dict(
-        terminal=terminal,safe_terminal=safe_terminal,unsafe=unsafe,
         compacted=compacted,retained_state=retained,
         safe_compaction=safe_compaction,aba_resurrection=aba,
         lost_legitimate_repair=lost,duplicate_compensation=dup,
         false_quiescence=false_quiescence,unresolved=unresolved,
+        unsafe=unsafe,terminal=terminal,safe_terminal=safe_terminal,
     )
 
 def permanent_tombstone(s):
     if s["repair_state"]=="PENDING_REQUIRED":
         if s["old_repair_arrives"]:
-            return classify(terminal=True,retained=True)
+            return classify(retained=True,terminal=True)
         return classify(retained=True,unresolved=True)
-    return classify(terminal=True,retained=True)
+    return classify(retained=True,terminal=True)
 
-def compacted_no_barrier_outcome(s):
-    pending=s["repair_state"]=="PENDING_REQUIRED"
-    arrives=s["old_repair_arrives"]
-    if pending and not arrives:
-        return classify(compacted=True,lost=True,false_quiescence=True,
-                        unresolved=True)
-    if pending and arrives and s["g3_advanced"]:
-        return classify(compacted=True,aba=True,lost=True,
-                        false_quiescence=True)
-    if pending and arrives and not s["g3_advanced"]:
-        return classify(terminal=True,compacted=True,safe_compaction=True)
-    if not arrives:
-        return classify(terminal=True,compacted=True,safe_compaction=True)
+def compacted_no_barrier_outcome(s,effective_arrival=None):
+    if effective_arrival is None:
+        effective_arrival=s["old_repair_arrives"]
+    state=s["repair_state"]
+    if state=="PENDING_REQUIRED":
+        if not effective_arrival:
+            return classify(compacted=True,lost=True,
+                            false_quiescence=True)
+        if s["g3_advanced"]:
+            return classify(compacted=True,aba=True,lost=True,
+                            false_quiescence=True)
+        return classify(compacted=True,safe_compaction=True,terminal=True)
+    if not effective_arrival:
+        return classify(compacted=True,safe_compaction=True,terminal=True)
     if s["g3_advanced"]:
         return classify(compacted=True,aba=True,false_quiescence=True)
-    if (s["repair_state"]=="FINAL_APPLIED" and
-        s["repair_kind"]=="compensate" and not s["dedupe_valid"]):
+    if (state=="FINAL_APPLIED" and s["repair_kind"]=="compensate"
+        and not s["dedupe_valid"]):
         return classify(compacted=True,dup=True,false_quiescence=True)
     return classify(compacted=True,false_quiescence=True)
 
@@ -65,35 +66,40 @@ def finite_ttl_tombstone(s):
     return compacted_no_barrier_outcome(s)
 
 def registry_epoch_fenced(s):
-    eligible=(s["proof_current"] and s["proof_complete"] and
-              s["repair_state"]!="PENDING_REQUIRED")
+    eligible=(
+        s["proof_current"] and s["proof_complete"] and
+        s["repair_state"]!="PENDING_REQUIRED"
+    )
     if not eligible:
         return permanent_tombstone(s)
-    effective=dict(s)
-    effective["old_repair_arrives"]=(
+    effective_arrival=(
         s["old_repair_arrives"] and s["future_drift"]!="none"
     )
-    return compacted_no_barrier_outcome(effective)
+    return compacted_no_barrier_outcome(s,effective_arrival)
 
 def early_retirement_barrier(s):
-    eligible=(s["barrier_available"] and s["proof_current"] and
-              s["proof_complete"])
+    eligible=(
+        s["barrier_available"] and s["proof_current"] and s["proof_complete"]
+    )
     if not eligible:
         return permanent_tombstone(s)
     if s["repair_state"]=="PENDING_REQUIRED":
-        return classify(compacted=True,lost=True,false_quiescence=True,
-                        unresolved=not s["old_repair_arrives"])
-    return classify(terminal=True,compacted=True,safe_compaction=True)
+        return classify(compacted=True,lost=True,false_quiescence=True)
+    return classify(compacted=True,safe_compaction=True,terminal=True)
 
 def finality_gated_retirement_barrier(s):
-    eligible=(s["barrier_available"] and
-              s["repair_state"]!="PENDING_REQUIRED")
-    if eligible:
-        return classify(terminal=True,compacted=True,safe_compaction=True)
-    return permanent_tombstone(s)
+    eligible=(
+        s["barrier_available"] and
+        s["repair_state"]!="PENDING_REQUIRED"
+    )
+    if not eligible:
+        return permanent_tombstone(s)
+    return classify(compacted=True,safe_compaction=True,terminal=True)
 
 def safe_archive(s):
-    return finality_gated_retirement_barrier(s)
+    if s["barrier_available"] and s["repair_state"]!="PENDING_REQUIRED":
+        return classify(compacted=True,safe_compaction=True,terminal=True)
+    return permanent_tombstone(s)
 
 POLICIES={
     "permanent_tombstone":permanent_tombstone,
@@ -123,35 +129,39 @@ def main():
     ss=scenarios()
     result={
         "schema_version":1,
-        "model":"repair-quiescence/tombstone-compaction finite mechanism lattice",
+        "model":"repair-quiescence compaction finite mechanism lattice",
         "scenario_count":len(ss),
         "aggregate":aggregate(ss),
         "targeted_slices":{
-            "current_complete_final_then_future_registry_drift_and_old_arrival":aggregate(select(
-                ss,lambda s:s["proof_current"] and s["proof_complete"] and
+            "registry_proof_then_future_drift_and_old_arrival":aggregate(select(
+                ss,lambda s:
+                s["proof_current"] and s["proof_complete"] and
                 s["repair_state"]!="PENDING_REQUIRED" and
                 s["future_drift"]!="none" and s["old_repair_arrives"]
             )),
             "early_barrier_while_legitimate_repair_pending":aggregate(select(
-                ss,lambda s:s["barrier_available"] and s["proof_current"] and
+                ss,lambda s:
+                s["barrier_available"] and s["proof_current"] and
                 s["proof_complete"] and
                 s["repair_state"]=="PENDING_REQUIRED"
             )),
-            "ttl_expired_old_repair_arrives_after_g3":aggregate(select(
-                ss,lambda s:s["ttl_expired"] and s["old_repair_arrives"] and
+            "ttl_expired_old_arrival_after_g3":aggregate(select(
+                ss,lambda s:
+                s["ttl_expired"] and s["old_repair_arrives"] and
                 s["g3_advanced"]
             )),
-            "final_repair_and_barrier_available":aggregate(select(
-                ss,lambda s:s["repair_state"]!="PENDING_REQUIRED" and
-                s["barrier_available"]
+            "final_repair_with_barrier_available":aggregate(select(
+                ss,lambda s:
+                s["barrier_available"] and
+                s["repair_state"]!="PENDING_REQUIRED"
             )),
         },
         "notes":[
             "Equal-weight synthetic mechanism counts, not production incident rates.",
-            "A current/complete replay-registry proof is a snapshot; future source addition or retention extension can reopen replay after tombstone compaction.",
-            "A monotonic sink-side retirement/minimum-repair-generation barrier blocks future old-generation repair only when every publication path respects it.",
-            "Advancing the retirement barrier before historical repair is final loses still-legitimate repair.",
-            "Fixed TTL is modeled as time-based deletion rather than a repair-quiescence certificate."
+            "A source-registry proof is a snapshot; later replay-source/retention drift can invalidate it unless future mutation is fenced.",
+            "A retirement barrier is modeled as a monotonic sink-side lower bound that rejects old-generation repair publications.",
+            "The barrier is safe to compact against only after the historical repair vector is final; advancing it while repair is pending loses legitimate repair.",
+            "retained_state counts one unit of retained per-incarnation witness for comparison, not bytes."
         ]
     }
     print(json.dumps(result,indent=2,sort_keys=True))
