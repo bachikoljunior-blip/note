@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "control_revision": 25,
+  "config_revision": 6,
+  "frozen_semantic_root_commit": "039a96d2dbf60e7e09c1c1d6d24885571c6658f0",
+  "enabled_desired": true,
+  "execution": {
+    "bootstrap": "Read automation_control/DESIRED_STATE.json first, then automation_control/roles/open_source.json, pinned to main 039a96d2dbf60e7e09c1c1d6d24885571c6658f0 before semantic work. Root/config blobs were frozen; later main drift was treated as opaque SHA metadata only.",
+    "public_research": "Inspected exact modelcontextprotocol/csharp-sdk v2.2.0 source at commit 6fa3825973949a9c4f0cd8af344e15a8db09dc35 for Tasks alternate-filter ordering, task-store contract, InputRequiredResult/ResultOrAlternate seams, CreateTaskResult mapping, and durable-create-to-Task.Run ordering.",
+    "source_equivalent_tests": [
+      "pre-Tasks deterministic task identity and response-loss recovery fixtures PASS 13/13",
+      "negative fixtures explicitly prove durable CreateTaskAsync success before Task.Run can leave an orphan and that simple handle recovery does not redrive it"
+    ],
+    "artifact": {
+      "path": "research_workers_clean_g1/open_source/artifacts/20260829T020526Z_mcp_pre_tasks_deterministic_identity_harness.py",
+      "commit": "b2cacce658b14f469d6f96eadeb64839ca0ce708",
+      "blob": "fef5e36655354f1b29aead2caa6b5136d85cfad0",
+      "readback": "exact pinned readback succeeded"
+    },
+    "checkpoint": {
+      "path": "research_workers_clean_g1/open_source/checkpoints/20260829T020636Z_mcp_pre_tasks_filter_and_create_schedule_gap.json",
+      "commit": "80f5fad9a43c768f4dc3db67c4eeeb24fc25a7a4",
+      "blob": "971c726a7dc0a378c0af92383ada7f01733f7389",
+      "readback": "exact pinned readback succeeded"
+    },
+    "latest": {
+      "path": "research_workers_clean_g1/open_source/LATEST.json",
+      "precondition_blob": "4ea8d188843f9bb70f46da95cb44fc22256c6d13",
+      "commit": "19ca55e64ba9d6ad727987fa17e793e2e0a05efb",
+      "blob": "2d06ebedbd267b44087b699ee25dc52d049a894c",
+      "readback": "exact pinned readback succeeded"
+    }
+  },
+  "revisions": [
+    "Previous statement that a request-aware seam was only hypothetical is narrowed: exact v2.2.0 has a public experimental CallToolWithAlternateFilters pipeline, and WithTasks appends its filter there, so a pre-Tasks typed filter can emit requestState before task creation.",
+    "Tool-body MRTR remains unsuitable for this composition because stock WithTasks converts InputRequiredException from the background tool pipeline into a task failure. The preflight must return InputRequiredResult directly from the outer alternate-result filter.",
+    "A custom store can use signed server-minted op_id as deterministic unique taskId and fail duplicate create before Task.Run. Together with an outer filter returning the verified existing CreateTaskResult, this closes response-loss unknown-handle and concurrent blind-retry duplication in the source-equivalent fixtures.",
+    "New counterexample: exact RunAsTaskAsync durably creates the task before volatile Task.Run scheduling. Crash between those steps leaves a discoverable but unexecuted Working task; deterministic handle recovery alone does not redrive it. Handle recovery, execution liveness, and external-effect duplicate safety must be proved separately."
+  ],
+  "semantic_drift": {
+    "frozen_commit": "039a96d2dbf60e7e09c1c1d6d24885571c6658f0",
+    "sha_only_observed_during_semantic_work": "8ab6378fcdd332d946118dac9d707dd603d7d425",
+    "sha_only_observed_after_latest_write": "19ca55e64ba9d6ad727987fa17e793e2e0a05efb",
+    "handling": "No post-freeze DESIRED_STATE/config semantic body was read. Own LATEST/receipt state and public source only were read after drift."
+  },
+  "mutation_scope": [
+    "research_workers_clean_g1/open_source/artifacts/20260829T020526Z_mcp_pre_tasks_deterministic_identity_harness.py",
+    "research_workers_clean_g1/open_source/checkpoints/20260829T020636Z_mcp_pre_tasks_filter_and_create_schedule_gap.json",
+    "research_workers_clean_g1/open_source/LATEST.json",
+    "research_workers_clean_g1/open_source/receipts/20260829T020636Z_mcp_pre_tasks_filter_and_create_schedule_gap.json"
+  ],
+  "forbidden_mutations_confirmed_absent": [
+    "automation_control/DESIRED_STATE.json",
+    "automation_control/roles/open_source.json",
+    "public/source repositories",
+    "branches/refs/PRs outside role-local note persistence",
+    "other-worker/downstream/legacy state"
+  ],
+  "cost": {
+    "quota_bearing_features_used": [],
+    "incremental_monetary_cost": 0
+  },
+  "termination": {
+    "reason": "safe persistence boundary reached after exact-source seam confirmation, executable response-loss/concurrency fixtures, and discovery of a distinct create-before-schedule crash counterexample",
+    "frontier_nonempty": true
+  },
+  "exact_continuation": "Fresh-bootstrap authoritative control/config first. If config revision 6 remains active, read own LATEST and latest checkpoint. At exact C# SDK v2.2.0, model the smallest durable execution-claim/generation layer that can redrive a task left after CreateTaskAsync success but before Task.Run, while preventing concurrent/stale effect execution. Explicitly counterexample lease expiry during a non-idempotent external effect and require effect-side idempotency/CAS for a positive exactly-once claim. Then convert the OpenHands v1.44.1 fenced marker model into an exact-source patch/regression candidate and audit another caller-stable-identity mutation API plus connected Chat mutation/readback availability."
+}
