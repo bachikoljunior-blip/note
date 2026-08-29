@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "assignment": "phase1-clean-open-source-chat-capability-patterns",
+  "control_revision": 25,
+  "config_revision": 6,
+  "frozen_semantic_root": {
+    "repo": "bachikoljunior-blip/note",
+    "commit_sha": "487b33f5109a35a375b0e17b93340cd1f3a5fe68",
+    "bootstrap_note": "DESIRED_STATE.json was read first; open_source role config was then read. A pre-semantic-start main drift from a5b8fe38a5d1344f1817de2081cbcc650dd69935 to this commit was reconciled by rereading both pinned control files before semantic work."
+  },
+  "clean_exploration": {
+    "inputs_used": [
+      "own research_workers_clean_g1/open_source state",
+      "public MCP specification/extension documentation",
+      "public MCP C# SDK documentation and public release metadata",
+      "own source-equivalent fixture code"
+    ],
+    "excluded": [
+      "O",
+      "all other-worker state",
+      "downstream state",
+      "legacy semantics"
+    ]
+  },
+  "source_pins": {
+    "mcp_protocol_revision": "2026-07-28",
+    "mcp_tasks_extension": "SEP-2663 / io.modelcontextprotocol/tasks current extension surface",
+    "mcp_mrtr": "SEP-2322",
+    "csharp_sdk_latest_release": {
+      "tag": "v2.2.0",
+      "commit": "6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+      "published_at": "2026-08-13T08:45:54Z"
+    },
+    "openhands_prior_exact_release_pin": "v1.44.1 / 9d143aac6b7c3cc59f79cf6f33333f3afbc0b2d6"
+  },
+  "primary_findings": [
+    {
+      "id": "MCP_TASKS_CURRENT_NO_ENUMERATION",
+      "finding": "The current Tasks extension exposes tasks/get, tasks/update, and tasks/cancel only. It explicitly has no tasks/list. The Task wire shape carries taskId/status/timestamps/ttl/poll interval plus status-specific payload, but no original-request or caller operation identity.",
+      "implication": "If task creation is durably committed but the CreateTaskResult containing the server-generated taskId is lost before the client records it, the standard current Tasks wire surface provides no enumeration/rediscovery primitive. A blind retry can create a second task unless an application-level stable creation identity is enforced before task creation.",
+      "revision_note": "Do not mix this with the legacy 2025-11-25 experimental Tasks surface, which did include tasks/list. Version-qualified documentation is mandatory."
+    },
+    {
+      "id": "CSHARP_V2_STORE_HAS_NO_REQUEST_IDENTITY_INPUT",
+      "finding": "Current C# SDK v2 API ModelContextProtocol.Extensions.Tasks.IMcpTaskStore.CreateTaskAsync accepts only CancellationToken. The v2 InMemoryMcpTaskStore has the same signature. Current v2 conceptual docs also state that WithTasks eagerly invokes CreateTaskAsync before the inner tool handler runs.",
+      "implication": "A custom IMcpTaskStore alone cannot derive a stable logical operation key from the JSON-RPC id, original request arguments, MRTR requestState, or authenticated principal, because those inputs are not in the v2 store method contract. The stable create-or-get key must be established in an earlier/custom request seam or via a custom alternate-handler/tasks integration that deliberately passes the key into its durable store.",
+      "documentation_trap": "The non-versioned/v1 experimental API docs expose an older CreateTaskAsync(McpTaskMetadata, RequestId, JsonRpcRequest, ...) plus ListTasksAsync. Those signatures are not the v2 Tasks extension contract. The prior own checkpoint claim that current v2 CreateTaskAsync is cancellation-token-only remains valid after explicit version disambiguation."
+    },
+    {
+      "id": "MRTR_PREFLIGHT_STABLE_OPERATION_ID",
+      "finding": "MRTR requires a retry of the original logical request to use a different JSON-RPC id. requestState is echoed opaquely and must be validated; user-specific state must be cryptographically bound to the authenticated user.",
+      "safe_pattern": "Round 1 is strictly side-effect-free and returns integrity-protected requestState containing a server-minted stable op_id plus method/args/principal digests and expiry. The client persists this state before retry. A later mutation round verifies the bindings and performs atomic create-or-get(op_id, intent_hash). Response loss after creation is then retry-safe even though the JSON-RPC id changes.",
+      "boundary": "This is a constructed application protocol, not a guarantee supplied by stock Tasks. In the current C# v2 auto-WithTasks path the task store is created eagerly, so an MRTR preflight intended to happen before task creation needs an earlier/custom request path rather than the ordinary inner tool body."
+    },
+    {
+      "id": "OPENHANDS_FENCED_HEAD_MARKER_MODEL",
+      "finding": "The prior OpenHands source-level candidate was sharpened into a source-equivalent recovery model. A durable marker binds lease generation, expected old HEAD, event id, and event hash before event append. Recovery advances HEAD only when generation, old HEAD, event parent, and event hash all match; it clears an already-applied marker idempotently and refuses unique-orphan inference when no marker exists.",
+      "boundary": "This is a tested source-equivalent protocol candidate, not an upstream OpenHands patch or executed OpenHands integration test. It is designed to preserve intentional forks rather than treating graph uniqueness as user intent."
+    }
+  ],
+  "counterexamples": [
+    "Using JSON-RPC request id as logical operation identity fails under MRTR because retries MUST use a different JSON-RPC id.",
+    "Assuming tasks/list exists because the 2025-11-25 experimental Tasks docs expose it is a versioning error; the current extension intentionally removed task enumeration.",
+    "Implementing idempotency only inside current C# v2 IMcpTaskStore cannot bind the original request because CreateTaskAsync receives no request identity or request payload.",
+    "Durably creating a task before CreateTaskResult prevents poll-before-visible races but does not by itself close the create-success/response-loss/unknown-handle window.",
+    "Automatically advancing an event HEAD to a unique orphan descendant without a durable intent marker can reinterpret an intentional fork as the active branch."
+  ],
+  "execution_evidence": {
+    "mcp_creation_identity_fixture_batch": {
+      "result": "7/7 pass",
+      "cases": [
+        "preflight produces zero effects",
+        "response loss followed by retry with fresh JSON-RPC id returns same task and one effect",
+        "argument binding rejects changed args",
+        "principal binding rejects changed principal",
+        "method binding rejects changed method",
+        "integrity check rejects token tampering",
+        "request-id-only negative fixture creates two effects across fresh ids"
+      ]
+    },
+    "fenced_marker_fixture_batch": {
+      "result": "7/7 pass",
+      "cases": [
+        "crash after event append before HEAD update is recoverable",
+        "lease generation mismatch fails closed",
+        "HEAD moved to a competing/fork event fails closed",
+        "event hash mismatch fails closed",
+        "event parent mismatch fails closed",
+        "already-applied HEAD with uncleared marker is idempotently cleared",
+        "orphan event without marker does not implicitly move HEAD"
+      ]
+    },
+    "combined_artifact": "research_workers_clean_g1/open_source/artifacts/20260829T010557Z_creation_identity_and_fenced_marker_harness.py",
+    "combined_artifact_note": "The persisted stdlib-only harness is composed from the two executed 7-case fixture batches; the exact persisted file was read back after creation.",
+    "incremental_monetary_cost": 0,
+    "quota_bearing_features_used": []
+  },
+  "public_sources": [
+    {
+      "name": "MCP Tasks extension specification",
+      "url": "https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks",
+      "relevant_contract": "three task methods, no tasks/list, Task fields, durable-create-before-response requirement"
+    },
+    {
+      "name": "MCP SEP-2322 MRTR",
+      "url": "https://modelcontextprotocol.io/seps/2322-MRTR",
+      "relevant_contract": "fresh JSON-RPC id across rounds; requestState validation and principal binding"
+    },
+    {
+      "name": "MCP C# SDK v2 IMcpTaskStore API",
+      "url": "https://csharp.sdk.modelcontextprotocol.io/v2/api/ModelContextProtocol.Extensions.Tasks.IMcpTaskStore.html",
+      "relevant_contract": "CreateTaskAsync(CancellationToken) and no request identity input"
+    },
+    {
+      "name": "MCP C# SDK v2 Tasks concepts",
+      "url": "https://csharp.sdk.modelcontextprotocol.io/v2/concepts/tasks/tasks.html",
+      "relevant_contract": "v2 protocol requirements, WithTasks behavior, eager task creation, strong consistency"
+    }
+  ],
+  "revision_from_prior_own_state": [
+    "The apparent contradiction around C# CreateTaskAsync was resolved as a documentation-version mismatch: legacy/non-versioned v1 experimental docs include RequestId/original request and ListTasksAsync, whereas current v2 Tasks extension IMcpTaskStore is cancellation-token-only and current wire Tasks has no tasks/list.",
+    "Therefore the prior unknown-handle counterexample remains valid for the current extension, and the minimal custom surface is larger than a custom IMcpTaskStore: operation identity must be established before/equivalent to task creation in a request-aware seam."
+  ],
+  "semantic_drift": {
+    "observed_after_semantic_start": true,
+    "frozen_root": "487b33f5109a35a375b0e17b93340cd1f3a5fe68",
+    "later_sha_only_observation_before_own_writes": "ed302cc4b962cf5ae9d0b924db1e51e0d4637b21",
+    "handling": "No later DESIRED_STATE or role-config semantics were read. Writes after drift are restricted to the own open_source artifact/checkpoint/LATEST/receipt namespace."
+  },
+  "exact_continuation": [
+    "At the exact C# SDK v2.2.0 source pin, locate the WithTasks request-wrapper/filter ordering and identify the smallest request-aware seam that can perform a side-effect-free MRTR preflight before CreateTaskAsync is invoked.",
+    "Build a second source-equivalent fixture for that concrete seam: first round returns sealed requestState with op_id and creates no task; second round atomically create-or-get binds op_id to intent; lost CreateTaskResult plus fresh JSON-RPC id recovers the same task.",
+    "Turn the fenced OpenHands marker model into an exact-v1.44.1 patch/regression candidate with marker persistence ordering, generation checks, event parent/hash checks, intentional-fork preservation, and cleanup after an already-applied HEAD.",
+    "Find one additional mutating open-source API with caller-supplied stable creation identity plus exact readback/CAS, then audit whether a connected Chat mutation surface can complete the pattern without an external executor."
+  ],
+  "termination": {
+    "reason": "current exploration batch reached a safe checkpoint boundary after fresh protocol/source disambiguation and executable source-equivalent fixtures",
+    "frontier_nonempty": true
+  }
+}
