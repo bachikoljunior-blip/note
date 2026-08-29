@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v5-irreducible-handoff-aligned",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "frontier_item_id": "ROOTV5-HISTORY-SELECTOR-CALIBRATION-REPAIR-v2",
+  "protocol_id": "HIST-STICKY-ONLINE-v2",
+  "observed_at": "2026-08-29T12:10:34.848517+09:00",
+  "control_binding": {"root_control_revision":25,"root_blob":"347c1182ef5fc24900b4d94cdeed0fe2e8202cae","config_control_revision":14,"config_revision":7,"config_blob":"c5d194b341a70356da196cfb88636ab41fc1bc9f"},
+  "repair_source": {"blocked_protocol":"ROOTV5-OPRO-HISTORY-REAL-OUTCOME-CALIBRATION","integrity_evidence_path":"research_workers_clean_g1/self_improvement/phase1_opro_history_calibration_integrity_v1_2026-08-29T1208_JST.md","integrity_evidence_blob":"bda02ecec51b592e1079d0589b6d29917b942c6f","old_panel_reused_for_performance":false},
+  "prospective_panel": {
+    "panel_frontier_id":"ROOTV5-HISTORY-SELECTOR-CALIBRATION-v2",
+    "minimum_valid_rounds":6,
+    "minimum_disagreement_exposures_per_policy":2,
+    "admission_rule":"Only terminal transitions whose decision record was durably written and read back before any semantic read/execution of the factual candidate are eligible. No outcome collected before this protocol readback can enter the panel.",
+    "candidate_set_rule":"At each round, candidate set is the complete set of current self_improvement frontier items that are OPEN, declared_before_semantic_read=true, have a stable candidate_id, strategy_class and integer priority_index already durably present before the decision record, are safely Chat-capable with actually exposed tools, require no protected/primary authority, and are not the calibration tracker itself. The exact candidate set and metadata are copied into the immutable decision record before either policy chooses.",
+    "required_candidate_fields":["candidate_id","frontier_item_id","strategy_class","priority_index","declared_at_sequence","safe_chat_capable"],
+    "initial_sticky_incumbent_strategy_class":"generate_score_select",
+    "sticky_policy": {
+      "policy_id":"STICKY-CLASS-v2",
+      "choice_rule":"If one or more eligible candidates have strategy_class equal to sticky_incumbent_strategy_class, choose the one with smallest priority_index, then lexicographically smallest candidate_id. Otherwise choose the globally smallest priority_index, then lexicographically smallest candidate_id.",
+      "update_rule":"After a valid factual outcome is durably read back, sticky_incumbent_strategy_class becomes the factual candidate's strategy_class, regardless of outcome utility. No update occurs on invalid or duplicate outcome records.",
+      "tie_rule":"smallest priority_index, then candidate_id"
+    },
+    "history_policy": {
+      "policy_id":"HISTORY-CLASS-MEAN-v2",
+      "archive_scope":"Only valid factual outcomes from this v2 panel after protocol readback; never old sequence-117 panel outcomes.",
+      "class_value":"Arithmetic mean of exact terminal_utility values for valid factual outcomes in the same strategy_class. An unobserved class has prior value 1.0 exactly.",
+      "choice_rule":"Choose eligible candidate whose strategy_class has highest class_value. On equal class_value, prefer the class with more valid panel observations; on remaining tie choose smallest priority_index, then lexicographically smallest candidate_id.",
+      "archive_update_timing":"Only after immutable outcome readback; the current round's outcome cannot affect either policy's choice for that same round.",
+      "tie_rule":"higher observation count, then smaller priority_index, then candidate_id"
+    },
+    "factual_policy_schedule": {
+      "rule":"Round numbers alternate HISTORY, STICKY, HISTORY, STICKY, ... starting with HISTORY at round 1. This schedule is frozen now and cannot be changed after any round outcome is known.",
+      "agreement_rule":"If both policies choose the same candidate, that candidate is factual regardless of scheduled policy. The realized outcome is observable for both policies because their actions are identical.",
+      "disagreement_rule":"If policies disagree, execute only the candidate chosen by the scheduled factual policy. The unexecuted policy's counterfactual utility is MISSING and must never be imputed."
+    },
+    "terminal_metric": {
+      "metric_id":"TERMINAL-UTILITY-v2",
+      "mapping":{"SATISFIED_EXACT_SCOPE":2,"BLOCKED_PROTOCOL_UNDERSPECIFIED":1,"BLOCKED_UNRESOLVED_CHILD":1,"BLOCKED_EXACT_CAPABILITY":1,"SOFT_NO_PROGRESS":0,"INVALID_EVIDENCE":0,"DUPLICATE_EFFECT":0},
+      "validity_requirements":["stable terminal transition ID","immutable evidence readback","no forbidden semantic input","no cross-role/O mutation","no protected-authority mutation","no unsupported completion claim"],
+      "invalid_round_rule":"If a validity requirement fails, round_valid=false and no policy/archive update is allowed. Invalid rounds do not count toward minimum_valid_rounds."
+    },
+    "decision_record_required_fields":["protocol_id","round_number","candidate_set","sticky_state_before","history_archive_before","sticky_choice","history_choice","scheduled_factual_policy","factual_candidate","decision_written_at","decision_evidence_blob"],
+    "outcome_record_required_fields":["round_number","factual_candidate","terminal_transition_id","terminal_status","terminal_utility","outcome_evidence_blob","outcome_readback_at","round_valid"],
+    "primary_reporting": {
+      "agreement_metrics":"agreement rate and utility of agreed actions; agreed action outcome may be attributed to both policies because action identity is the same.",
+      "disagreement_metrics":"For disagreement rounds, report factual realized utility separately by scheduled policy. Require at least two valid disagreement exposures assigned to HISTORY and at least two assigned to STICKY before any descriptive winner label.",
+      "winner_rule":"If exposure minimums are met, a DESCRIPTIVE winner may be named only from mean realized terminal_utility on valid disagreement rounds; exact tie => TIE. This is not a causal or counterfactual superiority claim.",
+      "insufficient_rule":"If minimum disagreement exposures are not met, report INSUFFICIENT_DISAGREEMENT and no winner.",
+      "counterfactual_rule":"Never compute paired regret or unexecuted-policy utility unless a future separately preregistered protocol obtains immutable outcomes for both candidates under the same round candidate set."
+    },
+    "retuning_prohibited_after_first_decision": ["candidate eligibility fields","sticky rule","history rule/value","utility mapping","policy schedule","winner threshold","minimum rounds","minimum disagreement exposures"]
+  },
+  "constructed_ambiguity_checks": [
+    {"trace":"missing-candidate-set","expected":"REFUSE_ROUND","observed":"REFUSE_ROUND","pass":true},
+    {"trace":"candidate-missing-strategy-class","expected":"REFUSE_CANDIDATE_AND_IF_SET_LT2_REFUSE_ROUND","observed":"REFUSE_CANDIDATE_AND_IF_SET_LT2_REFUSE_ROUND","pass":true},
+    {"trace":"missing-history-archive-state","expected":"REFUSE_ROUND","observed":"REFUSE_ROUND","pass":true},
+    {"trace":"unobserved-class-value","expected":1.0,"observed":1.0,"pass":true},
+    {"trace":"same-round-self-reward","expected":"NO_ARCHIVE_UPDATE_BEFORE_CHOICE","observed":"NO_ARCHIVE_UPDATE_BEFORE_CHOICE","pass":true},
+    {"trace":"counterfactual-missing-on-disagreement","expected":"DO_NOT_IMPUTE","observed":"DO_NOT_IMPUTE","pass":true},
+    {"trace":"duplicate-terminal-transition","expected":"NO_SECOND_ARCHIVE_UPDATE","observed":"NO_SECOND_ARCHIVE_UPDATE","pass":true},
+    {"trace":"outcome-before-readback","expected":"NO_ARCHIVE_OR_INCUMBENT_UPDATE","observed":"NO_ARCHIVE_OR_INCUMBENT_UPDATE","pass":true},
+    {"trace":"post-hoc-policy-schedule-change","expected":"INVALID_PROTOCOL","observed":"INVALID_PROTOCOL","pass":true},
+    {"trace":"invalid-safety-conflict-outcome","expected":"ROUND_INVALID_NO_UPDATE","observed":"ROUND_INVALID_NO_UPDATE","pass":true},
+    {"trace":"insufficient-disagreement-exposures","expected":"INSUFFICIENT_DISAGREEMENT_NO_WINNER","observed":"INSUFFICIENT_DISAGREEMENT_NO_WINNER","pass":true}
+  ],
+  "constructed_ambiguity_aggregate":{"passes":11,"total":11},
+  "interpretation_guard":"This repaired protocol enables replayable prospective decisions and a limited descriptive realized-utility comparison under partial feedback. It does not create missing counterfactuals and must not be described as causal evidence that one selector is generally superior.",
+  "next_candidate_preregistration": {
+    "candidate_id":"CAND-GRIPS-001",
+    "frontier_item_id":"ROOTV5-PUBLIC-OPTIMIZER-GRIPS",
+    "strategy_class":"textual_edit_search",
+    "priority_index":10,
+    "declared_at_sequence":121,
+    "safe_chat_capable":true,
+    "semantic_read_done":false
+  }
+}
