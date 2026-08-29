@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 37,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "transport_mode": "exact_blob_two_pass_fallback_then_role_local_cas",
+  "frozen_control": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_semantic_identity_recheck": "same root/config blobs",
+    "control25_acceptance_semantics_imported": false
+  },
+  "predecessor": "research_workers_clean_g1/open_source/checkpoints/20260829T084000Z_openhands_r7_two_phase_recovery.json",
+  "predecessor_blob": "4c8665796913576a16c4490e8f3e0008c81c6799",
+  "target": {
+    "repository": "modelcontextprotocol/csharp-sdk",
+    "release": "v2.2.0",
+    "release_commit": "6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "release_published_at": "2026-08-13T08:45:54Z",
+    "latest_release_rechecked_this_run": true
+  },
+  "exact_source_evidence": {
+    "tasks_builder": "src/ModelContextProtocol.Extensions.Tasks/Server/McpTasksBuilderExtensions.cs at 6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "task_store": "src/ModelContextProtocol.Extensions.Tasks/Server/IMcpTaskStore.cs at 6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "request_filters": "src/ModelContextProtocol.Core/Server/McpRequestFilters.cs at 6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "server_tool": "src/ModelContextProtocol.Core/Server/McpServerTool.cs at 6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "composed_invocation_state": "src/ModelContextProtocol.Core/Server/ComposedCallToolInvocationState.cs at 6fa3825973949a9c4f0cd8af344e15a8db09dc35"
+  },
+  "finding": {
+    "classification": "UNRESOLVED_RESTART_PIPELINE_REENTRY_SEAM",
+    "scope": "Inspected official public server/task surfaces in exact C# SDK v2.2.0; no claim about private application-specific wrappers outside those surfaces.",
+    "initial_execution": "WithTasks is an alternate-result CallTool filter. For a task-backed call it durably calls IMcpTaskStore.CreateTaskAsync, captures the current request pipeline delegate `next`, then schedules Task.Run. The background body later invokes that captured `next`, which is why ordinary CallToolFilters run after task creation and before the matched tool on the original process.",
+    "crash_boundary": "A process crash after durable CreateTaskAsync but before or during volatile Task.Run destroys the captured `next` delegate. IMcpTaskStore persists task state/result/input requests but exposes no replay delegate, stored original request, claim-generation, or resume-existing-through-pipeline method.",
+    "direct_primitive_negative": "McpServerTool.InvokeAsync is a primitive tool invocation entrypoint. Calling it directly on restart is not equivalent to the ordinary CallTool request pipeline and does not by itself rerun CallToolFilters/current policy or authorization.",
+    "fresh_request_negative": "Re-entering through a fresh normal task-backed CallTool request reaches WithTasks again. IMcpTaskStore.CreateTaskAsync is specified to create a new task with a unique task ID, so stock v2.2.0 does not identify that fresh request as a resume of the already durable working task.",
+    "internal_state_limit": "ComposedCallToolInvocationState is internal and tracks in-process lifecycle coordination only; it is not a durable/public restart re-entry capability.",
+    "missing_supported_seam": "A safe stock restart path would need a supported entrypoint that accepts an already claimed durable task plus replayable original request/intent, skips only new-task creation, then rebuilds and executes the complete current ordinary CallTool policy/filter pipeline before the matched tool. No such public entrypoint was found in the exact v2.2.0 surfaces examined.",
+    "external_effect_limit": "Even such a seam plus a monotonic task-attempt generation would not by itself make arbitrary external effects exactly-once after lease expiry; the effect boundary still needs a stable idempotency identity or an atomic effect-side fence/CAS."
+  },
+  "executed_artifact": {
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T090000Z_mcp_restart_pipeline_reentry_harness.py",
+    "blob": "bd19a6c247efe5306815ed7982c6f0cb526c2610",
+    "result": "PASS 8/8",
+    "fixtures": [
+      "initial task executes the ordinary policy pipeline",
+      "durable-create-before-schedule crash leaves a working task with no effect",
+      "direct primitive replay bypasses a revoked policy in the negative model",
+      "fresh normal retry creates a distinct task rather than resuming the existing one",
+      "hypothetical resume-existing seam reruns current policy and can block",
+      "monotonic claim generation can run one claimed existing task attempt",
+      "stale generation terminal write is rejected",
+      "attempt generation alone does not deduplicate an external effect already crossed"
+    ],
+    "execution_note": "The source-equivalent harness was executed in the current Chat runtime before persistence; the persisted role-local artifact was then exact-read back. It models the documented/source ordering and entrypoint boundary rather than compiling the upstream C# SDK."
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_execution_allowed_for_acceptance": false,
+    "finite_monthly_trial_paid_quota_allowed_for_acceptance": false,
+    "incremental_monetary_cost_required": 0,
+    "unavailable_capability_is_unresolved_child_not_pass": true
+  },
+  "phase1_assessment": {
+    "public_source_audit_and_role_local_model": "PASS within current Chat surface",
+    "stock_csharp_sdk_restart_reentry": "UNRESOLVED_CHILD",
+    "reason": "The missing supported existing-task/full-pipeline re-entry capability cannot be replaced by a protected/richer-mode/manual-user handoff under control26.",
+    "optional_monthly_quota_dependency": "none consumed or required",
+    "incremental_monetary_cost": 0,
+    "hosted_runner_codespaces_artifact_lfs_package_cloud_credit_used": false
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "modelcontextprotocol/csharp-sdk upstream"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If this assignment remains active, read own LATEST and this checkpoint only. First inspect one other official open-source MCP server SDK with current Tasks support for a durable existing-task restart entrypoint that rebuilds the full current policy/filter pipeline; prefer a release-pinned source and explicitly test crash-after-task-create-before-schedule. If it has the same missing seam, promote the pattern only to the shared-scope supported by both SDKs. Then return to the OpenHands R7 leaf and determine whether exact v1.44.1 can express a single base-state snapshot commit plus in-memory field synchronization without intermediate ConversationState.__setattr__ autosaves while preserving the Agent Server lease/write guard. Keep every unexposed capability as an unresolved child, not a handoff."
+}
