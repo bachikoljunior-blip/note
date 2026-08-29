@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "role": "continual_learning",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-continual-learning-durable-adaptation",
+  "bootstrap": {
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/continual_learning.json",
+    "role_config_blob": "16232cba3558b13f883f097e11d052016cff20b7",
+    "role_control_revision": 9,
+    "role_config_revision": 6,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1
+  },
+  "slice": {
+    "name": "hash_chained_idempotent_replay_probe",
+    "purpose": "Test one zero-cost recurring-Chat durable-adaptation primitive covering update, duplicate resistance, rollback, forgetting guard and exact reconstruction using plain deterministic state plus lightweight repository transport.",
+    "mechanism": {
+      "state_form": "canonical JSON base plus append-only event journal",
+      "integrity": "SHA-256 over canonical JSON",
+      "idempotency": "event_id + exact payload digest; identical replay is no-op, divergent reuse is conflict",
+      "rollback": "append rollback event selecting a previously materialized accepted state; history remains intact",
+      "reconstruction": "replay unique accepted events from base in order"
+    },
+    "fixture": {
+      "base": {"alpha": "A", "beta": "B"},
+      "base_digest": "28cb6c0b343a769ad0a97150b8b184015c51a97ca0f45981ad5de75aa3be16c9",
+      "events": [
+        {"event_id": "e1", "op": "patch", "changes": {"beta": "B2", "gamma": "C"}},
+        {"event_id": "e1", "op": "patch", "changes": {"beta": "B2", "gamma": "C"}},
+        {"event_id": "e2", "op": "patch", "changes": {"alpha": "A_bad"}},
+        {"event_id": "e3", "op": "rollback", "target_event_id": "e1"}
+      ],
+      "journal_digest": "f37e0d1c3c6515f7896b6db33448c451c663d0f7bcd75395941a571fc37a0665"
+    },
+    "observed": {
+      "event_statuses": ["applied", "duplicate_noop", "applied", "rollback_applied"],
+      "final_state": {"alpha": "A", "beta": "B2", "gamma": "C"},
+      "final_digest": "69851dee7d56df24156bfaeb030c805f3af5c747ce7502e96fd0088634a1e859",
+      "protected_alpha_retained_after_update": true,
+      "new_gamma_acquired": true,
+      "duplicate_effect_count": 0,
+      "rollback_restored_e1_exactly": true,
+      "second_reconstruction_digest_equal": true,
+      "conflicts": []
+    },
+    "metrics": {
+      "protected_anchor_retention": 1.0,
+      "new_item_acquisition": 1.0,
+      "duplicate_effect_rate": 0.0,
+      "rollback_exact": 1.0,
+      "reconstruction_digest_match": 1.0
+    },
+    "tested_scope": "Deterministic small-state event replay only. This establishes the mechanics of durable update/rollback/idempotency/reconstruction for text state; it does not establish semantic model-weight adaptation, concurrent multi-writer correctness, or indefinite repository availability.",
+    "zero_dependency_assessment": {
+      "residual_richer_mode_or_protected_or_manual_user_execution": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost": 0,
+      "transport_note": "Plain repository contents API is used only as lightweight state transport. The adaptation computation is local deterministic replay, not hosted compute; rate-limit interruption is handled by checkpointing and deferring to a later invocation rather than same-run retry."
+    },
+    "conflict_check": "No O/downstream/other-worker/legacy semantic input consumed; no protected-primary or scheduler mutation; only own role-local state and sanitized root/config/lifecycle were used."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "next_invocation_resumes_exact_continuation": true,
+  "exact_continuation": "Next invocation: extend the same append-only replay protocol with one divergent duplicate event_id payload and a simulated interrupted write boundary; verify conflict rejection plus restart from the last committed digest without applying a partial event. Do not start any unrelated base-work leaf."
+}
