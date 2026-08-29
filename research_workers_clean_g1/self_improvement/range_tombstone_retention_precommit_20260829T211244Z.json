@@ -1,0 +1,45 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-TOMBSTONE-RETENTION-BOUND-v1",
+  "precommitted_at":"2026-08-29T21:12:44Z",
+  "source_semantics_read_before_precommit":false,
+  "own_namespace_duplicate_check":"code search for exact phrase range tombstone returned total_count=0 with incomplete_results=true; weak duplicate diagnostic only",
+  "hypothesis":"Historical per-key spent records can be reclaimed exactly once a monotonic finalized-through epoch acts as a range tombstone; only keys in still-open epochs need exact retention. A fixed probabilistic summary is safe against double-credit only if it has no false negatives, but may still fail usefulness because false positives can reject fresh valid keys.",
+  "fixed_state":{"finalized_through_epoch":8,"open_exact_keys":{"9":["K9"]},"old_individual_key_records_for_epochs_le_8":"eligible_for_reclamation_after_range_marker_readback"},
+  "candidates":[
+    {"id":"RANGE-EXACT","representation":"durable finalized_through_epoch=8 plus exact semantic-key sets only for epochs >8"},
+    {"id":"BLOOM-FIXED","representation":"fixed-size probabilistic summary of all historical spent keys"},
+    {"id":"NAIVE-DROP","representation":"delete old individual spent keys without a finalized epoch-range marker"}
+  ],
+  "fixed_events":[
+    {"step":1,"event":"duplicate old K7 with origin_epoch=7 after individual K7 record reclaimed","expected_RANGE_EXACT":"reject solely because 7 <= finalized_through 8"},
+    {"step":2,"event":"fresh K9b with origin_epoch=9 and K9b not in exact open set","expected_RANGE_EXACT":"eligible for independent evaluation"},
+    {"step":3,"event":"duplicate K9 in epoch 9","expected_RANGE_EXACT":"reject by exact open-epoch set"},
+    {"step":4,"control":"NAIVE-DROP receives old duplicate K7 after old key record deletion","expected":"FAIL because duplicate can no longer be distinguished"},
+    {"step":5,"control":"BLOOM-FIXED false-negative duplicate query","expected":"FATAL FAIL; would permit double credit"},
+    {"step":6,"control":"BLOOM-FIXED false-positive fresh K9b query","expected":"SAFE-BUT-USEFULNESS-FAIL for exact parity because valid fresh evidence is rejected"},
+    {"step":7,"event":"durably advance finalized_through 8 -> 9 after all epoch-9 terminal/readback obligations close","expected_RANGE_EXACT":"after range-marker readback, epoch-9 exact key set may be reclaimed"},
+    {"step":8,"control":"transport failure reading range marker or open exact set","expected":"UNKNOWN/no credit and no reclamation"},
+    {"step":9,"control":"incoming outcome lacks verifiable origin epoch","expected":"UNKNOWN/reject; never infer epoch from assignment label"}
+  ],
+  "guards":{
+    "G1":"candidate representations, events and failure controls frozen before public source audit",
+    "G2":"finalized-through marker is monotonic and durable before old per-key reclamation",
+    "G3":"origin_epoch <= finalized_through rejects old duplicates without per-key lookup",
+    "G4":"open epochs retain exact semantic-key sets",
+    "G5":"naive old-key deletion without range finality must fail",
+    "G6":"any probabilistic false negative is fatal for duplicate-credit safety",
+    "G7":"probabilistic false positives are not accepted as exact useful parity for fresh-credit handling",
+    "G8":"range marker advances only after all covered epoch obligations terminal/readback-close",
+    "G9":"transport uncertainty is UNKNOWN and blocks semantic effects/reclamation",
+    "G10":"origin epoch must be verifiable; label-only inference is forbidden",
+    "G11":"terminal artifact exact readback required before role credit; scope is this fixed role-local trace only",
+    "G12":"accepted route has zero residual richer/protected/manual execution, zero finite optional quota dependency and zero incremental monetary cost"
+  },
+  "acceptance":"PASS only if a public range-deletion/tombstone or equivalent ordered-key mechanism supports compact range finality and RANGE-EXACT satisfies all guards. BLOOM-FIXED and NAIVE-DROP are controls, not acceptable fallbacks unless their frozen failure conditions are disproven without rubric edits.",
+  "credit_rule":"Precommit earns zero role credit; at most one role-local credit after exact terminal readback.",
+  "exact_next_action":"Read back this precommit, then audit public range-tombstone/range-delete semantics plus Bloom-filter error semantics. Evaluate RANGE-EXACT, BLOOM-FIXED and NAIVE-DROP exactly as frozen; seal/read back terminal evidence before credit."
+}
