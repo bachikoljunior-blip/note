@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:20:00+09:00",
+  "topic": "ScienceWorld replay-verification ablation plus exact upstream ASI transactional implementation",
+  "sources": [
+    {
+      "id": "speedrunner-paper-v1",
+      "type": "official_arxiv_html",
+      "title": "Better, Faster, Stronger: Programmatic Skill Learning Best Reduces Agent Cost",
+      "arxiv": "2608.11338v1",
+      "date": "2026-08-11",
+      "facts": [
+        "Appendix E says the online ASI adaptation removes the original skill-verification step because it requires re-solving the inducing task; all other ASI components are left unchanged.",
+        "Appendix G.3 compares ASI, ASI (replay), and SpeedRunner on ScienceWorld task 3.",
+        "Restoring replay-based verification improves ASI mean task performance, especially early in training, by filtering broken skills that regress a previous task.",
+        "The text does not print exact ASI-vs-ASI(replay) point values from Figure 12; no point estimate is inferred from the plotted image here."
+      ],
+      "experimental_scope": "ScienceWorld task family 3; GPT-5.4-mini actor/inducer; 200 online rollouts; sleep every 10; three random seeds; fixed 30-episode held-out test set evaluated every 50 training rollouts."
+    },
+    {
+      "id": "asi-official-code",
+      "type": "official_github_code",
+      "repository": "zorazrw/agent-skill-induction",
+      "revision": "377abe0623a37eaf7f03bdd26cb97bb5331acf47",
+      "path": "asi/induce/induce_actions.py",
+      "blob": "802673e139bef2987e9f403da3e4efc3805c6536",
+      "facts": [
+        "write_actions copies the pre-candidate action file to a .tmp backup and appends candidate functions to the live action file.",
+        "write_tests generates per-inducing-task replay tests, executes them, evaluates task success, and separately checks that the induced action is valid/used.",
+        "If any test fails or times out, write_tests signals revert; the pipeline moves the .tmp backup back over the action file and removes generated replay result directories.",
+        "If all tests pass, the .tmp backup is removed and the candidate remains, implementing commit-on-all-pass semantics."
+      ]
+    },
+    {
+      "id": "asi-official-readme",
+      "type": "official_github_file",
+      "repository": "zorazrw/agent-skill-induction",
+      "revision": "377abe0623a37eaf7f03bdd26cb97bb5331acf47",
+      "path": "README.md",
+      "blob": "3f2f63649e33b82b2dad28b53448e5a2d815278c",
+      "claim": "README states that induced actions are added only if all generated test cases succeed; otherwise the new actions are discarded."
+    },
+    {
+      "id": "asi-gitignore",
+      "type": "official_github_file",
+      "repository": "zorazrw/agent-skill-induction",
+      "revision": "377abe0623a37eaf7f03bdd26cb97bb5331acf47",
+      "path": ".gitignore",
+      "blob": "f17fdcf3fc47ff10c5695146b46ce4fcebb3feaf",
+      "claim": "asi/debug_actions, asi/outputs, and results/webarena.* are ignored, so normal replay test/result artifacts are not retained in the repository by those paths."
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-097",
+      "claim": "The 2026 SpeedRunner paper supplies a matched ScienceWorld component intervention for ASI replay admission: it states that verification alone is removed while other ASI components remain unchanged, and restoring it improves mean task performance. The exact original ASI code independently shows backup→temporary candidate exposure→replay tests→all-pass commit / failure rollback mechanics.",
+      "scope": "Causal effect is paper-level ScienceWorld task-3 evidence; mechanism bytes are from the upstream ASI repository, not a byte-identical SpeedRunner adaptation."
+    },
+    {
+      "id": "p1-sa-098",
+      "claim": "Transactional rollback does not automatically yield a replayable provenance bundle. The upstream ASI repo ignores its generated debug/output/result paths, and the public code does not bind each admitted candidate to immutable candidate digest + replay-input digest + verifier result digest in a durable manifest. Therefore admission semantics are observable in code while per-candidate experiment replay provenance remains weaker.",
+      "scope": "Observed public repository surface at revision 377abe0623a37eaf7f03bdd26cb97bb5331acf47."
+    }
+  ],
+  "protocol_relation": {
+    "existing_gate": "TRANSACTIONAL_SKILL_ADMISSION_WITH_REPLAY_PROOF",
+    "action": "strengthen evidence only; no new lifecycle validator required",
+    "reason": "The public implementation and matched ablation reinforce the already-separated candidate/admit/rollback lifecycle rather than introducing a new state transition."
+  },
+  "remaining_gap": "Figure 12 underlying numeric run logs and the exact code revision used for the SpeedRunner ASI adaptation were not found in the public paper surface during this run. Do not estimate graph values or equate upstream ASI bytes with the adaptation bytes without further evidence."
+}
