@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "name": "SPEEDRUNNER_ASI_REPLAY_SIDECAR_INTEGRATION_V1",
+  "status": "reference_integration_spec_not_upstream_patch",
+  "purpose": "Instrument the current public ASISleep candidate admission transaction with a durable replay sidecar while preserving existing proposal, replay, commit and revert behavior.",
+  "upstream_binding": {
+    "repository": "JHU-CLSP/speedrunner",
+    "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+    "asisleep_path": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+    "asisleep_blob": "1359d8b5759e5fc1f00e4df41d1b9774ab735419",
+    "loop_path": "src/speedrunner/methods/wake_sleep/loop.py",
+    "loop_blob": "026d236af186cc49c9e8363a22660e1b2804aa49"
+  },
+  "target_packet": {
+    "schema": "skill_replay_admission_sidecar_v1.schema.json",
+    "validator": "skill_replay_admission_sidecar_validator_v1.py",
+    "claim_rule": "Use transaction_only unless an exact environment replay-equivalence packet is available. Only then may replay_verified_admission be asserted."
+  },
+  "zero_behavior_change_constraints": [
+    "Do not change which traces qualify as successful.",
+    "Do not change LLM prompts, tools, generation settings, request limits or retry counts.",
+    "Do not change candidate function static validation.",
+    "Do not change lexical new-helper usage checking.",
+    "Do not change replay call ordering or fresh-environment construction.",
+    "Do not change env.execute_code or env.check_solution inputs.",
+    "Do not change the condition that replay mode commits only when all required replays pass.",
+    "Do not change the no-replay branch's static-validation commit behavior.",
+    "Provenance-write failure must be surfaced separately and must never be silently interpreted as replay success. For strict audit mode, fail closed before returning a newly committed codebook; for observation-only mode, preserve the algorithm result but mark provenance_incomplete outside the admission-proof claim."
+  ],
+  "minimal_signature_change": {
+    "current": "ASISleep.update(..., **_: object)",
+    "recommended": "ASISleep.update(..., sleep_trace_path: Optional[str] = None, **_: object)",
+    "why": "WakeSleepLoop already passes one unique per-batch path under run_dir/oracle_trace; making it explicit consumes an existing interface value rather than adding a new caller-visible channel."
+  },
+  "canonical_digest_rules": {
+    "json": "UTF-8 JSON, sort_keys=true, separators=(',', ':'), ensure_ascii=false, terminal newline excluded from digest input.",
+    "codebook": "Serialize the same semantic fields used by Codebook.save_json into the canonical JSON rule. If Codebook.save_json ordering/formatting is implementation-dependent, first build the equivalent in-memory object and canonicalize it; never hash a temporary filename or pretty-print representation.",
+    "trajectory": "Canonical JSON array of exact ordered call strings after _asi_submit_test_trajectory cleaning and before _run_replay rewrites the final call into a local 'result =' assignment.",
+    "replay_result": "Canonical JSON object containing task_id, solution_success, used_new_helper, error_class/error_text digest, and any captured reset/result evidence.",
+    "decision": "Canonical JSON object over implementation/environment/transaction/replays plus status and post_codebook_sha256, excluding decision_packet_sha256 itself; digest this object to produce decision_packet_sha256."
+  },
+  "field_mapping": {
+    "implementation.repository": "constant JHU-CLSP/speedrunner",
+    "implementation.revision": "runtime/build supplied exact Git revision; do not infer from package version",
+    "implementation.asisleep_blob_sha": "exact source blob of ASISleep implementation",
+    "implementation.config_blob_sha": "exact selected experiment YAML blob",
+    "implementation.policy_revision": "a stable string identifying replay admission semantics; for the observed bytes use a project-local value such as speedrunner-asisleep-1f041a9b",
+    "environment.package": "scienceworld for ScienceWorld runs",
+    "environment.version": "installed distribution version resolved at run start",
+    "environment.artifact_filename": "installed wheel/sdist/JAR bundle identity source; never only package name",
+    "environment.artifact_sha256": "hash of the exact distribution/JAR bundle used",
+    "environment.dataset_manifest_sha256": "hash of the exact ordered ProblemLoader dataset record manifest used by the run",
+    "environment.replay_equivalence_packet_sha256": "null unless SCIENCEWORLD_ACTION_PREFIX_REPLAY_EQUIVALENCE_GATE evidence is available",
+    "transaction.batch_index": "WakeSleepLoop batch_idx",
+    "transaction.successful_task_ids": "preserve deterministic order from successful traces; do not derive from the unordered successful_ids set",
+    "transaction.allow_replay": "self.allow_replay",
+    "transaction.pre_codebook_sha256": "canonical digest of incoming codebook before copy.deepcopy",
+    "transaction.candidate_codebook_sha256": "canonical digest of state.codebook after proposal/static validation and before replay decision",
+    "transaction.candidate_functions": "for each state.added_names entry, record exact function name and canonical source code sha256 from staged state.codebook",
+    "replays[].task_id": "the successful task id being replayed",
+    "replays[].problem_record_sha256": "canonical digest of the exact ProblemLoader record resolved for task_id",
+    "replays[].reset_observation_sha256": "digest of reset observation/state evidence captured from the fresh replay environment before the scripted calls; if unavailable, do not assert replay_verified_admission",
+    "replays[].test_trajectory_artifact_sha256": "sha256 of the persisted canonical trajectory artifact bytes",
+    "replays[].test_trajectory_digest": "sha256 of canonical ordered call strings",
+    "replays[].used_new_helper": "the existing _run_replay used_new result",
+    "replays[].solution_success": "the existing _run_replay success result",
+    "replays[].error_class": "null on clean pass; otherwise a stable class such as execution_error/check_solution_error/missing_helper/exception rather than free-form message alone",
+    "replays[].result_artifact_sha256": "sha256 of canonical replay-result artifact",
+    "decision.status": "commit on current all-pass path or current no-replay constructed-candidate path; revert on current missing/failed replay path",
+    "decision.post_codebook_sha256": "candidate digest on commit; pre digest on revert",
+    "decision.decision_packet_sha256": "canonical decision packet digest as defined above"
+  },
+  "required_code_hooks": [
+    {
+      "hook": "update-entry",
+      "action": "Capture pre_codebook_sha256, explicit sleep_trace_path, exact experiment/source/environment bindings and an ordered successful task-id list."
+    },
+    {
+      "hook": "post-proposal",
+      "action": "After result=agent.run_sync and after confirming state.added_names is nonempty, capture candidate codebook digest and candidate function source digests. No candidate means no replay-admission transaction and therefore no v1 packet is required."
+    },
+    {
+      "hook": "no-replay-return",
+      "action": "Before returning state.codebook, emit one transaction_only packet with allow_replay=false, replays=[], status=commit, and post=candidate."
+    },
+    {
+      "hook": "missing-test-return",
+      "action": "Before returning original codebook, emit one transaction_only packet with allow_replay=true, all actually submitted replay records if any, status=revert, post=pre, plus a local diagnostic for missing task ids. The v1 semantic validator will correctly reject this as replay_verified_admission."
+    },
+    {
+      "hook": "each-replay",
+      "action": "Persist exact ordered calls and a canonical replay-result artifact immediately after _run_replay returns; append its bound record to an in-memory replay list in successful-trace order."
+    },
+    {
+      "hook": "failed-replay-return",
+      "action": "Before returning original codebook, emit transaction_only unless an environment-equivalence packet exists; status=revert and post=pre."
+    },
+    {
+      "hook": "all-pass-return",
+      "action": "Before returning state.codebook, emit transaction_only by default, or replay_verified_admission only when every successful task has exactly one replay record and environment replay equivalence is bound; status=commit and post=candidate."
+    }
+  ],
+  "ordering_fix_required_for_audit_only": {
+    "observed_issue": "Current code constructs successful_ids as a set and iterates that set for missing/replay checks. This does not change the logical all-pass predicate, but set iteration is not a durable ordered evidence identity.",
+    "instrumentation_rule": "Keep successful_ids for membership semantics if desired, but separately retain successful_task_order=[t.id for t in successful]. Emit and iterate evidence records in that order. Do not claim the ordered replay_tasks==successful_task_ids validator condition from set order."
+  },
+  "presentation_sidecar_boundary": {
+    "observed_public_example": "gh-pages public/methods/asi/epoch_0/sidecar.json records a selected Crafter evaluation trajectory and frame/call metrics.",
+    "rule": "Do not reuse the same semantic type name without a discriminator. A rollout/presentation sidecar is not an admission-proof sidecar. Recommended filenames: oracle_XXXX.replay_admission.json and oracle_XXXX.replay_trajectory.<task-id>.json."
+  },
+  "historical_replay_boundary": "This integration makes future runs auditable. It cannot retroactively create exact replay transcripts, environment hashes or Figure-12 numeric data for historical runs that did not persist them.",
+  "generic_residual_capability_boundary": null,
+  "next_action": "Search remaining public SpeedRunner gh-pages/project artifacts for ScienceWorld/Figure-12 data; if absent, treat future-run sidecar emission as fully specified and resume MemCompiler evaluated ScienceWorld run/memory snapshot binding."
+}
