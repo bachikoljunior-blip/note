@@ -1,0 +1,58 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-SWITCH-CANCEL-SAFETY-v1",
+  "precommit_blob":"90fe3f2a1d757f39bf6632ac9ccff13f1e18900b",
+  "terminal_observed_at":"2026-08-30T01:04:00+09:00",
+  "public_mechanism":{
+    "family":"Chubby sequencer / generation fencing",
+    "primary_source":"Mike Burrows, The Chubby lock service for loosely-coupled distributed systems, OSDI 2006",
+    "source_url":"https://static.usenix.org/events/osdi06/tech/full_papers/burrows/burrows_html/",
+    "source_supported_core":[
+      "lock generation numbers increase when a lock transitions from free to held",
+      "a lock holder can obtain a sequencer carrying lock name, mode, and lock generation number",
+      "recipient servers are expected to validate the sequencer and reject invalid/stale requests",
+      "new master epochs reject requests from older epochs",
+      "closed pre-failover handles are remembered so delayed or duplicated packets cannot recreate them"
+    ],
+    "literal_runtime_phase1_status":"NOT_ACCEPTED",
+    "literal_runtime_reason":"A Chubby cell and downstream Chubby-aware servers are external infrastructure. Only the monotonic-generation plus recipient-side stale-rejection mechanism is adapted into role-local Chat state."
+  },
+  "chat_reduction_id":"CHAT-SWITCH-FENCING-v1",
+  "chat_reduction":{
+    "switch_rule":"increment role-local generation before installing replacement pending child",
+    "pending_identity":"persist generation plus child id",
+    "terminal_acceptance":"accept a completion only if generation and child id exactly match current pending state and the child has no prior terminal credit key",
+    "stale_rule":"mismatch is diagnostic-only; no credit, generation, terminal, or active-frontier mutation",
+    "duplicate_rule":"after first terminal readback clears the pending identity, a duplicate no longer matches active pending state and cannot receive credit",
+    "transport_rule":"CAS/readback failure is non-semantic and leaves prior durable state authoritative"
+  },
+  "fixed_trace_result":{
+    "initial":{"generation":7,"active_child":"X","credit_total":34},
+    "switch":{"generation":8,"active_child":"Y","superseded_child":"X"},
+    "late_terminal_X_generation7":"REJECT_STALE_NO_STATE_OR_CREDIT_CHANGE",
+    "terminal_Y_generation8":"ELIGIBLE_ONLY_AFTER_IMMUTABLE_TERMINAL_READBACK",
+    "duplicate_terminal_Y_generation8":"REJECT_DUPLICATE_NO_SECOND_CREDIT"
+  },
+  "candidate_scores":[
+    {"id":"SC-A","fatal":false,"score":3,"passes":["G6","G9","G10"],"fails":["G1","G2","G3","G4","G5","G7","G8"]},
+    {"id":"SC-B","fatal":false,"score":10,"passes":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"]},
+    {"id":"SC-C","fatal":false,"score":4,"passes":["G6","G7","G9","G10"],"fails":["G1","G2","G3","G4","G5","G8"]},
+    {"id":"SC-D","fatal":true,"fatal_gate":"F2","score":0}
+  ],
+  "selected_candidate":"SC-B",
+  "outcome":"PASS_CHAT_SWITCH_FENCING_EXACT_SCOPE",
+  "credit_eligibility_after_independent_readback":1,
+  "phase1_assessment":{
+    "accepted_chat_reduction_residual_richer_mode_protected_or_user_execution_dependency":false,
+    "accepted_chat_reduction_finite_monthly_trial_paid_quota_dependency":false,
+    "accepted_chat_reduction_incremental_monetary_cost":0,
+    "accepted_chat_reduction_external_api_or_hosted_compute_dependency":false,
+    "literal_chubby_runtime_on_accepted_route":false
+  },
+  "scope_limit":"Constructed role-local optimizer-switch trace only. Source support establishes stale-request fencing semantics, not a claim that scheduled Chat reproduces Chubby, consensus, distributed locking, or arbitrary exactly-once execution.",
+  "frontier_nonempty":true,
+  "exact_next_action":"After independent readback, advance once with credit_delta=1. Next leaf should test switch rollback/abort atomicity: if a new assignment is selected but its checkpoint write fails, the controller must preserve the prior active assignment and must not leave a half-switched frontier. Precommit before any new public semantic read."
+}
