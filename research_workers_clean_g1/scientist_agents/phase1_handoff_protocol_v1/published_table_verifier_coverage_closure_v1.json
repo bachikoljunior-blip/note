@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "p1-protocol-067",
+  "name": "PUBLISHED_TABLE_VERIFIER_COVERAGE_CLOSURE_GATE",
+  "created_at": "2026-08-30T05:47:22+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
+  "purpose": "Fail closed when a repository claims that published tables are rebuilt from raw rows but the verifier checks only a subset of numeric cells, silently omits a table, or validates a rate through a different denominator than the displayed rate.",
+  "scope": "Static evidence-package verification. This gate does not establish scientific validity, historical run-time nonrepudiation, or causal correctness by itself.",
+  "required_bindings": [
+    "immutable table/blob identity for every table in the claimed publication surface",
+    "explicit inventory of every claimed numeric/data cell or an equivalent schema-level coverage manifest",
+    "one-to-one mapping from each claimed numeric/data cell to a reducer/verifier check, with declared exclusions limited to labels/non-data presentation fields",
+    "raw-row source identity and join/grouping keys for each checked cell",
+    "metric semantics, including population, valid/scored subset, skipped/refused/error treatment, numerator and denominator for each rate",
+    "verifier source revision and deterministic reducer semantics",
+    "coverage closure assertion that fails when a table or numeric/data field is unmapped",
+    "mismatch assertion that fails when a mapped cell differs from the recomputed value"
+  ],
+  "fail_closed_conditions": [
+    "a CSV/table is within the claimed publication surface but absent from the verifier registry",
+    "a row mapper checks success_count but leaves success_rate, denominator or other claimed numeric fields unchecked",
+    "a displayed rate uses n_tasks while the verifier recomputes on n_valid, unless the rate itself is explicitly checked against its displayed denominator",
+    "the verifier reports zero mismatches without proving coverage closure",
+    "a test asserts only verifier exit status or a zero-mismatch string but never asserts that every claimed numeric/data cell is covered",
+    "an aggregate 'cells verified' count is derived from mapper yields rather than from an independently enumerated publication-cell manifest"
+  ],
+  "adversarial_controls": [
+    {
+      "case": "success_count_covered_rate_uncovered",
+      "expected": "fail",
+      "reason": "A correct count does not attest the displayed denominator or rate."
+    },
+    {
+      "case": "secondary_csv_omitted_from_registry",
+      "expected": "fail",
+      "reason": "Zero mismatches on the registered subset is not exhaustive publication coverage."
+    },
+    {
+      "case": "rate_denominator_differs_from_display",
+      "expected": "fail",
+      "reason": "Metric provenance is inconsistent even if numerator counts match."
+    },
+    {
+      "case": "all_numeric_cells_manifested_and_reduced",
+      "expected": "pass",
+      "reason": "Coverage and value equality are both closed."
+    },
+    {
+      "case": "coverage_manifest_cardinality_equals_unique_claimed_cells",
+      "expected": "pass",
+      "reason": "Independent inventory closes the silent-omission class."
+    }
+  ],
+  "observed_trigger": {
+    "repository": "DylanZSZ/Memory-Collapse-Eval",
+    "revision": "adf347f67a81a19fc71d2529d09108c71a1f9712",
+    "experiment": "sciworld_cross-family-shortcut-contamination",
+    "finding": "The public verifier checks ScienceWorld success-count cells but omits the entire baseline_gpt_20fam.csv, trend z/p/slope fields, and the eval table's denominator/rate/raw-mean/full-score/negative-score fields. Its final checked-cell count is the number of mapper-emitted checks, so '0 mismatched' does not prove exhaustive table coverage."
+  },
+  "phase1_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_dependency": false,
+    "finite_monthly_or_trial_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "accepted_use": "As a scheduled-Chat-native fail-closed gate over immutable public text/JSON/CSV/source artifacts.",
+    "not_established": [
+      "historical execution identity",
+      "scientific correctness of the underlying experiment",
+      "causal validity of an intervention"
+    ]
+  }
+}
