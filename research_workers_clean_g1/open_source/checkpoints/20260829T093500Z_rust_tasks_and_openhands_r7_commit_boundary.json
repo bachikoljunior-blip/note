@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 39,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "frozen_control": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "transport_mode": "exact_blob_two_pass",
+    "control25_acceptance_semantics_imported": false
+  },
+  "rust_sdk": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "latest_release": "rmcp-v3.1.4",
+    "published_at": "2026-08-20T03:47:18Z",
+    "annotated_tag_object": "2b7ea69be1701fd39de53161055212c4041ebf06",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "release_readme_finding": "The exact release README identifies rmcp as the official Rust MCP SDK, states support for the stable 2026-07-28 protocol, and documents the io.modelcontextprotocol/tasks SEP-2663 flow using rmcp::task_manager::TaskManager.",
+    "exact_source_finding": "The release TaskManager is a concrete process-memory runtime: TaskManagerInner holds a HashMap of task entries behind Arc<Mutex<...>>; spawn creates a fresh UUID task id, inserts the entry, then launches the operation with tokio::spawn; shutdown drains the map and aborts retained join handles. The inspected repository search exposed no TaskStore abstraction. ServerHandler task methods are overridable and default to method-not-found, so this is a bundled-runtime boundary, not proof that the Rust SDK protocol surface forbids a custom persistent task backend.",
+    "classification": "RELEASED_TASK_RUNTIME_PROCESS_MEMORY_ONLY_IN_INSPECTED_BUNDLED_MANAGER",
+    "phase1_implication": "Client-persisted taskId is sufficient for disconnect/client-restart only while the same TaskManager state survives. A server-process restart loses the bundled manager state, so it is not a scheduled-Chat cross-run durable executor. Replacing it with a custom persistent task backend still requires an external resident executor/storage path and therefore remains an unresolved child under control26; it is not an accepted zero-residual Chat route.",
+    "harness": "research_workers_clean_g1/open_source/artifacts/20260829T090500Z_rust_tasks_restart_scope_harness.py",
+    "harness_blob": "805f39bb78d4db6f4548274904325538b905c426",
+    "harness_result": "PASS 8/8",
+    "harness_scope": "source-equivalent behavioral model only; upstream Rust crate was not compiled or executed"
+  },
+  "tasks_extension_scope": {
+    "protocol": "io.modelcontextprotocol/tasks SEP-2663",
+    "relevant_spec_boundary": "The extension requires task creation to be observable by tasks/get before CreateTaskResult is returned and recommends durable client-side taskId persistence for client crash/restart recovery. The current extension has tasks/get, tasks/update and tasks/cancel but no tasks/list.",
+    "safe_claim": "Protocol-level task vocabulary and immediate tasks/get observability do not by themselves prove server-process restart persistence, lost-CreateTaskResult rediscovery, execution redrive, or exactly-once external effects."
+  },
+  "openhands_r7": {
+    "repository": "OpenHands/software-agent-sdk",
+    "release_commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "exact_source": "openhands-sdk/openhands/sdk/conversation/state.py",
+    "source_facts": [
+      "_save_base_state serializes self with model_dump_json(exclude_none=True, context=...) and writes BASE_STATE under the installed write guard.",
+      "__setattr__ autosaves changed public fields immediately when save depth is zero; inside the context manager it defers by setting _dirty.",
+      "__exit__ flushes dirty state when save depth returns to zero, so exceptional exit does not provide rollback semantics.",
+      "leaf_event_id and head_is_empty are excluded from state-change callback emission, but last_user_message_id is not, so recovery must not replay ordinary public assignment semantics if it is intended to be silent bookkeeping."
+    ],
+    "r7_commit_shape": "After complete marker/event/generation validation with no public mutation, construct the final base snapshot off-object, write that snapshot exactly once under the existing write guard, then synchronize already-validated primitive recovery fields into in-memory state without passing through ConversationState.__setattr__, and only then clear recovery markers. A crash after snapshot write but before in-memory sync is safe because restart loads the committed base; a crash before write leaves the old base and marker; a crash after in-memory sync but before cleanup is idempotently recoverable from the committed base plus marker.",
+    "source_risk": "A direct __dict__ or equivalent bypass is an internal implementation technique and must be isolated to a startup-only helper with exact-release regression tests. It is not presented as a stable public Pydantic API or as an applied upstream patch.",
+    "harness": "research_workers_clean_g1/open_source/artifacts/20260829T091500Z_openhands_r7_single_snapshot_commit_harness.py",
+    "harness_blob": "aa7faf91b22ca8c4914a0226de84fec8ff6a8cbe",
+    "harness_result": "PASS 11/11",
+    "harness_scope": "source-equivalent recovery model only; upstream OpenHands patch was not applied or executed"
+  },
+  "phase1_assessment": {
+    "chat_native_public_source_audit_and_role_local_persistence": "PASS",
+    "rust_bundled_task_manager_as_restart_durable_executor": "UNRESOLVED_CHILD",
+    "openhands_upstream_patch_or_external_executor_dependency_counted_as_pass": false,
+    "finite_monthly_trial_paid_quota_dependency": "none consumed or required",
+    "incremental_monetary_cost": 0,
+    "hosted_runner_codespaces_artifact_lfs_package_cloud_credit_used": false,
+    "residual_richer_mode_protected_user_execution_dependency": "none for this research/checkpoint work; any custom server runtime or upstream patch execution remains unresolved and is not accepted"
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/",
+      "automation_control/receipts/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "public upstream repositories"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If still active, read own LATEST and this checkpoint only. For the official Rust SDK rmcp-v3.1.4 exact release, inspect the concrete ServerHandler wiring/example around TaskManager to determine whether task creation can be bound to a caller-stable operation identity or custom persistent create-or-get without bypassing ordinary call_tool policy; preserve the bundled in-memory finding as scope-limited. For OpenHands commit 9d143aac..., inspect exact serialization tests and conversation lease/startup integration to draft an exact-source R7 helper/pytest patch shape that serializes a validated target snapshot without mutating self before the write, performs one guarded BASE_STATE write, synchronizes in-memory recovery bookkeeping silently, and retains existing unmatched-Action repair. Do not count upstream patch application or an external server process as Phase-1 acceptance."
+}
