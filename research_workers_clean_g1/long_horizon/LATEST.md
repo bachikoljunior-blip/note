@@ -1,37 +1,30 @@
 # Long Horizon clean_g1 — latest pointer
 
-Authoritative latest checkpoint for this namespace:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T070703JST_SHADOW_RECOVERY_ADMISSIBILITY.md`
+Authoritative latest checkpoint for this role-local Phase-1 branch:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_RECURRING_BOUNDARY_ABA.md`
 
-Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T200128JST_AUTHORIZATION_CONSUMPTION_AND_PUBLIC_HARNESS.md`
+Immediate predecessor Phase-1 checkpoint:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T1102JST_PHASE1_CONTINUATION_GUARD.md`
 
-Control snapshot frozen for this semantic invocation:
-- root control revision: `22`
-- root control blob: `e4f6d24c137284d002941ac04254e3dbeca2cfcb`
-- role config revision: `6`
-- role config blob: `a8f3d4df40f0d1017ee5c21701b7573572795e74`
-- frozen semantic source main SHA: `bc0ed3133e95dad3cd647d4e83d8901a19b6e6a0`
-- own prior LATEST blob consumed: `1cc7d7e8372a3bbdc3f27daf96aad98f5dfbf0f4`
-- public Agent-libOS pin: `72366eecc9e04cc7445a5ea51d7b5f236aa4d1e9`
-- late SHA-only write-safety head observed `fcab4ec165c6fea4c086f5f169767f34024ffd75`; exact root/config blob identities were unchanged and no newer-head semantics were adopted.
-- `bootstrap_valid=true`.
+Frozen authority:
+- transport: `exact_blob_two_pass`
+- root control revision/blob: `26` / `481660fb6008a57cea162da38439cf115c8d7ebe`
+- own role control/config revision/blob: `16` / `7` / `41984ccfed213f739f005db5a772baef4a8c711f`
+- phase/root/task: `phase_1_chat_parity` / `o-chat-parity-root-v4-zero-work-dependency-zero-quota` / `phase1-clean-long-horizon-overrun-recovery`
+- `bootstrap_valid=true`
 
-Current synthesis delta:
-- Pinned Agent-libOS source closes an important harness ambiguity: `recovery_options(run_id)` returns no choices unless the Run is already `needs_attention`, while `recover(...)` recomputes that server-derived option set before accepting an `option_id`. Therefore a naive gate-OFF ablation can erase the treatment surface for recovery itself; lifecycle gate and public recovery availability are not independently manipulable by default.
-- The same raw unsettled-effect evidence is used by recovery-option derivation and multiple lifecycle blockers. A valid factorial must keep evidence/identity and recovery-admissibility fixed across cells, then vary only (A) the blocking consequence and (B) whether the Host executes the already-frozen authoritative recovery.
-- First clean experiment should branch all four cells from one serialized ambiguous-effect prefix before any branch-specific lifecycle progression. Maintain a shadow/frozen evidence-bound recovery option in every cell, record phase-specific `would_block`, and suppress only the narrow next lifecycle blocker for gate OFF.
-- Pinned crash harness/worker verifies the deterministic external-effect fault substrate and benchmark-local method-replacement precedent. Correction: the previously cited durable-task-run `ablations.py`/`MethodType` path is not present at the pinned commit; the verified precedent is `crash_worker.py` direct runtime-method replacement (and recovery-scale instrumentation). Do not repeat the old exact-path claim.
-- The public real-LLM Durable Task Run evaluation is a later extension surface with restart/effect/no-redispatch safety checks, but it is not the missing gate×recovery factorial.
+Current result:
+- True later-invocation reconstruction succeeded from the prior role-local checkpoint.
+- A set-once resume-consumption claim was created/read back; duplicate creation was rejected HTTP 422.
+- Prior-invocation `LATEST` blob advanced once by exact CAS; stale replay of that old blob was rejected HTTP 409 and readback retained the new pointer.
+- Live ABA `A1 -> B2 -> A3` retained monotonic sequence/generation; stale A1 replay was rejected HTTP 409 even though semantic payload returned to A.
+- Synthetic eight-case forecast calibration: point rule missed 3 overruns with 0 unnecessary switches; p90/slack missed 0 with 2 unnecessary switches, within this declared trace only.
+- Persisted rate-limit trace covers repeated 429, explicit/missing Retry-After, restart-stable not-before/backoff, retry exhaustion switch/defer, slack-triggered switching and a zero-optional-quota dependency inventory.
+- Accepted route uses no richer-mode/Work/protected-primary/manual execution step, hosted runner, finite monthly/trial/paid compute credit, or optional quota-bearing rescue; incremental monetary cost is zero. Lightweight repository state transport remains rate-limit-aware.
 
 Exact continuation:
-1. Trace the pinned `verify_external_effect_receipt(...)` provider/plugin path and determine whether the Fsync provider can expose an authoritative ledger-backed receipt without changing startup reconciliation.
-2. Locate the narrow next-dispatch unresolved-effect blocker interception; test one lifecycle phase before any global gate ablation.
-3. Install an identical benchmark-only frozen/shadow recovery-option provider in all four cells so gate OFF cannot make recovery disappear by avoiding `needs_attention`.
-4. Execute deterministic `(gate OFF/ON) × (recovery OFF/ON)` from one copied ambiguous-effect RuntimeStore + independent provider ledger + authorization-consumption snapshot; assert identical pre-treatment evidence fingerprints.
-5. Measure realized-effect count, premature continuation/completion, Runtime effect state, recovery-option divergence, verifier result, `would_block`, rescue/disruption, then add a fresh-operation semantic-replay arm for duplicate/authorization-consumption metrics.
-6. Only after deterministic closure, adapt the real-LLM live evaluation with protected external effects and counterbalanced repeated runs.
-7. Continue searching for an already-powered real-model four-cell before claiming novelty.
-8. Preserve exact tested scope and a nonempty frontier; `global_completion=false`.
-
-Future runs must resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
+1. Deterministically resolve authority if multiple role-local Phase-1 branches exist, without using protected main as arbiter.
+2. Promote the advisory rate-limit trace to a live persisted multi-invocation state-transition probe.
+3. Test interruption after resume-claim creation but before pointer advancement, and the converse pointer-advanced/receipt-missing case.
+4. Begin predeclared forecast calibration from repeated own scheduled-Chat duration observations.
+5. Preserve exact scope and a nonempty frontier; `global_completion=false`.

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "scope": "Deterministic persisted rate-limit policy trace. Incoming 429/Retry-After observations are synthetic; repository persistence/readback is live.",
+  "policy": {
+    "max_attempts": 3,
+    "missing_retry_after_backoff_seconds": "min(60 * 2^(attempt-1), 300), using the durable attempt number; persist once and never resample on restart",
+    "defer_rule": "if now < not_before and wait + p90_remaining + retry_reserve <= budget_remaining, DEFER_RATE_LIMIT",
+    "switch_rule": "if wait + p90_remaining + retry_reserve > budget_remaining OR retry budget is exhausted, SWITCH_PLAN when a predeclared alternative exists",
+    "no_alternative_rule": "same unsafe condition without an alternative => DEFER_NO_ALTERNATIVE; never blind-retry"
+  },
+  "episodes": [
+    {
+      "id": "repeated_429_then_switch",
+      "initial": {"budget_remaining":600,"p90_remaining":200,"retry_reserve":60,"plan_generation":1,"alternative":"compact_plan"},
+      "events": [
+        {"t":0,"observation":"429","retry_after_seconds":120,"attempt":1,"persisted_not_before":120,"decision":"DEFER_RATE_LIMIT"},
+        {"t":30,"observation":"restart","attempt":1,"persisted_not_before":120,"decision":"DEFER_RATE_LIMIT","assertion":"no early retry; not_before unchanged"},
+        {"t":120,"observation":"429","retry_after_seconds":null,"attempt":2,"persisted_backoff_seconds":120,"persisted_not_before":240,"decision":"DEFER_RATE_LIMIT"},
+        {"t":150,"observation":"restart","attempt":2,"persisted_backoff_seconds":120,"persisted_not_before":240,"decision":"DEFER_RATE_LIMIT","assertion":"missing-header backoff was not resampled"},
+        {"t":240,"observation":"429","retry_after_seconds":null,"attempt":3,"deterministic_candidate_backoff_seconds":240,"decision":"SWITCH_PLAN","new_plan_generation":2,"reason":"retry budget exhausted"}
+      ]
+    },
+    {
+      "id": "exhausted_without_alternative",
+      "initial": {"budget_remaining":500,"p90_remaining":200,"retry_reserve":60,"plan_generation":1,"alternative":null},
+      "events": [
+        {"t":0,"observation":"429","retry_after_seconds":60,"attempt":1,"persisted_not_before":60,"decision":"DEFER_RATE_LIMIT"},
+        {"t":60,"observation":"429","retry_after_seconds":null,"attempt":2,"persisted_backoff_seconds":120,"persisted_not_before":180,"decision":"DEFER_RATE_LIMIT"},
+        {"t":180,"observation":"429","retry_after_seconds":null,"attempt":3,"deterministic_candidate_backoff_seconds":240,"decision":"DEFER_NO_ALTERNATIVE","reason":"retry budget exhausted; no safe alternative"}
+      ]
+    },
+    {
+      "id": "retry_after_consumes_slack",
+      "initial": {"budget_remaining":300,"p90_remaining":220,"retry_reserve":40,"plan_generation":1,"alternative":"compact_plan"},
+      "events": [
+        {"t":0,"observation":"429","retry_after_seconds":90,"attempt":1,"computed_required":350,"decision":"SWITCH_PLAN","new_plan_generation":2,"reason":"90 + 220 + 40 > 300"}
+      ]
+    }
+  ],
+  "restart_invariant": "A restart reads persisted attempt/backoff/not_before. It does not draw a new delay and cannot authorize a retry before not_before.",
+  "quota_zero_control": {
+    "hosted_runner_quota":0,
+    "codespaces_quota":0,
+    "artifact_lfs_package_quota":0,
+    "cloud_credit":0,
+    "external_api_model_credit":0,
+    "decision":"UNCHANGED",
+    "reason":"The continuation policy depends only on scheduled-Chat reasoning plus lightweight repository state transport; optional quota-bearing execution paths are absent."
+  },
+  "incremental_monetary_cost": 0
+}
