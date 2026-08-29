@@ -1,0 +1,100 @@
+{
+  "role": "open_source",
+  "artifact_kind": "source_qualified_design_refinement_and_model_evidence",
+  "created_at": "2026-08-29T21:45:00Z",
+  "source_pin": "OpenHands/software-agent-sdk@9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a (v1.44.1)",
+  "supersedes_design_shape": "The prior full ordered chain journal remains safe in the modeled crash domain but can grow O(number_of_nested_events * base_snapshot_size). This artifact refines it to a fixed-size rolling WAL while preserving exact durable-prefix recovery.",
+  "source_constraints": [
+    "ConversationState.append_event is the authoritative parent-stamp/HEAD chokepoint; direct EventLog.append remains intentionally used by fork copying and should not automatically become an R7 transaction.",
+    "To bind the exact event JSON without duplicating EventLog serialization, the minimal exact-source patch should let ConversationState.append_event pass an optional before-write callback into EventLog.append. EventLog serializes event.model_dump_json(exclude_none=True), then invokes the callback with the expected index, final event object, and exact serialized payload immediately before FileStore.write.",
+    "The callback can atomically prepare/promote the rolling WAL under the agent-server lease guard. EventLog's own guarded write then independently fences the event write; if ownership changes between WAL prepare and event write, the new owner sees a safe marker-before-event case.",
+    "ConversationState can compute a candidate base snapshot off-object from current dirty public state plus deterministic post-append HEAD bookkeeping. For a final user MessageEvent the agent-server hook may additionally predict last_user_message_id=event.id; this is derived bookkeeping from a durable user event and avoids replaying a user event while leaving that index stale.",
+    "ConversationState._save_base_state must serialize once, invoke an optional before-base-write hook with those exact payload bytes, write the same payload, then invoke an optional after-base-write hook. Independent serialization cannot be used for equality because Cipher uses randomized Fernet encryption.",
+    "EventService recovery must still run immediately after ConversationLease.claim and before credential scrub or LocalConversation construction."
+  ],
+  "rolling_wal_schema": {
+    "common": [
+      "schema_version",
+      "writer_lease_generation",
+      "old_base_sha256"
+    ],
+    "committed_prefix": [
+      "last_committed_event_index or null",
+      "last_committed_event_sha256 or null",
+      "candidate_base_payload for that committed prefix or null",
+      "candidate_base_sha256 or null"
+    ],
+    "pending_event": [
+      "expected_index",
+      "final event id",
+      "final parent id",
+      "exact EventLog JSON sha256",
+      "candidate base payload after this event's deterministic bookkeeping",
+      "candidate base sha256"
+    ],
+    "save_phase": [
+      "exact payload emitted once by _save_base_state",
+      "exact payload sha256"
+    ]
+  },
+  "rolling_transition": [
+    "Before event N=first: create WAL with old-base digest and pending N.",
+    "After N file is durable, the WAL still says pending N; this alone is recoverable.",
+    "Before event N+1: verify pending N's exact file, promote N candidate to committed_prefix, replace pending with N+1, and atomically replace the WAL. The full older chain can be discarded.",
+    "Crash after that WAL replacement but before N+1 file: recover committed N candidate. Crash after N+1 file: recover pending N+1 candidate.",
+    "At _save_base_state: verify/promote the current pending event if present, serialize final base once, replace WAL with save-phase exact payload/digest, write those exact bytes, then remove WAL after successful base write.",
+    "If marker cleanup fails after a successful base write, a later same-generation prepare may first cleanup the finalized WAL only when raw base exactly matches the WAL save digest. A finalized WAL whose base is still old blocks new appends in the same generation; it must not be repurposed."
+  ],
+  "recovery_rules": [
+    "Malformed schema/digests fail closed.",
+    "Normal takeover recovery requires writer_generation < current_generation. Same-generation incomplete WAL recovery remains rejected.",
+    "Verify the committed tail file/digest before using committed candidate state; verify the pending file/id/parent/digest before using pending candidate state.",
+    "If pending file is absent and no committed candidate exists, marker-before-event => remove WAL only, provided raw base still matches old_base_sha256.",
+    "If pending file is absent but committed candidate exists => replay committed candidate, provided raw base is old.",
+    "If pending file exists exact => replay pending candidate, provided raw base is old.",
+    "Save-phase WAL requires no pending event and an exact committed tail when one exists. If raw base is old, replay the exact save payload; if raw base already matches exact save digest, cleanup only; otherwise fail closed.",
+    "Markerless orphan events are never adopted. An R7-marked event may coexist with an older markerless orphan because the WAL is the intent authority, not unique-descendant topology."
+  ],
+  "model_execution": {
+    "result": "22/22 PASS",
+    "runtime": "stdlib-only Python source-equivalent model executed in this run",
+    "fixtures": [
+      "marker before event",
+      "single event before base save",
+      "nested event crash after rolling promotion but before second event",
+      "nested second event durable",
+      "pre-base exact-save upgrade",
+      "base written before cleanup",
+      "pending event digest mismatch",
+      "navigation/fork raw-base conflict",
+      "same-generation incomplete recovery rejected",
+      "multi-generation takeover G to G+N",
+      "markerless orphan not adopted",
+      "foreign event at pending index rejected",
+      "save phase with missing tail rejected",
+      "candidate payload digest mismatch",
+      "base-write failure preserves replayable save WAL",
+      "cleanup failure recoverable next generation",
+      "exact-save payload digest mismatch",
+      "marked event can coexist with an older markerless orphan",
+      "malformed pending digest rejected",
+      "same-generation finalized-WAL cleanup then new append when base is exact-final",
+      "same-generation finalized WAL blocks new append while base is still old",
+      "committed-tail corruption detected before replay"
+    ]
+  },
+  "why_this_is_smaller": "At most one committed candidate snapshot, one pending candidate snapshot, and one final exact-save snapshot are needed. The WAL does not retain every nested event entry, so marker growth is bounded by O(base_snapshot_size) rather than O(number_of_events * base_snapshot_size), while every crash point still resolves to either the previous committed prefix or the exact pending event prefix.",
+  "exact_patch_shape": [
+    "event_store.py: add an optional keyword-only before_write callback to EventLog.append; call it after duplicate/parent validation and after exact JSON serialization but before FileStore.write. Existing callers, including fork copying, remain unchanged when callback is absent.",
+    "state.py: add private optional event/base persistence hooks and setters. In append_event, authoritative-stamp first, compute deterministic candidate base off-object, call EventLog.append with the optional hook bridge, then perform existing live HEAD assignments. In _save_base_state, serialize once, invoke before-base hook, perform guarded write of that same payload, invoke after-base hook.",
+    "event_service.py: define the local rolling-WAL schema/helpers with atomic_write_text and SHA-256; recover immediately after lease claim; install hooks only after LocalConversation construction and set_write_guard. All WAL mutation/readback and recovery writes use the current lease generation guard.",
+    "tests/cross/test_conversation_lease_behavior.py: add real ConversationService crash-window tests, including a UserPromptSubmit hook that emits HookExecutionEvent before the final replacement MessageEvent, proving rolling promotion recovers the exact durable prefix and that the final event identity is the post-hook identity."
+  ],
+  "not_claimed": [
+    "upstream patch applied",
+    "Python type-check success",
+    "upstream pytest success",
+    "custom FileStore generic atomicity",
+    "full power-loss durability"
+  ]
+}
