@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at_note": "Use repository commit timestamp as authoritative; filename timestamp is approximate within this invocation per provenance_timestamp_corrections_2026-08-29T1432JST.json.",
+  "topic": "OmniScientist numeric grounding is edition-specific; host skill grounds by numeric membership rather than claim-to-output semantics",
+  "paper": {
+    "title": "OmniScientist: An Omni-Modal Omni-Discipline AI Scientist",
+    "arxiv": "2608.13558",
+    "v1_date": "2026-08-13",
+    "paper_level_claim": "The paper states that idea, rigour and claim checks are run in code to enforce statistical validity, execution provenance and numerical traceability; on 36 real-data cases it reports a mean paper score of 6.3, and direct perception wins 85% of paired head-to-head judgments against the blind variant.",
+    "scope": "Paper-level system evidence. The 85% paired result tests direct perception, not the specific semantic-output binding issue described below."
+  },
+  "repository": {
+    "name": "Omni-Scientist/OmniScientist",
+    "revision": "052ade2178123df47896331d5d5fbe3ce2e99018"
+  },
+  "sources": [
+    {
+      "path": "skill/README.md",
+      "blob": "42ad710e770c35c48479607f096f3cdb32c6134e",
+      "facts": [
+        "The Claude Code skill edition documents gate_cli.py as recording runs and refusing ungrounded numbers.",
+        "The README explicitly states the gate checks that numbers came from a run, not that a number is attached to the right quantity, and gives the concrete example that writing accuracy 0.947 when 0.947 is actually a cosine similarity still passes.",
+        "The README explicitly says the CLI edition in cli/skills/omnisci is a different build."
+      ]
+    },
+    {
+      "path": "skill/omnisci/bin/gate_cli.py",
+      "blob": "2c381663b66cb90e9f6d54f28f229bdd75168c48",
+      "facts": [
+        "record executes an analysis script and appends script/argv/returncode/stdout/stderr/truncation to ledger.jsonl.",
+        "ledger_numbers extracts all numeric tokens from ledger stdout into one flat numeric set.",
+        "check accepts each numeric token in paper prose if it approximately matches any ledger number, including percent/fraction transformations and rounding tolerance.",
+        "This host-edition gate has no output-field/quantity/unit/claim locator in the authorization predicate."
+      ]
+    },
+    {
+      "path": "cli/skills/omnisci/bin/gate_cli.py",
+      "blob": "cba6b15f1b5b5fcefb7410c46ac0550ec7b56498",
+      "facts": [
+        "The CLI skill edition is materially hardened beyond the host edition: ledger entries bind script SHA256, timestamp and entry SHA256; active_ledger keeps only the latest successful invocation whose current script bytes still match, and ledger_numbers uses only active entries.",
+        "The CLI gate also verifies citation provenance and perception receipts and retains figure captions in numeric claim scanning.",
+        "Despite this hardening, numeric grounding is still a membership comparison against the union of active stdout numbers; no semantic output-field/quantity identifier is part of grounded()."
+      ]
+    },
+    {
+      "path": "cli/tests/integrity_test.py",
+      "blob": "2a9d0b0bd6b0b3d86e27f66c96e069998e11b7c0",
+      "facts": [
+        "The packaged CLI integrity tests explicitly cover latest-success-only behavior: after a successful run, changing the script makes the old entry stale; a later failed run becomes failed_latest and contributes no ledger numbers.",
+        "Integrity tests verify entry hashing, script-staleness invalidation and fail-closed malformed ledger handling."
+      ]
+    },
+    {
+      "path": "docs/DEVELOPMENT.md",
+      "blob": "c6476c36c89b583922ca92d075628caeb3d78b59",
+      "facts": [
+        "The repository deliberately maintains separate engine, Claude Code skill, CLI skill and desktop surfaces.",
+        "The docs explain the two skill editions are intentionally different for host-read pixels versus a vision sidecar with SHA256 receipts."
+      ]
+    },
+    {
+      "path": "scripts/check_parity.py",
+      "blob": "95b6cf80ff3a2c3d20219a3598b5975648488b7c",
+      "facts": [
+        "The parity checker explicitly says the four implementations are not intended to be byte-identical and only codifies selected cross-version invariants.",
+        "It requires some files to be identical and some gate path-handling properties to exist across editions, but the observed current file does not encode a general rule that all numeric-gate authorization semantics must be identical between the two skills."
+      ]
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-111",
+      "claim": "Numeric provenance and semantic claim provenance are different properties. OmniScientist's host-skill documentation explicitly acknowledges that a paper can attach a real ledger number to the wrong scientific quantity and still pass. A trustworthy handoff must bind the claim number to a named/typed output quantity (plus units and permitted transform), not merely prove that the same numeric value appeared somewhere in an authorized stdout stream.",
+      "scope": "Exact documented limitation of the Claude Code skill edition at revision 052ade...; it is not evidence that a published OmniScientist paper contains such a mislabeling."
+    },
+    {
+      "id": "p1-sa-112",
+      "claim": "Gate authority is implementation-edition specific. At the same repository revision, the CLI skill has latest-success-only, script-hash, entry-hash, citation and perception-receipt hardening that the Claude Code host gate file does not share. Therefore a provenance certificate for one edition must not be automatically inherited by another merely because both are called OmniScientist/gate_cli.py.",
+      "scope": "Public repository implementation surfaces. The docs intentionally permit some host-specific divergence; this finding does not classify every difference as a defect."
+    },
+    {
+      "id": "p1-sa-113",
+      "claim": "The CLI integrity suite supplies direct implementation evidence that failed latest runs and changed script bytes are meant to lose numeric-grounding authority in that edition. This is stronger lifecycle semantics than simple 'number appeared in stdout', but it still leaves quantity identity unresolved because the active numeric values are flattened before prose matching.",
+      "scope": "CLI edition and its current packaged integrity tests."
+    }
+  ],
+  "protocol_implication": {
+    "name": "CLAIM_TO_EXECUTION_OUTPUT_SEMANTIC_BINDING_GATE",
+    "rule": "Every quantitative scientific claim must cite an exact successful execution entry and an exact typed output locator (record/field/metric identifier), bind the value and units, declare any allowed presentation transform (percent, unit conversion, rounding), and preserve script/argv/environment/input identities. Global numeric membership is supporting evidence only and cannot authorize the semantic claim."
+  },
+  "causal_boundary": "No new benchmark effect is inferred. The paper's paired perception ablation does not isolate this gate, and no published claim is alleged to be mislabeled."
+}
