@@ -1,0 +1,34 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-ESTIMATOR-WARMSTART-CONTINUITY-GATE-v1",
+  "precommit_blob":"e18b466a02fcab6dc639b0df79309cd9c8d0a8ae",
+  "evaluated_at":"2026-08-29T22:08:53.536989+00:00",
+  "mechanism_id":"QUIC-CONTINUITY-CONDITIONAL-RTT-WARMSTART-REDUCTION",
+  "public_sources":[
+    {"url":"https://www.rfc-editor.org/rfc/rfc9002.html#section-6.2.2","bound_semantics":"RFC 9002 says resumed connections over the same network MAY use the previous connection's final smoothed RTT as the resumed connection's initial RTT; when no previous RTT is available a fresh initial RTT is used."},
+    {"url":"https://www.rfc-editor.org/rfc/rfc9000.html#section-9.4","bound_semantics":"RFC 9000 normally resets RTT estimation on a new path, but allows retention when only the peer port changes, a common NAT-rebinding continuity case, while warning that retaining old state across materially different path characteristics can be too aggressive."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Treat a validated same-scope/same-assignment continuity token as the limited continuity condition analogous only to a resumed same-network/port-only continuity case; all other epoch changes reset estimator state.",
+    "extra_role_local_safety":"Before enabling transferred state, require one fresh current-epoch same-scope probe with abs(probe-SRTT_old)<=1.0. This bounded drift check is an added controller guard, not a QUIC requirement.",
+    "probe_rule":"The continuity probe is qualification evidence; old estimator deadlines are not activated for the new epoch until the gate passes.",
+    "literal_quic_runtime_used":false
+  },
+  "control_results":[
+    {"id":"C1_STABLE","result":"PASS","details":"Same scope/assignment/token and fresh probe 2 satisfy drift bound. Warm-start old SRTT=2, RTTVAR=.5625 then probe update gives RTTVAR=.421875 and deadline=3.6875, preserving valid same-regime history."},
+    {"id":"C2_CHANGED_REGIME","result":"PASS","details":"Same token but probe 10 differs from old SRTT by 8>1, so transfer is rejected and estimator resets. Fresh latency-10 initialization gives deadline 30, role-local clamped to12. Unconditional inheritance would expose old deadline4.25 before adaptation."},
+    {"id":"C3_TOKEN_MISMATCH","result":"PASS","details":"Token tok-Y != tok-X forces reset even though probe latency2 matches the old regime; fresh estimator deadline=6."},
+    {"id":"C4_STALE_PROBE","result":"PASS","details":"Probe carries prior epoch A@12 while qualifying A@13, so it is rejected and no transfer occurs."}
+  ],
+  "comparator_results":{"unconditional_reset":"SAFE_BUT_HISTORY_LOSS_ON_C1","unconditional_inherit":"UNSAFE_ON_C2_CHANGED_REGIME","continuity_gated":"PASS_ALL_FIXED_CONTROLS"},
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed synthetic epoch-rollover trace only. RFC 9000/9002 support conditional RTT-state reuse/reset semantics but do not define this controller's continuity token, drift threshold, durable persistence or prove production timeout correctness."
+}
