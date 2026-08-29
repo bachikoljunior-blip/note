@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "part": 33,
+  "leaf": "same_generation_abandoned_reservation_cleanup",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "68446d6322630d4ba65d734db1422c50a5782f78",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 6,
+    "role_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c",
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "concurrency_scenario_count": 384,
+  "concurrency_strategy_evaluations": 2304,
+  "recovery_scenario_count": 192,
+  "mechanisms": [
+    "timeout_all",
+    "prepared_only_timeout",
+    "separate_cancel_flag",
+    "grant_record_cas",
+    "parent_generation_only",
+    "staging_integrator"
+  ],
+  "common_strong_slice": {
+    "conditions": "registry_complete && deterministic_same_id; phase/relation/late_old/cancel_req/race/effect_domain vary",
+    "per_strategy": [
+      {"mech":"timeout_all","n":96,"unsafe":32,"progress":96,"blocked":0,"false_block":0,"duplicate":16,"reconcile":0,"stale_old":32},
+      {"mech":"prepared_only_timeout","n":96,"unsafe":0,"progress":64,"blocked":32,"false_block":8,"duplicate":0,"reconcile":32,"stale_old":0},
+      {"mech":"separate_cancel_flag","n":96,"unsafe":16,"progress":80,"blocked":16,"false_block":0,"duplicate":4,"reconcile":8,"stale_old":8},
+      {"mech":"grant_record_cas","n":96,"unsafe":0,"progress":68,"blocked":28,"false_block":0,"duplicate":0,"reconcile":36,"stale_old":0},
+      {"mech":"parent_generation_only","n":96,"unsafe":0,"progress":48,"blocked":48,"false_block":24,"duplicate":0,"reconcile":32,"stale_old":0},
+      {"mech":"staging_integrator","n":96,"unsafe":0,"progress":72,"blocked":24,"false_block":0,"duplicate":0,"reconcile":32,"stale_old":0}
+    ]
+  },
+  "key_slices": {
+    "timeout_all_late_old_replacement": {
+      "PREPARED": {"n":8,"unsafe":0,"progress":8},
+      "GRANTED": {"n":8,"unsafe":8,"progress":8},
+      "AUTHORIZED": {"n":8,"unsafe":8,"progress":8}
+    },
+    "grant_record_cancel_authorize_race": {
+      "cancel_first": {"n":4,"unsafe":0,"replacement_progress":4,"old_authorize_blocked":4},
+      "authorize_first": {"n":4,"unsafe":0,"replacement_progress":0,"reconcile_required":4}
+    },
+    "separate_cancel_flag_granted_replacement_late_old": {"n":4,"unsafe":4},
+    "same_task_grant_record": {
+      "deterministic_reservation_id": {"n":48,"unsafe":0,"progress":48,"duplicate":0,"authorized_reconcile":16},
+      "new_or_random_reservation_id": {"n":48,"unsafe":32,"progress":16,"duplicate":48}
+    },
+    "staging_registry": {
+      "complete": {"n":96,"unsafe":0},
+      "incomplete": {"n":96,"unsafe":48,"progress":96}
+    }
+  },
+  "recovery_micro_model": {
+    "PREPARED_durable_record_deterministic_id": {"n":16,"resumable":16,"orphan":0,"duplicate":0,"fail_closed":0},
+    "GRANTED_durable_record_deterministic_id": {"n":16,"resumable":16,"orphan":0,"duplicate":0,"fail_closed":0},
+    "AUTHORIZED_repo_atomic_durable_record": {"n":16,"resumable":16,"orphan":0,"fail_closed":0},
+    "AUTHORIZED_external_nonfenced_with_durable_effect_id": {"n":8,"resumable":0,"orphan":0,"duplicate":0,"fail_closed":8,"unresolved_external":8},
+    "AUTHORIZED_external_nonfenced_without_durable_effect_id": {"n":8,"resumable":0,"orphan":0,"duplicate":8,"fail_closed":8,"unresolved_external":8},
+    "rate_limit_without_durable_record": {"n":24,"safe_checkpoint":24,"orphan":24},
+    "rate_limit_durable_record_deterministic_id": {"n":12,"safe_checkpoint":12,"resumable":10,"fail_closed_external_authorized":2}
+  },
+  "mechanism_conclusion": {
+    "phase_scoped_timeout": "Time-based cleanup is safe for PREPARED prefixes because they carry no authority. It is unsafe to let time alone revoke GRANTED or AUTHORIZED state.",
+    "task_owned_resume": "A rematerialized invocation should resume the same deterministic reservation ID rather than take over with a new worker-owned claim.",
+    "single_grant_record": "After full cell acquisition, use one CAS-monotone grant record. GRANTED may transition to exactly one of CANCELLED or AUTHORIZED; if authorization wins, cancellation/replacement must fail closed and reconcile rather than pretending revocation succeeded.",
+    "separate_cancel_is_not_enough": "A cancellation flag in a separate authority object can race a worker that already observed GRANTED; without atomic authorization fencing, the tested late-old slice is unsafe.",
+    "authorized_is_absorbing_for_revocation": "Once AUTHORIZED is durably minted, replacement must not revoke by lease expiry or late cancellation. Resume/reconcile the same durable effect identity instead."
+  },
+  "phase1_assessment": {
+    "repository_local_cleanup_candidate": "PREPARED-only lease cleanup + deterministic same-task resume + single grant-record CAS cancellation/authorization fork is Chat-capable with lightweight repository state/CAS.",
+    "residual_richer_mode_or_manual_user_execution": "none for the tested repository-local state machine",
+    "finite_monthly_quota_credit_dependency": "none accepted",
+    "incremental_monetary_cost": "0",
+    "external_sink_atomic_participation": "unresolved child: after AUTHORIZED, an arbitrary protected/non-idempotent external sink still needs durable effect identity/status or sink-side idempotency/fencing; this is not counted solved.",
+    "global_phase1_closure_claimed": false
+  },
+  "scope_limit": "Three reservation phases, same-task vs replacement, two race orders, repository-atomic vs non-fenced external effect domain. The model assumes PREPARED has no effect authority and GRANTED cancellation/authorization live in one CAS record.",
+  "exact_continuation": "Cancellation/release atomicity after a GRANT record wins CANCELLED. Compare immediate multi-cell release, lazy tombstoned release, per-cell cancel epoch, reservation-level CANCELLED tombstone checked by all new claimants, and staged integrator. Enumerate partial cell-release crash, response loss, rate-limit interruption, old PREPARED/GRANTED owner return, new claimant acquiring a subset while stale cells remain, cancellation tombstone rollback/GC, and cell delete/recreate ABA. Determine whether one durable reservation-level cancellation tombstone can safely decouple logical revocation from best-effort per-cell cleanup without creating permanent false exclusion or re-admission holes."
+}
