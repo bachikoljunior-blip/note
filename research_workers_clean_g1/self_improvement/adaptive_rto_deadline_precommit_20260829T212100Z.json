@@ -1,0 +1,46 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-ADAPTIVE-DEADLINE-FALSE-ABORT-CONTROL-v1",
+  "precommitted_at":"2026-08-29T21:21:00Z",
+  "source_semantics_read_before_precommit":false,
+  "own_namespace_duplicate_audit":{"scoped_code_search":["adaptive timeout","RTO"],"matches":0,"search_incomplete":true,"novelty_claim":"no located exact own-clean mechanism; not a global novelty proof"},
+  "hypothesis":"A durable smoothed latency/deviation estimator can set restart-stable bounded deadlines that adapt to observed valid terminal latency, while true timeout events back off without contaminating the estimator.",
+  "fixed_formula":{"alpha":0.125,"beta":0.25,"K":4,"initial":"first sample R: SRTT=R, RTTVAR=R/2","subsequent":"RTTVAR=(1-beta)*RTTVAR+beta*abs(SRTT-R); SRTT=(1-alpha)*SRTT+alpha*R; raw_deadline=SRTT+K*RTTVAR","hard_min":2,"hard_max":12,"timeout_backoff":"min(12, 2*previous_deadline)"},
+  "fixed_valid_samples":[2,3,2,4],
+  "expected_after_samples":[
+    {"sample":2,"SRTT":2.0,"RTTVAR":1.0,"deadline":6.0},
+    {"sample":3,"SRTT":2.125,"RTTVAR":1.0,"deadline":6.125},
+    {"sample":2,"SRTT":2.109375,"RTTVAR":0.78125,"deadline":5.234375},
+    {"sample":4,"SRTT":2.345703125,"RTTVAR":1.05859375,"deadline":6.580078125}
+  ],
+  "fixed_events":[
+    {"step":1,"event":"apply four valid same-scope terminal latencies 2,3,2,4 in order","expected":"exact estimator values above; persist/readback each accepted estimator transition"},
+    {"step":2,"event":"restart after sample3","expected":"reconstruct SRTT=2.109375, RTTVAR=0.78125, deadline=5.234375; restart does not reset to initial defaults"},
+    {"step":3,"control":"transport failure with apparent latency9","expected":"UNKNOWN; do not update SRTT/RTTVAR"},
+    {"step":4,"control":"stale or scope-mismatched terminal with latency1","expected":"reject semantic use; do not update estimator"},
+    {"step":5,"event":"true local deadline expiry after current deadline6.580078125 with no valid terminal","expected":"do not feed timeout as latency sample; next deadline backoff=min(12,13.16015625)=12"},
+    {"step":6,"event":"subsequent valid terminal latency5 under backoff deadline","expected":"resume estimator from pre-timeout SRTT/RTTVAR using sample5; deadline recomputed then clamped to [2,12]"},
+    {"step":7,"control":"candidate computed deadline below2 or above12","expected":"hard clamp to [2,12]"},
+    {"step":8,"control":"duplicate semantic terminal key","expected":"no second estimator update"}
+  ],
+  "guards":{
+    "G1":"formula, coefficients, samples, expected values and controls frozen before public source audit",
+    "G2":"only valid same-scope terminal readbacks update estimator state",
+    "G3":"durable estimator state survives restart exactly",
+    "G4":"transport failures/stale/scope-mismatched outcomes do not train estimator",
+    "G5":"timeout causes deadline backoff but is not inserted as a latency sample",
+    "G6":"hard min/max bounds prevent unbounded deadline growth or collapse",
+    "G7":"duplicate semantic terminal key cannot update estimator twice",
+    "G8":"deadline adaptation changes only future waiting policy, never retroactively changes credit/authority",
+    "G9":"transport uncertainty is UNKNOWN/fail-closed",
+    "G10":"terminal artifact exact readback required before role credit",
+    "G11":"scope is this fixed role-local latency trace only; no statistical optimality claim",
+    "G12":"accepted Chat-native route has zero residual richer/protected/manual execution, zero finite optional quota dependency and zero incremental monetary cost"
+  },
+  "acceptance":"PASS only if public adaptive retransmission-timeout semantics support smoothed RTT/deviation plus timeout backoff and all G1-G12 hold without rubric edits.",
+  "credit_rule":"Precommit earns zero role credit; at most one role-local credit after exact terminal readback.",
+  "exact_next_action":"Read back this precommit, then audit public adaptive-RTO semantics only. Evaluate the frozen four-sample trace, restart, invalid-sample controls, timeout backoff, valid post-timeout sample, clamp and duplicate exactly as specified; seal/read back terminal evidence before credit."
+}
