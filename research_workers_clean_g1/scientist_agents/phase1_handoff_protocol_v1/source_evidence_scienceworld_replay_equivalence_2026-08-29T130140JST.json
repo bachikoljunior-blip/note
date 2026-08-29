@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-29T13:01:40+09:00",
+  "topic": "ScienceWorld exact state reconstruction and replay-equivalence boundary for memory counterfactuals",
+  "sources": [
+    {
+      "id": "memcompiler-env-pin",
+      "repository": "air-embodied-brain/MemCompiler",
+      "revision": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
+      "path": "requirements.txt",
+      "blob": "44e950d3950a3e294cd9f338846baafd6c47bf7e",
+      "observed": "The official MemCompiler code pins scienceworld==1.2.2."
+    },
+    {
+      "id": "scienceworld-current-readme",
+      "repository": "allenai/ScienceWorld",
+      "revision": "e8216d6044e8e39be9fcb185e3b2dfb602584b52",
+      "path": "README.md",
+      "blob": "703769290b34a1dcca1310ce3d882f54f0601576",
+      "observed": "The current README warns that the 1.3.0 deterministic-UUID change fixes stochastic simulation outcomes and can change physics trajectories, ambiguous-action resolution, gold paths, and observation/JSON ordering relative to 1.2.x; task generation for a given variation is otherwise unchanged."
+    },
+    {
+      "id": "scienceworld-issue-33",
+      "repository": "allenai/ScienceWorld",
+      "issue": 33,
+      "state": "closed",
+      "closed_at": "2026-08-19T14:39:29Z",
+      "observed": "The maintainer-authored issue reports that the same task-1-boil, variationIdx=0, simplificationStr=teleportAction and same five-command sequence produced missing steam in 6/8 runs in one trial and 4/8 in another, where 0/8 was expected."
+    },
+    {
+      "id": "scienceworld-pr-88",
+      "repository": "allenai/ScienceWorld",
+      "pull_request": 88,
+      "merged_at": "2026-08-19T14:39:28Z",
+      "observed": "The merged determinism fix replaces multiple unordered iteration paths with deterministic/sorted ordering and bumps the Scala simulator version from 1.2.3 to 1.3.0."
+    },
+    {
+      "id": "scienceworld-current-tests",
+      "repository": "allenai/ScienceWorld",
+      "revision": "e8216d6044e8e39be9fcb185e3b2dfb602584b52",
+      "path": "tests/test_scienceworld.py",
+      "blob": "8acfeef1581f90ff445c15bcf1a17ccea8a3b0d8",
+      "observed": "Current tests require identical reset observation across 30 resets, identical object-tree/API snapshots across 8 resets, and eight identical full traces for the task-1-boil five-action reproducer after the determinism fix."
+    },
+    {
+      "id": "scienceworld-python-wrapper",
+      "repository": "allenai/ScienceWorld",
+      "revision": "e8216d6044e8e39be9fcb185e3b2dfb602584b52",
+      "path": "scienceworld/scienceworld.py",
+      "blob": "5217e5affbeccdfa09c58d40787d030bf8440cb3",
+      "observed": "load() binds taskName, variationIdx and simplificationStr; reset() asks the simulator to reset and then executes look around. No native state-snapshot restore primitive was observed in the inspected public Python wrapper surface."
+    }
+  ],
+  "findings": [
+    {
+      "id": "p1-sa-089",
+      "claim": "For exact MemCompiler ScienceWorld counterfactual replay, task/variation/action-prefix identity alone is not sufficient evidence of the same pre-effect simulator state: the evaluated public code pins ScienceWorld 1.2.2, while the official project documents a 1.3.0 determinism fix that changes simulation trajectories relative to 1.2.x and provides a concrete pre-fix same-prefix stochastic reproducer.",
+      "scope": "Conservative provenance rule for exact counterfactual replay. This does not assert that every ScienceWorld 1.2.2 task or action prefix is stochastic, nor that the reported MemCompiler Table-3 episodes themselves hit the known stochastic path."
+    },
+    {
+      "id": "p1-sa-090",
+      "claim": "Action-prefix state reconstruction can be admitted only after an exact-prefix replay-equivalence probe (or native snapshot) binds environment revision, task/variation/simplification, reset state, ordered actions and branch-state/trace digests. Upgrading a 1.2.x evaluated run to the 1.3.0 deterministic implementation cannot be silently treated as the same evaluated environment because the official README explicitly warns of changed physics trajectories and observations.",
+      "scope": "Protocol requirement derived from the observed version boundary; current official tests directly cover specific reset/object-tree and task-1-boil traces, not package-wide determinism for every task."
+    }
+  ]
+}
