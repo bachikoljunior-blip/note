@@ -2,16 +2,18 @@
 //! Target: modelcontextprotocol/rust-sdk rmcp-v3.1.4 @
 //! 4a738b9dd99eaca418b614afa433a0cbdaf8d056.
 //!
-//! Purpose: demonstrate the smallest router-first seam. The stock macro-generated
+//! Purpose: demonstrate the smallest router-first seam. The SDK macro-generated
 //! `call_tool` remains in control, so `ToolRouter::call` performs disabled-route
 //! checks and standard extractors before this handler body can materialize a task.
 //! The durable store/executor below is deliberately an application abstraction;
 //! stock `TaskManager` is NOT used because its storage is process-local.
+//!
+//! Cargo note: RequestStateCodec requires rmcp's `request-state` feature.
 
 use std::{sync::Arc, time::Duration};
 
 use rmcp::{
-    ErrorData as McpError, ServerHandler, tool, tool_handler, tool_router,
+    ErrorData as McpError, ServerHandler, schemars, tool, tool_handler, tool_router,
     handler::server::{
         common::Extension,
         router::tool::ToolRouter,
@@ -44,7 +46,7 @@ struct PreflightState {
 ///
 /// REQUIRED contract (not supplied by rmcp):
 /// - mint_op_id() returns a server-generated stable logical operation id.
-/// - create_or_get is atomic on op_id and rejects intent-hash conflicts.
+/// - create_or_get is atomic on op_id and rejects intent-key conflicts.
 /// - only the returned `created=true` winner may claim/schedule the operation.
 /// - get/update/cancel survive server-process restart.
 /// - restart redrive uses an attempt generation/CAS; external effects use their
@@ -54,7 +56,7 @@ pub trait DurableTaskStore: Send + Sync + 'static {
     fn create_or_get(
         &self,
         op_id: &str,
-        intent_hash: &str,
+        intent_key: &str,
     ) -> Result<(Task, bool), McpError>;
     fn schedule_if_winner(&self, task_id: &str, args: MutateArgs) -> Result<(), McpError>;
     fn get(&self, task_id: &str) -> Result<DetailedTask, McpError>;
@@ -67,14 +69,17 @@ pub trait DurableTaskStore: Send + Sync + 'static {
 }
 
 #[derive(Clone)]
-pub struct TaskServer<S: DurableTaskStore> {
+pub struct TaskServer {
     tool_router: ToolRouter<Self>,
-    store: Arc<S>,
+    store: Arc<dyn DurableTaskStore>,
     request_state: RequestStateCodec,
 }
 
-impl<S: DurableTaskStore> TaskServer<S> {
-    pub fn new(store: Arc<S>, signing_key: impl Into<Vec<u8>>) -> Result<Self, McpError> {
+impl TaskServer {
+    pub fn new(
+        store: Arc<dyn DurableTaskStore>,
+        signing_key: impl Into<Vec<u8>>,
+    ) -> Result<Self, McpError> {
         let request_state = RequestStateCodec::try_new(signing_key)
             .map_err(|e| McpError::invalid_params(e.to_string(), None))?;
         Ok(Self {
@@ -93,15 +98,16 @@ impl<S: DurableTaskStore> TaskServer<S> {
         Ok(format!("{}|tools/call|mutate|{}", principal.0, args_json).into_bytes())
     }
 
-    fn intent_hash(principal: &Principal, args: &MutateArgs) -> Result<String, McpError> {
-        // Placeholder readable digest representation. Replace with a cryptographic
-        // digest over canonical intent bytes in production.
-        Ok(hex::encode(sha2::Sha256::digest(Self::associated_data(principal, args)?)))
+    fn intent_key(principal: &Principal, args: &MutateArgs) -> Result<String, McpError> {
+        // Exact canonical intent comparison is sufficient for create-or-get;
+        // a production store may hash these bytes as an internal optimization.
+        let bytes = Self::associated_data(principal, args)?;
+        String::from_utf8(bytes).map_err(|e| McpError::internal_error(e.to_string(), None))
     }
 }
 
 #[tool_router]
-impl<S: DurableTaskStore> TaskServer<S> {
+impl TaskServer {
     #[tool(description = "Example persistent task-capable mutation")]
     async fn mutate(
         &self,
@@ -145,8 +151,8 @@ impl<S: DurableTaskStore> TaskServer<S> {
             .request_state
             .open_json_with(&sealed, &associated_data)
             .map_err(|e| McpError::invalid_params(e.to_string(), None))?;
-        let intent_hash = Self::intent_hash(&principal, &args)?;
-        let (task, created) = self.store.create_or_get(&preflight.op_id, &intent_hash)?;
+        let intent_key = Self::intent_key(&principal, &args)?;
+        let (task, created) = self.store.create_or_get(&preflight.op_id, &intent_key)?;
         if created {
             self.store.schedule_if_winner(&task.task_id, args)?;
         }
@@ -156,7 +162,7 @@ impl<S: DurableTaskStore> TaskServer<S> {
 
 // No manual call_tool: #[tool_handler] generates the router-first implementation.
 #[tool_handler]
-impl<S: DurableTaskStore> ServerHandler for TaskServer<S> {
+impl ServerHandler for TaskServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(
             ServerCapabilities::builder()
@@ -192,11 +198,10 @@ impl<S: DurableTaskStore> ServerHandler for TaskServer<S> {
 }
 
 // Source-check notes for the next run:
-// 1. `hex` and `sha2::Digest` above are illustrative application dependencies;
-//    replace or import them explicitly before claiming compilation.
-// 2. Verify the generic #[tool_router]/#[tool_handler] macro bounds for TaskServer<S>
-//    against a real rustc/cargo run. No Rust toolchain exists in the current runtime.
-// 3. Verify how the authenticated Principal is inserted into RequestContext.extensions
-//    for the chosen transport/middleware; Extension<Principal> itself is an exact rmcp extractor.
+// 1. Verify this exact file with real rustc/cargo; neither exists in the current runtime.
+// 2. Verify how the authenticated Principal is inserted into RequestContext.extensions
+//    for the selected transport/middleware; Extension<Principal> itself is an exact rmcp extractor.
+// 3. Verify the application store returns the exact same seed Task on duplicate op_id and
+//    persists any in-task inputRequests needed by tasks/update.
 // 4. DurableTaskStore must not schedule an effect before its row/intent is committed,
 //    and must independently solve create-before-schedule crash redrive and effect fencing.
