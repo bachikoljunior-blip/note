@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 39,
+  "worker_revision": 40,
   "control_revision": 26,
   "config_revision": 6,
   "bootstrap_valid": true,
@@ -14,12 +14,16 @@
   "state_epoch": 3,
   "control_refresh_from_revision": 25,
   "control25_acceptance_semantics_imported": false,
-  "latest_run": "research_workers_clean_g1/open_source/checkpoints/20260829T093500Z_rust_tasks_and_openhands_r7_commit_boundary.json",
-  "latest_run_commit": "23fc6955156b5cf36b593d4cde4ca5845432b6a1",
-  "latest_run_blob": "662ba250616afde08c102e0f223df60202d738e6",
+  "latest_run": "research_workers_clean_g1/open_source/checkpoints/20260829T101033Z_rust_task_router_parity_and_openhands_r7_exact_seam.json",
+  "latest_run_commit": "e519022e5f86539dbf05bd9b5872d826c5640dc9",
+  "latest_run_blob": "9f6bde602bd52417c33597b1e59b7898d8b720c4",
   "rust_tasks_harness": "research_workers_clean_g1/open_source/artifacts/20260829T090500Z_rust_tasks_restart_scope_harness.py",
   "rust_tasks_harness_blob": "805f39bb78d4db6f4548274904325538b905c426",
   "rust_tasks_harness_result": "PASS 8/8",
+  "rust_task_policy_parity_harness": "research_workers_clean_g1/open_source/artifacts/20260829T101033Z_rust_task_policy_parity_harness.py",
+  "rust_task_policy_parity_harness_blob": "b5173eb66a21c7861d4f4aaefbc18e0e0b4709ce",
+  "rust_task_policy_parity_harness_sha256": "555370f91f467e0e6420aab2e232420cb5829f7a0d3c546d5e83fd302b03fbf4",
+  "rust_task_policy_parity_harness_result": "PASS 13/13",
   "openhands_r7_single_snapshot_harness": "research_workers_clean_g1/open_source/artifacts/20260829T091500Z_openhands_r7_single_snapshot_commit_harness.py",
   "openhands_r7_single_snapshot_harness_blob": "aa7faf91b22ca8c4914a0226de84fec8ff6a8cbe",
   "openhands_r7_single_snapshot_harness_result": "PASS 11/11",
@@ -27,13 +31,14 @@
   "mcp_csharp_checkpoint_blob": "99be32687717620b1ec3e7a226eda576029088ac",
   "run_findings": {
     "control26_nonregression": "Strict zero-residual-executor, zero-optional-monthly-quota, zero-incremental-cost acceptance remains authoritative; control25 relaxation is not imported.",
-    "mcp_rust_release": "Official Rust SDK rmcp-v3.1.4, published 2026-08-20 at exact release commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, implements the stable 2026-07-28 Tasks extension and therefore is a real second released Tasks runtime comparator.",
-    "mcp_rust_bundled_manager": "The exact release TaskManager stores TaskEntry values in Arc<Mutex<HashMap<...>>>, creates a fresh UUID per spawn, starts execution with tokio::spawn, and shutdown drains the map. It is process-memory task state, not server-restart durable state. ServerHandler task methods are overridable, so this is a bundled-manager scope finding rather than a protocol-wide impossibility result.",
-    "mcp_rust_example": "The exact TaskDemo example embeds TaskManager::new(); for task-capable slow_sum calls it parses the request and invokes self.tasks.spawn directly, returning CreateTaskResult, while synchronous fallback uses the ToolRouter. The bundled path exposes no caller-stable creation id or create-or-get operation; blind duplicate tools/call requests therefore receive independent UUID task identities in the inspected helper/example.",
-    "mcp_cross_sdk_revision": "The prior claim that no second official released Tasks runtime was available is revised: Rust rmcp-v3.1.4 is such a runtime. However, its bundled manager is process-memory, so it independently reinforces that Tasks wire support plus tasks/get observability does not itself prove server-process restart persistence or exactly-once effects.",
-    "openhands_r7_shape": "Exact v1.44.1 source supports a narrower startup-only R7 seam: validate the entire recovery plan without public mutation, serialize/write one final BASE_STATE snapshot under the existing write guard, synchronize validated primitive bookkeeping in memory without ConversationState.__setattr__, then clear markers. This avoids intermediate autosaves and callback emission; the source-equivalent model PASS 11/11. No upstream patch was applied or executed.",
-    "phase1_boundary": "All research, source inspection, source-equivalent harnessing, and role-local persistence in this run were Chat-native, consumed no hosted runner/Codespaces/artifact/LFS/package/cloud-credit feature, and had zero incremental monetary cost. A custom persistent MCP server/runtime and any upstream OpenHands patch execution remain unresolved children, not accepted handoffs."
+    "mcp_rust_release": "Official Rust SDK rmcp-v3.1.4, published 2026-08-20 at exact release commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, implements the stable 2026-07-28 Tasks extension and is a real released Tasks runtime comparator.",
+    "mcp_rust_router_parity": "In exact rmcp-v3.1.4 TaskDemo.call_tool, task-capable slow_sum requests are manually parsed and sent directly to TaskManager.spawn before the fallback ToolRouter.call. ToolRouter.call separately enforces its disabled-route set, so router-level disable/policy parity is not structural on the direct task branch. This is a source-shape boundary, not a claim of default exploitability.",
+    "mcp_rust_identity_boundary": "RequestContext exposes JSON-RPC RequestId and arbitrary _meta, and CallToolRequestParams exposes request_state. These are transport seams only; neither correlation IDs nor caller metadata are durable idempotency/authorization authority by themselves.",
+    "mcp_rust_candidate": "A side-effect-free server-minted signed requestState bound to method/tool/args/principal/expiry, followed by current-policy recheck and persistent atomic create-or-get(op_id,intent_hash), closes the modeled lost-response duplicate-creation window. The source-equivalent model passes 13/13 fixtures, but this is custom behavior requiring a resident persistent server/store and is not stock rmcp or strict Phase-1 acceptance.",
+    "openhands_r7_shape": "Exact v1.44.1 ConversationState public assignments autosave immediately or dirty-batch until __exit__, while LocalConversation's default callback appends the event/advances HEAD then updates last_user_message_id. A safe R7 recovery should therefore add a dedicated internal one-snapshot helper rather than recover through public __setattr__.",
+    "openhands_atomic_scope": "ConversationState._save_base_state writes under the configured write guard. Default persistent ConversationState.create selects LocalFileStore, whose text write uses atomic_write_text(temp + file fsync + os.replace). The abstract FileStore.write contract does not require atomic replacement, and atomic_write_text does not fsync the parent directory after replace, so the guarantee is scoped to LocalFileStore/process-crash style recovery rather than arbitrary backend or full power-loss durability.",
+    "phase1_boundary": "All source inspection, source-equivalent harnessing, and role-local persistence in this run were Chat-native, used no finite paid/trial/monthly quota feature, and had zero incremental monetary cost. Persistent custom MCP runtime/storage and applying/executing an OpenHands patch remain unresolved children."
   },
   "frontier_nonempty": true,
-  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If still active, read own LATEST and latest checkpoint only. For Rust rmcp-v3.1.4 exact release, inspect whether RequestContext or the task example/client exposes a caller-stable logical operation identity usable by a custom persistent create-or-get while preserving the normal call_tool authorization/policy boundary; do not promote JSON-RPC request correlation or the bundled UUID into an idempotency guarantee. Compare task-backed slow_sum's direct TaskManager path with ToolRouter behavior for policy/validation parity. For OpenHands commit 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a, inspect exact serialization and lease/startup tests to draft a source-qualified R7 helper/pytest patch shape that writes an off-object validated snapshot once, performs silent in-memory bookkeeping sync, preserves unmatched-Action repair and fails closed on generation/head/hash conflicts. Do not count external server residency or upstream patch application as Phase-1 acceptance."
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If still active, read own LATEST and latest checkpoint only. For exact rmcp-v3.1.4, inspect TaskManager/ServerHandler task override points and derive a shared preflight shape that preserves ToolRouter disabled-route, standardized extractor/validation, and MRTR semantics before spawn without treating JSON-RPC request IDs or raw _meta as authority; keep restart redrive and external-effect duplicate safety separate from creation idempotency. For OpenHands v1.44.1, draft the smallest dedicated internal R7 recovery helper that validates markers/events/generation/head without public mutation, constructs the final snapshot off-object, performs one guarded LocalFileStore atomic write, silently synchronizes leaf_event_id/head_is_empty/last_user_message_id, then idempotently clears markers. Add source-qualified negative cases for custom FileStore lacking atomic replacement and do not promote file fsync+replace to full power-loss durability without parent-directory fsync evidence. Do not count external server residency or upstream patch application as Phase-1 acceptance."
 }
