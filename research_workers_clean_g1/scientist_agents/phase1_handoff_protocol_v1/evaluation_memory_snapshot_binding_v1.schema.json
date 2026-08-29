@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/scientist_agents/evaluation_memory_snapshot_binding_v1.schema.json",
+  "title": "Evaluation memory snapshot and run binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "claim_level", "environment", "memory_pair", "run_binding"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "claim_level": {
+      "enum": [
+        "environment_artifact_identity",
+        "same_initial_memory_snapshot",
+        "same_retrieved_candidate_pool",
+        "evaluated_run_bundle"
+      ]
+    },
+    "environment": {"$ref": "#/$defs/environment"},
+    "memory_pair": {"$ref": "#/$defs/memoryPair"},
+    "run_binding": {"$ref": "#/$defs/runBinding"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {"enum": ["sha256", "git_sha1"]},
+        "value": {"type": "string", "minLength": 40, "maxLength": 64}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_name", "version", "artifact_channel", "artifact_filename", "artifact_digest"],
+      "properties": {
+        "package_name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "artifact_channel": {"enum": ["pypi_distribution", "git_checkout", "container_image", "other"]},
+        "artifact_filename": {"type": "string", "minLength": 1},
+        "artifact_digest": {"$ref": "#/$defs/digest"},
+        "source_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "commit", "archive_byte_binding", "claims_exact_package_source_commit"],
+          "properties": {
+            "repository": {"type": "string", "minLength": 1},
+            "commit": {"type": "string", "minLength": 40, "maxLength": 40},
+            "jar_blob_sha": {"type": ["string", "null"], "minLength": 40, "maxLength": 40},
+            "archive_byte_binding": {"type": "boolean"},
+            "claims_exact_package_source_commit": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["memory_id", "content_digest"],
+      "properties": {
+        "memory_id": {"type": "string", "minLength": 1},
+        "content_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "initial_memory_snapshot_digest",
+        "retrieval_config_digest",
+        "task_query_digest",
+        "pre_retrieval_memory_state_digest",
+        "trace_identity_level",
+        "candidate_pool_digest",
+        "candidate_members",
+        "output_artifact_digest"
+      ],
+      "properties": {
+        "condition_id": {"type": "string", "minLength": 1},
+        "initial_memory_snapshot_digest": {"$ref": "#/$defs/digest"},
+        "retrieval_config_digest": {"$ref": "#/$defs/digest"},
+        "task_query_digest": {"$ref": "#/$defs/digest"},
+        "pre_retrieval_memory_state_digest": {"$ref": "#/$defs/digest"},
+        "trace_identity_level": {"enum": ["count_summary", "member_identity"]},
+        "candidate_pool_digest": {"$ref": "#/$defs/digest"},
+        "candidate_members": {"type": "array", "items": {"$ref": "#/$defs/member"}},
+        "task_order_digest": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "update_ledger_digest": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "output_artifact_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "memoryPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["update_policy", "allow_empty_pool", "condition_a", "condition_b"],
+      "properties": {
+        "update_policy": {"enum": ["frozen", "online"]},
+        "allow_empty_pool": {"type": "boolean"},
+        "condition_a": {"$ref": "#/$defs/condition"},
+        "condition_b": {"$ref": "#/$defs/condition"}
+      }
+    },
+    "runBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runner_revision",
+        "runner_artifact_digest",
+        "dataset_digest",
+        "model_artifact_digest",
+        "environment_config_digest",
+        "table_binding_manifest_digest"
+      ],
+      "properties": {
+        "runner_revision": {"type": "string", "minLength": 1},
+        "runner_artifact_digest": {"$ref": "#/$defs/digest"},
+        "dataset_digest": {"$ref": "#/$defs/digest"},
+        "model_artifact_digest": {"$ref": "#/$defs/digest"},
+        "environment_config_digest": {"$ref": "#/$defs/digest"},
+        "table_binding_manifest_digest": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]}
+      }
+    }
+  }
+}
