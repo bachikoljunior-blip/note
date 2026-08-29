@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "part": 34,
+  "leaf": "cancelled_reservation_lazy_release",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "68446d6322630d4ba65d734db1422c50a5782f78",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 6,
+    "role_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c",
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "scenario_count": 864,
+  "strategy_evaluations": 5184,
+  "recovery_scenario_count": 72,
+  "current_tombstone_strong_slice": {
+    "conditions": "tombstone=CURRENT_CANCELLED && incarnation_sensitive && registry_complete",
+    "per_strategy": [
+      {"mech":"block_stale","n":72,"unsafe":0,"progress":28,"blocked":44,"false_block":44,"reclaim_reads":0},
+      {"mech":"eager_release","n":72,"unsafe":0,"progress":28,"blocked":44,"false_block":44,"reclaim_reads":0},
+      {"mech":"per_cell_cancel","n":72,"unsafe":0,"progress":28,"blocked":44,"false_block":44,"reclaim_reads":0},
+      {"mech":"lazy_tombstone","n":72,"unsafe":0,"progress":72,"blocked":0,"false_block":0,"reclaim_reads":68},
+      {"mech":"missing_is_free","n":72,"unsafe":0,"progress":72,"blocked":0,"false_block":0,"reclaim_reads":68},
+      {"mech":"staging_integrator","n":72,"unsafe":0,"progress":72,"blocked":0,"false_block":0,"reclaim_reads":72}
+    ]
+  },
+  "key_slices": {
+    "lazy_tombstone_current": {"n":72,"unsafe":0,"progress":72,"blocked":0},
+    "lazy_tombstone_missing_fail_closed": {"n":72,"unsafe":0,"progress":0,"blocked":72,"false_block":72},
+    "missing_tombstone_treated_as_free": {"n":72,"unsafe":44,"progress":72},
+    "lazy_tombstone_cell_ABA": {
+      "incarnation_sensitive": {"n":36,"unsafe":0},
+      "name_or_resettable_epoch_only": {"n":36,"unsafe":36}
+    },
+    "rollback_to_GRANTED_plus_late_old": {"n":36,"unsafe":36,"blocked":36},
+    "per_cell_cancel_cleanup": {
+      "none": {"n":24,"progress":0,"blocked":24},
+      "partial": {"n":24,"progress":4,"blocked":20},
+      "full": {"n":24,"progress":24,"blocked":0}
+    }
+  },
+  "recovery_micro_model": {
+    "stale_cell_durable_tombstone_deterministic_new_id": {"n":9,"resumable":9,"orphan":0,"self_conflict":0},
+    "stale_cell_no_durable_tombstone": {"n":18,"resumable":0,"orphan":18},
+    "stale_cell_durable_tombstone_fresh_id": {"n":9,"resumable":0,"self_conflict":9},
+    "rate_limit_stale_cell_strong": {"n":3,"safe_checkpoint":3,"resumable":3}
+  },
+  "mechanism_conclusion": {
+    "lazy_release": "A durable reservation-level CANCELLED tombstone can logically revoke the old reservation before every cell is physically cleaned. A new claimant follows the stale cell's holder reservation ID, verifies current CANCELLED, then CAS-reclaims that cell under its deterministic reservation ID. Its partial reclaim prefix remains PREPARED and non-authoritative.",
+    "cleanup_not_authority": "Best-effort cell release is garbage collection, not the revocation proof. Requiring all cell rows to be cleaned first causes avoidable false exclusion after crash/rate-limit interruption.",
+    "tombstone_missing": "Missing cancellation evidence must fail closed. Treating missing as dead/free is unsafe when stale holder rows remain.",
+    "incarnation": "Cell delete/recreate requires current blob/incarnation-sensitive identity; logical name or a resettable numeric epoch is an ABA hole.",
+    "rollback": "If the repository authority itself is rolled back from CANCELLED to an old GRANTED view and no independent monotonic witness survives, the model cannot distinguish the rollback; late-old behavior is unsafe. This remains an anti-rollback unresolved child, not an accepted route."
+  },
+  "phase1_assessment": {
+    "repository_local_lazy_release": "Chat-capable with lightweight repository CAS/readback; no hosted coordinator, hosted compute/storage allowance, paid/trial/monthly credit, manual user execution, or incremental monetary cost is required for the tested scope.",
+    "finite_monthly_quota_credit_dependency": "none accepted",
+    "incremental_monetary_cost": "0",
+    "residual_richer_mode_or_manual_user_execution": "none for tested repository-local lazy release",
+    "unresolved_children": [
+      "authority-domain rollback/restore that erases the durable CANCELLED witness",
+      "arbitrary protected external effect after AUTHORIZED"
+    ],
+    "global_phase1_closure_claimed": false
+  },
+  "scope_limit": "Three logical cells, six claim shapes, none/partial/full cleanup, current/missing/rolled-back tombstone, cell ABA and incarnation identity. Repository-wide rollback is modeled as an explicit negative control.",
+  "exact_continuation": "Cancellation tombstone retention/compaction under repository-only zero-quota constraints. Compare permanent per-reservation tombstone, compact monotonic per-cell retired-holder floor, append-only reservation terminal index, generation-level cancellation watermark, and fail-closed no-GC. Enumerate all cells cleaned, stale-cell restore, cell delete/recreate, task-key reuse, repository branch rewind/restore, response loss, and rate-limit interruption. Determine the weakest durable witness that permits bounded state growth without allowing a cancelled reservation to become authoritative again; explicitly test whether any witness in the same rollback domain can solve a complete repository rewind, or whether that case is information-theoretically indistinguishable and must remain unresolved."
+}
