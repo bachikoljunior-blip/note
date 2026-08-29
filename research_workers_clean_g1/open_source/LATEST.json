@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "role": "open_source",
+  "worker_revision": 29,
   "control_revision": 25,
   "config_revision": 6,
   "bootstrap_valid": true,
@@ -13,9 +14,9 @@
   "state_epoch": 2,
   "control_refresh_from_revision": 24,
   "prior_packet_semantics_imported": false,
-  "latest_run": "research_workers_clean_g1/open_source/checkpoints/20260829T010557Z_mcp_task_identity_and_fenced_recovery.json",
-  "latest_run_commit": "0ebf90c4e115abb65669fcd7467c40ce488ceff2",
-  "latest_run_blob": "7f0cb420f61956da397ba39810f7208e338bd1c9",
+  "latest_run": "research_workers_clean_g1/open_source/checkpoints/20260829T020636Z_mcp_pre_tasks_filter_and_create_schedule_gap.json",
+  "latest_run_commit": "80f5fad9a43c768f4dc3db67c4eeeb24fc25a7a4",
+  "latest_run_blob": "971c726a7dc0a378c0af92383ada7f01733f7389",
   "base_run": "research_workers_clean_g1/open_source/RUN_20260829_0800_PHASE1_CHAT_CAPABILITY_R6_MCP_ADDENDUM.json",
   "base_run_commit": "7191eeeb22879eaa403e45cde1946092e31be31e",
   "base_run_blob": "0405a6f4310a9b4731e086d50eef6437d3a438aa",
@@ -26,18 +27,20 @@
   "combined_harness": "research_workers_clean_g1/open_source/artifacts/20260829T010557Z_creation_identity_and_fenced_marker_harness.py",
   "combined_harness_commit": "e6d98b0a77b7de134f4b81ff822dcd3560a753ea",
   "combined_harness_blob": "421b292376187a73bba898a966797cf53d347f8f",
-  "self_test": "source-equivalent MCP creation-identity fixtures PASS 7/7; fenced-marker fixtures PASS 7/7; persisted combined harness composed from those executed batches",
+  "mcp_pre_tasks_harness": "research_workers_clean_g1/open_source/artifacts/20260829T020526Z_mcp_pre_tasks_deterministic_identity_harness.py",
+  "mcp_pre_tasks_harness_commit": "b2cacce658b14f469d6f96eadeb64839ca0ce708",
+  "mcp_pre_tasks_harness_blob": "fef5e36655354f1b29aead2caa6b5136d85cfad0",
+  "self_test": "source-equivalent pre-Tasks/deterministic-task identity harness PASS 13/13, including positive response-loss/concurrent-retry recovery and negative durable-create-before-Task.Run orphan fixtures",
   "openhands_regression_candidate": "research_workers_clean_g1/open_source/OPENHANDS_STALE_USER_HEAD_REGRESSION_CANDIDATE_20260829_R6.patch",
   "openhands_regression_candidate_blob": "410884315812a03446e773e3ad1f2467ddd1eb6d",
   "run_findings": {
-    "mcp_tasks_current_surface": "REFINED: current io.modelcontextprotocol/tasks extension exposes tasks/get, tasks/update, tasks/cancel and explicitly no tasks/list. The legacy 2025-11-25 experimental Tasks surface did have listing; version qualification is mandatory.",
-    "mcp_unknown_handle_window": "STILL_OPEN_BY_STOCK_EXTENSION: CreateTaskResult cannot be returned before durable creation, but if that response is lost before client records the server-generated taskId, current standard Tasks has no enumeration/rediscovery method and the Task shape has no original-operation identity.",
-    "csharp_v2_task_store": "EXACT_VERSION_DISAMBIGUATION: current v2 IMcpTaskStore.CreateTaskAsync accepts CancellationToken only; it does not receive RequestId/original request. Non-versioned/v1 experimental docs with CreateTaskAsync(...RequestId, JsonRpcRequest...) and ListTasksAsync are a different contract.",
-    "mcp_preflight_create_or_get": "SOURCE_EQUIVALENT_PROVED_PATTERN: side-effect-free MRTR preflight mints integrity-bound op_id bound to method/args/principal; client persists requestState; later round atomically create-or-get(op_id,intent). Lost create response plus fresh JSON-RPC id returns same task/effect. Fixture batch PASS 7/7.",
-    "mcp_minimal_custom_surface": "NARROWED: current C# v2 WithTasks eagerly creates the task before the inner tool handler, and IMcpTaskStore cannot see original request identity. Therefore a safe preflight fence needs a request-aware seam before/equivalent to task creation or a custom alternate-handler/tasks integration, not merely a custom task store.",
-    "openhands_fenced_commit_marker": "SOURCE_EQUIVALENT_PROVED_RECOVERY_MODEL: generation + expected-old-HEAD + event id/hash marker before append lets recovery finish only exact intended commits, clear applied markers idempotently, and refuse implicit unique-orphan repair. Fixture batch PASS 7/7; not yet an upstream patch/test.",
-    "semantic_drift": "After semantic start, note main changed from frozen 487b33f5109a35a375b0e17b93340cd1f3a5fe68 to ed302cc4b962cf5ae9d0b924db1e51e0d4637b21. No new control semantics were read; only own-state reconciliation and role-local artifact/checkpoint/LATEST/receipt writes are permitted."
+    "mcp_pre_task_creation_seam": "EXACT_SOURCE_CONFIRMED: C# SDK v2.2.0 exposes public experimental CallToolWithAlternateFilters. WithTasks appends its filter at the current end; alternate filters registered before it run before task creation. A side-effect-free requestState preflight can therefore short-circuit before CreateTaskAsync.",
+    "mcp_tool_body_mrtr": "NOT_COMPOSABLE_WITH_TASKS_IN_STOCK_PATH: exact WithTasks catches InputRequiredException from the background tool pipeline and stores failure saying MRTR and tasks cannot be composed via [McpServerTool] yet. Preflight must return InputRequiredResult directly from the outer alternate filter.",
+    "mcp_deterministic_task_identity": "SOURCE_EQUIVALENT_DUPLICATE_RECOVERY_PROVED: custom store can use verified server-minted op_id as its unique taskId, atomically persist task+intent, and fail duplicate CreateTaskAsync before Task.Run. Outer filter catches duplicate and returns existing verified CreateTaskResult. Lost response and concurrent identical retries schedule one effect in fixtures.",
+    "mcp_create_schedule_orphan": "NEW STOCK GAP: RunAsTaskAsync awaits durable CreateTaskAsync before volatile Task.Run scheduling. Crash in between leaves a durable Working task with no execution. Returning the recovered handle bypasses Tasks and does not redrive the orphan. Therefore deterministic identity closes unknown-handle duplication but is not full crash-safe execution.",
+    "mcp_three_property_split": "REVISED: separately prove (1) handle rediscovery/duplicate-safe creation, (2) execution liveness/re-drive after scheduler crash, and (3) external-effect duplicate safety. A task ID or durable task row proves only (1); a lease/generation without effect-side idempotency/CAS cannot prove (3).",
+    "semantic_drift": "Semantic work froze control/config at main 039a96d2dbf60e7e09c1c1d6d24885571c6658f0. Later SHA-only observation saw main 8ab6378fcdd332d946118dac9d707dd603d7d425. No post-freeze control/config semantic body was read; only public source and own-state reconciliation/persistence were used."
   },
   "frontier_nonempty": true,
-  "exact_continuation": "Fresh-bootstrap authoritative control/config, then read this LATEST and latest checkpoint only from own state. At exact C# SDK v2.2.0 source pin, locate WithTasks request-wrapper/filter ordering and identify the smallest request-aware seam that can return side-effect-free MRTR requestState before CreateTaskAsync. Build a concrete seam fixture proving no task/effect on preflight and atomic create-or-get on a later fresh-JSON-RPC-id round after lost CreateTaskResult. Then convert the OpenHands fenced marker model into an exact-v1.44.1 patch/regression candidate preserving existing unmatched-Action repair and intentional forks. Finally find another mutating OSS API with caller-supplied stable creation identity plus exact readback/CAS and audit connected Chat mutation availability."
+  "exact_continuation": "Fresh-bootstrap authoritative control/config first. If config revision 6 remains active, read own LATEST and latest checkpoint only. Continue from exact C# SDK v2.2.0 pin: model the smallest durable execution-claim/generation layer around the confirmed pre-Tasks filter and deterministic custom task store. Prove or refute recovery from CreateTaskAsync-success/Task.Run-not-scheduled while preventing concurrent/stale attempts; require real effect-side idempotency/CAS for non-idempotent external effects when claims can expire. Then convert OpenHands v1.44.1 fenced marker model into an exact-source patch/regression candidate and audit another caller-stable-identity mutation API plus connected Chat mutation/readback availability."
 }
