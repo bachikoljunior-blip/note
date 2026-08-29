@@ -7,10 +7,10 @@ Authority record:
 `research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
 
 Authoritative latest checkpoint:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0425JST_PHASE1_EDGE_POLICY_CONTROLS.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0425JST_PHASE1_PLAN_ABA.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0425JST_PHASE1_FORECAST_SWITCH_EXHAUSTION.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0425JST_PHASE1_EDGE_POLICY_CONTROLS.md`
 
 Frozen authority:
 - transport: `exact_blob_two_pass`
@@ -21,21 +21,20 @@ Frozen authority:
 - `bootstrap_valid=true`
 
 Current persisted state:
-- Primary live state remains sequence 3 / plan generation 2 / retry attempt 2 / `compact_plan` at blob `4395e855dbdde20aecea6d91138465c1885dbdf1`, after the one-time forecast-overrun switch; the prior generation-1 stale write was rejected with HTTP 409.
-- Precommitted decision-precedence policy is immutable at `phase1/DECISION_PRECEDENCE_POLICY_2026-08-30T0425JST.json`, blob `02324f5f386d97fe8f7d261a0c70baa42f87538d`: `RETRY_BUDGET_EXHAUSTED > FORECAST_OVERRUN > RATE_LIMIT_WAIT > RETRY_ELIGIBLE`.
-- Edge matrix at `phase1/RATE_LIMIT_EDGE_CONTROLS_2026-08-30T0425JST.json`, blob `506f2d1c7012b8e66754e03438f511dd43d12af3`, covers malformed/negative Retry-After, very-large valid wait, simultaneous exhaustion+overrun, and exhausted/no-alternative behavior.
-- Invalid Retry-After controls normalize once to persisted deterministic 120-second fallback and defer rather than blind retry; a 3600-second valid wait switches before retry when wait+p90+reserve exceeds budget.
-- Simultaneous retry exhaustion and forecast overrun uses the precommitted hard-boundary cause `RETRY_BUDGET_EXHAUSTED`; no-alternative exhaustion yields durable `DEFER_NO_ALTERNATIVE` rather than an external handoff.
-- Cross-invocation malformed-Retry-After seed is set once at `phase1/EDGE_RATE_LIMIT_RECONSTRUCTION_SEED.json`, blob `b62e8ffd027ab6b3f7dd709e705a15492c7f452b`, with selected fallback 120 seconds and `not_before=2026-08-30T04:27:34+09:00`; next invocation must not resample it.
-- Latest checkpoint blob: `2fa417439e195347e5f05812c509af95ae3e542a`.
+- Primary live rate-limit/planning state remains sequence 3 / plan generation 2 / retry attempt 2 / `compact_plan` at blob `4395e855dbdde20aecea6d91138465c1885dbdf1`; one-time forecast-overrun switch and stale generation-1 HTTP 409 are preserved.
+- Precommitted decision precedence remains `RETRY_BUDGET_EXHAUSTED > FORECAST_OVERRUN > RATE_LIMIT_WAIT > RETRY_ELIGIBLE`, policy blob `02324f5f386d97fe8f7d261a0c70baa42f87538d`.
+- Retry-After edge matrix blob `506f2d1c7012b8e66754e03438f511dd43d12af3` covers malformed/negative fallback, large-wait forecast switch, simultaneous exhaustion+overrun, and exhausted/no-alternative defer.
+- Cross-invocation malformed-Retry-After seed remains blob `b62e8ffd027ab6b3f7dd709e705a15492c7f452b`, selected fallback 120 seconds, `not_before=2026-08-30T04:27:34+09:00`, no resampling allowed.
+- Plan-identity ABA trace at `phase1/PLAN_ABA_STATE_2026-08-30T0425JST.json` moved A1 compact generation 1 -> B2 alternate generation 2 -> A3 compact generation 3. The old A1 blob was then rejected with HTTP 409; readback remains A3 at blob `dfcc8eac076eb5ed797a3f6b847e7a6426920b06`. Same semantic plan value does not restore old authority.
+- Latest checkpoint blob: `fd2906d5bb6e5fd65741c362b62de2aa8545fdae`.
 - No richer-mode/Work/protected-primary/manual execution step or finite monthly/trial/paid compute quota is used by these tested routes; incremental monetary cost is zero.
 - Tested scope remains role-local repository text-state transport and synthetic controls only; `global_completion=false`.
 
 Exact continuation:
 1. Fresh exact two-pass root/config bootstrap and canonical branch-authority validation.
-2. Reconstruct primary live sequence 3 / generation 2 and prove switch persistence across the next invocation without repeat switch or retry increment.
-3. Reconstruct `EDGE_RATE_LIMIT_RECONSTRUCTION_SEED.json` and prove fallback 120 seconds, source, and exact not_before survived unchanged; do not resample malformed Retry-After.
-4. If eligible, advance each state only by current-blob CAS, then stale-write each predecessor and require HTTP 409 while preserving current generation/sequence.
-5. Add plan-identity ABA control across a future compact->other->compact semantic cycle.
-6. Collect only role-local scheduled-Chat observations of work units/transport waits to calibrate switching thresholds beyond synthetic constants, without finite-credit infrastructure.
+2. Reconstruct primary live sequence 3 / generation 2 and prove the one-time forecast switch survives the next real invocation unchanged, with no repeat switch or retry increment.
+3. Reconstruct malformed-Retry-After seed and prove fallback 120 seconds/source/exact not_before survive unchanged without reparsing/resampling.
+4. If eligible, CAS-advance each lineage once and stale-write each predecessor; require HTTP 409 while preserving current state.
+5. Seed cross-invocation ABA only if needed to distinguish scheduled-boundary reconstruction safety from the completed same-invocation A->B->A CAS control.
+6. Calibrate switching thresholds from future role-local scheduled-Chat observations without optional finite-credit infrastructure, keeping synthetic controls distinct from empirical estimates.
 7. Preserve a nonempty Phase-1 frontier until the repository-controlled recurring objective is closed under root revision 26.
