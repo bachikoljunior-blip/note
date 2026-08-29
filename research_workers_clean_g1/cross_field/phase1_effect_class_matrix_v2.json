@@ -1,0 +1,110 @@
+{
+  "schema_version": 2,
+  "supersedes": "research_workers_clean_g1/cross_field/phase1_effect_class_matrix_v1.json",
+  "reason_for_revision": "v1 correctly identified connector capabilities but was too permissive about testing repository workflow metadata. The active cross_field write boundary authorizes only role-local state/output paths plus own immutable receipts, so branch/issue/PR mutations cannot be used as this role's validation surface even when the connector exposes those actions.",
+  "authority_scope": "cross_field CLEAN role-local only",
+  "phase1_constraints": {
+    "no_residual_richer_mode_protected_or_manual_user_step": true,
+    "no_optional_monthly_trial_paid_or_hosted_compute_quota_dependency": true,
+    "incremental_monetary_cost": 0
+  },
+  "classes": [
+    {
+      "class": "durable cross-run state, replay, audit, idempotency and conflict-safe coordination",
+      "status": "DIRECT_SCOPED_PASS",
+      "evidence": "r132/r133 live role-local event/CAS probes",
+      "kernel": "immutable events and root manifests + one CAS HEAD + stable op_id + reconstruction-first retry"
+    },
+    {
+      "class": "multi-object atomic publication and interruption recovery",
+      "status": "DIRECT_SCOPED_PASS",
+      "evidence": "r133 created A/B events and a new root without moving HEAD; fresh reconstruction remained at old A/B state; same-op retry reused candidate root and advanced once; stale CAS returned 409"
+    },
+    {
+      "class": "long-horizon bounded work across recurring scheduled-Chat invocations",
+      "status": "PENDING_CROSS_RUN_PROBE",
+      "candidate": "persist an exact operation token/frontier in role-local state, end one invocation before applying it, then in a later invocation reconstruct from authoritative role-local state and continue without conversation/process memory",
+      "residual_dependency": false,
+      "acceptance_condition": "later invocation must discover the pending op from role-local durable state, not from conversational history, and complete or safely no-op it under the retry state machine"
+    },
+    {
+      "class": "role-local textual repository mutation",
+      "status": "DIRECT_SCOPED_PASS",
+      "evidence": "GitHub Contents create/update/readback plus current-blob CAS; deterministic retry absorbed stale and repository-head 409 conflicts"
+    },
+    {
+      "class": "branches, refs, issues and PR metadata",
+      "status": "UNRESOLVED_FOR_THIS_ROLE_BOUNDARY",
+      "capability_observation": "scheduled-Chat GitHub connector exposes such mutation actions",
+      "why_not_tested": "those mutations are outside the active cross_field role-local file/receipt write boundary; capability schema is not acceptance evidence",
+      "zero_quota_substitute_candidates": [
+        "represent the needed coordination/result in authorized role-local content files when that is materially equivalent",
+        "have an appropriately authorized CLEAN role independently test its own permitted surface; cross_field does not consume that other-role result"
+      ],
+      "scope_caveat": "the second candidate does not solve this role's child and cannot be counted here unless the material outcome is independently reproducible inside cross_field's boundary"
+    },
+    {
+      "class": "public-source retrieval and source-qualified synthesis",
+      "status": "DIRECT_PASS",
+      "mechanism": "scheduled-Chat public web retrieval plus role-local checkpointing"
+    },
+    {
+      "class": "arbitrary private-repository shell/build/test execution with full dependency environment",
+      "status": "UNRESOLVED_CHILD",
+      "zero_quota_substitute_candidates": [
+        {
+          "candidate": "bounded textual verification slice",
+          "idea": "retrieve only the source slice and authoritative specification needed for a property, then verify the property directly in scheduled Chat without claiming full-build equivalence",
+          "limit": "only counts where the requested material outcome is exactly the verified property"
+        },
+        {
+          "candidate": "proof-carrying/source-contract substitution",
+          "idea": "replace the execution leaf with a small independently checkable certificate over connector-readable source",
+          "limit": "full environment-sensitive build/test remains unresolved if the certificate is not outcome-equivalent"
+        }
+      ]
+    },
+    {
+      "class": "authenticated UI interaction or external service effect with no authorized scheduled-Chat write action",
+      "status": "UNRESOLVED_CHILD",
+      "zero_quota_substitute_candidates": [
+        {
+          "candidate": "authorized equivalent connector action",
+          "condition": "must be directly available to the executing role, materially effect-equivalent, tested, zero-manual-rescue and zero optional quota dependency"
+        },
+        {
+          "candidate": "outcome redesign onto an already-authorized role-local effect surface",
+          "condition": "must preserve the material outcome; recording an intent for a human or richer executor is not parity"
+        }
+      ]
+    },
+    {
+      "class": "durable binary artifact/storage beyond ordinary text contents",
+      "status": "UNRESOLVED_CHILD",
+      "zero_quota_substitute_candidates": [
+        {
+          "candidate": "canonical textual source representation",
+          "condition": "binary can be regenerated deterministically when the material requirement is semantic content rather than durable binary bytes"
+        },
+        {
+          "candidate": "content-addressed textual chunks plus manifest",
+          "condition": "must remain within ordinary repository-content transport limits and avoid LFS/artifact/package quotas"
+        }
+      ]
+    },
+    {
+      "class": "protected-primary/secrets/privileged authority",
+      "status": "UNRESOLVED_AND_FORBIDDEN_FOR_THIS_ROLE",
+      "zero_quota_substitute_candidates": [
+        "unprivileged outcome redesign entirely inside authorized effects",
+        "verifiable proposal/certificate only when the protected execution is not itself part of the material outcome"
+      ],
+      "hard_rule": "a protected/manual handoff never counts as Phase-1 parity"
+    }
+  ],
+  "transversal_kernel": {
+    "eliminates": ["process-memory dependency", "manual restart bookkeeping", "duplicate-retry ambiguity", "stale overwrite", "continuously-running coordinator dependency for role-local state"],
+    "does_not_eliminate": ["missing effect surfaces", "environment-sensitive arbitrary execution", "protected authority", "rate-limit latency"]
+  },
+  "next_action": "Create a role-local pending cross-run op artifact and checkpoint it without applying the op. On a later scheduled invocation, reconstruct from LATEST/role-local state, detect the pending op, run CHECK_APPLIED against authoritative HEAD, and complete/no-op it through the retry state machine."
+}
