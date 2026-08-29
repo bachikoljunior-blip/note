@@ -1,0 +1,53 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-TOMBSTONE-RETENTION-BOUND-v1",
+  "precommit_blob":"bb63f2b16880315e39a63cd53135261525b8713f",
+  "evaluated_at":"2026-08-29T21:14:05Z",
+  "mechanism_id":"ROCKSDB-RANGE-TOMBSTONE-PLUS-EXACT-OPEN-EPOCH-KEYSET",
+  "public_sources":[
+    {
+      "url":"https://github.com/facebook/rocksdb/wiki/DeleteRange",
+      "bound_semantics":"RocksDB DeleteRange represents deletion of an ordered key range as a single range tombstone rather than one point tombstone per key."
+    },
+    {
+      "url":"https://github.com/cockroachdb/pebble/blob/master/docs/rocksdb.md",
+      "bound_semantics":"A range deletion tombstone carries start/end bounds and a sequence number; keys in the covered range at older sequence numbers are treated as deleted."
+    },
+    {
+      "url":"https://guava.dev/releases/30.0-jre/api/docs/com/google/common/hash/BloomFilter.html",
+      "bound_semantics":"A Bloom filter has one-sided error: a positive containment result may be false, while a negative result is definitive for a correctly implemented filter."
+    }
+  ],
+  "chat_native_reduction":{
+    "literal_rocksdb_guava_runtime_used":false,
+    "range_mapping":"A durable finalized-through epoch marker compactly covers every origin epoch <= the marker, analogous to one ordered range tombstone replacing many point tombstones.",
+    "open_epoch_rule":"Only epochs newer than finalized-through retain exact semantic-key sets.",
+    "bloom_control":"A correct standard Bloom filter has no false negatives, so the frozen false-negative trace is a fatal implementation-corruption control rather than an expected operating case. Its permitted false positives still make it unsuitable for exact useful parity because fresh valid keys can be rejected."
+  },
+  "candidate_results":{
+    "RANGE-EXACT":"PASS",
+    "BLOOM-FIXED":"REJECT_FOR_EXACT_PARITY_DUE_TO_FALSE_POSITIVES; FALSE_NEGATIVE_CONTROL_FATAL_IF_OBSERVED",
+    "NAIVE-DROP":"FAIL_DUPLICATE_SAFETY"
+  },
+  "trace_results":[
+    {"step":1,"result":"PASS","details":"K7 origin_epoch=7 is rejected from finalized range because 7 <= 8 even after its point record is reclaimed"},
+    {"step":2,"result":"PASS","details":"fresh K9b origin_epoch=9 absent from exact open set is independently eligible"},
+    {"step":3,"result":"PASS","details":"duplicate K9 is rejected by exact epoch-9 set"},
+    {"step":4,"result":"PASS","details":"NAIVE-DROP control fails as required because old K7 cannot be distinguished after deletion"},
+    {"step":5,"result":"PASS","details":"Bloom false-negative control is fatal as frozen; standard Bloom semantics promise one-sided error so such an observation would indicate invalid/corrupted mechanism"},
+    {"step":6,"result":"PASS","details":"Bloom false-positive fresh K9b remains safety-conservative but fails exact usefulness/parity"},
+    {"step":7,"result":"PASS","details":"finalized-through may advance 8->9 only after epoch-9 obligations terminal/readback-close; exact epoch-9 key set becomes reclaimable only after durable marker readback"},
+    {"step":8,"result":"PASS","details":"transport uncertainty yields UNKNOWN and blocks credit/reclamation"},
+    {"step":9,"result":"PASS","details":"missing verifiable origin epoch is UNKNOWN/rejected; assignment label is not used as an epoch surrogate"}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS","G11":"PASS_PENDING_READBACK","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; this file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed role-local contiguous finalized-prefix trace only. It does not prove bounded storage when old epochs finalize with holes, nor claim RocksDB or Guava runtimes are accepted zero-quota execution paths."
+}
