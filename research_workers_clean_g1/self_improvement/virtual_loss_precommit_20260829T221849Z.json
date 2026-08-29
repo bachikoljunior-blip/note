@@ -1,0 +1,26 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-PENDING-EVIDENCE-VIRTUAL-LOSS-v1",
+  "precommitted_at":"2026-08-29T22:18:49.913847+00:00",
+  "predecessor":{"sequence":232,"state_blob":"3888a38bc66ad1211c9aa5839294d37960542de2","latest_blob":"6d38cd4b82f0e0f423ef2210ddc81110fbe5f2ff","credit_total":83},
+  "base_selector":"Previously validated UCB1 using only accepted terminal rewards.",
+  "reservation_rule":{"virtual_loss_lambda":0.2,"adjusted_index":"ucb_index - 0.2*pending_count","reservation_effect":"On launching an evaluation, increment durable pending_count for exact assignment+generation; this is not a reward, count, horizon increment or credit.","release":"Remove exactly one matching reservation on exact terminal readback or explicit abort; terminal reward update occurs only after matching current-generation readback."},
+  "fixed_trace":[
+    {"initial":{"A":{"n":1,"sum":0.8,"ucb":1.9774100225},"B":{"n":1,"sum":0.7,"ucb":1.8774100225},"N":2},"slot1":"select A and create reservation A@g1 pending=1"},
+    {"slot2_without_reservation":"statistics unchanged, so raw UCB selects A again","expected":"FAIL_AS_INTENDED_DUPLICATE_CONCENTRATION"},
+    {"slot2_with_virtual_loss":{"A_adjusted":1.7774100225,"B_adjusted":1.8774100225},"expected":"select B and create reservation B@g1 pending=1"},
+    {"event":"restart with A@g1 and B@g1 pending","expected":"reconstruct both reservations and adjusted indices; no reward/credit invented"},
+    {"event":"A@g1 terminal reward0.8","expected":"release A reservation exactly once; then A n=2,sum=1.6,N=3"},
+    {"event":"duplicate A@g1 terminal same semantic key","expected":"no second release and no second reward update"},
+    {"event":"abort B@g1 before terminal","expected":"release B reservation once; generation fenced/aborted; no reward update"},
+    {"event":"late B@g1 terminal reward1.0 after abort","expected":"reject stale; no pending underflow, reward update or credit"},
+    {"event":"transport-uncertain evaluation result","expected":"keep reservation pending until a separately valid abort/terminal transition; no guessed reward"}
+  ],
+  "guards":["pending reservations are durable","reservation is not reward evidence","adjusted selection score affects scheduling only","release is exact-key exactly-once","abort fences late completion","duplicate terminal is idempotent","transport uncertainty cannot synthesize terminal reward","restart preserves reservations","no external parallel executor is required for the tested logical two-slot trace","no finite optional quota","incremental monetary cost zero","public semantics bind only after precommit readback"],
+  "acceptance_rule":"PASS only if a public parallel-search mechanism uses a temporary virtual loss/reservation to discourage concurrent workers from selecting the same pending branch, and the fixed delayed-feedback trace passes unchanged. The Chat reduction tests only logical sequential scheduling of pending slots and makes no throughput/speedup claim.",
+  "credit_rule":"This precommit earns zero credit; at most one credit after terminal exact readback.",
+  "frontier_nonempty":true
+}
