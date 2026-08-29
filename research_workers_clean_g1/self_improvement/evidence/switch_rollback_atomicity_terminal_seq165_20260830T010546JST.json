@@ -1,0 +1,57 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-SWITCH-ROLLBACK-ATOMICITY-v1",
+  "precommit_blob":"a9bfa404a5c763cdccf7b5bd8e99d84e40e062f9",
+  "terminal_observed_at":"2026-08-30T01:05:46+09:00",
+  "public_mechanism":{
+    "family":"Git expected-old atomic ref update / transaction prepare-commit-abort",
+    "primary_source":"Git git-update-ref documentation",
+    "source_url":"https://git-scm.com/docs/git-update-ref.html",
+    "source_supported_core":[
+      "an update with new-oid and old-oid applies only after verifying the current ref equals old-oid",
+      "a transaction can be started, prepared, committed, or aborted",
+      "a transaction automatically aborts if its session ends without explicit commit",
+      "prepare aborts if a queued ref cannot be locked",
+      "when refs cannot all be locked with matching old values, no modifications are performed"
+    ],
+    "literal_git_cli_phase1_status":"NOT_REQUIRED_ON_ACCEPTED_ROUTE",
+    "adaptation":"Use the same expected-old/abort semantics with the role-local repository pointer CAS already available as lightweight durable transport; no Git CLI execution is required."
+  },
+  "chat_reduction_id":"CHAT-PREPARE-CAS-SWITCH-v1",
+  "chat_reduction":{
+    "prepare":"write immutable replacement checkpoint first; do not move active pointer",
+    "commit":"CAS the active role-local pointer only when its current blob equals the exact predecessor blob",
+    "abort":"CAS mismatch or write/readback failure leaves the prior pointer authoritative and gives the prepared checkpoint zero semantic credit",
+    "dedup":"a stale retry still presents the old predecessor blob and therefore cannot apply after a successful commit",
+    "readback":"new pointer must be independently read back before it is used for continuation or credit"
+  },
+  "fixed_trace_result":{
+    "initial":{"active_pointer":"A","credit_total":35},
+    "prepare_B":"B_DURABLE_POINTER_STILL_A",
+    "commit_B_wrong_expected_old":"REJECT_POINTER_A_CREDIT_UNCHANGED",
+    "commit_B_expected_old_A":"APPLY_ONCE_THEN_REQUIRE_READBACK",
+    "duplicate_commit_B_expected_old_A":"REJECT_STALE_EXPECTATION_NO_SECOND_EFFECT"
+  },
+  "candidate_scores":[
+    {"id":"RA-A","fatal":false,"score":7,"passes":["G1","G2","G5","G6","G8","G9","G10"],"fails":["G3","G4","G7"]},
+    {"id":"RA-B","fatal":false,"score":10,"passes":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"]},
+    {"id":"RA-C","fatal":false,"score":3,"passes":["G8","G9","G10"],"fails":["G1","G2","G3","G4","G5","G6","G7"]},
+    {"id":"RA-D","fatal":true,"fatal_gate":"F2","score":0}
+  ],
+  "selected_candidate":"RA-B",
+  "outcome":"PASS_PREPARE_CAS_SWITCH_ABORT_EXACT_SCOPE",
+  "credit_eligibility_after_independent_readback":1,
+  "phase1_assessment":{
+    "accepted_chat_reduction_residual_richer_mode_protected_or_user_execution_dependency":false,
+    "accepted_chat_reduction_finite_monthly_trial_paid_quota_dependency":false,
+    "accepted_chat_reduction_incremental_monetary_cost":0,
+    "accepted_chat_reduction_external_api_or_hosted_compute_dependency":false,
+    "repository_api_role":"lightweight CAS/readback transport only"
+  },
+  "scope_limit":"Constructed role-local assignment-switch commit/abort trace only. This does not establish multi-resource serializability, distributed transaction correctness, or Git ref-transaction equivalence beyond the expected-old abort property used here.",
+  "frontier_nonempty":true,
+  "exact_next_action":"After independent readback, advance once with credit_delta=1. Next leaf should test priority inversion during recovery: an older low-value pending repair must not indefinitely block a newly urgent safe assignment, while preemption must preserve resumability and cannot erase prior evidence. Precommit the comparison before any new public semantic read."
+}
