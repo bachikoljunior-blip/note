@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "retry-state-machine finite structural safety checker",
+  "material_outcome": "PASS iff the retry controller structurally routes stale/rate-limit conditions to reconstruction/wait and contains no explicit manual-rescue branch.",
+  "equivalence_scope": "This checker substitutes for a script/CI execution only for this finite declarative invariant. It does not claim arbitrary build/test equivalence.",
+  "checks": [
+    {"id":"I1","path":"states.PUBLISH_CAS.on_409","operator":"equals","expected":"RECONSTRUCT"},
+    {"id":"I2","path":"states.PUBLISH_CAS.on_403_or_429","operator":"equals","expected":"RATE_LIMIT_WAIT"},
+    {"id":"I3","path":"states.ENSURE_IMMUTABLE_OBJECTS.on_409","operator":"equals","expected":"FETCH_AND_COMPARE_OBJECT"},
+    {"id":"I4","path":"states.RECONSTRUCT.on_403_or_429","operator":"equals","expected":"RATE_LIMIT_WAIT"},
+    {"id":"I5","path":"states.ENSURE_IMMUTABLE_OBJECTS.on_403_or_429","operator":"equals","expected":"RATE_LIMIT_WAIT"},
+    {"id":"I6","path":"states.ENSURE_ROOT.on_403_or_429","operator":"equals","expected":"RATE_LIMIT_WAIT"},
+    {"id":"I7","path":"states.READBACK.on_403_or_429","operator":"equals","expected":"RATE_LIMIT_WAIT"},
+    {"id":"I8","path":"states.RATE_LIMIT_WAIT.resume","operator":"equals","expected":"RECONSTRUCT"},
+    {"id":"I9","path":"states.RATE_LIMIT_WAIT.manual_rescue","operator":"equals","expected":false},
+    {"id":"I10","path":"states.CHECK_APPLIED.if_applied","operator":"equals","expected":"DONE_NOOP"}
+  ],
+  "decision_rule": "PASS only if all ten checks pass; otherwise FAIL and report exact failed ids.",
+  "execution_requirements": "Only JSON/text fetch plus finite path lookup/comparison. No shell, build system, hosted runner, Codespaces, package registry, external API/model credit or manual user step is required."
+}
