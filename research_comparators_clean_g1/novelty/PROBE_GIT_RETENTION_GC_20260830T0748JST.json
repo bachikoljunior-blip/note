@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "role": "o_novelty_comparator",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-dedup-mechanisms",
+  "observed_at": "2026-08-30T07:48:00+09:00",
+  "frozen_authority": {
+    "note_main_sha": "4a27775eff370a98a98f51188575455193868ce0",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "downstream_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_blob": "d40255643eeb3f8a761b3036425085aae9979c16",
+    "downstream_control_revision": 35,
+    "role_config_revision": 19,
+    "transport_mode": "sha_only_exact_sha_h1_h2",
+    "bootstrap_valid": true
+  },
+  "probe_question": "Can scheduled-Chat continuation safely rely on a historical Git commit/tree after every retaining ref becomes unreachable, and which zero-cost repository-native variants preserve semantic recovery without assuming undocumented GitHub retention?",
+  "official_sources": [
+    {
+      "url": "https://git-scm.com/docs/git-prune",
+      "observation": "git prune removes objects unreachable from refs, subject to expiry and packing rules."
+    },
+    {
+      "url": "https://git-scm.com/docs/git-gc",
+      "observation": "git gc keeps objects referenced by branches, tags, reflogs and refs, while unreachable objects may be pruned after expiry; this is not a permanent-retention contract."
+    },
+    {
+      "url": "https://docs.github.com/en/enterprise-server@3.20/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository",
+      "observation": "GitHub documents that rewritten commits may remain temporarily reachable through SHA/caches/PR refs, but after all references are removed server garbage collection can expunge unreachable Git objects. Therefore SHA-only access after total dereference is not a durable availability guarantee."
+    }
+  ],
+  "local_git_probe": {
+    "environment": "local git object database; no hosted runner, Codespaces, external API credit or paid compute",
+    "cases": [
+      {
+        "case": "historical_unreachable_commit_tree",
+        "setup": "Create snapshot commit A, rewind the only active branch, expire reflogs immediately, run git gc --prune=now.",
+        "result": "A commit and its tree become unavailable to git cat-file after pruning.",
+        "pass": false,
+        "interpretation": "A bare historical SHA is not a zero-dependency retention mechanism once every retaining ref disappears and GC is allowed."
+      },
+      {
+        "case": "mutable_retaining_branch_anchor",
+        "setup": "Create branch retain -> A, rewind active branch, expire reflogs, run git gc --prune=now; then delete retain and prune again.",
+        "result": "A remains available while retain exists, then becomes unavailable after retain deletion plus GC.",
+        "pass": false,
+        "interpretation": "A mutable branch/tag anchor converts an unreachable snapshot into a reachable one but does not survive adversarial ref deletion or total same-domain rewind."
+      },
+      {
+        "case": "current_reachable_semantic_copy",
+        "setup": "Read semantic payload from A before rewind, rewind active branch, materialize the payload into a new file on a new current reachable commit, expire reflogs and prune now.",
+        "result": "Original A becomes unavailable, while the new reachable commit and copied semantic payload remain available.",
+        "pass": true,
+        "interpretation": "Copying the required semantic recovery payload into the current reachable role namespace removes dependence on old-object retention for ordinary GC/rewrite cases. It preserves semantics, not original object identity."
+      },
+      {
+        "case": "fail_closed_missing_snapshot",
+        "setup": "Treat missing historical object as unresolved and refuse reconstruction from an unverifiable substitute.",
+        "result": "Safety is preserved but liveness/outcome parity is not restored.",
+        "pass": false,
+        "interpretation": "Fail-closed handling is required but is not itself a parity-closing recovery mechanism."
+      }
+    ],
+    "raw_observations": {
+      "probe_1": {
+        "A_before": "commit",
+        "COPY_before": "commit",
+        "A_with_retain_after_gc": "commit",
+        "COPY_after_gc": "missing",
+        "A_after_delete_gc": "missing",
+        "TREE_A_after_delete_gc": "missing"
+      },
+      "probe_2": {
+        "original_A_after_gc": "missing",
+        "reachable_copy_after_gc": "commit",
+        "reachable_copy_payload": "snapshot-A semantic payload"
+      }
+    }
+  },
+  "mechanism_assessment": {
+    "retained_exact_distinct_mechanism": {
+      "mechanism_id": "CURRENT-REACHABLE-ROLE-SEMANTIC-COPY-WITH-FAIL-CLOSED-GC-BOUNDARY-v1",
+      "definition": "Before relying on a snapshot that may lose its last retaining ref, materialize the minimum verified semantic recovery payload plus source hash/provenance into the currently reachable role-local namespace, exact-read it back, and treat any later missing/mismatched historical object as fail-closed rather than assuming GitHub object retention.",
+      "tested_scope": "Local Git rewrite/GC with immediate reflog expiry and prune-now; semantic-copy preservation under a currently reachable branch; exact GitHub hosted retention duration was not assumed or measured.",
+      "zero_incremental_cost": true,
+      "finite_monthly_quota_dependency": false,
+      "residual_work_or_protected_or_manual_execution_dependency": false,
+      "root_closing": false,
+      "remaining_failure": "If the entire repository authority domain is rewound/deleted/recreated so the current semantic copy and every other monotonic witness disappear, this mechanism has no independent surviving anchor."
+    },
+    "rejected_variant": {
+      "mechanism_id": "MUTABLE-BRANCH-OR-TAG-SNAPSHOT-ANCHOR-v1",
+      "reason": "It preserves reachability only while the mutable ref remains. Deleting or rewinding every retaining ref reopens the GC-loss boundary."
+    }
+  },
+  "phase1_acceptance": false,
+  "decision_relevance": "PHASE1_WITHHELD",
+  "exact_next_candidate": "Probe a second durability domain that remains Chat-native, zero-cost and quota-independent without protected-primary/manual execution, or prove a tighter impossibility boundary. Compare same-repository pull-request refs/cached views, repository issue/comment or other non-Git durable objects if exposed within allowed write boundaries, and fail-closed dual-witness designs. Reject any route whose durability depends on undocumented cache retention, admin/support action, protected refs, paid storage/compute, or user execution."
+}
