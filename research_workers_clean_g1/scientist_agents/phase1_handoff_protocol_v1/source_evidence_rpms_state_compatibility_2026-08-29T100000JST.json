@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "role": "scientist_agents",
+  "created_at_logical": "2026-08-29T10:00:00+09:00",
+  "source": {
+    "title": "RPMS: Enhancing LLM-Based Embodied Planning through Rule-Augmented Memory Synergy",
+    "authors": ["Zhenhang Yuan", "Shenghai Yuan", "Lihua Xie"],
+    "arxiv": "2603.17831v1",
+    "submitted": "2026-03-18",
+    "primary_url": "https://arxiv.org/html/2603.17831v1"
+  },
+  "tested_scope": {
+    "alfworld": {
+      "benchmark": "ALFWorld v0.3.5",
+      "evaluation_tasks": 134,
+      "learning_tasks": 140,
+      "backbone": "Llama 3.1 8B-Instruct",
+      "single_trial": true,
+      "frozen_memory_entries_round1": 233,
+      "memory_composition": {"success": 64, "failure": 157, "verified_schema": 12}
+    },
+    "scienceworld": {
+      "benchmark": "ScienceWorld",
+      "tasks": 26,
+      "episodes": 241,
+      "backbone": "GPT-4",
+      "single_trial": true
+    }
+  },
+  "mechanism": {
+    "retrieval": "Goal-signature retrieval first produces M_cand.",
+    "pre_injection_gate": "State-Consistent Filtering (SCF) screens each recalled entry against a deterministic current belief-state signature before prompt injection.",
+    "alfworld_signature": "sigma(b_t)=(location, hand_state); compatibility requires matching hand occupancy.",
+    "scienceworld_extension": "Compatibility checks instrument availability, room match and bounded progress alignment.",
+    "arbitration": "After SCF, rules-first hard filtering removes direct rule conflicts and soft annotation marks non-direct conflicts."
+  },
+  "controlled_evidence": {
+    "memory_freeze": "After Round 1, the 233-entry ALFWorld memory is frozen before evaluation and shared across ablation conditions; no online learning occurs during evaluation.",
+    "scf_ablation": {
+      "memory_only_cost_when_disabled_pp": -3.7,
+      "full_rpms_cost_when_disabled_pp": -6.0,
+      "environment": "ALFWorld",
+      "interpretation": "With the stored memory snapshot fixed, removing retrieval-time state consistency reduces success, isolating a receiver-side applicability check more directly than prior memory-presence ablations."
+    },
+    "factorial_alfworld": {"baseline": 35.8, "memory_only": 41.0, "rules_only": 50.7, "full": 59.7},
+    "per_task_negative_transfer": {
+      "task_type": "Look",
+      "baseline": 55.6,
+      "memory_only": 11.1,
+      "full": 66.7,
+      "interpretation": "Unfiltered/ungrounded memory can be harmful on a task subset."
+    },
+    "arbitration": {"none": 47.8, "soft_only": 53.0, "hard_only": 55.2, "hard_plus_soft": 59.7},
+    "scienceworld": {"baseline": 44.9, "memory_only": 46.0, "rules_only": 51.3, "full": 54.0, "isolated_scf_off_delta_reported": false}
+  },
+  "protocol_implication": {
+    "name": "PER_DECISION_MEMORY_COMPATIBILITY_GATE",
+    "rule": "A retrieved/admitted memory is still only a candidate. Immediately before each decision-step injection, revalidate it against the current compact state signature and current compatibility policy. State or candidate-set drift invalidates cached compatibility. Empty injection is legal.",
+    "separation": "Admission/retrieval identity and per-use applicability are separate lifecycle gates."
+  },
+  "scope_limits": [
+    "The exact isolated SCF delta is reported for ALFWorld, not ScienceWorld.",
+    "ScienceWorld provides transfer evidence for the same explicit compatibility mechanism and full-system gains, but the paper does not report a numerical ScienceWorld SCF-off delta.",
+    "Different backbones are used across ALFWorld and ScienceWorld, so cross-environment score differences are not model-controlled comparisons.",
+    "No official public RPMS code repository was located in the current search; implementation-revision binding remains unresolved."
+  ],
+  "line_anchors": {
+    "method_and_filter": "arXiv HTML lines 161-192",
+    "frozen_memory_and_factorial_design": "lines 239-248",
+    "alfworld_results": "lines 263-290",
+    "scienceworld_results": "lines 291-299",
+    "scf_isolated_ablation": "Appendix C lines 434-447",
+    "scienceworld_compatibility": "lines 218-223",
+    "failure_memory_example": "Appendix F lines 975-1008 and 1050-1078"
+  }
+}
