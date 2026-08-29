@@ -1,0 +1,122 @@
+{
+  "role": "open_source",
+  "worker_revision": 46,
+  "semantic_parent_revision": 45,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "bootstrap": {
+    "first_semantic_read": "automation_control/DESIRED_STATE.json",
+    "h1_main_sha": "07bc12523465e1ae52b32003097688fffd463ed6",
+    "h2_main_sha": "07bc12523465e1ae52b32003097688fffd463ed6",
+    "enabled_desired": true,
+    "semantic_freeze": "control/config semantics frozen after stable H1/H2; later main changes observed only as SHA metadata"
+  },
+  "clean_exploration": {
+    "read_scopes": [
+      "own research_workers_clean_g1/open_source state",
+      "public OpenHands/software-agent-sdk exact v1.44.1 source",
+      "public modelcontextprotocol/rust-sdk exact rmcp-v3.1.4 source"
+    ],
+    "excluded": [
+      "O semantics",
+      "other-worker state",
+      "downstream state",
+      "legacy semantics"
+    ]
+  },
+  "execution_evidence": {
+    "openhands_r7_chain_journal_model": {
+      "artifact": "research_workers_clean_g1/open_source/artifacts/20260829T212000Z_openhands_r7_chain_journal_candidate.json",
+      "artifact_blob": "39cabc5c7fd972388d286d6974656c420c33260d",
+      "artifact_commit": "dbc6f08f2f3f781595b97de893bd55a8af328dc6",
+      "result": "19/19 PASS",
+      "classification": "source-equivalent model evidence plus exact-source-qualified design; not an upstream patch/compile/runtime crash test"
+    },
+    "rmcp_exact_source": {
+      "source": [
+        "crates/rmcp/src/task_manager.rs",
+        "crates/rmcp/src/handler/server.rs",
+        "crates/rmcp/src/handler/server/router/tool.rs",
+        "crates/rmcp/src/handler/server/tool.rs"
+      ],
+      "classification": "exact released source inspection; no implementation mutation"
+    }
+  },
+  "public_source_pins": {
+    "openhands": {
+      "repository": "OpenHands/software-agent-sdk",
+      "release": "v1.44.1",
+      "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a"
+    },
+    "rmcp": {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "release": "rmcp-v3.1.4",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056"
+    }
+  },
+  "findings": {
+    "openhands_r7_revision": {
+      "revisions": [
+        "A marker cannot be created at LocalConversation._tree_stamping: UserPromptSubmit hooks can replace a MessageEvent after that convenience stamp, constructing a fresh event without preserving id/timestamp/parent. The durable marker seam must be inside ConversationState.append_event after its authoritative _stamp_parent_id and before EventLog.append.",
+        "One-event R7 is unsound. HookEventProcessor can synchronously emit HookExecutionEvent values through original_callback before the outer action/message reaches the default callback. These nested events can all be durably appended inside one outer ConversationState save context before one deferred base_state flush. R7 must journal an ordered consecutive pending-event chain.",
+        "Each journal entry can bind expected EventLog index, final stamped event id/parent, exact event JSON digest, and a deterministic candidate base-state payload/digest for that durable prefix. Startup may recover the exact present prefix; it must never infer a markerless orphan or use unique-descendant structure as intent authority.",
+        "Fernet encryption makes independently reserialized base snapshots byte-unstable. Therefore _save_base_state must serialize once, upgrade the journal immediately before the base write with that exact payload/digest, write those exact bytes, and clean the marker only after successful write. This makes base-save-before-cleanup detectable by exact digest.",
+        "Agent-server recovery has to run immediately after ConversationLease.claim and before _scrub_persisted_credentials or LocalConversation construction. Current startup otherwise can rewrite stale base_state before repair. ConversationLease.guarded_write can fence the local marker/base writes by generation.",
+        "Recovery accepts a well-formed marker from any strictly older lease generation, not only G-1, because repeated takeovers may crash before mutating recovery state. Same-generation same-owner re-entry remains intentionally unresolved/fail-closed in the model."
+      ],
+      "model_result": "19/19 PASS",
+      "not_claimed": [
+        "upstream patch applied",
+        "type-check/compile success",
+        "upstream runtime crash regression success",
+        "generic custom FileStore safety",
+        "full machine-power-loss durability"
+      ]
+    },
+    "rmcp_persistent_backend_seam": {
+      "observations": [
+        "Stock TaskManager is a concrete Arc<Mutex<HashMap<...>>> implementation. TaskContext privately contains that same TaskManagerInner Arc<Mutex>, and spawn always creates a fresh UUIDv4. No TaskStore/create-or-get backend trait was found in the exact released source search.",
+        "ServerHandler call_tool/get_task/update_task/cancel_task are overrideable application-level methods, so a persistent task implementation is possible only by implementing/replacing task behavior at the handler/application layer rather than by swapping storage under stock TaskManager/TaskContext.",
+        "ToolRouter.call is the reusable policy/validation surface: it rejects disabled routes and runs registered extractors/argument deserialization. A custom task-capable call_tool should route normal validation/policy through ToolRouter rather than reimplementing it manually.",
+        "The generic Service dispatcher checks Tasks client capability only after call_tool returns a Task response, so that guard still cannot serve as a pre-materialization fence for a custom persistent task row.",
+        "ToolCallContext carries RequestContext, arguments, inputResponses and requestState, so a custom handler can inspect continuation identity before task materialization while still constructing the router context. This does not provide stock restart durability or idempotent create-or-get by itself."
+      ],
+      "boundary": "The smallest released seam is application-level ServerHandler + ToolRouter composition with a custom persistent task store/executor. Stock TaskManager cannot simply be pointed at durable storage while retaining TaskContext semantics. Such a resident server/store remains a strict Phase-1 unresolved executor/storage dependency."
+    }
+  },
+  "acceptance": {
+    "strict_phase1_pass": false,
+    "finite_paid_trial_monthly_hosted_quota_used": [],
+    "incremental_monetary_cost": 0,
+    "unresolved_children": [
+      "OpenHands R7 chain-journal design still needs an exact-v1.44.1 patch plus type/runtime crash tests",
+      "R7 same-owner same-generation re-entry policy remains unresolved",
+      "R7 generic custom FileStore atomicity is not guaranteed by the public FileStore contract",
+      "rmcp persistent create-or-get/redrive requires a custom resident server/store outside stock TaskManager",
+      "rmcp restart redrive still must re-enter current ToolRouter policy/validation and keep effect-side idempotency/fencing separate",
+      "external non-idempotent effects remain unsafe under lease/generation takeover without downstream idempotency/CAS/fencing"
+    ]
+  },
+  "mutation_scope": {
+    "written": [
+      "research_workers_clean_g1/open_source/artifacts/20260829T212000Z_openhands_r7_chain_journal_candidate.json",
+      "this checkpoint",
+      "own LATEST and immutable own execution receipt after this checkpoint"
+    ],
+    "untouched": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "shared execution ledger state",
+      "other-worker/downstream/legacy state",
+      "public upstream repositories",
+      "scheduler state"
+    ]
+  },
+  "termination": {
+    "reason": "current run checkpoint after exhausting the source-qualified R7 journal leaf and isolating the released rmcp persistent-backend seam; frontier remains nonempty"
+  },
+  "frontier": {
+    "exact_continuation": "Against OpenHands/software-agent-sdk@9d143aac, draft the exact minimal state.py/event_service.py patch for the post-stamp pre-append chain journal plus pre-base-write exact-payload upgrade and startup-first recovery; then source-check it against existing hook, fork/navigation, lease, credential-scrub and conversation-restore tests and add exact pytest candidates. In parallel, against rmcp-v3.1.4, trace the generated tool_handler/router call path and RequestStateCodec/RequestContext principal binding to write a compile-qualified custom ServerHandler skeleton that performs side-effect-free preflight, current ToolRouter validation/policy, persistent create-or-get, and tasks/get/update/cancel without relying on stock TaskManager; keep resident store/redriver and effect-side idempotency as unresolved Phase-1 children."
+  }
+}
