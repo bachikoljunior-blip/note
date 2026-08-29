@@ -1,0 +1,157 @@
+{
+  "role": "open_source",
+  "worker_revision": 45,
+  "semantic_parent_revision": 43,
+  "diagnostic_parent_revision": 44,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "bootstrap": {
+    "first_semantic_read": "automation_control/DESIRED_STATE.json",
+    "h1_main_sha": "0edce5844b59d2e3bf860bad8ec931a193b9e8f6",
+    "h2_main_sha": "0edce5844b59d2e3bf860bad8ec931a193b9e8f6",
+    "root_blob_sha": "481660d2e47bea3c07a8b7c73a4e9149cbcb5b9a",
+    "config_blob_sha": "3aeff28669d43ec7976cb57f7041e20eca4fe21e",
+    "enabled_desired": true,
+    "revision_44_diagnostic_superseded": true,
+    "note": "This run used the SHA-only refs/heads/main transport required by control/config, fetched root/config at exact H1, and re-read SHA-only H2 immediately before semantic work. Later main reads were SHA metadata only."
+  },
+  "clean_exploration": {
+    "read_scopes": [
+      "own research_workers_clean_g1/open_source state",
+      "public OpenHands/software-agent-sdk exact-source release",
+      "public modelcontextprotocol/rust-sdk exact-source release"
+    ],
+    "excluded": [
+      "O",
+      "other-worker state",
+      "downstream state",
+      "legacy semantics"
+    ]
+  },
+  "execution_evidence": {
+    "openhands_r7_quarantined_model_rerun": {
+      "artifact": "research_workers_clean_g1/open_source/artifacts/20260829T161500Z_openhands_r7_atomic_store_boundary_harness.py",
+      "result": "8/8 PASS",
+      "classification": "source-equivalent model evidence only; de-quarantined because it reproduced under valid bootstrap; not an upstream patch/compile/runtime test",
+      "covered": [
+        "crash before write preserves old snapshot",
+        "crash after atomic write preserves new snapshot",
+        "crash before marker cleanup leaves new snapshot plus recoverable marker",
+        "happy-path cleanup",
+        "non-atomic store rejected before write",
+        "tearing generic write can yield invalid/torn JSON",
+        "generation mismatch fails closed",
+        "digest mismatch fails closed"
+      ]
+    },
+    "rmcp_task_boundary_model": {
+      "artifact": "research_workers_clean_g1/open_source/artifacts/20260829T190505Z_rmcp_stock_vs_persistent_task_boundary_harness.py",
+      "result": "10/10 PASS",
+      "classification": "source-equivalent boundary model; not a stock rmcp implementation",
+      "covered": [
+        "stock lost CreateTaskResult plus blind retry creates different task IDs",
+        "stock server restart loses process-memory task",
+        "persistent create-or-get recovers same caller-stable handle",
+        "same operation ID with different intent fails closed",
+        "persistent backing survives restart",
+        "create-before-schedule orphan remains observable but not live",
+        "restart redrive can claim a durable row",
+        "concurrent claim has one winner",
+        "stale completion is rejected after generation takeover",
+        "attempt generation alone does not make an external non-idempotent effect exactly once"
+      ]
+    }
+  },
+  "public_source_pins": {
+    "rmcp": {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "release": "rmcp-v3.1.4",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056"
+    },
+    "openhands": {
+      "repository": "OpenHands/software-agent-sdk",
+      "release": "v1.44.1",
+      "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+      "tree": "a0a6838c88d733bb8e4d67985d657fb65d82b51d",
+      "pin_correction": "Previous attribution of this SHA to OpenHands/OpenHands was wrong. The exact v1.44.1 commit resolves in OpenHands/software-agent-sdk; the release commit itself changes openhands-sdk/openhands-agent-server/openhands-tools/openhands-workspace versions from 1.44.0 to 1.44.1."
+    }
+  },
+  "findings": {
+    "rmcp_stock_task_manager": {
+      "exact_source": [
+        "crates/rmcp/src/task_manager.rs",
+        "crates/rmcp/src/handler/server.rs",
+        "examples/servers/src/common/task_demo.rs"
+      ],
+      "observations": [
+        "TaskManager stores TaskEntry values in Arc<Mutex<HashMap<...>>> process memory.",
+        "spawn() creates a fresh UUIDv4 task ID for each call, inserts the entry, then starts tokio::spawn.",
+        "shutdown() drains the in-memory map.",
+        "The released stock source exposes no caller-stable create_or_get/with_id TaskManager primitive and no TaskStore abstraction in the inspected task manager source.",
+        "ServerHandler task protocol methods are overrideable, so this is a stock-manager boundary, not a claim that persistent custom task handling is impossible.",
+        "The bundled TaskDemo task branch checks client Tasks capability itself, manually parses slow_sum arguments, and calls TaskManager.spawn directly; synchronous fallback uses ToolRouter. Generic response capability rejection is therefore not a pre-materialization fence for application-created tasks."
+      ]
+    },
+    "three_axis_task_safety": {
+      "axes": [
+        "handle recovery / creation idempotency",
+        "execution liveness / restart redrive",
+        "external-effect duplicate safety"
+      ],
+      "conclusion": "A persistent task row plus monotonic claim generation can recover a handle and reject stale terminal writes, but it cannot by itself prevent a stale attempt from duplicating an already-started non-idempotent external effect after takeover. The effect boundary still needs a stable idempotency key or an atomic CAS/fencing mechanism."
+    },
+    "openhands_v1_44_1_r7_source_validation": {
+      "exact_source": [
+        "openhands-sdk/openhands/sdk/conversation/state.py",
+        "openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py",
+        "openhands-sdk/openhands/sdk/io/base.py",
+        "openhands-sdk/openhands/sdk/io/local.py",
+        "openhands-sdk/openhands/sdk/utils/files.py"
+      ],
+      "observations": [
+        "ConversationState.append_event() appends the event first and then assigns leaf_event_id for non-ConversationStateUpdateEvent events.",
+        "_save_base_state() serializes the current ConversationState and writes BASE_STATE, using _write_guard when configured.",
+        "Public field assignment after autosave is enabled either marks _dirty inside a state context or immediately calls _save_base_state outside it; non-HEAD state changes can also invoke the state-change callback.",
+        "ConversationState.__exit__ flushes a dirty state when the outermost save context exits; the flush is not conditioned on exc_type being None.",
+        "LocalConversation's default callback calls state.append_event(e) before assigning last_user_message_id for a real user MessageEvent. Both assignments occur while the state context lock is held, so their base snapshot is deferred until context exit.",
+        "When no FileStore is supplied and persistence_dir is configured, ConversationState.create selects LocalFileStore; without persistence_dir it falls back to InMemoryFileStore.",
+        "LocalFileStore.write uses atomic_write_text for string payloads.",
+        "atomic_write_text writes a temp file in the destination directory, flushes and fsyncs that file, then os.replace()s it over the target.",
+        "atomic_write_text does not fsync the parent directory after os.replace(), so the inspected source supports process-crash atomic replacement evidence but is not proof of full power-loss durability.",
+        "The abstract FileStore.write contract requires writing contents but does not require atomic replacement, crash durability, or a capability flag. Therefore a recovery helper that requires one-shot BASE_STATE replacement cannot soundly assume every custom FileStore has LocalFileStore semantics."
+      ],
+      "r7_candidate_scope": "Keep R7 as a design/source-equivalent candidate: pure marker/event/generation validation without public state mutation; construct the final base snapshot off-object; perform one guarded one-shot BASE_STATE write only on a backend with an explicit atomic-replace capability; synchronize validated primitive in-memory bookkeeping without triggering public __setattr__ autosave/callback; then clean the marker. A generic custom FileStore lacking such capability should fail closed. No upstream implementation/compile/runtime success is claimed."
+    }
+  },
+  "acceptance": {
+    "strict_phase1_pass": false,
+    "finite_paid_trial_monthly_hosted_quota_used": [],
+    "incremental_monetary_cost": 0,
+    "unresolved_children": [
+      "stock rmcp TaskManager does not provide server-restart durability or caller-stable create-or-get",
+      "a custom persistent task server/store remains a resident executor/storage dependency under the strict zero-residual-executor criterion",
+      "create-before-schedule orphan redrive still needs a durable claim/redrive path that re-enters the full current policy/validation pipeline",
+      "attempt generations do not make external effects exactly once without effect-side idempotency/CAS/fencing",
+      "OpenHands R7 remains source/design evidence and still needs a concrete exact-v1.44.1 implementation plus upstream/runtime crash regression tests",
+      "custom FileStore atomicity is not part of the public FileStore contract"
+    ]
+  },
+  "mutation_scope": {
+    "written": [
+      "research_workers_clean_g1/open_source/artifacts/20260829T190505Z_rmcp_stock_vs_persistent_task_boundary_harness.py",
+      "this checkpoint",
+      "own LATEST and immutable own receipt after this checkpoint"
+    ],
+    "untouched": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy state",
+      "public upstream repositories",
+      "scheduler state"
+    ]
+  },
+  "frontier": {
+    "exact_continuation": "First preserve the corrected OpenHands v1.44.1 repo pin. Then build an exact-source R7 patch/test candidate against OpenHands/software-agent-sdk@9d143aac that introduces an explicit atomic-snapshot recovery seam or fails closed on FileStore backends without that capability; include marker-before-event, event-before-base-save, base-save-before-marker-cleanup, navigation/fork stale-marker, generation/digest mismatch, and non-atomic custom-store negatives. In parallel, inspect released rmcp-v3.1.4 for the smallest custom ServerHandler/router seam that can bind a server-minted RequestState logical operation identity to persistent create-or-get and restart redrive while preserving current router policy/validation; do not count a resident custom server/store or effect without downstream idempotency as Phase-1 pass."
+  }
+}
