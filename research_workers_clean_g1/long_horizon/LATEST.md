@@ -1,9 +1,12 @@
 # Long Horizon clean_g1 — latest pointer
 
-Provisional Phase-1 recurring-boundary evidence for this role-local branch:
-`research_workers_clean_g1/long_horizon/phase1/RECURRING_BOUNDARY_RESULT.md`
+Authoritative latest checkpoint for this role-local Phase-1 branch:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_RECURRING_BOUNDARY_ABA.md`
 
-Frozen authority for this semantic invocation:
+Immediate predecessor Phase-1 checkpoint:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T1102JST_PHASE1_CONTINUATION_GUARD.md`
+
+Frozen authority:
 - transport: `exact_blob_two_pass`
 - root control revision/blob: `26` / `481660fb6008a57cea162da38439cf115c8d7ebe`
 - own role control/config revision/blob: `16` / `7` / `41984ccfed213f739f005db5a772baef4a8c711f`
@@ -11,10 +14,17 @@ Frozen authority for this semantic invocation:
 - `bootstrap_valid=true`
 
 Current result:
-- A later scheduled-Chat invocation reconstructed the prior branch checkpoint and created a set-once resume-consumption claim; duplicate claim creation was rejected.
-- Live ABA sequence `A1 -> B2 -> A3` retained monotonic authority; stale A1 CAS replay was rejected HTTP 409 although the semantic payload had returned to A.
-- An eight-case synthetic forecast trace compared point versus p90/slack switching; p90 removed three missed overruns on the declared trace at the cost of two extra switches.
-- Persisted rate-limit controls cover repeated 429, explicit/missing Retry-After, restart before not_before, deterministic bounded backoff, exhausted-retry switch/defer, and quota-zero dependency inventory.
-- No richer-mode/manual/protected-primary execution step or finite monthly/trial/paid compute credit is used by the tested route; lightweight repository transport remains rate-limit-aware.
+- True later-invocation reconstruction succeeded from the prior role-local checkpoint.
+- A set-once resume-consumption claim was created/read back; duplicate creation was rejected HTTP 422.
+- Prior-invocation `LATEST` blob advanced once by exact CAS; stale replay of that old blob was rejected HTTP 409 and readback retained the new pointer.
+- Live ABA `A1 -> B2 -> A3` retained monotonic sequence/generation; stale A1 replay was rejected HTTP 409 even though semantic payload returned to A.
+- Synthetic eight-case forecast calibration: point rule missed 3 overruns with 0 unnecessary switches; p90/slack missed 0 with 2 unnecessary switches, within this declared trace only.
+- Persisted rate-limit trace covers repeated 429, explicit/missing Retry-After, restart-stable not-before/backoff, retry exhaustion switch/defer, slack-triggered switching and a zero-optional-quota dependency inventory.
+- Accepted route uses no richer-mode/Work/protected-primary/manual execution step, hosted runner, finite monthly/trial/paid compute credit, or optional quota-bearing rescue; incremental monetary cost is zero. Lightweight repository state transport remains rate-limit-aware.
 
-Immediate next action: finalize the stale-pointer CAS replay against this `LATEST.md`, then write the immutable full checkpoint and advance this pointer once more with a current-blob CAS.
+Exact continuation:
+1. Deterministically resolve authority if multiple role-local Phase-1 branches exist, without using protected main as arbiter.
+2. Promote the advisory rate-limit trace to a live persisted multi-invocation state-transition probe.
+3. Test interruption after resume-claim creation but before pointer advancement, and the converse pointer-advanced/receipt-missing case.
+4. Begin predeclared forecast calibration from repeated own scheduled-Chat duration observations.
+5. Preserve exact scope and a nonempty frontier; `global_completion=false`.
