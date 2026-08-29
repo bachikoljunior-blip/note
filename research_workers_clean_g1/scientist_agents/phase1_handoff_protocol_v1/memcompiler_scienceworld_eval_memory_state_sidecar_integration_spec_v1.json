@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "name": "MEMCOMPILER_SCIENCEWORLD_EVAL_MEMORY_STATE_SIDECAR_INTEGRATION_V1",
+  "status": "reference_integration_spec_not_upstream_patch",
+  "purpose": "Make future ScienceWorld evaluation claims about fixed retrieved memory, same-M comparisons and selected-memory effects replay-auditable without changing the receiver prompt or policy behavior.",
+  "upstream_binding": {
+    "repository": "air-embodied-brain/MemCompiler",
+    "revision": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
+    "eval_path": "tasks/eval_with_trained_model.py",
+    "eval_blob": "d4631f3b7a0ed05a83c5080009d9ec347766a55d",
+    "memory_path": "core/memory/core_memory/memcompiler.py",
+    "memory_blob": "a8d11466aaa5276ef3dc3a37d7ca7f23290a23b0",
+    "message_path": "core/memory/common.py",
+    "message_blob": "005e5f6d17cf8f7a9b58f57d6d8ca78d35b9f19a"
+  },
+  "behavior_preservation_constraints": [
+    "Do not change retrieval query text, successful_topk, failed_topk, insight_topk, threshold, task-graph traversal or LLM reranking prompts/settings.",
+    "Do not add provenance IDs or digests to task_memory strings, Manager prompts, Executor prompts or model-visible trajectory text.",
+    "Do not change UPDATE_MEMORY behavior; record it explicitly instead.",
+    "Do not sort/reorder the actual retrieved candidates for execution. Any sorting used for snapshot canonicalization must operate only on copied provenance records.",
+    "Do not change environment seeds, ScienceWorld task/variation/simplification, reset calls, action ordering, model sampling or checkpoint loading.",
+    "A provenance-write failure must not be silently interpreted as evidence for same-M or same-selected-memory claims."
+  ],
+  "run_level_fields": {
+    "source_revision": "exact Git revision",
+    "eval_source_blob_sha256_or_git_blob": "exact eval implementation blob",
+    "memory_source_blob_sha256_or_git_blob": "exact memory implementation blob",
+    "scienceworld_package_version": "installed distribution version",
+    "scienceworld_runtime_artifact_sha256": "exact wheel/sdist/JAR bundle digest where available",
+    "test_jsonl_blob_or_sha256": "exact ScienceWorld test manifest bytes",
+    "model_artifact_revision": "immutable model repository revision",
+    "model_weights_sha256": "exact weights digest",
+    "update_memory": "effective boolean, not source-code default inferred later",
+    "memory_persist_directory": "logical run-local identifier; do not rely on mutable path name as identity",
+    "memory_snapshot_pre_run_sha256": "canonical snapshot digest before first evaluation episode",
+    "retrieval_config_sha256": "canonical digest of retrieval hyperparameters plus reranker/model identity",
+    "run_condition_id": "full/AMMI/no-memory/etc. exact condition label and implementation revision"
+  },
+  "memory_snapshot_canonicalization": {
+    "minimum_main_memory": "Read main_memory.get() into a provenance-only copy containing ids, documents and metadatas. Canonicalize each record as {backend_id, page_content_sha256, canonical_metadata_sha256}; sort the copied records by backend_id and hash the canonical JSON list.",
+    "retrieval_affecting_auxiliary_state": "Also bind task-layer graph and any insight-layer state used by retrieval/reranking. A digest of main_memory alone is insufficient if task-graph or insight state can change candidate selection.",
+    "canonical_json": "UTF-8, sorted keys, separators=(',', ':'), ensure_ascii=false.",
+    "privacy_and_context": "Persist hashes/IDs in the sidecar; raw memory text may stay in the normal DB/artifact store. Do not inject snapshot metadata into the model context."
+  },
+  "per_episode_fields": {
+    "episode_id": "stable task + variation identifier",
+    "task_query_sha256": "digest of the exact query_task bytes passed to retrieve_memory",
+    "memory_snapshot_pre_retrieval_sha256": "snapshot immediately before the one episode-start retrieval",
+    "retrieval_config_sha256": "run-level retrieval config digest",
+    "ordered_candidates": "for every returned success/failure memory item, preserve returned order and record receiver-visible content digest plus persistent backend ID when available; record insight identities/digests separately",
+    "candidate_pool_sha256": "digest of the ordered returned-candidate identity/content records exactly as delivered to the episode",
+    "task_memory_prompt_sha256": "digest of exact model-visible task_memory rendering, if a renderer is used",
+    "compiler_step_records": "per step: observation/state digest, selector/compiler revision, compiler output/guidance digest, executor input digest, and selected persistent record ID only if explicit selection can be observed without changing behavior",
+    "memory_update_event": "whether memory.add_memory executed after the episode, canonical inserted-content digest, and post-update memory snapshot digest",
+    "memory_snapshot_post_episode_sha256": "snapshot after all update/backward effects for the episode"
+  },
+  "backend_identity_capture": {
+    "observed_gap": "Current retrieval converts Chroma Documents to MASMessage metadata and drops backend IDs before returning.",
+    "preferred_hook": "Instrument the retrieval layer on a provenance-only branch at the point where each Document still has access to storage identity, or query a copied backend result mapping that binds returned Document content/metadata to the corresponding backend ID without altering result ordering.",
+    "fallback": "If exact backend ID cannot be obtained without changing retrieval behavior, record canonical receiver-visible content digests and classify evidence only as same-content, not same-persistent-record."
+  },
+  "claim_tiers": [
+    {
+      "tier": "fixed_within_episode_pool",
+      "requirements": "one episode-start retrieval plus no re-retrieval or mutation of the returned task_memory object during that episode",
+      "does_not_imply": "same underlying memory bank across episodes or conditions"
+    },
+    {
+      "tier": "same_returned_pool_content_across_conditions",
+      "requirements": "same task/query/retrieval config and identical ordered candidate receiver-content digests for the paired conditions",
+      "does_not_imply": "same persistent backend records when duplicate/equivalent records may exist"
+    },
+    {
+      "tier": "same_persistent_backend_pool_across_conditions",
+      "requirements": "identical ordered backend IDs + content digests, compatible pre-retrieval memory snapshot, and bound update/freeze policy",
+      "does_not_imply": "same per-step selected member if compilation selection is implicit"
+    },
+    {
+      "tier": "same_selected_identity_receiver_effect",
+      "requirements": "all prior bindings plus identical selected persistent record, compiled guidance and pre-effect executor state; only receiver effect differs",
+      "does_not_imply": "scientific generalization beyond the tested environment/task distribution"
+    }
+  ],
+  "current_public_output_gap": "Count-only task_memory_summary cannot satisfy any cross-condition same-M claim above fixed-within-episode pool. It must not be upgraded to candidate identity evidence.",
+  "historical_boundary": "This sidecar makes future runs auditable. It cannot retroactively bind the reported Table-3 run to the current public runner, UPDATE_MEMORY setting, local DB path or candidate pool without a separate author-published bridge artifact.",
+  "generic_residual_capability_boundary": null,
+  "next_action": "Search public model/dataset/repository history for a Table-3 bridge containing the ScienceWorld memory DB or candidate-pool/run manifest. If absent, treat the future-run instrumentation route as specified and continue searching for another science-domain system with already-published selected-memory identities and fixed-bank matched ablation."
+}
