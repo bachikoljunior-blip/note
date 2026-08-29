@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "name": "external-effect retryability/idempotency gate",
+  "purpose": "Prevent the role-local CAS/event kernel from being incorrectly generalized into exactly-once external side effects.",
+  "public_sources": [
+    {
+      "title": "AWS Builders' Library: Making retries safe with idempotent APIs",
+      "url": "https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/",
+      "relevance": "AWS describes the ambiguity after a timeout, safe retries via caller-provided request identifiers, and the need for the service-side idempotency record plus mutation to be atomic."
+    },
+    {
+      "title": "Google Cloud: Idempotency",
+      "url": "https://cloud.google.com/discover/idempotency",
+      "relevance": "Repeated idempotent requests have the same final effect; non-idempotent creates need explicit idempotency logic/keys for safe retry."
+    }
+  ],
+  "indistinguishability_negative_result": {
+    "setup": "Local durable state contains INTENT(op_id, params) and no RECEIPT. The role calls a non-idempotent external create/effect that exposes neither an idempotency key nor a queryable stable effect identity. The invocation loses the response or stops before recording a receipt.",
+    "world_0": "The remote effect did not execute.",
+    "world_1": "The remote effect executed exactly once, but the local role did not observe/record the result.",
+    "local_observation_on_recovery": "Identical in world_0 and world_1: intent present, receipt absent.",
+    "if_retry": "world_1 can execute the effect twice, violating at-most-once.",
+    "if_do_not_retry": "world_0 can leave the effect unexecuted, violating at-least-once.",
+    "conclusion": "Repository CAS/idempotency state alone cannot guarantee exactly-once for such an opaque non-idempotent external effect. A richer/manual reconciliation step would not be an accepted Phase-1 solution, so this effect class remains unresolved until the downstream surface supplies safe identity/reconciliation semantics."
+  },
+  "acceptance_classes": [
+    {
+      "class": "NATURALLY_IDEMPOTENT",
+      "criterion": "Repeating the same effect request has no additional material side effect.",
+      "retry_rule": "Retry after reconstruction/backoff; record receipt after authoritative observation."
+    },
+    {
+      "class": "SERVER_IDEMPOTENCY_KEY",
+      "criterion": "Downstream accepts a caller-stable idempotency/client request token and duplicate requests with the same token do not repeat the logical effect.",
+      "retry_rule": "Persist op_id before call; reuse exactly the same downstream idempotency token on every retry; record returned effect identity/result."
+    },
+    {
+      "class": "QUERY_RECONCILABLE_STABLE_IDENTITY",
+      "criterion": "Effect is created/updated under a deterministic unique resource identity that can be queried after ambiguity, or duplicate create returns a stable conflict that can be fetched and compared.",
+      "retry_rule": "On ambiguous/crash recovery, query deterministic identity first; reuse if semantically equal, otherwise checkpoint conflict."
+    },
+    {
+      "class": "OPAQUE_NON_IDEMPOTENT_CREATE",
+      "criterion": "No idempotency token, no natural idempotence and no reliable query by a caller-stable identity.",
+      "retry_rule": "UNRESOLVED: do not claim exactly-once parity."
+    }
+  ],
+  "live_positive_example": {
+    "surface": "GitHub repository contents create/update inside the authorized role-local namespace",
+    "classification": "QUERY_RECONCILABLE_STABLE_IDENTITY + CAS",
+    "evidence": "Deterministic content path can be fetched after a 409 and compared; mutable HEAD update requires the previously fetched blob SHA. r132/r133 observed both deterministic retry and stale-writer 409 behavior."
+  },
+  "effect_wrapper_protocol": [
+    "RECONSTRUCT authoritative role-local HEAD/intent.",
+    "If receipt/result for op_id is already authoritative, DONE_NOOP.",
+    "Classify downstream action under this gate before first execution.",
+    "Persist immutable INTENT with stable op_id and canonical parameters.",
+    "Execute only if class is naturally idempotent, server-idempotency-key, or query-reconcilable stable identity; otherwise leave unresolved.",
+    "After timeout/interruption, reconcile/query or retry with the identical downstream key according to the class; never mint a new logical key for the same op_id.",
+    "Persist immutable RECEIPT/effect identity then CAS-publish completion.",
+    "A receipt write failure is safe only because the downstream action is already retry/reconcile safe."
+  ],
+  "phase1_impact": {
+    "strengthens": "the existing state/orchestration kernel into a safe wrapper for compatible connector effects",
+    "falsifies": "the assumption that durable local op_ids alone make every external side effect exactly-once",
+    "residual_manual_or_richer_dependency": false,
+    "quota_dependency": "none added; each candidate connector still needs its own zero-optional-quota assessment",
+    "incremental_monetary_cost": 0
+  },
+  "exact_next_action": "Before promoting any connector-based effect substitute in the effect-class matrix, require it to pass this idempotency gate and the role's write-authority boundary. Prefer an authorized stable-resource update as the next live effect test; keep opaque create actions unresolved."
+}
