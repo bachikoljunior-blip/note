@@ -1,0 +1,94 @@
+{
+  "assignment": "phase1-clean-open-source-chat-capability-patterns",
+  "classifier_updates": [
+    "DIRECT_TASK_BRANCH_BYPASSES_ROUTER_GATE",
+    "CUSTOM_META_ID_TRANSPORT_ONLY",
+    "SIGNED_REQUEST_STATE_CREATE_OR_GET_CANDIDATE",
+    "LOCALFILESTORE_ATOMIC_SNAPSHOT_SCOPE",
+    "GENERIC_FILESTORE_ATOMICITY_UNPROVEN"
+  ],
+  "continuation": [
+    "For rmcp-v3.1.4, inspect TaskManager/ServerHandler task method override points to determine whether a shared preflight can preserve ToolRouter disabled/extractor/MRTR semantics without duplicating policy, and model restart redrive separately from creation idempotency.",
+    "For OpenHands v1.44.1, design the smallest dedicated internal recovery helper that builds a snapshot from validated overrides, performs one guarded LocalFileStore atomic write, and silently syncs leaf_event_id/head_is_empty/last_user_message_id; add source-qualified regression candidates for before-write, after-replace-before-memory-sync, cleanup retry, navigation/fork conflict, and custom non-atomic FileStore rejection.",
+    "Keep external-effect duplicate safety separate from task-handle recovery and attempt liveness."
+  ],
+  "control_revision": 26,
+  "created_at_utc": "2026-08-29T10:10:33Z",
+  "executed_artifacts": [
+    {
+      "kind": "SOURCE_EQUIVALENT_MODEL",
+      "path": "research_workers_clean_g1/open_source/artifacts/20260829T101033Z_rust_task_policy_parity_harness.py",
+      "result": "13/13 PASS",
+      "sha256": "555370f91f467e0e6420aab2e232420cb5829f7a0d3c546d5e83fd302b03fbf4"
+    }
+  ],
+  "findings": [
+    {
+      "boundary": "This is a structural policy/configuration parity gap, not a claim that the shipped demo is exploitable by default. If a route is disabled in ToolRouter, a direct task branch must independently recheck the same gate or route through a shared preflight before spawn.",
+      "classification": "PARTIAL",
+      "evidence": "TaskDemo.call_tool checks slow_sum+client task capability and directly parses args then TaskManager.spawn before the fallback ToolRouter.call path. ToolRouter.call independently enforces its disabled-route set.",
+      "id": "RUST_TASK_DIRECT_BRANCH_ROUTER_PARITY_GAP"
+    },
+    {
+      "boundary": "Correlation IDs and caller-supplied _meta can transport identity but are not documented durable idempotency or authorization authority.",
+      "classification": "UNPROVEN_AS_AUTHORITY",
+      "evidence": "RequestContext exposes JSON-RPC RequestId and arbitrary meta; CallToolRequestParams exposes request_state.",
+      "id": "RUST_REQUEST_CONTEXT_ID_META_TRANSPORT_ONLY"
+    },
+    {
+      "boundary": "Not stock rmcp behavior. Requires custom persistent server/store; resident external runtime remains an unresolved strict Phase-1 child.",
+      "classification": "PROVED_IN_SOURCE_EQUIVALENT_MODEL_ONLY",
+      "evidence": "13/13 local stdlib model fixtures pass: side-effect-free preflight, current-policy recheck, method/tool/args/principal/expiry integrity binding, atomic create-or-get, lost-response same-handle recovery, and negative mismatch/tamper/revocation cases.",
+      "id": "SIGNED_REQUEST_STATE_CREATE_OR_GET_CANDIDATE"
+    },
+    {
+      "boundary": "Exact v1.44.1 does not expose a dedicated public/supported 'serialize validated overrides + one snapshot + silent in-memory sync' recovery primitive. R7 should add a dedicated internal helper rather than perform recovery through public __setattr__.",
+      "classification": "PARTIAL",
+      "evidence": "ConversationState public field writes autosave immediately or mark dirty inside its context; __exit__ flushes dirty state. LocalConversation default callback append_event advances HEAD then sets last_user_message_id, so both bookkeeping mutations can be deferred until context exit after the event file append. _save_base_state serializes self and writes under the configured write guard.",
+      "id": "OPENHANDS_R7_EXACT_SNAPSHOT_SEAM_REFINED"
+    },
+    {
+      "boundary": "FileStore.write interface itself does not promise atomic replacement, so the R7 one-snapshot guarantee cannot be generalized to arbitrary custom FileStore backends without an explicit atomic-write contract/capability. atomic_write_text does not fsync the parent directory after replace, so do not upgrade this to full power-loss durability evidence.",
+      "classification": "PROVED_FOR_LOCALFILESTORE_PROCESS_CRASH_SCOPE",
+      "evidence": "LocalFileStore.write(str) uses atomic_write_text, which writes a temp file, flushes+fsyncs the file, then os.replace()s it. ConversationState.create selects LocalFileStore when persistence_dir is supplied and no custom FileStore is injected.",
+      "id": "OPENHANDS_LOCALFILESTORE_ATOMIC_REPLACE_SCOPE"
+    }
+  ],
+  "mutation_scope": {
+    "edited_desired_state": false,
+    "edited_other_worker_state": false,
+    "edited_role_config": false,
+    "edited_upstream_repo": false,
+    "own_namespace_only": true
+  },
+  "public_exact_pins": {
+    "openhands": {
+      "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+      "release": "v1.44.1",
+      "repo": "OpenHands/software-agent-sdk"
+    },
+    "rust_sdk": {
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "release": "rmcp-v3.1.4",
+      "release_date": "2026-08-20",
+      "repo": "modelcontextprotocol/rust-sdk"
+    }
+  },
+  "role": "open_source",
+  "role_config_revision": 6,
+  "schema_version": 1,
+  "scope": "CLEAN role-local state + public exact-release sources only",
+  "status": "active",
+  "strict_phase1_assessment": {
+    "incremental_monetary_cost": 0,
+    "phase1_pass": false,
+    "quota_bearing_features_used": false,
+    "unresolved_children": [
+      "Persistent rmcp create-or-get/redrive needs a resident/custom server and durable store outside native scheduled Chat execution.",
+      "OpenHands R7 remains an exact-source patch/test candidate, not an applied+executed upstream patch.",
+      "Arbitrary FileStore atomic snapshot semantics are not guaranteed by the base interface."
+    ]
+  },
+  "termination": "runtime/tool budget boundary; recurring research remains active with exact nonempty continuation",
+  "worker_revision": 40
+}
