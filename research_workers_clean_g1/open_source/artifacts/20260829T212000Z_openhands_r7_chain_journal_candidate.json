@@ -1,0 +1,95 @@
+{
+  "role": "open_source",
+  "artifact_kind": "source_qualified_design_and_model_evidence",
+  "created_at": "2026-08-29T21:20:00Z",
+  "source_pin": {
+    "repository": "OpenHands/software-agent-sdk",
+    "release": "v1.44.1",
+    "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a"
+  },
+  "status": {
+    "upstream_patch_applied": false,
+    "upstream_compiled": false,
+    "upstream_runtime_crash_tested": false,
+    "source_equivalent_model_executed": true,
+    "model_result": "19/19 PASS"
+  },
+  "exact_source_findings": [
+    "Event.id is created when the immutable Event model is instantiated; parent_id may still be None at that point.",
+    "ConversationState.append_event performs the authoritative _stamp_parent_id(event) immediately before EventLog.append, then advances leaf_event_id/head_is_empty after the event file write.",
+    "LocalConversation's outer _tree_stamping is only a convenience stamp: UserPromptSubmit hooks can replace a MessageEvent after that outer stamp. The replacement constructor does not preserve id, timestamp, or parent_id, so an R7 marker created before hooks would bind the wrong event identity/lineage. The marker seam therefore has to be inside ConversationState.append_event after its authoritative stamp and before EventLog.append.",
+    "HookEventProcessor can synchronously emit HookExecutionEvent values through original_callback before the outer ActionEvent/MessageEvent reaches original_callback. Because those nested events are appended inside the same outer ConversationState context, multiple event files can be durable before the single deferred base_state save. A one-event marker is therefore insufficient; R7 requires a consecutive pending-event chain journal.",
+    "ConversationState.__exit__ writes the dirty base snapshot at the outermost state context, even when the context exits with an exception.",
+    "EventService.start claims the conversation lease before _scrub_persisted_credentials, constructs LocalConversation only later, and injects the ConversationState/EventLog write guard after construction. Pending-event recovery therefore has to be the first conversation-state operation immediately after lease claim, before credential scrub and before LocalConversation construction, or stale base_state can be rewritten before repair.",
+    "ConversationLease.guarded_write holds the lease lock while checking owner/generation and during the yielded disk write. Marker/base recovery and marker cleanup can therefore be fenced by the same generation on the agent-server local-filesystem path."
+  ],
+  "candidate_protocol": {
+    "marker_path": "one fixed pending-event commit journal per conversation; exact final path TBD in patch",
+    "prepare_event_seam": "Inside ConversationState.append_event, after _stamp_parent_id and immediately before EventLog.append, invoke a private pre-append hook configured by agent-server. The hook atomically writes/extends the pending journal under the current lease guard.",
+    "chain_entry": [
+      "expected contiguous EventLog index",
+      "final stamped event_id and parent_id",
+      "sha256 of the exact event JSON bytes EventLog is about to write",
+      "candidate base_state JSON payload after deterministic append_event HEAD bookkeeping and, for a real user MessageEvent, last_user_message_id bookkeeping",
+      "sha256 of that candidate base payload"
+    ],
+    "common_marker_fields": [
+      "schema version",
+      "writer lease generation",
+      "sha256 of the raw base_state.json present before the first event in the unsaved chain",
+      "ordered event entries",
+      "optional exact-save payload and sha256, populated at base-save time"
+    ],
+    "base_save_upgrade": "In ConversationState._save_base_state, serialize the payload once. Before writing base_state, invoke a private pre-base-write hook that upgrades the existing journal with that exact serialized payload and digest; then write that same payload. Only after a successful base write invoke the post-base-write hook that removes the marker. This avoids false mismatch from Fernet's randomized ciphertext because the journal and base write share exactly the same serialized bytes.",
+    "startup_first_operation_recovery": [
+      "Claim lease and obtain current generation.",
+      "Before credential scrub or LocalConversation construction, read the marker, raw base_state, and the marker-bound event files under the lease guard.",
+      "Require a well-formed marker from a strictly older generation for takeover recovery; same-generation same-owner retry remains a separate liveness policy decision and is not accepted by the model.",
+      "Verify that marker entries correspond to an exact consecutive prefix of event files. Digest, event id, parent, non-prefix presence, malformed chain, or base conflict fails closed.",
+      "If zero marker events exist and raw base digest is the recorded old digest, this is marker-before-event crash: remove marker only.",
+      "If an exact event prefix exists but base-save phase never started and raw base is still old, write the last present entry's candidate base payload, then remove marker.",
+      "If the journal contains an exact-save payload, require every journal event to exist. If raw base is old, write the journal's exact-save payload; if raw base already has its exact digest, cleanup only; any other base fails closed.",
+      "Never infer/adopt a markerless orphan event. A marker-bound event may coexist with older markerless orphan siblings because the marker, not unique-descendant structure, carries commit intent."
+    ]
+  },
+  "why_chain_not_single_marker": "HookExecutionEvent emissions can be nested before the outer hooked event and all append inside one deferred state-save context. A fixed marker that only describes the latest event loses the recoverable prefix when a crash occurs after an earlier nested event is durable but before the next event write. The journal keeps per-event candidate snapshots so recovery can commit the exact durable prefix.",
+  "fernet_boundary": "Cipher.encrypt uses Fernet.encrypt, which is randomized. Therefore precomputing a final encrypted base JSON and later comparing it to a separately reserialized successful base write is unsound. The candidate upgrades the journal with the exact payload bytes produced by _save_base_state immediately before writing those same bytes.",
+  "model_fixtures": [
+    "marker-before-event clears marker and leaves old base",
+    "event-before-base-save recovers one event",
+    "nested chain crash before second event commits exact first prefix",
+    "nested chain with all events recovers last candidate including hook state",
+    "pre-base-write journal upgrade recovers exact final payload",
+    "base-save-before-cleanup performs cleanup only",
+    "event digest mismatch fails closed",
+    "navigation/fork stale-marker base conflict fails closed",
+    "same/future generation fails closed",
+    "marker generation G is recoverable at G+N after repeated pre-recovery crashes",
+    "markerless orphan is not adopted",
+    "non-prefix event presence fails closed",
+    "save-phase marker with missing event fails closed",
+    "candidate base payload digest mismatch fails closed",
+    "recovery base-write failure preserves marker",
+    "cleanup failure is idempotently recoverable next generation",
+    "exact-save payload digest mismatch fails closed",
+    "marker-bound event can coexist with an older markerless orphan",
+    "malformed marker fails closed"
+  ],
+  "model_execution": {
+    "result": "19/19 PASS",
+    "runtime": "stdlib-only Python source-equivalent model executed in this run",
+    "note": "A non-fatal spreadsheet-runtime warmup warning was emitted by the notebook environment after the subprocess completed; the harness process itself exited 0 and printed RESULT 19/19 PASS."
+  },
+  "source_candidate_delta": [
+    "state.py: add private before-event-append, before-base-write, and after-base-write hooks plus internal setters; call the event hook after authoritative parent stamp and before EventLog.append; call base hooks around the exact payload write.",
+    "event_service.py: add local pending-journal read/write/recover helpers using atomic_write_text/unlink under ConversationLease.guarded_write; invoke recovery immediately after claim and before _scrub_persisted_credentials; install state hooks after LocalConversation construction and write-guard injection.",
+    "tests: extend lease/startup tests with nested HookExecutionEvent plus outer user/action event crash windows, marker-before-event, prefix recovery, exact-save-before-write, base-before-cleanup, repeated generation takeover, navigation/fork conflict, digest/parent corruption, markerless orphan, and cleanup retry."
+  ],
+  "unresolved": [
+    "No upstream patch has been applied, type-checked, compiled, or executed against v1.44.1.",
+    "The exact marker filename/schema and cleanup error policy still need implementation-level review.",
+    "Same-owner same-generation restart/re-entry policy is intentionally fail-closed in the model and needs a source-level decision.",
+    "Generic SDK custom FileStore remains outside this agent-server local-filesystem candidate; its FileStore contract does not guarantee atomic replacement.",
+    "The candidate covers process-crash consistency on the inspected local write primitives; it does not claim full machine-power-loss durability because parent-directory fsync is not established."
+  ]
+}
