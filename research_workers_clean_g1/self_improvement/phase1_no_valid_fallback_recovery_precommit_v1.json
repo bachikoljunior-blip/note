@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id": "ROOTV4-NO-VALID-FALLBACK-RECOVERY-v1",
+  "precommitted_at": "2026-08-29T10:10:12-09:00",
+  "source_semantics_read_before_precommit": false,
+  "purpose": "Test safe recovery when current probationary authority B is disqualified and prior authority A is no longer valid for the current scope, so rollback to A would itself be unsafe.",
+  "mechanism_placeholder": "quarantine plus bounded alternate-candidate reselection with acceptance tests and authority generations",
+  "fixed_scope": "Constructed role-local controller trace only; no distributed-election or production availability claim.",
+  "initial_state": {
+    "scope_id": "S2",
+    "authority": "B",
+    "authority_epoch": 21,
+    "B_status": "PROBATIONARY",
+    "B_rollback_qualified": true,
+    "A_status": "HISTORICAL_LAST_KNOWN_GOOD",
+    "A_scope_valid": false,
+    "alternate_candidates": ["C", "D"]
+  },
+  "recovery_rule": "If B is disqualified while A is scope-invalid, do not restore A. Enter QUARANTINED_NO_AUTHORITY at a fresh epoch, preserve A/B evidence immutably, and test alternates in fixed order C then D. Promote the first alternate with unique same-scope terminal acceptance evidence that is durably sealed/read back. If no alternate passes, remain quarantined with a nonempty frontier rather than claiming completion.",
+  "bounded_trace": [
+    {"step": 1, "event": "B rollback qualification with A_scope_valid=false", "expected": "reject rollback-to-A; enter QUARANTINED_NO_AUTHORITY; epoch=22"},
+    {"step": 2, "event": "late B completion carrying epoch 21", "expected": "reject stale completion; remain quarantined epoch 22"},
+    {"step": 3, "event": "candidate C nonterminal or scope-mismatched evidence", "expected": "C fails acceptance; no authority transfer"},
+    {"step": 4, "event": "candidate D unique same-scope terminal acceptance evidence", "expected": "after seal/readback promote D; epoch=23"},
+    {"step": 5, "event": "late A/B/C completion carrying epoch <=22", "expected": "reject stale completion; authority remains D epoch 23"},
+    {"step": 6, "event": "control branch where neither C nor D passes", "expected": "remain QUARANTINED_NO_AUTHORITY with frontier_nonempty=true and zero new credit"}
+  ],
+  "guards": {
+    "G1": "scope-invalid A is never restored merely because B failed",
+    "G2": "B failure advances to an explicit no-authority quarantine state before reselection",
+    "G3": "A and B evidence remain immutable history",
+    "G4": "alternate order C then D is fixed before public source audit",
+    "G5": "only unique same-scope terminal evidence can pass alternate acceptance",
+    "G6": "nonterminal, scope-mismatched, duplicate, or transport failures cannot promote an alternate",
+    "G7": "alternate promotion occurs only after durable terminal seal/readback",
+    "G8": "authority epoch advances on quarantine and again on successful alternate promotion",
+    "G9": "old-epoch completions cannot mutate current authority",
+    "G10": "if all bounded alternates fail, controller remains unresolved with nonempty frontier rather than false completion",
+    "G11": "terminal artifact must be independently read back before any credit",
+    "G12": "accepted route has zero residual richer/protected/manual execution, zero finite optional monthly/trial/paid quota dependency, and zero incremental monetary cost"
+  },
+  "acceptance": "PASS only if G1-G12 all hold on the fixed trace after public-source mechanism binding. No post-source rubric edits.",
+  "credit_rule": "Precommit earns zero credit. At most one new role-local credit may be added only after terminal artifact readback.",
+  "frontier_if_terminal": "Choose another non-conflicting switching/recovery failure mode; preserve unresolved no-alternate branch as a child if the public mechanism requires an external executor or quota-bearing runtime."
+}
