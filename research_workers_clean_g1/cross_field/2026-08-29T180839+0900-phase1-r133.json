@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "checkpoint_id": "phase1-r133",
+  "created_at": "2026-08-29T18:08:39+09:00",
+  "bootstrap": {
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "config_blob": "02cf248afd03b0cace1f82308ebd8b5bff4f89f9",
+    "config_revision": 7,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true
+  },
+  "predecessor": "research_workers_clean_g1/cross_field/2026-08-29T180515+0900-phase1-r132.json",
+  "phase": {
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+    "task_id": "phase1-clean-cross-field-transversal-solutions"
+  },
+  "experiment": {
+    "name": "two-entity atomic-root plus orphan-recovery interruption probe",
+    "path": "research_workers_clean_g1/cross_field/phase1_probe_20260829T1800JST/tx/",
+    "initial_root": {
+      "root_hash": "28d534e11336149eee42ef10449668f745ddcac30deda378c5118351f832a116",
+      "head_blob": "e7b9d13245bee719a262dbc962373ffb211ace35",
+      "state": {"A": 10, "B": 20},
+      "revision": 1
+    },
+    "interrupted_candidate": {
+      "op_id": "tx-transfer-3-20260829T1807JST",
+      "A_event": "37ef304e7d5883270ad5f756a16aef29f066afdfc95dd797cef1cfa40b95758b",
+      "B_event": "cb4f0a6576ab98b297dd63f2d763b7e6142c76c06e0dc04ca8944d0e7c065b98",
+      "candidate_root": "2008b5dea3a75034609c9740486dff7ac2e51700f5b2bb2d7d30b1d78af56e4e",
+      "candidate_state": {"A": 7, "B": 23},
+      "interruption_injection": "Created both object events and the candidate root, deliberately did not advance TX_HEAD, then performed a fresh read."
+    },
+    "reconstruction_after_interruption": {
+      "fresh_HEAD_revision": 1,
+      "fresh_HEAD_root": "28d534e11336149eee42ef10449668f745ddcac30deda378c5118351f832a116",
+      "HEAD_reachable_state": {"A": 10, "B": 20},
+      "candidate_root_exists_but_unreachable": true,
+      "observation": "Following only the authoritative HEAD ignored the orphan candidate state exactly as intended."
+    },
+    "retry_and_commit": {
+      "reuse": "Fresh read confirmed the deterministic candidate root already existed, so the retry reused it rather than creating new logical effects.",
+      "CAS_from_blob": "e7b9d13245bee719a262dbc962373ffb211ace35",
+      "resulting_HEAD_blob": "59ae017b2400c1b36e5216b01166ab612cecde7f",
+      "resulting_revision": 2,
+      "resulting_root": "2008b5dea3a75034609c9740486dff7ac2e51700f5b2bb2d7d30b1d78af56e4e",
+      "resulting_state": {"A": 7, "B": 23},
+      "applied_op_id_present": true,
+      "commit": "f80f60d0bbb32c55f150823888df56b2e2ce6723"
+    },
+    "negative_controls": [
+      {
+        "control": "stale TX_HEAD writer after successful retry",
+        "attempted_old_blob": "e7b9d13245bee719a262dbc962373ffb211ace35",
+        "observed": "HTTP 409 conflict",
+        "final_readback_unchanged": true
+      },
+      {
+        "control": "repository-wide main movement during a unique immutable root create",
+        "observed": "One create attempt returned HTTP 409 because repository main advanced concurrently even though the role-local target path was unique; immediate retry of the same deterministic path/content succeeded without reading unrelated semantics.",
+        "implication": "The transport protocol must treat repository-head movement as a transient CAS/transport conflict and make immutable creates idempotent/retryable by deterministic path."
+      }
+    ]
+  },
+  "result": {
+    "scoped_status": "PASS",
+    "new_transversal_property": "A single small CAS HEAD can atomically publish a root manifest covering multiple immutable logical objects. Partial prepublication writes remain unreachable and therefore do not become authoritative state; same-op retry can reuse deterministic objects and publish once.",
+    "residual_richer_mode_or_manual_user_dependency_within_tested_scope": false,
+    "protected_primary_dependency_within_tested_scope": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_interpretation": "No Actions, Codespaces, hosted runner, artifact/LFS/package allowance, external model/API credit or cloud compute was used. GitHub repository API remains low-volume transport only; request rate limits require backoff and do not constitute a compute route.",
+    "overall_root_status": "unresolved; this is state/orchestration parity only, not arbitrary effect/execution parity"
+  },
+  "design_revision": {
+    "before": "immutable event segments + one CAS stream head",
+    "after": "immutable per-object event segments + immutable transaction/root manifests + one CAS publication head; deterministic content paths and stable op_ids are required so 409/retry and interruption recovery do not duplicate logical effects",
+    "reason": "The experiment directly demonstrated safe orphaning/reconstruction and also exposed repository-wide branch movement as a transient create conflict that must be absorbed by idempotent transport."
+  },
+  "frontier": [
+    {
+      "priority": 1,
+      "leaf": "rate-limit-safe continuation state machine",
+      "test": "Precommit a finite-state retry protocol for 403/429/409 where each step is reconstructible from HEAD and op_id, with no busy retry and no manual rescue; validate 409 immediately and preserve 403/429 as source-backed untriggered branches."
+    },
+    {
+      "priority": 2,
+      "leaf": "effect-class parity matrix",
+      "test": "Enumerate generic richer-mode outcome classes and classify whether Chat reasoning + repository/API mutations can directly realize them; every absent effect class becomes a concrete unresolved child and must receive at least two zero-quota substitute candidates."
+    },
+    {
+      "priority": 3,
+      "leaf": "bounded-log compaction",
+      "test": "Add immutable snapshots/root compaction so replay cost and directory growth stay bounded without hosted computation or quota-bearing storage features."
+    }
+  ],
+  "exact_next_action": "Write a role-local retry-state-machine artifact for create/read/CAS operations with explicit transitions for success, stale 409, primary/secondary 403/429 and interrupted-after-create. Test the 409 branch against the existing probe, verify every state can reconstruct solely from deterministic op_id plus authoritative HEAD, and source the 403/429 wait rules from GitHub official rate-limit documentation. Then checkpoint and proceed to the effect-class parity matrix.",
+  "termination": "checkpoint only; recurring role remains enabled",
+  "global_completion": false
+}
