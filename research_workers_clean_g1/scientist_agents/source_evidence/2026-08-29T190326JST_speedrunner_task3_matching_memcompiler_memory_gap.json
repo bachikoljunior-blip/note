@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T19:03:26+09:00",
+  "generation": "clean_g1",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
+  "authority": {
+    "frozen_main_sha": "014b548b09666700ee52894030ffcdf1ba4d1c98",
+    "frozen_root_path": "automation_control/DESIRED_STATE.json",
+    "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "frozen_role_config_path": "automation_control/roles/scientist_agents.json",
+    "frozen_role_config_blob": "84d968713c9aa5537ba690521715e1b340fbd9d1",
+    "config_revision": 5,
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "source_scope": "Public primary repository artifacts only. No O/O-derived state, other worker state, downstream state, shared execution ledger, other-role receipts, or legacy/pre-independence semantic state were used.",
+  "sources": [
+    {
+      "id": "speedrunner_current_public_scienceworld_ablation_surface",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "artifacts": [
+        {
+          "path": "configs/scienceworld/asi-replay-gpt-t3.yaml",
+          "blob": "195604cf737810ab7afdf3a3dd812b3a92e16615"
+        },
+        {
+          "path": "configs/scienceworld/asi-gpt-t3t4.yaml",
+          "blob": "5532872eebb8659ad1bde8634953fe7eb1f93b39"
+        },
+        {
+          "path": "src/speedrunner/benchmarks/scienceworld/scienceworld_env.py",
+          "blob": "697f56633ca999a12537998962a64ce4bb5b6af3"
+        },
+        {
+          "path": "src/speedrunner/core/rollout.py",
+          "blob": "09986e039f121a481738d5c96d906235c7949bd1"
+        },
+        {
+          "path": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+          "blob": "1359d8b5759e5fc1f00e4df41d1b9774ab735419"
+        }
+      ],
+      "observations": [
+        "The dedicated replay arm uses method=asi, GPT-5.4-mini for both rollout and sleep agents, train_size=200, test_size=30, wake_cycle_length=1, eval_every=50, task_id=[3], and allow_replay=true.",
+        "The public no-replay GPT config uses the same model/reasoning/request-limit/server/train/test/wake/eval settings, with allow_replay=false and task_id=[3,4].",
+        "ScienceWorld make_data uses seed=42 by default and, for list task IDs, processes families in list order using one local random.Random(seed). For each family it shuffles that family's train/dev/test lists and immediately slices them before moving to the next family.",
+        "Because family 3 is first in both [3] and [3,4], the sequence of RNG operations applied to family 3 is identical before any family-4 operation. Under this current code, the 200 family-3 training records and 30 family-3 test records selected for the two configs are therefore identical by construction, assuming the same ScienceWorld task/variation enumeration from the same environment build.",
+        "Evaluate._eval_subsets_for_rollout_count groups list-task test records by task_family_id and emits task-specific labels. For train_size=200, task 3 is selected at rollout counts 50, 100, 150, and at the 200 boundary alongside task 4; run_for_rollout_count evaluates each selected family separately.",
+        "The ASISleep implementation selects different system prompts depending on allow_replay. With replay enabled, the model must submit one scripted test trajectory per successful task and receives the submit_test_trajectory tool. With replay disabled, that requirement/tool is absent. Replay then executes the proposed scripts against a fresh environment and retains the proposed codebook only if all replay checks pass; no-replay commits after static validation alone."
+      ],
+      "inferences": [
+        "The current public ScienceWorld configs are more tightly matched for task-3 data and periodic evaluation than a surface comparison of task_id=[3] versus [3,4] suggests. The future task-4 family need not contaminate the task-3 metric under the current evaluator because task-family metrics are separated.",
+        "This closes a current-config dataset/evaluation confound but does not bind the historical Figure-12 runs to this exact source revision or prove that the plotted raw task-3 series came from these files.",
+        "The current allow_replay implementation is not a proposal-frozen admission-only intervention: it changes the induction prompt and tool contract before candidate functions are generated, then additionally changes post-generation replay admission. Therefore current implementation evidence cannot establish same-candidate-bytes causal isolation for replay verification alone."
+      ],
+      "uncertainty": [
+        "No historical Figure-12 run identifier, raw task_id_3 metric files, candidate function bytes, scripted replay inputs/transcripts, or per-proposal accept/revert records were located in the inspected current public repository surface.",
+        "The initial public source commit containing these configs is dated 2026-08-14, after the paper submission; Git chronology does not bind the paper-time evaluated revision."
+      ]
+    },
+    {
+      "id": "memcompiler_initial_public_scienceworld_runtime_state_surface",
+      "repository": "air-embodied-brain/MemCompiler",
+      "revision": "d09a5462f5af6f19478c3f8dedb0b9c4d36dac1a",
+      "artifacts": [
+        {
+          "path": "tasks/run_manager_executor_scienceworld.py",
+          "blob": "4ddc67bb814da355ced8027bf8577f6942739e66"
+        },
+        {
+          "path": "data/sciworld/test.jsonl",
+          "blob": "035e0feca0d33eb22190a65799b96dcd421b3d61"
+        },
+        {
+          "path": ".gitignore",
+          "blob": "9e92455752734e5ebbe5a440d88e03f37618f1b2"
+        }
+      ],
+      "observations": [
+        "The initial public source tree already contained the ScienceWorld environment, prompts, test JSONL and run_manager_executor_scienceworld.py; the ScienceWorld harness was not introduced only by the later May-29 evaluation-documentation commit.",
+        "The initial ScienceWorld runner points MEMCOMPILER_PATH to ./output/memcompiler, defaults UPDATE_MEMORY=true, and expects persistent Chroma/runtime state outside source files.",
+        "The same initial revision's .gitignore excludes *.db, output*/, .db*/, *.log and *.zip. Thus the repository source history intentionally omits the runtime memory database and ordinary run outputs.",
+        "The current webpage branch contains static documentation/assets, including rendered result images, but no raw memory database or run manifest in its versioned tree."
+      ],
+      "inferences": [
+        "The absence of a Table-3-bound ScienceWorld memory snapshot is not just a missing filename in current main: the initial public architecture routes persistent memory/output state into paths explicitly excluded from Git. Source-tree identity can therefore bind harness code and the public test file but not the evaluated persistent memory-bank bytes.",
+        "A valid Table-3 provenance bridge must come from a separately archived Chroma/memory snapshot, run manifest, release/supplementary bundle, or equivalent artifact that binds those runtime bytes to the evaluated model/source/config; repository proximity alone is insufficient."
+      ],
+      "uncertainty": [
+        "The initial public source revision postdates the paper-time evaluation and is not itself proof of the exact evaluated revision or UPDATE_MEMORY setting used for Table 3.",
+        "No Table-3-bound ScienceWorld persistent memory DB, ordered candidate-pool snapshot, selected-record identities, or canonical run manifest was located on the inspected Git branches."
+      ]
+    }
+  ],
+  "scope_guards": [
+    "Current-code deterministic task-3 subset matching is a source-level derivation, not historical-run provenance. Do not promote it to a claim that the published Figure-12 raw runs used identical realized data unless a run/source manifest binds them.",
+    "Separate task-family metric emission prevents an obvious task4 aggregation confound in the current evaluator, but does not recover missing raw Figure-12 values or run identity.",
+    "SpeedRunner paper-level 'all other components unchanged' language remains paper-level matched-method evidence; current implementation still changes proposal-generation semantics when replay is enabled.",
+    "MemCompiler source/harness presence is not evaluated-memory-state identity because the persistent state path is explicitly outside versioned source.",
+    "Neither audit is a Phase-1 live-experiment route: both are public evidence audits with zero incremental monetary cost and no optional hosted-compute/API-credit dependency in the accepted evidence path."
+  ]
+}
