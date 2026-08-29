@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id": "ROOTV4-CHECKER-MUTATION-HOLDOUT-v1",
+  "precommitted_at": "2026-08-29T10:14:27-09:00",
+  "source_semantics_read_before_precommit": false,
+  "purpose": "Test whether the checker pair selected by the prior four-mutant calibration still detects faults on a separate holdout mutation set that is not used to select the pair.",
+  "mechanism_placeholder": "selection/holdout separation for checker calibration",
+  "fixed_scope": "Constructed role-local holdout trace only. Holdout separation reduces direct calibration overfitting in this trace but does not prove general fault independence.",
+  "selection_binding": {
+    "selection_artifact": "research_workers_clean_g1/self_improvement/phase1_checker_mutation_calibration_terminal_v1.json",
+    "selection_artifact_blob": "a59c502c00fccd0ddac4c665d4fa4d02b33667bf",
+    "selected_pair": ["Q1_DIRECT", "Q2_RELATION"],
+    "selection_mutants": ["M1_SCOPE", "M2_RELATION", "M3_STALE", "M4_DUPLICATE"],
+    "rule": "Do not change the selected pair after seeing holdout outcomes."
+  },
+  "holdout_mutants": {
+    "H1_SCOPE_RELATION": "paired observation has a scope inconsistency that direct scope validation should detect while relation check may also reject",
+    "H2_STALE_ONLY": "otherwise plausible candidate completion carries a stale authority/checker generation",
+    "H3_RELATION_ONLY": "direct terminal outcome appears acceptable but the paired relation/invariant is violated"
+  },
+  "predeclared_holdout_kill_matrix": {
+    "Q1_DIRECT": {"H1_SCOPE_RELATION":"KILL","H2_STALE_ONLY":"KILL","H3_RELATION_ONLY":"SURVIVE"},
+    "Q2_RELATION": {"H1_SCOPE_RELATION":"KILL","H2_STALE_ONLY":"SURVIVE","H3_RELATION_ONLY":"KILL"},
+    "Q1_COPY": {"H1_SCOPE_RELATION":"KILL","H2_STALE_ONLY":"KILL","H3_RELATION_ONLY":"SURVIVE"}
+  },
+  "holdout_acceptance_rule": "The frozen selected pair passes holdout only if its union kills H1-H3 and each checker contributes at least one holdout kill not supplied by the other. A pair failure cannot be repaired by changing the pair or holdout set after observation.",
+  "fixed_trace": [
+    {"step":1,"pair":"Q1_DIRECT + Q2_RELATION","expected":"holdout union kills H1-H3; Q1 uniquely kills H2; Q2 uniquely kills H3"},
+    {"step":2,"control_pair":"Q1_DIRECT + Q1_COPY","expected":"fails holdout because H3 survives and there is no differential holdout kill"},
+    {"step":3,"candidate":"J","Q1_DIRECT":"PASS","Q2_RELATION":"PASS","expected":"J may be promoted only after selection artifact, holdout artifact, and both candidate checks are durably read back"},
+    {"step":4,"event":"late completion from pre-holdout checker generation","expected":"reject stale completion; no authority mutation"},
+    {"step":5,"control":"selected pair fails any holdout requirement","expected":"pair becomes ineligible; remain unresolved with frontier_nonempty=true and zero credit; no reselection on this holdout"
+    }
+  ],
+  "guards": {
+    "G1":"selection pair is frozen from the prior calibration before holdout evaluation",
+    "G2":"holdout mutant set and expected kill matrix are frozen before public source audit",
+    "G3":"holdout outcomes cannot be used to retroactively change the selected pair",
+    "G4":"selected Q1_DIRECT + Q2_RELATION must kill H1-H3 in union",
+    "G5":"each selected checker must contribute at least one unique holdout kill",
+    "G6":"Q1_DIRECT + Q1_COPY control must fail holdout eligibility",
+    "G7":"candidate J still requires both same-scope terminal checker PASS results in addition to holdout eligibility",
+    "G8":"all required artifacts must be sealed/read back before promotion or credit",
+    "G9":"transport failures, duplicates, UNKNOWN, scope mismatch, or stale generations never count as PASS",
+    "G10":"failed holdout leaves the controller unresolved without tuning on the holdout set",
+    "G11":"terminal leaf artifact must be independently read back before any role-local credit",
+    "G12":"accepted route has zero residual richer/protected/manual execution, zero finite optional monthly/trial/paid quota dependency, and zero incremental monetary cost"
+  },
+  "acceptance": "PASS only if G1-G12 hold after public-source mechanism binding; no post-source pair or holdout edits.",
+  "credit_rule": "Precommit earns zero credit; at most one credit after terminal readback.",
+  "frontier_if_terminal": "Select another non-conflicting switching/recovery failure mode; preserve the limitation that one finite holdout set cannot establish generalization to arbitrary unknown faults."
+}
