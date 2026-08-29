@@ -1,0 +1,313 @@
+*** Source-qualified patch candidate only; not applied or compiled upstream. ***
+*** Target: OpenHands/software-agent-sdk v1.44.1 commit 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a ***
+*** Goal: fence event-file -> persisted-HEAD crash recovery without inferring intent from orphan descendants. ***
+*** Scope: candidate for the Agent Server local/single-writer lease path; preserve current unmatched-Action repair. ***
+
+diff --git a/openhands-sdk/openhands/sdk/conversation/persistence_const.py b/openhands-sdk/openhands/sdk/conversation/persistence_const.py
+index 0000000..0000000 100644
+--- a/openhands-sdk/openhands/sdk/conversation/persistence_const.py
++++ b/openhands-sdk/openhands/sdk/conversation/persistence_const.py
+@@
+ BASE_STATE = "base_state.json"
+ EVENTS_DIR = "events"
++PENDING_HEAD_COMMITS_DIR = "pending_head_commits"
+ # Accept 5+ digits: the writer pads to a 5-digit minimum but does not cap width.
+ EVENT_NAME_RE = re.compile(
+     r"^event-(?P<idx>\d{5,})-(?P<event_id>[0-9a-fA-F\-]{8,})\.json$"
+ )
+
+diff --git a/openhands-sdk/openhands/sdk/conversation/state.py b/openhands-sdk/openhands/sdk/conversation/state.py
+index 0000000..0000000 100644
+--- a/openhands-sdk/openhands/sdk/conversation/state.py
++++ b/openhands-sdk/openhands/sdk/conversation/state.py
+@@
++import hashlib
+ import json
+ import threading
+ from collections.abc import Callable, Sequence
+-from contextlib import AbstractContextManager
++from contextlib import AbstractContextManager, nullcontext
+@@
+-from openhands.sdk.conversation.persistence_const import BASE_STATE, EVENTS_DIR
++from openhands.sdk.conversation.persistence_const import (
++    BASE_STATE,
++    EVENTS_DIR,
++    PENDING_HEAD_COMMITS_DIR,
++)
+@@
+     AgentErrorEvent,
++    MessageEvent,
+     ObservationEvent,
+     UserRejectObservation,
+ )
+@@
+ class ConversationState(OpenHandsModel):
+@@
+     head_is_empty: bool = Field(default=False)
++
++    # Monotonic generation of a successfully-written base_state.json snapshot.
++    # This is internal persistence metadata, not a conversation-tree revision.
++    # It lets crash recovery distinguish a still-pending HEAD marker from a
++    # marker whose corresponding/newer base snapshot already committed but
++    # whose cleanup was interrupted.
++    persistence_generation: int = Field(default=0, ge=0)
+@@
+     def set_write_guard(
+         self,
+         write_guard: Callable[[], AbstractContextManager[None]] | None,
+     ) -> None:
+         self._write_guard = write_guard
+         self._events.set_write_guard(write_guard)
++
++    @staticmethod
++    def _head_event_digest(event: Event) -> str:
++        # EventLog.append persists exactly model_dump_json(exclude_none=True).
++        payload = event.model_dump_json(exclude_none=True)
++        return hashlib.sha256(payload.encode()).hexdigest()
++
++    @staticmethod
++    def _head_marker_path(event_id: EventID) -> str:
++        return f"{PENDING_HEAD_COMMITS_DIR}/{event_id}.json"
++
++    def _write_pending_head_marker(self, event: Event) -> None:
++        marker = {
++            "schema_version": 1,
++            "base_generation": self.persistence_generation,
++            "expected_leaf_event_id": self.leaf_event_id,
++            "expected_head_is_empty": self.head_is_empty,
++            "event_id": event.id,
++            "parent_id": event.parent_id,
++            "event_sha256": self._head_event_digest(event),
++        }
++        guard = nullcontext() if self._write_guard is None else self._write_guard()
++        with guard:
++            self._fs.write(
++                self._head_marker_path(event.id),
++                json.dumps(marker, sort_keys=True, separators=(",", ":")),
++            )
++
++    def _delete_obsolete_head_markers(
++        self, fs: FileStore, committed_generation: int
++    ) -> None:
++        # Best-effort cleanup only. If the process dies after the base snapshot
++        # write but before deletion, recovery observes marker.base_generation <
++        # persisted persistence_generation and discards it without reapplying.
++        for path in fs.list(PENDING_HEAD_COMMITS_DIR):
++            try:
++                marker = json.loads(fs.read(path))
++                if int(marker["base_generation"]) < committed_generation:
++                    fs.delete(path)
++            except Exception:
++                logger.warning(
++                    "Could not clean pending HEAD marker %s; "
++                    "leaving it for fail-closed startup reconciliation.",
++                    path,
++                    exc_info=True,
++                )
++
++    def reconcile_pending_head_commits(self) -> list[EventID]:
++        """Finish only an exact marker-bound event->HEAD commit chain.
++
++        This intentionally does *not* adopt a unique log descendant merely
++        because it exists. Marker identity, the persisted raw HEAD state,
++        event parent and exact event digest must all agree. Multiple candidates
++        from the same expected HEAD fail closed, preserving intentional forks.
++
++        Callers that use an external writer lease must install set_write_guard()
++        before invoking this method.
++        """
++        marker_paths = self._fs.list(PENDING_HEAD_COMMITS_DIR)
++        if not marker_paths:
++            return []
++
++        pending: dict[EventID, tuple[str, dict[str, object]]] = {}
++        for path in marker_paths:
++            marker = json.loads(self._fs.read(path))
++            marker_generation = int(marker["base_generation"])
++            if marker_generation < self.persistence_generation:
++                # A later base snapshot definitely committed; this is cleanup
++                # residue, not an unapplied event->HEAD transition.
++                guard = (
++                    nullcontext()
++                    if self._write_guard is None
++                    else self._write_guard()
++                )
++                with guard:
++                    self._fs.delete(path)
++                continue
++            if marker_generation > self.persistence_generation:
++                raise ValueError(
++                    "Pending HEAD marker has a future persistence generation"
++                )
++
++            event_id = str(marker["event_id"])
++            if event_id not in self._events:
++                # Marker-before-event crash: no durable event exists to adopt.
++                guard = (
++                    nullcontext()
++                    if self._write_guard is None
++                    else self._write_guard()
++                )
++                with guard:
++                    self._fs.delete(path)
++                continue
++
++            event = self._events[self._events.get_index(event_id)]
++            if event.parent_id != marker.get("parent_id"):
++                raise ValueError(
++                    f"Pending HEAD marker parent mismatch for event {event_id}"
++                )
++            if self._head_event_digest(event) != marker.get("event_sha256"):
++                raise ValueError(
++                    f"Pending HEAD marker digest mismatch for event {event_id}"
++                )
++            pending[event_id] = (path, marker)
++
++        adopted: list[EventID] = []
++        while pending:
++            candidates = [
++                event_id
++                for event_id, (_, marker) in pending.items()
++                if marker.get("expected_leaf_event_id") == self.leaf_event_id
++                and bool(marker.get("expected_head_is_empty"))
++                == self.head_is_empty
++            ]
++            if not candidates:
++                break
++            if len(candidates) != 1:
++                raise ValueError(
++                    "Ambiguous pending HEAD commit chain; refusing to choose a branch"
++                )
++
++            event_id = candidates[0]
++            event = self._events[self._events.get_index(event_id)]
++            self.leaf_event_id = event_id
++            if self.head_is_empty:
++                self.head_is_empty = False
++            if isinstance(event, MessageEvent) and event.source == "user":
++                self.last_user_message_id = event.id
++            adopted.append(event_id)
++            pending.pop(event_id)
++
++        if pending:
++            raise ValueError(
++                "Pending HEAD marker is not reachable from the exact persisted HEAD"
++            )
++
++        if adopted:
++            # Commit reconstructed HEAD/last_user_message_id before returning.
++            # _save_base_state increments persistence_generation; marker cleanup
++            # after that point is idempotent across another crash.
++            self._save_base_state(self._fs)
++        return adopted
+ 
+     # ===== Base snapshot helpers (same FileStore usage you had) =====
+     def _save_base_state(self, fs: FileStore) -> None:
+@@
+-        payload = self.model_dump_json(exclude_none=True, context=context)
+-        if self._write_guard is None:
+-            fs.write(BASE_STATE, payload)
+-        else:
+-            with self._write_guard():
+-                fs.write(BASE_STATE, payload)
++        next_generation = self.persistence_generation + 1
++        snapshot = self.model_copy(
++            update={"persistence_generation": next_generation}
++        )
++        payload = snapshot.model_dump_json(exclude_none=True, context=context)
++        guard = nullcontext() if self._write_guard is None else self._write_guard()
++        with guard:
++            fs.write(BASE_STATE, payload)
++            # Bypass ConversationState.__setattr__: the just-written snapshot is
++            # already authoritative, so do not recursively autosave/callback.
++            super().__setattr__("persistence_generation", next_generation)
++            self._delete_obsolete_head_markers(fs, next_generation)
+@@
+     def append_event(self, event: Event) -> Event:
+@@
+         event = self._stamp_parent_id(event)
+-        self._events.append(event)
+         # ConversationStateUpdateEvent is a state-sync artifact, not a tree node;
+         # advancing HEAD for it would recurse (moving HEAD re-emits one).
+         from openhands.sdk.event.conversation_state import (
+             ConversationStateUpdateEvent,
+         )
+ 
+-        if not isinstance(event, ConversationStateUpdateEvent):
++        if isinstance(event, ConversationStateUpdateEvent):
++            self._events.append(event)
++            return event
++
++        # WAL ordering for tree nodes:
++        #   pending marker -> immutable event file -> persisted HEAD snapshot.
++        # The marker stays until _save_base_state commits a higher generation.
++        self._write_pending_head_marker(event)
++        try:
++            self._events.append(event)
++        except Exception:
++            # Ordinary append failure: no event was committed by this call.
++            # A process crash here instead leaves the marker; startup safely
++            # discards it if EventLog has no matching event id.
++            guard = (
++                nullcontext()
++                if self._write_guard is None
++                else self._write_guard()
++            )
++            with guard:
++                self._fs.delete(self._head_marker_path(event.id))
++            raise
++
++        if not isinstance(event, ConversationStateUpdateEvent):
+             self.leaf_event_id = event.id
+             if self.head_is_empty:  # HEAD now points at a real event again
+                 self.head_is_empty = False
+         return event
+
+diff --git a/openhands-agent-server/openhands/agent_server/event_service.py b/openhands-agent-server/openhands/agent_server/event_service.py
+index 0000000..0000000 100644
+--- a/openhands-agent-server/openhands/agent_server/event_service.py
++++ b/openhands-agent-server/openhands/agent_server/event_service.py
+@@
+         self._conversation._state.set_write_guard(self._write_guard)
++        # The lease was claimed above. Install its generation fence before any
++        # recovery write, then finish only marker-bound event->HEAD commits.
++        # Rebuild because ConversationState.create() initially loaded the view
++        # from the pre-recovery persisted HEAD.
++        recovered_head_events = (
++            self._conversation._state.reconcile_pending_head_commits()
++        )
++        if recovered_head_events:
++            self._conversation._state.rebuild_view()
+         if not self._external_lease_renewal:
+             self._lease_task = asyncio.create_task(self._renew_lease_loop())
+ 
+         # Register state change callback to automatically publish updates
+         self._conversation._state.set_on_state_change(self._conversation._on_event)
+@@
+         state = self._conversation.state
+         if state.execution_status == ConversationExecutionStatus.RUNNING:
+             state.execution_status = ConversationExecutionStatus.ERROR
+             # Crash recovery scans the full log, not the active branch: the
+             # process may have died between writing an event file and persisting
+             # the advanced HEAD, so the leaf can lag the on-disk events. (Remote
+             # branching is unsupported — #3749 — so there are no abandoned
+             # branches to exclude here anyway.)
++            # The fenced HEAD-marker reconciliation above is complementary:
++            # it repairs exact tree reachability. Keep this existing unmatched
++            # ActionEvent repair because it additionally synthesizes an explicit
++            # execution failure/observation for an interrupted tool action.
+             unmatched_actions = ConversationState.get_unmatched_actions(state.events)
+
+*** Candidate validation status ***
+- Exact target source inspected for ConversationState.append_event, _save_base_state,
+  create/resume/rebuild_view, EventLog.append serialization/indexing, LocalConversation
+  user-message bookkeeping, Agent Server lease/write-guard setup and unmatched-Action repair.
+- Source-equivalent fenced-marker harness:
+  research_workers_clean_g1/open_source/artifacts/20260829T031000Z_openhands_fenced_head_marker_harness.py
+  PASS 8/8 for: single pending event, multi-event chain, crash after base commit before
+  cleanup, markerless orphan non-adoption, ambiguous branch fail-closed, digest mismatch,
+  parent mismatch, and stale old-generation marker cleanup.
+- This patch has NOT been applied, type-checked, or run against the upstream repository.
+- Further exact-source work should add upstream pytest coverage for marker-before-event crash,
+  event-before-base crash, base-before-cleanup crash, intentional navigation/fork, and lease
+  takeover; it should also review generic non-LocalFileStore semantics before upstreaming.
