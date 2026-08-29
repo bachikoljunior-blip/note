@@ -1,0 +1,76 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-CRASH-CONSISTENT-SWITCH-JOURNAL-v1",
+  "precommit_blob":"2ca449e88a312834e62e4b21b6d989758d4e36cf",
+  "evaluated_at":"2026-08-29T18:07:16.603700+00:00",
+  "tested_scope":"Constructed role-local scheduled-Chat switch TX-5 at scope S1 only, with four fixed restart points and fixed duplicate/scope/transport/conflict controls. This is recovery-logic conformance, not a database benchmark.",
+  "public_sources":[
+    {
+      "name":"SQLite Write-Ahead Logging",
+      "url":"https://www2.sqlite.org/wal.html",
+      "bound_semantics":"The original state is preserved while changes are appended to a separate log, and a commit occurs when a special commit record is appended."
+    },
+    {
+      "name":"SQLite WAL-mode file format recovery",
+      "url":"https://www.sqlite.org/walformat.html",
+      "bound_semantics":"Restart recovery scans the durable log and identifies the last valid commit frame, so incomplete tail state is not treated as a committed state."
+    },
+    {
+      "name":"PostgreSQL write-ahead log documentation",
+      "url":"https://www.postgresql.org/docs/18/runtime-config-wal.html",
+      "bound_semantics":"WAL retains information required for crash recovery, and durable commit behavior is tied to WAL records being flushed before recovery can rely on them."
+    }
+  ],
+  "source_binding_limit":"Only the durable-record-before-finalization distinction and restart recovery from durable records are imported. SQLite/PostgreSQL runtimes, databases, servers, filesystems, hosted workflow engines, and any external recovery service are not part of the accepted Chat-native execution route.",
+  "candidate_results":[
+    {
+      "id":"JR-A",
+      "score":0,
+      "result":"REJECT_FATAL_F1",
+      "reason":"Writing B into the authority pointer before durable qualification/finalization makes the externally visible authority itself an ambiguous intent record and permits pre-finalization authority transfer after interruption."
+    },
+    {
+      "id":"JR-B",
+      "score":12,
+      "result":"PASS",
+      "guards":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS","G11":"PASS","G12":"PASS"},
+      "success_and_restart_trace":[
+        "PREPARED is sealed/read back with A still authoritative.",
+        "QUALIFIED is sealed from distinct same-scope terminal evidence; A remains authoritative.",
+        "FINALIZED_DECISION is sealed/read back only after qualification passes; A still remains authoritative until the separate pointer update succeeds.",
+        "A compare-and-set authority update from recorded A to B is attempted only after finalized-decision readback; a mismatch against C is a conflict and is not forced.",
+        "Restart after PREPARED resumes qualification; restart after QUALIFIED resumes from persisted qualification; restart after FINALIZED_DECISION replays only the idempotent pointer update; restart after pointer=B closes bookkeeping without second credit."
+      ],
+      "failure_and_controls":[
+        "Qualification failure seals ABORTED/REJECTED and leaves A authoritative; a stale late TX-5 promotion is rejected.",
+        "Duplicate qualification, scope mismatch, and transport timeout do not advance semantic state.",
+        "Pointer changed to C causes compare-and-set conflict and prevents stale authority transfer."
+      ]
+    },
+    {
+      "id":"JR-C",
+      "score":0,
+      "result":"REJECT",
+      "reason":"Rerunning the whole switch after every restart discards durable progress identity and permits duplicate qualification, authority transfer, and credit, violating G6-G9."
+    },
+    {
+      "id":"JR-D",
+      "score":0,
+      "result":"REJECT_FATAL_F2",
+      "reason":"An external hosted workflow/recovery runtime is a residual execution dependency and may rely on finite optional quota or paid capacity."
+    }
+  ],
+  "accepted_reduction":"JR-B",
+  "accepted_claim":"For the exact TX-5 fixed trace, separating durable intent, qualification, finalized decision, and authority pointer transfer makes restart behavior unambiguous: no pre-finalization interruption transfers authority, committed-but-not-applied transfer is replayable, already-applied transfer is idempotent, and stale/conflicting completions fail closed.",
+  "not_claimed":"No claim of full database atomicity/durability semantics, production crash safety, or general optimizer superiority.",
+  "residual_richer_mode_protected_user_execution_dependency":false,
+  "finite_monthly_trial_paid_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "credit_eligible_after_readback":true,
+  "new_credit_if_readback":1,
+  "frontier_nonempty":true,
+  "exact_next_action_after_readback":"Advance controller credit by one only after independent readback. Then precommit a distinct sequential evidence-accumulation switch test before reading any public source for that next leaf."
+}
