@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "role": "long_horizon",
+  "phase_id": "phase_1_chat_parity",
+  "task_id": "phase1-clean-long-horizon-overrun-recovery",
+  "authority_branch": "clean-long-horizon-phase1-active",
+  "authority_file_blob": "dd9eb6a591f643e8653c61e5469a0805be54f3fe",
+  "policy_kind": "synthetic_long_horizon_retry_switch_precedence",
+  "normalization_rule": "Retry-After is admissible only when it parses to a finite nonnegative delay. Missing, malformed, negative, or non-finite values do not get sampled repeatedly; use the deterministic capped-exponential fallback once and persist the selected delay.",
+  "decision_order": [
+    "RETRY_BUDGET_EXHAUSTED",
+    "FORECAST_OVERRUN",
+    "RATE_LIMIT_WAIT",
+    "RETRY_ELIGIBLE"
+  ],
+  "decision_rules": {
+    "RETRY_BUDGET_EXHAUSTED": "If retry_attempt >= max_attempts, do not retry. If an alternative plan exists, SWITCH_PLAN; otherwise DEFER_NO_ALTERNATIVE. This hard count boundary has precedence over simultaneous forecast overrun for stable cause labeling.",
+    "FORECAST_OVERRUN": "If retry budget remains but persisted_wait_seconds + forecast_p90_remaining_seconds + retry_reserve_seconds > budget_remaining_seconds, do not retry. If an alternative plan exists, SWITCH_PLAN; otherwise DEFER_NO_ALTERNATIVE.",
+    "RATE_LIMIT_WAIT": "If retry budget remains and the budget test passes but current time is before persisted not_before, DEFER_RATE_LIMIT without resampling delay.",
+    "RETRY_ELIGIBLE": "Only if retry budget remains, the budget test passes, and not_before is satisfied may at most one next retry observation be authorized."
+  },
+  "monotonicity_rule": "A plan switch increments plan_generation exactly once; replaying the same cause cannot decrement generation or increment switch_count again.",
+  "no_handoff_rule": "DEFER_NO_ALTERNATIVE is a durable unresolved state, not a request for richer-mode/Work/protected-primary/manual-user execution.",
+  "quota_zero_assessment": "Repository text-state policy only; no hosted runner, Codespaces, artifact/LFS/package, cloud/model credit, protected-primary merge, or manual execution step.",
+  "incremental_monetary_cost": 0,
+  "global_completion": false
+}
