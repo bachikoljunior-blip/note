@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:31:00+09:00",
+  "topic": "AutoMat evidence-rich evaluation is path-addressed and archive output is not explicitly self-contained with the resolved artifact directory",
+  "repository": "JHU-CLSP/AutoMat",
+  "revision": "c16a60b0a65ef065ba4715a4e8146baf95327c92",
+  "sources": [
+    {
+      "path": "README.md",
+      "blob": "f66a59629420da55bec68f5ba820557082098c05",
+      "facts": [
+        "AutoMat evaluates from trace log, artifact contents, analysis report and claim reference materials.",
+        "Existing artifact directories can be re-evaluated and evaluator outputs are written back into that directory as repro_evaluation_results.json plus repro_eval_prompt.txt.",
+        "Normal execution can optionally archive a run to automat_runs/."
+      ]
+    },
+    {
+      "path": "harness/evaluators/llm_repro_evaluator.py",
+      "blob": "323fb0cdac1c0c141b6a0d7e6d51da75be304976",
+      "facts": [
+        "Evaluator observations require a human-readable what/where/valence triple and the prompt instructs the autonomous evaluator to inspect trace.log, produced artifacts, reference/reproduction.txt and reference implementation files.",
+        "The evaluator is given filesystem locations and a lightweight artifact listing, then reads current contents at evaluation time.",
+        "The saved structured result includes evaluator/model/claim/evaluation fields, but the observation schema does not carry a content digest for the referenced evidence item."
+      ]
+    },
+    {
+      "path": "agents/common.py",
+      "blob": "19ede398ad20e4b2f08a9836e6c303c2847d7e0b",
+      "facts": [
+        "Agent execution creates a real persistent artifact directory under <base_dir>/artifacts/<claim>_<agent>_<model>_<timestamp> and symlinks it into an independent temporary sandbox.",
+        "The sandbox's agent_view is copied from the claim and the real artifact directory persists after sandbox teardown."
+      ]
+    },
+    {
+      "path": "harness/runners/automat_agent_runner.py",
+      "blob": "6526297cbac2276ab0773e6e241f15c5ec01b07f",
+      "facts": [
+        "The runner resolves the latest matching artifact directory under <base_dir>/artifacts and returns its filesystem path plus a file-name listing.",
+        "The collected results do not compute or store a content-addressed manifest for those files."
+      ]
+    },
+    {
+      "path": "automat.py",
+      "blob": "e4948ace3c238a20a1e5fa52b5850d600e760e04",
+      "facts": [
+        "Evaluation resolves an artifact directory, reads its current trace/artifacts/reference context, writes the evaluator prompt and verdict into that artifact directory, and can later re-evaluate the same path.",
+        "With --archive, cleanup creates automat_runs/<claim>_<timestamp>, copies self.work_dir into archive/work, and saves events.jsonl plus results.json.",
+        "The archive code does not explicitly copy the resolved agent artifact_dir into the archive; results.json can therefore refer to a separately stored artifact path."
+      ]
+    },
+    {
+      "path": ".gitignore",
+      "blob": "3c098dc951d74959e8aaeb9a6c1ba0c703a913ec",
+      "fact": "Both artifacts/ and automat_runs/ are gitignored in the public code repository."
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-105",
+      "claim": "AutoMat provides substantially richer evaluator observability than final-answer-only scoring: the evaluator actively inspects full traces, generated artifacts and reference materials and records evidence locations. However, those locations are path-addressed rather than content-addressed in the public evaluator schema. Re-evaluation can therefore read a different byte snapshot at the same path unless an external snapshot discipline is imposed.",
+      "scope": "Current public implementation surface. No claim is made that published AutoMat scores were evaluated against mutated artifacts."
+    },
+    {
+      "id": "p1-sa-106",
+      "claim": "The current --archive implementation is not, by construction, an explicit self-contained copy of the resolved agent artifact directory: agent artifacts live under base_dir/artifacts while archive cleanup copies a separate harness work_dir and records results/events. A durable handoff should either include the full artifact snapshot or bind every external artifact/reference object by immutable digest/content-addressed locator.",
+      "scope": "Static path/data-flow observation. External storage could preserve those artifacts in practice; this is not a claim that authors lost them."
+    }
+  ],
+  "protocol_implication": {
+    "name": "REVIEWER_INPUT_SNAPSHOT_AND_ARCHIVE_COHERENCE_GATE",
+    "rule": "A scientific evaluator verdict is authoritative only for the exact content snapshot it observed. Bind trace, generated artifacts, analysis, claim/reference inputs, evaluator prompt/model/revision and output verdict into a content-addressed manifest. An archive may be thin only if every external object is immutable/content-addressed and resolvable; mutable path-only references fail closed. Re-evaluation against changed bytes creates a new verdict identity and invalidates reuse of the old verdict for the new snapshot.",
+    "relation_to_existing_protocols": "Extends verifier-observability artifact membership/digest requirements from per-requirement evidence to the complete reviewer input snapshot and archive transport boundary."
+  },
+  "causal_boundary": "This is evidence provenance and archive coherence, not an ablation demonstrating a change in scientific-agent success rate."
+}
