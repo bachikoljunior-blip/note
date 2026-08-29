@@ -1,0 +1,46 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-CONCURRENT-BRANCH-CREDIT-VECTOR-CLOCK-v1",
+  "precommit_blob":"96ba41e49cbed18a83d56ced553c0287dbf875da",
+  "evaluated_at":"2026-08-29T21:08:12Z",
+  "mechanism_id":"RIAK-VECTOR-CLOCK-CAUSAL-PARTIAL-ORDER",
+  "public_sources":[
+    {
+      "url":"https://docs.riak.com/riak/kv/2.2.0/learn/concepts/causal-context/index.html",
+      "bound_semantics":"Riak documents vector clocks as causal history metadata that can detect descendant relationships and concurrent updates; unresolved concurrent values become siblings rather than being silently ordered."
+    },
+    {
+      "url":"https://lucaswiman.github.io/frontrun/vector-clocks.html",
+      "bound_semantics":"A vector V is componentwise <= V' when each component is <=; neither vector dominating the other denotes concurrency."
+    }
+  ],
+  "chat_native_reduction":{
+    "literal_riak_or_external_runtime_used":false,
+    "classification_rule":"older if event_vector <= current_vector and not equal; newer if current_vector <= event_vector and not equal; concurrent if neither dominates",
+    "authority_rule":"vector order classifies causality only; it never auto-promotes an assignment without independent terminal qualification",
+    "duplicate_rule":"role-local semantic key guard is separate from vector-clock semantics"
+  },
+  "trace_results":[
+    {"event":"OLD/KOLD [2,3] vs current [3,3]","relation":"older","result":"PASS","effect":"historical-only; no authority mutation"},
+    {"event":"NEW/KNEW [3,4] vs current [3,3]","relation":"newer","result":"PASS","effect":"eligible for requalification only; no auto-promotion"},
+    {"event":"CON/KCON [4,2] vs current [3,3]","relation":"concurrent","result":"PASS","effect":"conflict/quarantine set; arrival order ignored"},
+    {"event":"DUP/KCON [4,2]","relation":"concurrent_duplicate","result":"PASS","effect":"semantic-key guard prevents a second effect"},
+    {"event":"MERGE/KMERGE [4,4]","relation":"newer and dominates [3,3], [3,4], [4,2]","result":"PASS","effect":"may enter independent qualification; still no authority bypass"}
+  ],
+  "control_results":[
+    {"control":"treat CON as newer because it arrived last","result":"PASS","effect":"rejected"},
+    {"control":"collapse same assignment labels across distinct vectors","result":"PASS","effect":"rejected"},
+    {"control":"scope/provenance mismatch","result":"PASS","effect":"event rejected semantically"},
+    {"control":"transport failure reading vector/key","result":"PASS","effect":"UNKNOWN/no effect"}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; this file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed two-component role-local causal-order trace only. No production distributed-systems correctness or optimizer-superiority claim."
+}
