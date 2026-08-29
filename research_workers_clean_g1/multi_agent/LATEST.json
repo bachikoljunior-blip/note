@@ -8,10 +8,10 @@
   "phase_id": "phase_1_chat_parity",
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
-  "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_CROSS_SHARD_PROMOTION_ATOMICITY_20260830_073446_PART59.md",
-  "mechanism_script_path": "research_workers_clean_g1/multi_agent/phase1_cross_shard_promotion_atomicity_20260830_073446_part59.py",
-  "mechanism_result_path": "research_workers_clean_g1/multi_agent/phase1_cross_shard_promotion_atomicity_20260830_073446_part59.json",
-  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_BATCHED_SHARDED_GC_20260830_073446_PART58.md",
+  "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_ADAPTIVE_SHARD_TOPOLOGY_20260830_073446_PART62.md",
+  "mechanism_script_path": "research_workers_clean_g1/multi_agent/phase1_adaptive_shard_topology_20260830_073446_part62.py",
+  "mechanism_result_path": "research_workers_clean_g1/multi_agent/phase1_adaptive_shard_topology_20260830_073446_part62.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_TERMINAL_WITNESS_COMPACTION_20260830_073446_PART61.md",
   "receipt_path": "automation_control/receipts/multi_agent/20260830T073446-part56-boundary.json",
   "presemantic_liveness_receipt_path": null,
   "presemantic_liveness_diagnostic_path": "research_workers_clean_g1/multi_agent/PHASE1_SNAPSHOT_RETENTION_GC_BOUNDARY_20260830_073446_PART56.md",
@@ -27,29 +27,29 @@
   "presemantic_liveness_witness_status": "write attempted twice before first role-local/public semantic read; both role-authorized receipt writes were blocked by OpenAI safety checks. Config8 makes this nonterminal; blocker is durably recorded in Part56 state. No scheduler mutation attempted.",
   "own_state_conflict_detected": false,
   "phase1_leaf_result": {
-    "part59_scenario_count": 3456,
-    "part59_strategy_evaluations": 17280,
-    "global_publish_before_bridges": "2976 partial-authority states; 1920 live-root deletions by GC; 1728 duplicate logical promotions; 2592 stale-authority commits",
-    "sequential_bridges_no_intent": "0 live-root deletion but 1896 orphan prepared states; 60 duplicate promotions; 60 stale-authority commits",
-    "durable_intent_bridges_commit": "0 live-root deletion; 0 partial authority; 0 orphan prepared; 0 duplicate; 0 stale commit; 3336 recoverable nonterminal/blocked",
-    "global_single_ref_atomic": "0 live-root/partial/orphan/duplicate/stale; 1296 commit, 2160 block"
+    "part62_scenario_count": 1728,
+    "part62_strategy_evaluations": 8640,
+    "hash_remap_no_epoch": "864 stale old-map writes; 576 early new-map writes; 1152 duplicate reservations; 576 live-root GC deletions",
+    "forwarding_tombstone": "96 stale old-map; 576 early new-map; 512 duplicates; 304 live-GC; 1536 stranded forwarding",
+    "topology_prepared_committed_inherit": "0 stale/early/duplicate/live-GC/orphan/stale-coordinator; 96 commit; 1632 recoverable PREPARED",
+    "dual_read_migration": "576 stale old-map; 576 early new-map; 1152 duplicates; 720 live-GC"
   },
   "phase1_acceptance": {
-    "ordering_rule": "Global authority may not become COMMITTED before all target-shard fences for that promotion are durable/current.",
-    "intent_rule": "Use deterministic PREPARED intent with exact target/shard set, coordinator epoch, contract digest and terminal policy; intent is recovery metadata, not authority by itself.",
-    "shard_rule": "Each shard bridge atomically binds its reservation/root epoch to current PREPARED promotion_id+coordinator epoch; GC honors current reservation.",
-    "commit_rule": "Global COMMITTED publishes only after every required bridge is verified current for the same promotion ID/epoch; response loss reconciles current intent/shard/global transition IDs before retry.",
-    "abort_rule": "Abort before COMMIT is monotonic ABORTED then fenced shard release; never cleanup-reverse a COMMITTED promotion.",
-    "scope_caveat": "Separate refs are not physically atomic; persistent rate limits may leave PREPARED nonterminal. Complete repository rollback remains unresolved.",
+    "topology_authority_rule": "Hash/path remap is routing, not authority; every write/GC action binds a monotonic topology generation.",
+    "prepare_commit_rule": "G2 PREPARED while G1 stays authoritative; new-map writes require G2 COMMITTED; commit only after all new domains/floors verified and current coordinator/topology epoch matches.",
+    "floor_rule": "Split children inherit >= parent floor; merge output >= max input floors; reset/min keeps transition PREPARED/fail-closed.",
+    "forwarding_rule": "Forwarding tombstone is post-COMMIT routing/fencing assistance, not a transaction coordinator.",
+    "response_rate_rule": "Applied-response-lost COMMIT readback by transition ID; rate limit leaves recoverable PREPARED and no partial authority.",
+    "scope_caveat": "Complete repository rollback remains unresolved; global Phase-1 closure not claimed.",
     "global_phase1_closure_claimed": false
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
     "optional_monthly_trial_paid_quota_dependency_added": false,
     "richer_mode_protected_manual_execution_dependency": false,
-    "repository_transport": "deterministic role-local intent + shard/global ref/path/CAS/readback only; no hosted coordinator",
+    "repository_transport": "role-local topology intent/generation + shard floor/ref/path/CAS/readback only",
     "external_coordination": "not required and not accepted as a dependency"
   },
   "base_continuation_preserved": "Resolve/freeze latest sanitized control. Continue unrelated base work only if Phase 1 later deactivates.",
-  "continuation": "Next leaf: PREPARED abort/release vs late shard bridge and stale coordinator. Compare cleanup-by-delete, shard-release-then-intent-abort, intent-ABORTED-then-name-only release, monotonic intent terminal state + per-shard reservation epoch, and fail-closed. Adversaries: B bridge after abort, A release response loss, stale coordinator takeover, new promotion reuses the same target, one shard rate-limited, GC after release, and intent cleanup. Measure post-abort resurrection, stale release of new reservation, live-root deletion, orphan reservation, duplicate release/promotion, false blockage, and recovery reads."
+  "continuation": "Model topology-abort cleanup. Start topology G2 PREPARED with one child provisioned and floor inherited. Compare delete-child-then-abort, abort-generation-then-name-only child cleanup, forwarding-only rollback, monotonic topology ABORTED + exact child-generation cleanup, and fail-closed. Adversaries: late G2 child write, late G1 parent write, cleanup response loss, child reuse, stale coordinator, rate limit, GC, and concurrent promotion intent. Measure post-abort G2 resurrection, stale cleanup of reused child reservation, duplicate cross-generation reservation, live-root deletion, stranded child state, false blockage, and recovery reads."
 }
