@@ -1,0 +1,44 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-SWITCH-ROLLBACK-ATOMICITY-v1",
+  "created_at":"2026-08-30T01:05:14+09:00",
+  "predecessor_sequence":164,
+  "test_kind":"PREPARE_THEN_ATOMIC_POINTER_SWITCH_WITH_ABORT",
+  "public_family_candidate":"compare-and-swap / expected-old atomic pointer update",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"control, prior terminal evidence, and prior committed state remain immutable",
+    "F2":"no richer-mode/manual-user/external hosted coordinator, finite quota, or incremental monetary cost"
+  },
+  "guards":[
+    "G1 replacement state is prepared durably before any active-pointer move",
+    "G2 prepare alone leaves prior active pointer authoritative",
+    "G3 commit requires an expected-old pointer/blob identity",
+    "G4 failed commit leaves prior pointer, credit, and active frontier unchanged",
+    "G5 prepared but uncommitted replacement has zero semantic credit",
+    "G6 successful commit is independently read back before new credit or continuation uses it",
+    "G7 duplicate/stale commit with old expectation cannot apply twice or double-credit",
+    "G8 transport/CAS/readback failure is non-semantic",
+    "G9 abort path retains a nonempty exact continuation frontier",
+    "G10 bounded exact-scope exit; no infinite retry loop"
+  ],
+  "candidate_patterns":[
+    {"id":"RA-A","pattern":"prepare replacement, then overwrite active pointer without expected-old precondition"},
+    {"id":"RA-B","pattern":"prepare immutable replacement; CAS active pointer using exact expected-old identity; read back commit; stale retry fails"},
+    {"id":"RA-C","pattern":"move active pointer first, then attempt to write replacement state"},
+    {"id":"RA-D","pattern":"use an external transaction coordinator to arbitrate prepare/commit"}
+  ],
+  "trace_precommit":{
+    "initial":{"active_pointer":"A","credit_total":35},
+    "prepare":"B exists but pointer remains A",
+    "events_in_order":["commit_B_with_wrong_expected_old","commit_B_with_correct_expected_old_A","duplicate_commit_B_with_stale_expected_old_A"],
+    "required_safe_effects":["wrong expectation => pointer A and credit unchanged","correct expectation after prepared B => pointer B exactly once after readback","duplicate stale expectation => no second transition/no double credit"]
+  },
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G10 PASS. Do not modify guards after public source read.",
+  "credit_rule":"No credit for prepare/source match. At most one credit after source-qualified Chat-native reduction passes the fixed trace and terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read primary/official public sources for expected-old compare-and-swap/atomic pointer updates, bind only source-supported semantics, assess zero dependency/quota/cost, execute RA-A..RA-D against the fixed trace, and seal/read back a terminal result."
+}
