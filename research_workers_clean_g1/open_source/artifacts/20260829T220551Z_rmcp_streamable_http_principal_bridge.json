@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+  "finding": "The saved router-first skeleton's direct Extension<Principal> extractor is not justified by rmcp's built-in Streamable HTTP path. At this release, the HTTP transport inserts http::request::Parts as one non-wire MCP request extension; RequestContext is then built from the request's Extensions. The generic Extension<T> extractor only looks up T directly in RequestContext.extensions. Therefore a Principal placed by trusted Tower/Axum authentication middleware in the HTTP request's parts.extensions is not automatically flattened into MCP Extensions as Principal. The source-qualified bridge is to obtain RequestContext<RoleServer> (or an extractor for the Parts object if Clone bounds permit), retrieve http::request::Parts from context.extensions, then read Principal from parts.extensions. This keeps client _meta untrusted and reuses the transport's trusted server-side HTTP metadata channel.",
+  "official_example_support": "The exact-release counter server reads axum::http::request::Parts from RequestContext.extensions for Streamable HTTP headers, confirming this is the supported transport metadata shape.",
+  "source_files": [
+    "crates/rmcp/src/service.rs",
+    "crates/rmcp/src/transport/streamable_http_server/tower.rs",
+    "crates/rmcp/src/handler/server/common.rs",
+    "examples/servers/src/common/counter.rs"
+  ],
+  "exact_source_urls": [
+    "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/service.rs",
+    "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/transport/streamable_http_server/tower.rs",
+    "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/handler/server/common.rs",
+    "https://raw.githubusercontent.com/modelcontextprotocol/rust-sdk/4a738b9dd99eaca418b614afa433a0cbdaf8d056/examples/servers/src/common/counter.rs"
+  ],
+  "scope_limits": [
+    "This does not prove a particular authentication middleware implementation or identity format.",
+    "It does not make stock TaskManager persistent or create-or-get idempotent.",
+    "It does not solve restart redrive or exactly-once external effects.",
+    "The saved Rust skeleton remains NOT COMPILED in this environment."
+  ],
+  "candidate_revision": "Replace Extension<Principal> in the task tool with RequestContext<RoleServer>-based extraction: get http::request::Parts from context.extensions, then get a server-authenticated Principal from parts.extensions. Fail closed if either is absent. Keep RequestStateCodec associated-data binding to that authenticated principal.",
+  "quota_zero_assessment": "The principal bridge itself is in-process transport metadata handling and has no inherent hosted-runner, Codespaces, artifact/LFS/package, cloud-credit, or external API/model quota dependency. Full Phase-1 acceptance remains false because durable store/redriver/effect-fencing obligations are unresolved.",
+  "incremental_monetary_cost": 0,
+  "tested_scope": "Exact-source inspection only; no cargo/rustc compile or runtime authentication test performed."
+}
