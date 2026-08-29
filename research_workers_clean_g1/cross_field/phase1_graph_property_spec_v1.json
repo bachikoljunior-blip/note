@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "bounded retry-controller graph checker",
+  "material_outcome": "PASS iff the finite transition graph has explicit defined targets, no mutation-state transient self/busy cycles, correct rate-limit/reconstruction routing, and finite normal/reuse/no-op witness paths to terminal states.",
+  "scope": "Declarative finite-state controller behavior only; not wall-clock, network, service implementation or arbitrary program execution.",
+  "checks": [
+    {"id":"G1","property":"every string transition target is a defined state"},
+    {"id":"G2","property":"terminal states have no outgoing transitions"},
+    {"id":"G3","property":"every on_403_or_429 edge equals RATE_LIMIT_WAIT"},
+    {"id":"G4","property":"every on_interruption edge equals RECONSTRUCT"},
+    {"id":"G5","property":"for each mutation state, any on_409/on_403_or_429/on_interruption target is not a mutation state"},
+    {"id":"G6","property":"no mutation state has a transient/error self-loop"},
+    {"id":"G7","property":"RATE_LIMIT_WAIT.resume equals RECONSTRUCT and manual_rescue is false"},
+    {"id":"G8","property":"witness path RECONSTRUCT->CHECK_APPLIED(if_absent)->DERIVE_CANDIDATE(precondition true)->ENSURE_IMMUTABLE_OBJECTS(all created)->ENSURE_ROOT(create success)->PUBLISH_CAS(success)->READBACK(expected)->DONE exists"},
+    {"id":"G9","property":"witness reuse path through object/root 409 fetch-and-compare equal branches reaches DONE after successful publish/readback"},
+    {"id":"G10","property":"CHECK_APPLIED.if_applied reaches DONE_NOOP directly"}
+  ],
+  "decision_rule": "PASS iff G1-G10 all pass. Report exact failed ids otherwise.",
+  "zero_dependency_note": "The graph is small and fully represented in repository text, so bounded traversal/comparison is the material checker; no hosted build runner, Codespaces, external compute service or manual step is part of the route."
+}
