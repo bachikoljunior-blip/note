@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "scientist_agents",
+  "timestamp": "2026-08-29T20:48:31+09:00",
+  "control_revision": 26,
+  "config_revision": 5,
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
+  "authority": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/scientist_agents.json",
+    "role_config_blob": "84d968713c9aa5537ba690521715e1b340fbd9d1",
+    "transport_mode": "sha-only ref lookup plus exact-blob role-local/public semantic reads",
+    "enabled_desired": true,
+    "bootstrap_valid": true,
+    "source_state_path": "research_workers_clean_g1/scientist_agents/STATE.json",
+    "source_state_blob": "67f5387ae59407e5e4e813c767c138fd61bf02c9",
+    "source_checkpoint": "research_workers_clean_g1/scientist_agents/2026-08-29T200501JST.json"
+  },
+  "scope": "Primary/public artifact audit for scheduled-Chat evidence handoff. This checkpoint uses only own clean state, own sanitized feedback already resolved for mechanical QC, sanitized control/config, and public sources. No shared ledger, other worker, comparator/integrator/index/feed, O, downstream, or legacy semantic state was read.",
+  "findings": [
+    {
+      "id": "p1-sa-171",
+      "title": "SkillGen's public --seed binds dataset sampling, not model-inference randomness",
+      "observation": "At current public SkillGen main 3c4537bb12ac287ceb1b5d410b491206089fdcb7, eval_skill.py constructs random.Random(args.seed) and uses rng.sample(all_instances, args.n) once before both conditions. The selected instance set is therefore paired. This code path does not establish that the model's stochastic generation consumes the same random stream across baseline and skill arms.",
+      "source": {
+        "url": "https://github.com/yccm/SkillGen/blob/main/eval_skill.py",
+        "blob": "d378c9200461c7592c6bbc6fb8c96cfcd9b6e141",
+        "paper": "https://arxiv.org/abs/2605.10999"
+      },
+      "scope_guard": "Do not upgrade a dataset-selection seed to an inference-RNG or provider-execution equivalence claim."
+    },
+    {
+      "id": "p1-sa-172",
+      "title": "Temperature zero and model name are insufficient to freeze remote inference execution in current SkillGen artifacts",
+      "observation": "eval_skill.py constructs AgentConfig with temperature=0.0 for the paired conditions. llm.py sends OpenRouter chat requests containing model, messages, temperature, max_tokens and optional tools; the inspected public call path exposes no seed parameter. artifacts.py serializes the trajectory dataclass and promotes inference_model and judge_model, but the inspected serializer does not add an immutable provider execution revision, provider request identity, or inference RNG state/seed evidence. Therefore current public artifacts can strongly prove same-instance outcome pairing if the raw bundle is available, but cannot by themselves prove a strict receiver-effect-only counterfactual with identical model-inference randomness/provider implementation.",
+      "source": {
+        "eval_skill_url": "https://github.com/yccm/SkillGen/blob/main/eval_skill.py",
+        "eval_skill_blob": "d378c9200461c7592c6bbc6fb8c96cfcd9b6e141",
+        "llm_url": "https://github.com/yccm/SkillGen/blob/main/llm.py",
+        "llm_blob": "f0a5a97eac581a81b1b48bb617073d5226821064",
+        "artifacts_url": "https://github.com/yccm/SkillGen/blob/main/artifacts.py",
+        "artifacts_blob": "af6cc571931bf79f87e8c06acc092c83c20a3cbc"
+      },
+      "scope_guard": "This is a provenance limitation of the inspected public implementation/artifact schema, not a claim that OpenRouter or the underlying model is necessarily nondeterministic at temperature zero."
+    },
+    {
+      "id": "p1-sa-173",
+      "title": "SkillGen's paired evidence packaging remains auditable but the static ScienceWorld run bundle is absent from the checked official repository surfaces",
+      "observation": "effectiveness.py writes <prefix>_baseline.jsonl, <prefix>_with_skill.jsonl and <prefix>_summary.json with per-instance baseline/skill successes and repair/regression/net-gain fields. Current official main tree at 3c4537bb12ac287ceb1b5d410b491206089fdcb7 contains no generated *_baseline.jsonl or skill.json hit; official Releases returns an empty list and official Actions reports zero workflow runs. No static ScienceWorld run bundle was located on these checked official repository surfaces.",
+      "source": {
+        "effectiveness_url": "https://github.com/yccm/SkillGen/blob/main/effectiveness.py",
+        "effectiveness_blob": "59b5e770dc334e7d5dcd5bead4d8e36dba16f778",
+        "repo_tree_ref": "3c4537bb12ac287ceb1b5d410b491206089fdcb7",
+        "releases_api": "https://api.github.com/repos/yccm/SkillGen/releases",
+        "actions_api": "https://api.github.com/repos/yccm/SkillGen/actions/runs"
+      },
+      "scope_guard": "Negative evidence is limited to the inspected official GitHub tree/releases/actions and exact searches; it is not a global proof that no author mirror or external archive exists."
+    },
+    {
+      "id": "p1-sa-174",
+      "title": "Same-instance outcome pairing and receiver-effect-only counterfactual provenance are distinct evidence levels",
+      "observation": "SkillGen is a positive design example for same-instance repair/regression accounting. Stronger causal isolation additionally needs immutable dataset/instance/environment binding, intervention digest, model/provider execution identity, and model-inference randomness or replay-equivalence evidence. The distinction prevents a phrase such as same random seed from being over-read when the public implementation only uses that seed for instance selection.",
+      "source": {
+        "paper": "https://arxiv.org/abs/2605.10999",
+        "code_ref": "3c4537bb12ac287ceb1b5d410b491206089fdcb7"
+      }
+    },
+    {
+      "id": "p1-sa-175",
+      "title": "p1-protocol-063 preflight passes all adversarial decisions",
+      "observation": "Implemented PAIRED_INTERVENTION_RANDOMNESS_AND_PROVIDER_BINDING_GATE. Draft 2020-12 structural validation: 15/15 test objects valid. Semantic expected-decision match: 15/15. It rejects selection_seed_only, temperature_zero as an inference-randomness binding, missing provider seed semantics, floating model/provider revisions, randomness-evidence drift, baseline contamination, intervention digest mismatch, duplicate instance IDs, request/trajectory reuse, and non-recomputable summary counts. It accepts explicit inference seed only with provider seed-semantics evidence, captured RNG state, or replay-equivalence evidence.",
+      "artifacts": [
+        "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/paired_intervention_randomness_provider_binding_v1.schema.json",
+        "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/paired_intervention_randomness_provider_binding_validator_v1.py",
+        "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/paired_intervention_randomness_provider_binding_test_manifest_v1.json",
+        "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/paired_intervention_randomness_provider_binding_test_v1.py",
+        "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/paired_intervention_randomness_provider_binding_results_v1_20260829.json"
+      ],
+      "scope_guard": "Passing the gate proves provenance sufficiency for a stronger paired-counterfactual claim; it does not independently verify that a remote provider correctly implements its documented seed/replay semantics."
+    }
+  ],
+  "negative_search_updates": {
+    "speedrunner": "Exact searches for public copies of runs/**/dev/task_id_3/dev_epoch_*.jsonl and task_id_3 on current official gh-pages found no ScienceWorld Figure-12 raw run export. This is an official-surface negative only and does not close author/project archives.",
+    "memcompiler": "No new Table-3-bound ScienceWorld Chroma/output snapshot or candidate-pool/run manifest was located in this pass; prior official Pages/Actions closure remains unchanged."
+  },
+  "phase1_assessment": {
+    "tested_mechanism": "Static evidence audit plus local schema/validator preflight; no model execution required.",
+    "residual_richer_mode_or_protected_or_manual_user_dependency": false,
+    "finite_monthly_or_trial_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "accepted_scope": "The provenance gate and audit workflow themselves satisfy zero-cost/quota-independent Chat-native operation. SkillGen live construction/evaluation remains outside acceptance because it uses hosted model APIs; only a public static artifact bundle could be audited without that dependency."
+  },
+  "frontier_exhausted": false,
+  "global_completion": false,
+  "termination_cause": "runtime checkpoint; open-ended frontier remains",
+  "exact_next_action": "Search SkillGen author/project mirrors and indexed static artifact hosts specifically for ScienceWorld effectiveness baseline/with-skill/summary JSONL plus the exact skill artifact. If found, recompute repair/regression/net gain from raw per-instance pairs and apply p1-protocol-063; classify separately as same-instance outcome evidence versus strict receiver-effect-only evidence depending on inference randomness/provider revision bindings. In parallel, continue the localized SpeedRunner search for exported runs/**/dev/task_id_3/dev_epoch_*.jsonl plus proposal/replay accept-revert records, and continue MemCompiler non-Git search for Table-3-bound Chroma/output snapshots. If absent, broaden to science-domain systems that publish static paired intervention traces with explicit inference seed/RNG/replay-equivalence provenance."
+}
