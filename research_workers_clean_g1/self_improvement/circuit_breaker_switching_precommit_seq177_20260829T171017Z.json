@@ -1,0 +1,54 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-FAILURE-CIRCUIT-BREAKER-SWITCHING-v1",
+  "created_at":"2026-08-29T17:10:17+00:00",
+  "predecessor_sequence":176,
+  "test_kind":"DURABLE_ASSIGNMENT_LOCAL_CIRCUIT_BREAKER_WITH_RECOVERY_PROBE",
+  "public_family_candidate":"circuit breaker CLOSED/OPEN/HALF_OPEN state machine for repeated assignment-local terminal failure",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"no permanent blacklist or deletion/rewrite of prior failures; breaker state is append-only qualification over immutable terminal identities",
+    "F2":"no richer-mode/manual-user/protected-primary/external hosted monitoring service, finite quota, or incremental monetary cost"
+  },
+  "guards":[
+    "G1 only independently read-back same-scope terminal failures for the same assignment family increment the breaker failure counter",
+    "G2 transport errors, search misses, interrupted writes, and unevaluated candidates do not increment the semantic failure counter",
+    "G3 exactly three qualifying consecutive failures transition CLOSED to OPEN for this fixed trace",
+    "G4 while OPEN, the failing assignment family is ineligible for immediate reselection but unrelated frontier work remains eligible",
+    "G5 OPEN duration is bounded by two durable controller transitions in this fixed trace; it is not a permanent blacklist",
+    "G6 after the bounded OPEN interval, transition to HALF_OPEN and allow exactly one bounded same-scope probe for that family",
+    "G7 HALF_OPEN probe success with terminal readback closes the breaker and resets only the breaker-local consecutive-failure counter",
+    "G8 HALF_OPEN probe failure with terminal readback reopens the breaker; duplicate/stale replay cannot add another failure or alter state",
+    "G9 breaker state transitions and any assignment credit are durable/readback-gated; CAS/readback failure leaves the prior durable breaker state authoritative",
+    "G10 bounded exact-scope exit with nonempty frontier and zero residual richer-mode/user execution, zero finite quota, zero incremental monetary cost"
+  ],
+  "fixed_trace":{
+    "family":"X",
+    "initial":"CLOSED; consecutive_failures=0",
+    "events":[
+      "X terminal fail F1 read back",
+      "transport timeout before any X terminal evidence",
+      "X terminal fail F2 read back",
+      "duplicate replay of F2",
+      "X terminal fail F3 read back",
+      "two unrelated durable controller transitions Y1,Y2",
+      "HALF_OPEN probe P1"
+    ],
+    "required_before_probe":"after F1 counter=1 CLOSED; timeout no change; F2 counter=2 CLOSED; duplicate F2 no change; F3 counter=3 OPEN; X blocked for Y1,Y2; then HALF_OPEN with exactly one P1",
+    "success_branch":"P1 terminal PASS => CLOSED; counter=0",
+    "failure_branch":"P1 terminal FAIL => OPEN; duplicate P1 replay no additional count/state change"
+  },
+  "candidate_patterns":[
+    {"id":"CB-A","pattern":"retry X indefinitely after every failure"},
+    {"id":"CB-B","pattern":"permanently blacklist X after three failures"},
+    {"id":"CB-C","pattern":"durable CLOSED/OPEN/HALF_OPEN breaker with terminal-identity dedupe, bounded OPEN interval, and one same-scope recovery probe"},
+    {"id":"CB-D","pattern":"delegate breaker metrics/state to an external hosted monitoring or workflow service"}
+  ],
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G10 PASS. Do not change threshold, OPEN duration, trace, guards, or candidate patterns after public source read.",
+  "credit_rule":"Precommit and breaker state transitions alone earn zero credit. At most one new leaf credit only after a source-qualified Chat-native reduction passes the fixed trace and immutable terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this precommit back, checkpoint it as pending with zero credit, then audit primary/public circuit-breaker sources before any other family selection; bind only source-supported state-machine semantics, execute CB-A..CB-D against the fixed trace, and seal/read back terminal evidence before credit."
+}
