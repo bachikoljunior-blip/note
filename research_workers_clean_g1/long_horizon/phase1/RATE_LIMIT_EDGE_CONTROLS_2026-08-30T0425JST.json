@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "role": "long_horizon",
+  "phase_id": "phase_1_chat_parity",
+  "task_id": "phase1-clean-long-horizon-overrun-recovery",
+  "authority_branch": "clean-long-horizon-phase1-active",
+  "authority_file_blob": "dd9eb6a591f643e8653c61e5469a0805be54f3fe",
+  "policy_path": "research_workers_clean_g1/long_horizon/phase1/DECISION_PRECEDENCE_POLICY_2026-08-30T0425JST.json",
+  "policy_blob": "02324f5f386d97fe8f7d261a0c70baa42f87538d",
+  "control_kind": "synthetic_rate_limit_and_retry_edge_matrix",
+  "cases": [
+    {
+      "id": "malformed_retry_after",
+      "input": {
+        "retry_attempt": 2,
+        "max_attempts": 3,
+        "retry_after_raw": "not-a-delay",
+        "budget_remaining_seconds": 7200,
+        "forecast_p90_remaining_seconds": 900,
+        "retry_reserve_seconds": 300,
+        "alternative_plan": "compact_plan"
+      },
+      "normalized": {
+        "retry_after_valid": false,
+        "persisted_wait_seconds": 120,
+        "wait_source": "deterministic_exponential_capped_fallback",
+        "resample_on_reconstruction": false
+      },
+      "decision": "DEFER_RATE_LIMIT",
+      "cause": "RATE_LIMIT_WAIT",
+      "blind_retry_allowed": false
+    },
+    {
+      "id": "negative_retry_after",
+      "input": {
+        "retry_attempt": 2,
+        "max_attempts": 3,
+        "retry_after_raw": -5,
+        "budget_remaining_seconds": 7200,
+        "forecast_p90_remaining_seconds": 900,
+        "retry_reserve_seconds": 300,
+        "alternative_plan": "compact_plan"
+      },
+      "normalized": {
+        "retry_after_valid": false,
+        "persisted_wait_seconds": 120,
+        "wait_source": "deterministic_exponential_capped_fallback",
+        "resample_on_reconstruction": false
+      },
+      "decision": "DEFER_RATE_LIMIT",
+      "cause": "RATE_LIMIT_WAIT",
+      "blind_retry_allowed": false
+    },
+    {
+      "id": "very_large_retry_after_overrun",
+      "input": {
+        "retry_attempt": 2,
+        "max_attempts": 3,
+        "retry_after_raw": 3600,
+        "budget_remaining_seconds": 2000,
+        "forecast_p90_remaining_seconds": 900,
+        "retry_reserve_seconds": 300,
+        "alternative_plan": "compact_plan"
+      },
+      "normalized": {
+        "retry_after_valid": true,
+        "persisted_wait_seconds": 3600,
+        "projected_required_seconds": 4800,
+        "forecast_overrun": true
+      },
+      "decision": "SWITCH_PLAN",
+      "cause": "FORECAST_OVERRUN",
+      "selected_plan": "compact_plan",
+      "external_work_attempt_consumed": false
+    },
+    {
+      "id": "collision_exhaustion_and_overrun",
+      "input": {
+        "retry_attempt": 3,
+        "max_attempts": 3,
+        "retry_after_raw": 3600,
+        "budget_remaining_seconds": 2000,
+        "forecast_p90_remaining_seconds": 900,
+        "retry_reserve_seconds": 300,
+        "alternative_plan": "compact_plan"
+      },
+      "derived": {
+        "retry_exhausted": true,
+        "forecast_overrun": true
+      },
+      "decision": "SWITCH_PLAN",
+      "cause": "RETRY_BUDGET_EXHAUSTED",
+      "precedence_assertion": "Hard retry exhaustion wins over simultaneous forecast overrun for stable cause labeling.",
+      "external_work_attempt_consumed": false
+    },
+    {
+      "id": "exhausted_no_alternative",
+      "input": {
+        "retry_attempt": 3,
+        "max_attempts": 3,
+        "persisted_wait_seconds": 0,
+        "budget_remaining_seconds": 7200,
+        "forecast_p90_remaining_seconds": 900,
+        "retry_reserve_seconds": 300,
+        "alternative_plan": null
+      },
+      "derived": {
+        "retry_exhausted": true,
+        "forecast_overrun": false
+      },
+      "decision": "DEFER_NO_ALTERNATIVE",
+      "cause": "RETRY_BUDGET_EXHAUSTED",
+      "blind_retry_allowed": false,
+      "richer_mode_or_manual_handoff_allowed": false
+    }
+  ],
+  "aggregate_assertions": {
+    "malformed_or_negative_retry_after_never_authorizes_immediate_blind_retry": true,
+    "invalid_retry_after_fallback_is_deterministic_and_persist_once": true,
+    "large_valid_wait_can_trigger_forecast_switch_before_next_retry": true,
+    "collision_cause_is_stable_under_precommitted_precedence": true,
+    "no_alternative_exhaustion_remains_durable_unresolved_state": true
+  },
+  "quota_zero_assessment": "Repository text-state controls only; no hosted runner, Codespaces, artifact/LFS/package, cloud/model credit, protected-primary merge, or manual execution step.",
+  "incremental_monetary_cost": 0,
+  "global_completion": false
+}
