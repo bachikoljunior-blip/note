@@ -1,0 +1,45 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-BOUNDED-INFLIGHT-CREDIT-WINDOW-v1",
+  "precommitted_at":"2026-08-29T21:15:35Z",
+  "source_semantics_read_before_precommit":false,
+  "own_namespace_duplicate_check":"code search for exact phrase sliding window returned total_count=0 with incomplete_results=true; weak duplicate diagnostic only",
+  "hypothesis":"A bounded unresolved-epoch window can cap exact duplicate/provenance metadata while preserving safe delayed credit: when the window is full, apply backpressure rather than opening another unresolved assignment epoch.",
+  "fixed_parameters":{"max_unresolved_epochs":3,"finalized_through_epoch":6},
+  "fixed_initial_window":[
+    {"epoch":7,"status":"pending","exact_keys":["K7"]},
+    {"epoch":8,"status":"terminal_readback_closed","exact_keys":["K8"]},
+    {"epoch":9,"status":"pending","exact_keys":["K9"]}
+  ],
+  "fixed_events":[
+    {"step":1,"event":"attempt to open epoch10 while unresolved/window entries 7,8,9 occupy capacity=3 and cumulative finality cannot pass gap7","expected":"BACKPRESSURE; do not open epoch10"},
+    {"step":2,"event":"late duplicate K8 arrives while epoch8 exact state still in window","expected":"reject duplicate"},
+    {"step":3,"event":"epoch7 terminal-or-aborted outcome is durably read back","expected":"close oldest gap7"},
+    {"step":4,"event":"advance cumulative finalized-through from6 through contiguous closed epochs7 and8 to8; durably read back marker","expected":"then reclaim exact epoch7/8 key sets and free two window slots"},
+    {"step":5,"event":"open epoch10 after slots freed","expected":"allowed; unresolved/exact tracked set remains <=3"},
+    {"step":6,"control":"ignore capacity and open epoch10 before gap7 closes","expected":"FAIL boundedness guard"},
+    {"step":7,"control":"transport failure reading window/finality/key state","expected":"UNKNOWN; no opening, reclamation or credit"},
+    {"step":8,"control":"late epoch7 completion after finalized-through=8 and point records reclaimed","expected":"reject via cumulative finality; no reopen"},
+    {"step":9,"control":"scope/provenance mismatch on any outcome","expected":"reject semantic use"}
+  ],
+  "guards":{
+    "G1":"capacity, initial window, events and controls frozen before public source audit",
+    "G2":"window occupancy never exceeds three tracked unfinalized/not-yet-reclaimable epochs",
+    "G3":"full window produces backpressure rather than silent eviction or untracked new epoch",
+    "G4":"cumulative finalized-through advances only across a contiguous closed prefix and after durable readback",
+    "G5":"exact open-window keys preserve duplicate detection until range finality makes them reclaimable",
+    "G6":"reclamation happens only after durable cumulative marker readback",
+    "G7":"old completion at or below cumulative finality cannot reopen credit or authority",
+    "G8":"transport uncertainty is UNKNOWN and fail-closed",
+    "G9":"scope/provenance mismatch rejects semantic use",
+    "G10":"terminal artifact exact readback required before role credit",
+    "G11":"scope is this fixed role-local capacity-3 trace only; no throughput claim",
+    "G12":"accepted Chat-native reduction has zero residual richer/protected/manual execution, zero finite optional quota dependency and zero incremental monetary cost"
+  },
+  "acceptance":"PASS only if public sliding-window/flow-control semantics support frozen bounded-outstanding/backpressure interpretation and all G1-G12 hold without post-source rubric edits.",
+  "credit_rule":"Precommit earns zero role credit; at most one role-local credit after exact terminal readback.",
+  "exact_next_action":"Read back this precommit, then audit public bounded sliding-window/flow-control semantics. Evaluate steps1-9 exactly as frozen; seal/read back terminal evidence before credit."
+}
