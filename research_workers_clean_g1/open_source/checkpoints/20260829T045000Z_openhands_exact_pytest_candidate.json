@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 34,
+  "control_revision": 25,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "base_checkpoint": "research_workers_clean_g1/open_source/checkpoints/20260829T044000Z_mcp_durable_outbox_redrive_contract.json",
+  "frozen_control": {
+    "semantic_start_main_sha": "8ad91c7c03ab86e116b3248d65c586618eaf212f",
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "root_revision": 25,
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_freeze_semantic_control_read": false
+  },
+  "openhands_pin": {
+    "repository": "OpenHands/software-agent-sdk",
+    "release": "v1.44.1",
+    "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "current_main_observed": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "current_main_matches_pin": true
+  },
+  "source_revisions": {
+    "existing_action_recovery": "Exact current source already handles the unmatched executable ActionEvent stale-HEAD subclass: startup scans the full immutable log, creates AgentErrorEvent with parent_id explicitly set to the unmatched ActionEvent id, and the existing cross test rewinds persisted HEAD then verifies the next active-branch/condenser manipulation remains valid.",
+    "remaining_user_message_class": "That repair is intentionally action-specific and runs when persisted execution_status was RUNNING. A normal user MessageEvent durably written before a deferred base-state save can be stranded behind a stale non-null leaf with no unmatched-action signal. Cold _resolve_active_leaf returns a non-null persisted leaf as-is, so tail fallback does not discover the message.",
+    "state_transaction_boundary": "LocalConversation's default callback appends through ConversationState while the state context lock is held, then records last_user_message_id for user messages. ConversationState.__exit__ flushes dirty state only when the outer save depth reaches zero, providing an exact event-file-before-base-snapshot failure injection seam.",
+    "lease_boundary": "Agent Server claims ConversationLease and installs the lease-backed state write guard before recovery writes. The implementation candidate therefore reconciles pending HEAD markers only after that fence is active."
+  },
+  "pytest_candidate": {
+    "path": "research_workers_clean_g1/open_source/OPENHANDS_FENCED_HEAD_MARKER_TESTS_CANDIDATE_20260829_R6.patch",
+    "commit": "2ba10296fcf8219725498c8a2c04ec81c2075b38",
+    "blob": "b72f9529957b1e42b16b1a030b7854471036eecd",
+    "status": "SOURCE_QUALIFIED_NOT_RUN_UPSTREAM",
+    "cases": [
+      "pending user MessageEvent: marker + durable event survive a deliberately failed deferred base save; after lease takeover, recovered leaf_event_id and last_user_message_id must point to that message, repaired base state must persist it, marker must clear, and next user message must parent to it",
+      "markerless tail descendant: immutable orphan event without commit marker must not be auto-adopted after restart, protecting navigation/fork intent"
+    ]
+  },
+  "implementation_candidate": {
+    "path": "research_workers_clean_g1/open_source/OPENHANDS_FENCED_HEAD_MARKER_PATCH_CANDIDATE_20260829_R6.patch",
+    "blob": "a9d5c84abe30eeca2e583f9d1c3237320496f017",
+    "model_harness": "research_workers_clean_g1/open_source/artifacts/20260829T031000Z_openhands_fenced_head_marker_harness.py",
+    "model_result": "PASS 8/8",
+    "claim_limit": "No claim of upstream correctness: implementation and pytest patches have not been applied together, type-checked, compiled, or run in the upstream repository."
+  },
+  "counterexamples_and_guardrails": [
+    "Do not replace existing unmatched-Action recovery; it synthesizes an execution failure result that marker reconciliation alone does not provide.",
+    "Do not infer write intent from a unique newer descendant; markerless tails can represent an orphan or intentional branch history.",
+    "Do not run recovery writes before the lease generation write guard is installed.",
+    "Do not generalize LocalFileStore file-level atomicity/locking guarantees to NFS/network filesystems without backend-specific evidence.",
+    "The marker hash binds exact event bytes/content, while monotonic persistence_generation provides the history-bearing component needed to avoid content-identity ABA."
+  ],
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "OpenHands upstream repository"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If config revision 6 remains active, read own LATEST and this checkpoint only. Next OpenHands leaf: audit the companion implementation and test candidate line-by-line against exact type/import/FileStore APIs and identify likely compile/runtime mismatches before describing it as apply-ready; add cases for marker-before-event crash, base-commit-before-marker-cleanup crash, ambiguous same-parent markers, explicit navigate_to/fork, and ConversationStateUpdateEvent. MCP leaf: locate a supported full-pipeline replay seam after restart or prove a new SDK API is required. Connected-CAS leaf: continue only where an authorized live sandbox exposes history-bearing expected revision."
+}
