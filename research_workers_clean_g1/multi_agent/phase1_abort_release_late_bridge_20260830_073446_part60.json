@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 60,
+  "leaf_id": "prepared-abort-release-vs-late-bridge",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "model": {
+    "scenario_count": 648,
+    "strategy_evaluations": 3240,
+    "equal_weight_lattice": true,
+    "initial_state": "promotion P is PREPARED; shard A holds reservation P/A; shard B is unreserved; abort is requested before global COMMIT",
+    "axes": {
+      "late_old_bridge": ["none", "B_late", "A_reacquire"],
+      "stale_coordinator": [false, true],
+      "new_promotion_reuse": ["none", "A", "B"],
+      "A_release_response": ["observed_success", "applied_response_lost", "not_applied_response_lost"],
+      "A_release_rate_limit": ["none", "A"],
+      "intent_cleanup": ["keep_terminal", "delete_after_abort"],
+      "gc_after_release": ["none", "A", "B"]
+    },
+    "strategies": [
+      "cleanup_by_delete",
+      "release_then_abort",
+      "abort_then_release_name_only",
+      "monotonic_abort_epoch_release",
+      "fail_closed"
+    ]
+  },
+  "aggregate": {
+    "cleanup_by_delete": {"post_abort_resurrection":444,"late_bridge_accepted":444,"stale_release_deleted_new_reservation":6,"live_root_deleted_by_gc":2,"unreconstructible_orphan":546,"stranded_old_reservation":546,"duplicate_release_attempt":54,"false_blockage":306,"new_promotion_blocked":312,"dead_copy_deleted_by_gc":86,"recovery_reads":648,"terminal_witness_retained":0},
+    "release_then_abort": {"post_abort_resurrection":324,"late_bridge_accepted":324,"stale_release_deleted_new_reservation":18,"live_root_deleted_by_gc":6,"unreconstructible_orphan":243,"stranded_old_reservation":486,"duplicate_release_attempt":108,"false_blockage":198,"new_promotion_blocked":252,"dead_copy_deleted_by_gc":174,"recovery_reads":648,"terminal_witness_retained":324},
+    "abort_then_release_name_only": {"post_abort_resurrection":180,"late_bridge_accepted":180,"stale_release_deleted_new_reservation":36,"live_root_deleted_by_gc":12,"unreconstructible_orphan":252,"stranded_old_reservation":414,"duplicate_release_attempt":108,"false_blockage":168,"new_promotion_blocked":180,"dead_copy_deleted_by_gc":180,"recovery_reads":648,"terminal_witness_retained":324},
+    "monotonic_abort_epoch_release": {"post_abort_resurrection":0,"late_bridge_accepted":0,"stale_release_deleted_new_reservation":0,"live_root_deleted_by_gc":0,"unreconstructible_orphan":0,"stranded_old_reservation":324,"duplicate_release_attempt":0,"false_blockage":108,"new_promotion_blocked":108,"dead_copy_deleted_by_gc":216,"recovery_reads":864,"terminal_witness_retained":648},
+    "fail_closed": {"post_abort_resurrection":0,"late_bridge_accepted":0,"stale_release_deleted_new_reservation":0,"live_root_deleted_by_gc":0,"unreconstructible_orphan":0,"duplicate_release_attempt":0,"false_blockage":216,"new_promotion_blocked":216,"dead_copy_deleted_by_gc":0,"recovery_reads":648}
+  },
+  "critical_slices": {
+    "release_before_abort_reacquire_window": {
+      "n": 3,
+      "definition": "old A writer reacquires after A release while intent is still PREPARED; no stale coordinator/new promotion/rate limit; response observed; terminal witness kept; GC target varies",
+      "cleanup_by_delete": "3/3 post-abort resurrection and 3/3 unreconstructible orphan",
+      "release_then_abort": "3/3 post-abort resurrection; terminal ABORTED exists later but the release step has already passed, so the reacquired P reservation is stranded",
+      "abort_then_release_name_only": "0 resurrection in this slice because ABORTED is visible before the late writer",
+      "monotonic_abort_epoch_release": "0 resurrection"
+    },
+    "response_lost_then_target_reuse": {
+      "n": 1,
+      "definition": "no late/stale writer; A release actually applies but response is lost; new promotion acquires A; blind release retry occurs; GC then targets A",
+      "cleanup_by_delete": "stale retry deletes the new reservation and GC deletes the newly-live root",
+      "release_then_abort": "same stale-release/live-GC failure",
+      "abort_then_release_name_only": "same stale-release/live-GC failure despite correct abort ordering because release is name-only",
+      "monotonic_abort_epoch_release": "0 stale release and 0 live-root deletion: readback/exact reservation epoch detects that P/A is gone and never deletes the new epoch"
+    },
+    "terminal_witness_deleted_then_stale_B": {
+      "n": 3,
+      "definition": "B late writer + stale coordinator, no new promotion/rate limit, observed A release; bulky/terminal intent is deleted after abort; GC target varies",
+      "cleanup_by_delete": "3/3 resurrection + 3/3 orphan",
+      "release_then_abort": "3/3 resurrection + 3/3 orphan after terminal record deletion",
+      "abort_then_release_name_only": "3/3 resurrection + 3/3 orphan after terminal record deletion",
+      "monotonic_abort_epoch_release": "0 resurrection/orphan because deleting bulky intent retains a compact terminal promotion-id/epoch witness"
+    }
+  },
+  "scope_safe_conclusion": {
+    "ordering_rule": "Abort must become a monotonic current authority state before releasing shard reservations. Release-first creates a window where old PREPARED writers can reacquire and survive the later abort.",
+    "release_identity_rule": "Shard cleanup must compare exact promotion_id + reservation epoch/incarnation. Name/path-only release is unsafe under ambiguous response plus target reuse because a retry can delete the next promotion's reservation.",
+    "terminal_retention_rule": "Deleting the only ABORTED witness reopens old-writer ambiguity. Bulky intent may be compacted only if a compact terminal promotion-id/epoch witness remains in the same authority domain consulted by late writers and cleanup.",
+    "candidate": "CAS intent PREPARED->ABORTED monotonically under current coordinator epoch; every late bridge must prove current PREPARED so it is rejected after ABORTED; release each shard only when current reservation matches exact promotion_id+reservation_epoch; ambiguous release response is read-before-retry; new promotion uses a new reservation epoch; GC proceeds only from current shard root/reservation state. Persistent rate limit may leave an ABORTED-but-cleanup-pending reservation, which is recoverable/nonterminal rather than orphaned.",
+    "not_proven": [
+      "The strong candidate retains a compact terminal witness; safe GC of that witness is the next child.",
+      "Rate-limited release can cause conservative blockage until cleanup resumes; wait-free progress is not claimed.",
+      "Complete repository rollback that erases terminal witness and shard epochs remains unresolved."
+    ]
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "repository_transport": "role-local monotonic intent + shard reservation CAS/readback only"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "Terminal promotion witness compaction: determine when ABORTED/COMMITTED promotion IDs and shard reservation epochs can be compacted without allowing old bridge/release replay after later target reuse.",
+    "Adaptive shard split/merge while an ABORTED cleanup-pending reservation exists.",
+    "Bounded retention index to avoid one tombstone per promotion while preserving a monotonic lower bound against old epochs."
+  ],
+  "exact_continuation": "Model terminal promotion-witness compaction. Compare delete-all-terminal-records, per-promotion tombstone, per-target minimum-reservation-epoch watermark, per-shard monotonic promotion generation floor, and fail-closed. Adversaries: very late old bridge/release, new target incarnation, shard split/merge, restore/replay of old checkpoint, response loss, watermark update lag, and rate-limit interruption. Measure old-writer acceptance, stale release of new reservation, retained-state growth, false blockage, and recovery reads."
+}
