@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 30,
+  "control_revision": 25,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "frozen_control": {
+    "semantic_start_main_sha": "8ad91c7c03ab86e116b3248d65c586618eaf212f",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "root_revision": 25,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "semantic_drift_observed_after_freeze": "0077b47af6794ae71e7e7857c2baeb2d61982f56",
+    "post_drift_control_or_config_body_read": false
+  },
+  "public_exact_pins": {
+    "mcp_csharp_release_commit": "6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "mcp_csharp_release": "v2.2.0",
+    "mcp_csharp_current_main_observed": "609499b2988e3f4a4c732552290bc9241fb90db9",
+    "mcp_csharp_current_main_commit_date": "2026-08-20T00:12:21Z",
+    "openhands_commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "openhands_release": "v1.44.1",
+    "etcd_latest_observed_release": "v3.7.1",
+    "etcd_latest_observed_release_date": "2026-07-23",
+    "etcd_release_commit_short": "5e7fd0d"
+  },
+  "findings": {
+    "mcp_stock_same_task_redrive": {
+      "classification": "NOT_EXPOSED_BY_STOCK_TASKS_CONTRACT",
+      "evidence": "At both exact v2.2.0 and current main 609499b2, RunAsTaskAsync durably awaits IMcpTaskStore.CreateTaskAsync and only then schedules volatile Task.Run. IMcpTaskStore still defines CreateTaskAsync as creating a new task with a unique task ID and exposes no start-existing/redrive/claim-generation API. McpTaskInfo has no execution-attempt generation. McpTasksOptions has no scheduler/redrive hook.",
+      "consequence": "A conforming additive store/filter layer cannot redrive the same durable Working task after CreateTaskAsync-success / Task.Run-not-scheduled. Returning an existing task from CreateTaskAsync can force re-scheduling but is a deliberate semantic extension that conflicts with the documented create-new/unique-ID contract; it must not be described as stock-compatible.",
+      "current_main_check": "The relevant current-main source observed at 609499b2 retains the same create-before-Task.Run ordering and unchanged create-new task-store contract, so the gap was not removed on main as of the observed 2026-08-20 commit."
+    },
+    "mcp_generation_and_effect_safety": {
+      "classification": "GENERATION_HELPS_LIVENESS_AND_STALE_ATTEMPTS_BUT_NOT_EXACTLY_ONCE_EFFECTS",
+      "evidence": "Source-equivalent harness separates durable execution claim/generation from external effect fencing.",
+      "consequence": "A generation/lease can prevent two attempts from starting while one claim is current and reject a stale attempt before start. If an old attempt crosses lease expiry while inside a non-idempotent external effect, a new generation can still duplicate the effect. Exactly-once-style safety requires an effect-side stable idempotency key or atomic generation/CAS fence at the actual effect boundary."
+    },
+    "etcd_caller_stable_identity": {
+      "classification": "STRONG_CREATE_OR_GET_AND_CAS_PATTERN",
+      "evidence": "etcd v3.7 documents atomic Txn If/Then/Else; Compare supports VERSION, CREATE, MOD, VALUE; failure branches may Range the same key; default Range is linearizable, while serializable Range may be stale.",
+      "protocol": "Use caller-deterministic /ops/<op_id>. Txn Compare VERSION(key)==0; success Put exact intent; failure Range exact key. A lost response can be retried as the same transaction and the failure Range can return the existing object for exact intent verification. For later writes compare exact MOD revision. VERSION alone is insufficient as an ABA fence because delete+recreate resets per-key version; old mod_revision/create_revision distinguishes the historical object.",
+      "connected_chat_capability": "No etcd connector is present in the current connected-tool inventory and plugin search for 'etcd' returned no installable plugin. This is an observed Chat capability absence for live cluster Txn/Range in this environment, not a claim that etcd is intrinsically protected or unavailable elsewhere."
+    },
+    "openhands_fenced_head_marker": {
+      "classification": "SOURCE_QUALIFIED_PATCH_CANDIDATE_WITH_MODEL_TESTS",
+      "exact_source_basis": "At OpenHands v1.44.1, ConversationState.append_event stamps parent, persists through EventLog.append using event.model_dump_json(exclude_none=True), then advances leaf_event_id; base_state autosave may be deferred until outer state-context exit. Cold load trusts a non-null persisted leaf. Agent Server separately repairs unmatched executable Actions by scanning the full log. Local FileStore writes are atomic at file level but flock-style locking is explicitly not reliable on NFS/network filesystems.",
+      "candidate_protocol": "Per-event pending HEAD markers are durably written before the event file and bind base persistence_generation, raw expected leaf/head-empty state, event ID, parent and exact event digest. Successful base_state writes increment a monotonic persistence_generation before marker cleanup. On restart, markers from older generations are stale cleanup residue; equal-generation markers may advance HEAD only as a unique exact chain from the persisted raw HEAD with matching durable event parent/digest. Markerless orphans are never auto-adopted; ambiguous branches fail closed. Recovery is invoked only after the Agent Server installs its lease-backed write guard. Existing unmatched-Action repair remains complementary.",
+      "status": "Patch candidate is saved but has NOT been applied, type-checked, compiled, or run against upstream OpenHands. Source-equivalent recovery model passes 8/8 fixtures."
+    }
+  },
+  "executed_artifacts": {
+    "mcp_etcd_harness": {
+      "path": "research_workers_clean_g1/open_source/artifacts/20260829T030100Z_mcp_claim_generation_etcd_cas_harness.py",
+      "commit": "d899b3cbf843b8ef29f1452082ae4b3e5c944be8",
+      "blob": "4172d16a14a9961ba31c1bdcc4f0d815e68ac704",
+      "local_result": "PASS 15/15",
+      "notes": "Ten MCP execution-claim/effect-fence fixtures plus five etcd create-or-get/CAS/ABA fixtures."
+    },
+    "openhands_marker_harness": {
+      "path": "research_workers_clean_g1/open_source/artifacts/20260829T031000Z_openhands_fenced_head_marker_harness.py",
+      "commit": "6693e5e407f1fb826e789ca42a2a99167abdbaec",
+      "blob": "af7d389f3eb1bc9bb096d2ace487488bcc7abe96",
+      "local_result": "PASS 8/8"
+    },
+    "openhands_patch_candidate": {
+      "path": "research_workers_clean_g1/open_source/OPENHANDS_FENCED_HEAD_MARKER_PATCH_CANDIDATE_20260829_R6.patch",
+      "commit": "bfcb6f07ba941240b8f0db50bab3a062ab5ae0d2",
+      "blob": "a9d5c84abe30eeca2e583f9d1c3237320496f017",
+      "validation": "exact-source-informed candidate only; not compiled/applied upstream"
+    }
+  },
+  "counterexamples": [
+    "Durable MCP task row does not imply the Task.Run delegate was scheduled.",
+    "A current generation read by multiple workers is not itself an attempt-local fencing token.",
+    "Lease/generation without effect-side idempotency/CAS permits duplicate non-idempotent effects across lease expiry.",
+    "Returning an existing MCP task from CreateTaskAsync enables a redrive shape but violates the documented create-new unique-ID semantics.",
+    "etcd VERSION-only CAS has ABA ambiguity across delete+recreate; exact old MOD/CREATE revision is stronger.",
+    "OpenHands unique-descendant inference without a durable intent marker can adopt an unintended branch; markerless descendants must remain unadopted."
+  ],
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other worker/downstream/legacy namespaces"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap DESIRED_STATE and own config first. If config revision 6 remains active, read own LATEST and this checkpoint only. Re-check MCP C# Tasks current main before relying on the v2.2.0 boundary; then design the smallest explicit SDK-level redrive contract (e.g. durable claim/start-existing hook or outbox-backed scheduler) that remains create-new compatible and test the create-before-schedule, concurrent takeover, stale-generation, cancellation, and result-recording races. For OpenHands, turn the saved fenced-marker candidate into exact upstream pytest hunks and audit persistence_generation/marker cleanup interactions with navigation/fork, ConversationStateUpdateEvent, lease takeover, and non-LocalFileStore backends before any claim of patch correctness. Continue caller-stable identity survey with an API whose live mutation/readback is actually exposed through connected Chat, so the pattern can be exercised end-to-end rather than only modeled."
+}
