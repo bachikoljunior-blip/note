@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 62,
+  "leaf_id": "adaptive-shard-split-merge-topology",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "model": {
+    "scenario_count": 1728,
+    "strategy_evaluations": 8640,
+    "equal_weight_lattice": true,
+    "axes": {
+      "topology_operation": ["split", "merge"],
+      "fault_point": ["none", "crash_after_prepare", "crash_after_one_child"],
+      "concurrent_write": ["none", "old_mapping", "new_mapping"],
+      "floor_transition": ["correct", "reset_or_min"],
+      "publish_response": ["observed", "applied_response_lost"],
+      "stale_coordinator": [false, true],
+      "rate_limited_domain": ["none", "left", "right"],
+      "target_incarnation": ["same", "recreated_aba"],
+      "gc": ["none", "target"]
+    },
+    "strategies": [
+      "hash_remap_no_epoch",
+      "forwarding_tombstone",
+      "topology_prepared_committed_inherit",
+      "dual_read_migration",
+      "fail_closed"
+    ]
+  },
+  "aggregate": {
+    "hash_remap_no_epoch": {"stale_old_mapping_write":864,"early_new_mapping_write":576,"duplicate_reservation":1152,"live_root_deleted_by_gc":576,"orphan_forwarding":0,"recoverable_prepared":0,"false_blockage":0,"transition_committed":1728,"transition_blocked":0,"stale_coordinator_effect":864,"response_reconcile":0,"recovery_reads":1728},
+    "forwarding_tombstone": {"stale_old_mapping_write":96,"early_new_mapping_write":576,"duplicate_reservation":512,"live_root_deleted_by_gc":304,"orphan_forwarding":1536,"recoverable_prepared":0,"false_blockage":1536,"transition_committed":192,"transition_blocked":1536,"stale_coordinator_effect":96,"response_reconcile":864,"recovery_reads":4320},
+    "topology_prepared_committed_inherit": {"stale_old_mapping_write":0,"early_new_mapping_write":0,"duplicate_reservation":0,"live_root_deleted_by_gc":0,"orphan_forwarding":0,"recoverable_prepared":1632,"false_blockage":544,"transition_committed":96,"transition_blocked":1632,"stale_coordinator_effect":0,"response_reconcile":48,"recovery_reads":6096},
+    "dual_read_migration": {"stale_old_mapping_write":576,"early_new_mapping_write":576,"duplicate_reservation":1152,"live_root_deleted_by_gc":720,"orphan_forwarding":0,"recoverable_prepared":0,"false_blockage":1536,"transition_committed":192,"transition_blocked":1536,"stale_coordinator_effect":864,"response_reconcile":864,"recovery_reads":7776},
+    "fail_closed": {"stale_old_mapping_write":0,"early_new_mapping_write":0,"duplicate_reservation":0,"live_root_deleted_by_gc":0,"orphan_forwarding":0,"recoverable_prepared":0,"false_blockage":1728,"transition_committed":0,"transition_blocked":1728,"stale_coordinator_effect":0,"response_reconcile":0,"recovery_reads":1728}
+  },
+  "critical_slices": {
+    "old_mapping_after_clean_transition": {
+      "n": 4,
+      "definition": "split/merge; no fault/rate/stale coordinator; floor correct; response observed; same incarnation; old-mapping writer; GC none/target",
+      "hash_remap_no_epoch": "4/4 accepts stale old-mapping write and 4/4 creates duplicate reservation; GC-target half of the slice deletes a live root",
+      "forwarding_tombstone": "0 stale old-mapping write in this clean committed slice; old mapping is forwarded/rejected",
+      "topology_prepared_committed_inherit": "0 stale write, 0 duplicate reservation, 0 live-root deletion; old topology generation is rejected",
+      "dual_read_migration": "4/4 accepts old-mapping write and creates duplicate reservation because both maps remain writable"
+    },
+    "early_new_mapping_during_prepared_fault": {
+      "n": 4,
+      "definition": "split/merge; crash after topology PREPARE; new-mapping writer; correct floor; no rate/stale coordinator; response observed; same incarnation; GC varies",
+      "forwarding_tombstone": "4/4 early new-mapping write accepted while topology is not committed; duplicate reservation in this blocked migration",
+      "dual_read_migration": "4/4 early new write/duplicate reservation",
+      "topology_prepared_committed_inherit": "0 early write/duplicate; new mapping requires COMMITTED topology generation and the PREPARED state remains recoverable"
+    },
+    "floor_reset_or_merge_min": {
+      "n": 4,
+      "definition": "split/merge clean control path except floor transition resets/uses min; old-mapping writer; no rate/stale; response observed; same incarnation; GC varies",
+      "forwarding_tombstone": "commits topology despite lowered floor; stale old authority accepted and GC-target half can delete live root",
+      "topology_prepared_committed_inherit": "0 unsafe effect; transition stays PREPARED/blocked because split children must inherit >= parent floor and merge output >= max input floor"
+    },
+    "one_domain_rate_limited": {
+      "n": 32,
+      "definition": "rate limit on left or right domain; other axes restricted to no fault, correct floor, observed response, current coordinator; operation/write/incarnation/GC vary",
+      "forwarding_tombstone": "32/32 migration blocked with stranded/orphan forwarding state in the model",
+      "topology_prepared_committed_inherit": "32/32 nonterminal recoverable PREPARED; old topology remains authoritative and no cross-topology stale/duplicate/live-GC effect is accepted"
+    }
+  },
+  "scope_safe_conclusion": {
+    "mapping_rule": "A deterministic hash/path remap is routing, not authority. Every write/GC action must bind to a monotonic topology generation and reject a retired mapping even if that old path still exists.",
+    "prepare_commit_rule": "Topology mutation is PREPARED while new child/merge domains are provisioned. New-mapping writes require current COMMITTED generation; old mapping remains authoritative until COMMIT. COMMIT occurs only after all new domains are present, floor inheritance is proven, and current coordinator/topology epoch still matches.",
+    "floor_rule": "Split child floor >= parent floor; merge output floor >= max(input floors). Reset/min transitions fail closed and remain PREPARED rather than lowering stale-writer fences.",
+    "forwarding_rule": "A forwarding tombstone is useful after COMMIT to reject/redirect old paths, but it is not itself a transaction coordinator. Installing forwarding before new mapping/floors are committed can strand traffic or admit early writes.",
+    "response_rate_rule": "Applied-response-lost topology COMMIT is reconciled by current topology generation/transition ID. Rate limit on one domain leaves PREPARED recoverable and does not make a partial topology authoritative.",
+    "incarnation_rule": "Target incarnation generation from Part61 remains part of the reservation/floor comparison across topology moves; physical shard identity alone is not sufficient."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "repository_transport": "role-local topology intent/generation + shard floor/ref/path/CAS/readback only"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "Topology PREPARED cleanup/rollback: abort a split/merge after one child provisioned while late writers and GC continue; require old mapping authority restoration without lowering floors or deleting new-generation reservations.",
+    "Cross-topology promotion intent: promotion PREPARED under G1 while topology G2 commits; decide whether promotion is remapped, aborted, or bridges both generations without duplicate reservation.",
+    "Complete repository rollback remains unresolved."
+  ],
+  "exact_continuation": "Model topology-abort cleanup. Start topology G2 PREPARED with one child provisioned and floor inherited. Compare delete-child-then-abort, abort-generation-then-fenced-child-cleanup, forwarding-only rollback, monotonic topology ABORTED + exact child-generation cleanup, and fail-closed. Adversaries: late G2 child write, late G1 parent write, response loss, target reuse, stale coordinator, rate limit, GC, and a concurrent promotion intent. Measure post-abort G2 resurrection, stale cleanup of reused child reservation, duplicate cross-generation reservation, live-root deletion, stranded child state, false blockage, and recovery reads."
+}
