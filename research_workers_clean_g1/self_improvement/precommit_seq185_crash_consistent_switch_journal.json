@@ -1,0 +1,52 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-CRASH-CONSISTENT-SWITCH-JOURNAL-v1",
+  "created_at":"2026-08-29T18:06:06.701757+00:00",
+  "predecessor_sequence":184,
+  "test_kind":"DURABLE_INTENT_AND_FINALIZATION_RECOVERY_FOR_ASSIGNMENT_SWITCH",
+  "public_family_candidate":"durable recovery journal with separate intent and finalized-decision records plus restart replay",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"no interruption point before a durably read-back finalized decision may transfer assignment authority from A to B",
+    "F2":"accepted route has no richer-mode/manual-user/protected-primary/external recovery runtime, no finite optional quota, and zero incremental monetary cost"
+  },
+  "guards":[
+    "G1 switch instance TX-5 has unique id, source A, candidate B, exact scope S1, and immutable predecessor pointer before any state transition",
+    "G2 PREPARED intent is durable and read back before qualification work but does not transfer authority or credit",
+    "G3 QUALIFIED requires distinct same-scope terminal evidence; duplicates, stale replays, scope mismatch, and transport failure are non-semantic",
+    "G4 FINALIZED_DECISION is a distinct durable state written only after qualification passes; authority still remains A until that state is independently read back",
+    "G5 authority pointer transfer is an idempotent compare-and-set from recorded predecessor A to B and occurs only after FINALIZED_DECISION readback",
+    "G6 restart after PREPARED without QUALIFIED resumes qualification with A authoritative",
+    "G7 restart after QUALIFIED without FINALIZED_DECISION resumes from qualification and may finalize only if persisted qualification remains valid for S1",
+    "G8 restart after FINALIZED_DECISION but before pointer transfer replays only the idempotent pointer update instead of re-running qualification or awarding duplicate credit",
+    "G9 restart after pointer already equals B treats authority transfer as complete and only closes TX-5 bookkeeping; duplicate completion earns no credit",
+    "G10 an ABORTED/REJECTED switch cannot later be promoted by a stale completion; immutable prior evidence remains history but non-authoritative",
+    "G11 a pointer compare-and-set mismatch against a different current authority is a conflict diagnostic and cannot be forced through",
+    "G12 bounded exact-scope exit with nonempty frontier, zero residual richer-mode/user execution dependency, zero finite quota dependency, and zero incremental monetary cost"
+  ],
+  "fixed_trace":{
+    "initial":{"authoritative":"A","candidate":"B","scope":"S1","switch_instance":"TX-5","pointer_version":"p7"},
+    "success_path":["PREPARED","QUALIFIED","FINALIZED_DECISION_READBACK","POINTER_A_TO_B","DONE"],
+    "restart_points":[
+      {"point":"after_PREPARED","required":"A remains authoritative; resume qualification"},
+      {"point":"after_QUALIFIED","required":"A remains authoritative; resume from persisted qualification"},
+      {"point":"after_FINALIZED_DECISION_readback_before_pointer_update","required":"A remains current until replayed pointer update succeeds; restart replays only the idempotent transfer"},
+      {"point":"after_pointer_update_before_DONE","required":"B already authoritative; restart closes bookkeeping with no second transfer or credit"}
+    ],
+    "failure_path":{"qualification":"FAIL","required":"ABORTED/REJECTED; A remains authoritative; late TX-5 promotion is rejected"},
+    "controls":{"duplicate_qualification":"non-semantic","scope_mismatch":"non-semantic","transport_timeout":"non-semantic","pointer_changed_to_C":"compare-and-set conflict; reject transfer"}
+  },
+  "candidate_patterns":[
+    {"id":"JR-A","pattern":"write candidate B into the authority pointer before durable qualification/finalization so restart can infer intent from the pointer"},
+    {"id":"JR-B","pattern":"durable PREPARED/QUALIFIED/FINALIZED_DECISION states plus readback-gated idempotent pointer transfer and restart replay"},
+    {"id":"JR-C","pattern":"rerun the whole switch after any restart and award credit again when B is observed"},
+    {"id":"JR-D","pattern":"delegate durable switch recovery to an external hosted workflow runtime"}
+  ],
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G12 PASS. Do not change fixed trace, restart points, guards, controls, or candidate patterns after public source read.",
+  "credit_rule":"Precommit/intermediate journal states earn zero credit. At most one leaf credit after a source-qualified Chat-native reduction passes every fixed restart/failure/control case and its immutable terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this precommit back. Only then audit public durable-recovery journal sources and bind source-supported finalization/restart semantics without importing any external runtime. Execute JR-A..JR-D against the frozen trace, seal immutable terminal evidence, read it back, and only then decide credit."
+}
