@@ -1,0 +1,34 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-PARTIAL-SWITCH-COMPENSATION-v1",
+  "observed_at":"2026-08-29T17:09:05+00:00",
+  "predecessor_sequence":175,
+  "precommit_blob":"c9f9fd16cc767debc26f15b7015f4d5618da5530",
+  "source_binding":[
+    {"id":"S1","source":"Garcia-Molina and Salem, SAGAS, Princeton TR-070-87 (1987)","url":"https://www.cs.princeton.edu/research/techreps/598","semantics_used":"A saga is a sequence of sub-transactions; partial execution is undesirable and must be compensated. The paper defines either full forward completion T1..Tn or a partial forward prefix followed by compensations Cj..C1, and notes that some applications may instead always move forward and finish."},
+    {"id":"S2","source":"Microsoft Azure Architecture Center, Compensating Transaction pattern","url":"https://learn.microsoft.com/en-us/azure/architecture/patterns/compensating-transaction","semantics_used":"Compensation requires enough information to undo completed work; compensating commands should be idempotent so they can be repeated after failure; original and compensating operations should be correlated and auditable; retry recoverable forward failures before triggering compensation."}
+  ],
+  "source_scope_note":"The original saga paper supplies the reverse-order compensation used in this fixed trace. Microsoft explicitly notes that generic compensation need not always run in exact reverse order, so reverse-order behavior is not generalized beyond this tested switch reduction.",
+  "chat_native_reduction":{"id":"SAGA-CHAT-SWITCH-RECOVERY-v1","rules":["Persist a switch instance id and append-only step status before treating a step as durable.","On resume, if the target remains valid, continue from the first incomplete forward step; do not replay completed steps.","If the target is no longer valid before terminal activation, enter COMPENSATING and append compensations for completed reversible steps in reverse order for this fixed switch trace.","Use stable compensation identity comp:<switch-instance>:<step> so replay is a semantic no-op after the first successful readback.","Keep the old assignment authoritative until target-active terminal readback. Preparation alone never transfers authority or credit.","After COMPENSATING or ABORTED, reject late forward completions for that switch instance/epoch.","Transport/CAS/readback failures change no semantic step state until the corresponding append is independently read back."],"literal_external_saga_orchestrator_required":false},
+  "fixed_trace_execution":{
+    "case_forward":{"input":"SW-8 has INTENT and B_PREPARED; B remains valid","actions":["read durable SW-8 step state","resume first incomplete forward step B_ACTIVE","read back B_ACTIVE terminal","only then supersede A"],"terminal":"B_ACTIVE","result":"PASS"},
+    "case_compensate":{"input":"SW-8 has INTENT and B_PREPARED; new same-scope evidence invalidates B before B_ACTIVE","actions":["append SW-8:COMPENSATING","append comp:SW-8:B_PREPARED","read back compensation","append SW-8:ABORTED"],"terminal":"SW-8 ABORTED; A remains authoritative","result":"PASS"},
+    "case_duplicate_compensation":{"input":"comp:SW-8:B_PREPARED replay","result":"NO_SECOND_SEMANTIC_EFFECT","status":"PASS"},
+    "case_stale_forward":{"input":"late SW-8:B_ACTIVE completion after SW-8 ABORTED","result":"REJECT_STALE_COMPLETION","status":"PASS"}
+  },
+  "candidate_results":[
+    {"id":"SC-A","fatal_gate":null,"guard_pass":["G2"],"guard_fail":["G1","G3","G4","G5","G6","G7","G8","G9","G10"],"score":1,"outcome":"REJECT","reason":"blind restart replays completed work and permits duplicate/stale effects"},
+    {"id":"SC-B","fatal_gate":null,"guard_pass":["G1","G2","G4","G7","G10"],"guard_fail":["G3","G5","G6","G8","G9"],"score":5,"outcome":"REJECT","reason":"unconditionally compensates even when safe forward recovery is available and lacks replay/terminal safeguards"},
+    {"id":"SC-C","fatal_gate":null,"guard_pass":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"],"guard_fail":[],"score":10,"outcome":"PASS"},
+    {"id":"SC-D","fatal_gate":"F2","score":0,"outcome":"REJECT","reason":"depends on external hosted workflow/orchestrator"}
+  ],
+  "guard_summary":{"selected_pattern":"SC-C","passed":"10/10","fatal_gates_passed":true},
+  "scope":"constructed role-local partial assignment-switch trace only; controller recovery conformance, not a claim that all real-world saga compensations are reversible, reverse-ordered, or automatically recoverable.",
+  "phase1_acceptance":{"residual_richer_mode_or_manual_user_execution_dependency":false,"finite_monthly_trial_paid_quota_dependency":false,"incremental_monetary_cost":0,"unresolved_literal_routes":["hosted workflow engines or external service participants are not acceptance evidence under quota=0"],"repository_api_use":"lightweight durable state/evidence transport only"},
+  "credit_rule_result":"ELIGIBLE_FOR_AT_MOST_ONE_NEW_LEAF_CREDIT_AFTER_THIS_TERMINAL_FILE_IS_INDEPENDENTLY_READ_BACK",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this terminal artifact back. Only after exact readback, advance controller credit by one and select a distinct failure mode for assignment switching/recovery; precommit before reading the next public mechanism family."
+}
