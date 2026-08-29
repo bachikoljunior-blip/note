@@ -7,10 +7,10 @@ Authority record:
 `research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
 
 Authoritative latest checkpoint:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0325JST_PHASE1_CROSS_INVOCATION_RECOVERY.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0425JST_PHASE1_FORECAST_SWITCH_EXHAUSTION.md`
 
 Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_INTERRUPTION_SEEDS.md`
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0325JST_PHASE1_CROSS_INVOCATION_RECOVERY.md`
 
 Frozen authority:
 - transport: `exact_blob_two_pass`
@@ -21,17 +21,20 @@ Frozen authority:
 - `bootstrap_valid=true`
 
 Current persisted state:
-- Rate-limit state is now sequence 2 / retry attempt 2. The planned missing-`Retry-After` control selected deterministic 120-second capped-exponential backoff exactly once and persisted `not_before=2026-08-30T03:27:39+09:00`; readback blob `9744517a8b49c346a78b67ba62cacfc329c3c4bb`.
-- Interruption Case A recovered across the real invocation boundary by reusing the existing immutable claim, creating one deterministic result, CAS-advancing the pointer, and receiving HTTP 422 on duplicate result creation. No new claim was minted.
-- Interruption Case B repaired its missing receipt from already committed pointer evidence, explicitly without effect replay, and received HTTP 422 on duplicate receipt creation.
-- Current checkpoint readback blob: `9da1fc9254fd1376111fc7b808d51a9be67ad398`.
+- Cross-invocation reconstruction proved the previously selected 120-second deterministic backoff and exact `not_before=2026-08-30T03:27:39+09:00` survived unchanged; no backoff resampling occurred.
+- Live rate-limit/planning state is sequence 3 / plan generation 2 / retry attempt 2 at blob `4395e855dbdde20aecea6d91138465c1885dbdf1`.
+- Synthetic forecast-overrun control used remaining budget 1000s versus forecast p90 900s + retry reserve 300s = 1200s, so it switched exactly once from `primary_retry_plan` to `compact_plan`, kept retry attempt 2, and consumed no external-work attempt.
+- A stale generation-1 reactivation write using pre-switch blob `9744517a8b49c346a78b67ba62cacfc329c3c4bb` was rejected with HTTP 409; readback remained generation 2.
+- Independent retry-budget exhaustion control is stored at `phase1/RETRY_BUDGET_EXHAUSTION_CONTROL_2026-08-30T0425JST.json`, blob `a79a1e73060ee11c36366b1dfe6a0dc366eeab41`: attempt=max_attempts while forecast_overrun=false yields `SWITCH_PLAN`, cause `RETRY_BUDGET_EXHAUSTED`, no blind retry. Duplicate control creation was rejected with HTTP 422.
+- Latest checkpoint blob: `a968e0ec1cce69742771c9c90a7d9504d9e61071`.
 - No richer-mode/Work/protected-primary/manual execution step or finite monthly/trial/paid compute quota is used by these tested routes; incremental monetary cost is zero.
-- Tested scope remains role-local repository text-state transport and synthetic effects only; `global_completion=false`.
+- Tested scope remains role-local repository text-state transport and synthetic controls only; `global_completion=false`.
 
 Exact continuation:
-1. Fresh two-pass root/config bootstrap; validate the exact canonical branch authority before own-state semantics.
-2. Reconstruct `phase1/LIVE_RATE_LIMIT_STATE.json` sequence 2 and prove the persisted 120-second backoff plus exact `not_before` survived the invocation boundary unchanged; do not resample.
-3. If eligible, run a monotonic forecast-overrun switch control: choose a persisted remaining-budget condition where `forecast_p90 + retry_reserve > remaining_budget`, advance `plan_generation` 1→2, switch once to `compact_plan`, and consume no additional external-work attempt.
-4. Prove stale generation-1 continuation cannot reactivate after the switch by current-blob CAS plus a stale-write rejection probe.
-5. Separately test retry-budget exhaustion at `max_attempts`; require switch/defer/blocker rather than blind retry, preserving forecast-overrun and exhaustion as distinct causes.
-6. Checkpoint exact outcomes and retain a nonempty Phase-1 frontier until the repository-controlled recurring objective is closed under the root zero-dependency/zero-quota constraints.
+1. Fresh two-pass root/config bootstrap and exact canonical branch-authority validation.
+2. Reconstruct sequence 3 / generation 2 and prove the switch survives another invocation unchanged: `switch_count=1`, retry attempt 2, generation 2, and no repeat switch from replayed overrun evidence.
+3. Run a cross-invocation stale-generation replay and require current-blob CAS rejection while preserving generation 2.
+4. Add deterministic collision controls where forecast-overrun and retry-exhaustion are both true; predeclare and test a stable precedence rule.
+5. Add malformed/negative and very-large `Retry-After` controls plus repeated reconstruction, persisting one bounded decision rather than resampling per invocation.
+6. Test retry exhaustion with no alternative plan; require durable defer/block rather than blind retry or implicit richer-mode/manual handoff.
+7. Preserve a nonempty Phase-1 frontier until the repository-controlled recurring objective is closed under root revision 26.
