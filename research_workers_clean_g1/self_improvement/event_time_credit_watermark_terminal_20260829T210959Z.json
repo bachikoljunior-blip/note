@@ -1,0 +1,47 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-OUT-OF-ORDER-CREDIT-WATERMARK-v1",
+  "precommit_blob":"77e09c4fe70fd78621e060cce60ccf14eb3afaa8",
+  "evaluated_at":"2026-08-29T21:09:59Z",
+  "mechanism_id":"FLINK-BEAM-EVENT-TIME-WATERMARK-LATE-DATA-BOUNDARY",
+  "public_sources":[
+    {
+      "url":"https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/concepts/time/",
+      "bound_semantics":"Flink watermarks carry event-time progress; Watermark(t) means events with timestamps <= t should have arrived, and watermarks are used to reason about out-of-order streams."
+    },
+    {
+      "url":"https://nightlies.apache.org/flink/flink-docs-release-1.6/dev/event_time.html",
+      "bound_semantics":"Elements arriving with timestamps <= an already-passed watermark are late elements; real systems may still observe arbitrarily delayed elements."
+    },
+    {
+      "url":"https://beam.apache.org/releases/pydoc/2.27.0/_modules/apache_beam/io/watermark_estimators.html",
+      "bound_semantics":"Beam's manual watermark estimator rejects watermark regression and requires monotonically increasing watermark values."
+    }
+  ],
+  "chat_native_reduction":{
+    "literal_flink_beam_runtime_used":false,
+    "watermark_policy":"The controller deliberately treats event_time <= durable credit_watermark as finalized for credit, even though public stream systems may choose different late-data handling policies.",
+    "authority_rule":"Late/finalized outcomes are archive diagnostics only and cannot reopen credit or mutate current authority.",
+    "advance_rule":"The role-local credit watermark advances only after terminal evidence for the covered epoch has been durably read back."
+  },
+  "trace_results":[
+    {"step":1,"input":"R7/K7 event_time=7 at W=8","result":"PASS","effect":"late/finalized; archive only; no credit or authority mutation"},
+    {"step":2,"input":"R9/K9 event_time=9 at W=8","result":"PASS","effect":"on-time and independently evaluable; no automatic credit"},
+    {"step":3,"input":"duplicate R9/K9","result":"PASS","effect":"semantic-key guard prevents duplicate effect"},
+    {"step":4,"input":"attempt W=8 -> 7","result":"PASS","effect":"rejected; watermark remains 8"},
+    {"step":5,"input":"transport failure reading W or K9 claim","result":"PASS","effect":"UNKNOWN/no semantic effect"},
+    {"step":6,"input":"durable R9 terminal/readback then W=8 -> 9","result":"PASS","effect":"monotonic advance permitted only after readback"},
+    {"step":7,"input":"R9b/K9b event_time=9 after W=9","result":"PASS","effect":"late/finalized; archive only; no credit"},
+    {"step":8,"input":"scope/provenance mismatch","result":"PASS","effect":"semantic use rejected regardless of watermark"}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; this file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed role-local watermark trace only. This does not claim stream watermarks are infallible completeness proofs, nor does it claim Flink/Beam themselves are accepted zero-quota runtimes."
+}
