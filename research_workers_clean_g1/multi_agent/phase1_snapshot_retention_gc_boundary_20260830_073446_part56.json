@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 56,
+  "leaf_id": "snapshot-retention-unreachable-object-gc-boundary",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "presemantic_liveness_witness": {
+    "required": true,
+    "status": "write_blocked",
+    "observation": "Two GitHub.create_file attempts to the role-authorized automation_control/receipts/multi_agent/ namespace were blocked by OpenAI safety checks before the first role-local/public semantic read. No scheduler mutation was attempted. The role config says witness-write failure alone is nonterminal, so the run continued with a CLEAN-safe role-local/public leaf."
+  },
+  "public_observations": [
+    {
+      "source": "https://docs.github.com/en/rest/git/refs",
+      "observation": "Git refs are names containing commit SHAs; GitHub documents that refs can be updated to a new SHA and deleted. A mutable ref name is therefore not an immutable snapshot identity."
+    },
+    {
+      "source": "https://git-scm.com/docs/gitglossary",
+      "observation": "Git defines an unreachable object as one not reachable from a branch, tag, or any other reference."
+    },
+    {
+      "source": "https://git-scm.com/docs/git-gc",
+      "observation": "Git GC documentation permits pruning unreachable objects after an expiration policy. This is public Git behavior, not a claim about GitHub.com's exact server-side retention schedule."
+    },
+    {
+      "source": "https://docs.github.com/en/rest/repos/contents",
+      "observation": "Repository contents create/update operations are mutable path operations and concurrent create/delete operations can conflict; use exact content identity and current-SHA/CAS discipline for mutable selection."
+    }
+  ],
+  "model": {
+    "scenario_count": 2304,
+    "strategy_evaluations": 16128,
+    "equal_weight_lattice": true,
+    "axes": {
+      "historical_object_state": ["reachable", "unreachable_retained", "unreachable_gone"],
+      "historical_fetch_transport": ["ok", "rate_limit"],
+      "current_reachable_copy_state": ["none", "exact", "deleted_gc", "wrong_reincarnation"],
+      "copy_read_transport": ["ok", "rate_limit"],
+      "mutable_anchor_state": ["expected", "moved", "deleted_recreated", "absent"],
+      "anchor_read_transport": ["ok", "rate_limit"],
+      "semantic_authority": ["same", "superseded"],
+      "retention_write_response": ["observed_success", "applied_response_lost", "not_applied_response_lost"]
+    },
+    "note": "Counts are mechanism-lattice counts, not production probabilities. historical_object_state models current-ref reachability/retention independently of an optional retention anchor or current-reachable copy."
+  },
+  "strategies": {
+    "historical_sha_fenced": {"success":384,"false_wrong_snapshot_recovery":0,"stale_resurrection":0,"fail_closed":1920,"duplicate_retention":0,"avg_recovery_reads":1.3333},
+    "current_path_fallback_no_digest": {"success":480,"false_wrong_snapshot_recovery":96,"stale_resurrection":0,"fail_closed":1728,"duplicate_retention":0,"avg_recovery_reads":2.1667},
+    "mutable_anchor_name_fenced": {"success":144,"false_wrong_snapshot_recovery":288,"stale_resurrection":0,"fail_closed":1872,"duplicate_retention":0,"avg_recovery_reads":1.375},
+    "mutable_anchor_sha_fenced": {"success":144,"false_wrong_snapshot_recovery":0,"stale_resurrection":0,"fail_closed":2160,"duplicate_retention":0,"avg_recovery_reads":1.125},
+    "copy_digest_fenced": {"success":480,"false_wrong_snapshot_recovery":0,"stale_resurrection":0,"fail_closed":1824,"duplicate_retention":0,"avg_recovery_reads":2.2917},
+    "copy_digest_no_authority": {"success":480,"false_wrong_snapshot_recovery":0,"stale_resurrection":480,"fail_closed":1344,"duplicate_retention":0,"avg_recovery_reads":1.875},
+    "copy_digest_blind_retry": {"success":480,"false_wrong_snapshot_recovery":0,"stale_resurrection":0,"fail_closed":1824,"duplicate_retention":768,"avg_recovery_reads":2.2917}
+  },
+  "critical_slices": {
+    "copy_salvage_after_historical_unavailability": {"n":96,"definition":"authority same; historical object is gone or its fetch is rate-limited; exact current-reachable copy exists and is readable","copy_digest_fenced":"96/96 correct recovery","historical_sha_fenced":"0/96 recovery; fail closed"},
+    "same_path_reincarnation": {"n":96,"definition":"authority same; historical object unavailable; current path exists but contains a different incarnation","current_path_fallback_no_digest":"96/96 false wrong-snapshot recovery","copy_digest_fenced":"0/96 false recovery; digest mismatch is rejected"},
+    "mutable_anchor_move_or_recreate": {"n":288,"definition":"authority same; anchor is readable but moved or delete-recreated","mutable_anchor_name_fenced":"288/288 false wrong-snapshot recovery","mutable_anchor_sha_fenced":"0/288 false recovery; fails closed on expected-SHA mismatch"},
+    "rate_limit_interruption": {"n":288,"definition":"authority same; historical route and copy route are both rate-limited","copy_digest_fenced":"288/288 fail closed; 0 unsafe recovery"},
+    "authority_revalidation_ablation": {"n":480,"definition":"authority superseded; copy-or-historical source is otherwise available","copy_digest_no_authority":"480/480 stale resurrection","copy_digest_fenced":"0/480 stale resurrection"},
+    "response_loss_blind_retry": {"n":768,"definition":"retention write applied but response was lost","copy_digest_blind_retry":"768/768 duplicate retention in the negative-control policy","copy_digest_fenced":"0 duplicate retention by deterministic identity plus read-before-retry"}
+  },
+  "scope_safe_conclusion": {
+    "accepted_candidate": "Before a historical checkpoint can become unreachable, retain its exact bytes under a deterministic content-addressed role-local path in the current reachable role namespace; record source snapshot/checkpoint identity and digest in the current role-local manifest; on ambiguous create response, read the deterministic path and verify exact digest before retry; on recovery, prefer the verified reachable copy and fall back to the historical SHA only if fetchable; never substitute a same path or mutable ref name without exact identity; revalidate current semantic authority before selecting LATEST; rate-limit/404/missing-copy stays nonterminal/fail-closed.",
+    "not_proven": [
+      "No claim that GitHub.com retains unreachable historical objects indefinitely.",
+      "No claim that an unprotected mutable branch/tag anchor is permanent; GitHub documents refs as updateable/deletable.",
+      "A current-reachable copy is still inside the repository rollback domain. A complete repository rewind/restore that removes both copy and manifest remains an inherited unresolved boundary."
+    ],
+    "gc_boundary": "Application GC may remove a retained copy only when the current role-local manifest no longer treats that snapshot/checkpoint as a recovery root. Missing expected content before that transition is a blocker, not permission to substitute a same-path reincarnation."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "repository_transport": "lightweight role-local path/ref/read/CAS/readback only; rate-limit interruption is fail-closed and checkpointed rather than compensated by paid compute/storage"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "Fenced application-GC / retention-root leaf: compare path-age GC, mark-manifest then sweep, generation-fenced sweep, and no-delete fail-closed under concurrent LATEST advance, response loss, rate limit, same-path reincarnation, and stale sweeper takeover.",
+    "Complete repository rollback with loss of both current reachable copy and manifest remains unresolved; do not accept external paid/protected witnesses as a solution."
+  ],
+  "exact_continuation": "Run a finite application-GC concurrency model over role-local retained checkpoint roots. Precommit roots from current LATEST plus required predecessor/open-continuation identities, then compare age-only deletion, manifest mark+sweep, generation/epoch-fenced sweep, and fail-closed no-delete. Adversaries: concurrent LATEST advance, stale sweeper, delete response loss, rate limit, same-path reincarnation, and main rewind. Measure deletion of live recovery roots, leaked dead copies, duplicate delete attempts, false blockage, and recovery reads. Preserve exact digest/incarnation fencing and zero-cost/zero-finite-quota constraints."
+}
