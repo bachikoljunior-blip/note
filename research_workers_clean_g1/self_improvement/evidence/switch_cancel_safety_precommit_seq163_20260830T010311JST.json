@@ -1,0 +1,44 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-SWITCH-CANCEL-SAFETY-v1",
+  "created_at":"2026-08-30T01:03:11+09:00",
+  "predecessor_sequence":163,
+  "test_kind":"STALE_PENDING_CHILD_FENCING_AFTER_SWITCH",
+  "public_family_candidate":"sequencer/fencing-token stale-writer rejection",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"root/control/prior terminal evidence remain immutable; no protected-primary mutation",
+    "F2":"no richer-mode/manual-user/external hosted executor, finite quota, or incremental monetary cost"
+  },
+  "guards":[
+    "G1 switch advances a monotonic role-local generation before opening replacement child",
+    "G2 each pending child durably carries generation and child id",
+    "G3 completion is eligible only when generation and child id exactly match active pending state",
+    "G4 stale or superseded completion cannot change credit, active generation, or active frontier",
+    "G5 duplicate completion for an already terminal child is idempotent and cannot double-credit",
+    "G6 prior terminal evidence stays immutable across switch/cancellation",
+    "G7 transport/CAS/readback failure is non-semantic and cannot advance credit or generation",
+    "G8 rejected stale completion leaves a nonempty exact continuation frontier",
+    "G9 bounded exact-scope exit; no infinite retry loop",
+    "G10 independent terminal readback precedes any semantic credit"
+  ],
+  "candidate_patterns":[
+    {"id":"SC-A","pattern":"boolean cancelled flag only; late completion trusts child-local flag"},
+    {"id":"SC-B","pattern":"monotonic generation fencing token plus child id; switch increments generation and late old-generation completions are rejected before credit"},
+    {"id":"SC-C","pattern":"delete superseded pending record; accept any later completion that presents a known child id"},
+    {"id":"SC-D","pattern":"delegate cancellation arbitration to an external coordinator or hosted worker"}
+  ],
+  "trace_precommit":{
+    "initial":{"generation":7,"active_child":"X","credit_total":34},
+    "switch":{"new_generation":8,"active_child":"Y","superseded_child":"X"},
+    "events_in_order":["late_terminal_X_generation7","terminal_Y_generation8","duplicate_terminal_Y_generation8"],
+    "required_safe_effects":["late X => no credit/no frontier change","first Y => eligible only after terminal readback","duplicate Y => no second credit"]
+  },
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G10 PASS. Evaluate candidate semantics against the fixed trace without changing guards after source read.",
+  "credit_rule":"No credit for precommit or source match. At most one credit only after a source-qualified Chat-native reduction passes the fixed trace and immutable terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read public primary/official sources for the preselected sequencer/fencing-token family, bind only source-supported stale-writer rejection semantics, assess zero dependency/quota/cost, then execute SC-A..SC-D against this fixed trace and seal/read back one terminal result."
+}
