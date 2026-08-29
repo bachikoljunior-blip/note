@@ -1,0 +1,37 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-ADAPTIVE-DEADLINE-FALSE-ABORT-CONTROL-v1",
+  "precommit_blob":"7311a9998046bd18512fbdc9521ea1b6fdbd084e",
+  "evaluated_at":"2026-08-29T21:22:15Z",
+  "mechanism_id":"RFC6298-SRTT-RTTVAR-RTO-BACKOFF-REDUCTION",
+  "public_sources":[
+    {"url":"https://www.rfc-editor.org/info/rfc6298/","bound_semantics":"RFC 6298 maintains SRTT and RTTVAR; first sample sets SRTT=R and RTTVAR=R/2; later samples use alpha=1/8, beta=1/4 and RTO=SRTT+max(G,4*RTTVAR); timeout backs RTO off by doubling; ambiguous retransmission RTT samples are excluded absent disambiguating timestamps."}
+  ],
+  "chat_native_reduction":{
+    "literal_tcp_runtime_used":false,
+    "logical_time_unit":"durable controller transitions, not seconds",
+    "formula_match":"Uses the frozen RFC-style alpha/beta/K update ordering and exponential backoff; role-local hard bounds [2,12] are an additional controller safety constraint rather than an RFC 6298 claim.",
+    "sample_gate":"Only valid same-scope terminal readbacks with unambiguous origin are latency samples; transport failures, stale/scope-mismatched outcomes and timeout events do not train the estimator.",
+    "durability_rule":"SRTT, RTTVAR and current deadline are persisted/read back after accepted updates so reconstruction does not reset estimator history."
+  },
+  "trace_results":[
+    {"step":1,"result":"PASS","details":"samples 2,3,2,4 produce exactly (SRTT,RTTVAR,deadline)=(2,1,6),(2.125,1,6.125),(2.109375,0.78125,5.234375),(2.345703125,1.05859375,6.580078125)"},
+    {"step":2,"result":"PASS","details":"restart after sample3 reconstructs SRTT=2.109375, RTTVAR=0.78125, deadline=5.234375 without reset"},
+    {"step":3,"result":"PASS","details":"transport-failure apparent latency9 remains UNKNOWN and does not update estimator"},
+    {"step":4,"result":"PASS","details":"stale/scope-mismatched latency1 rejected and does not update estimator"},
+    {"step":5,"result":"PASS","details":"true timeout after deadline6.580078125 doubles deadline then hard-clamps to12; timeout is not inserted as latency sample"},
+    {"step":6,"result":"PASS","details":"next valid latency5 resumes from pre-timeout estimator and yields SRTT=2.677490234375, RTTVAR=1.45751953125, recomputed deadline=8.507568359375"},
+    {"step":7,"result":"PASS","details":"future candidate deadlines are hard-clamped to role-local [2,12]"},
+    {"step":8,"result":"PASS","details":"duplicate semantic terminal key produces no second estimator update"}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed role-local logical-latency trace only. No claim of statistical optimality, TCP equivalence, production failure-detection correctness, or accepted TCP runtime."
+}
