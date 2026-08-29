@@ -1,0 +1,24 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-SLEEPING-BANDIT-ACTIVE-SET-v1",
+  "precommitted_at":"2026-08-29T22:17:22.506578+00:00",
+  "predecessor":{"sequence":231,"state_blob":"2e7f851f5fc91d99a0877a6d2985ccb5701a2f27","latest_blob":"9399c51b248909a10170e9d571416cf566d9550c","credit_total":82},
+  "selector":"Use previously validated UCB1 arithmetic only after filtering to the exact durable active set; unplayed newly-active assignments receive one initialization probe before index comparison.",
+  "initial_state":{"A":{"eligible":true,"n":2,"sum":1.6},"B":{"eligible":true,"n":2,"sum":1.8},"accepted_reward_total_N":4},
+  "fixed_trace":[
+    {"step":5,"eligibility_change":"B becomes INACTIVE with generation gB2 fenced","active_set":["A"],"expected_action":"A","reward":0.8,"post":{"A_n":3,"A_sum":2.4,"B_n":2,"B_sum":1.8,"N":5}},
+    {"event":"restart while B inactive","expected":"reconstruct active_set={A}, B statistics unchanged, generation fence preserved"},
+    {"event":"late B@gB1 completion reward1.0","expected":"reject as stale/inactive; no B/N update and no eligibility change"},
+    {"step":6,"eligibility_change":"B becomes ACTIVE again under same scope with new generation gB3","active_set":["A","B"],"indices":{"A":1.8358371534,"B":2.1686362412},"expected_action":"B","reward":1.0,"post":{"B_n":3,"B_sum":2.8,"N":6}},
+    {"step":7,"eligibility_change":"new C becomes ACTIVE with n=0","active_set":["A","B","C"],"expected_action":"C_INITIALIZATION_PROBE","reward":0.6,"post":{"C_n":1,"C_sum":0.6,"N":7}}
+  ],
+  "ablation":{"ignore_active_set":"At step5 historical B mean.9 exceeds A.8 and a selector that ignores eligibility can choose an invalid assignment.","impute_sleeping_rewards":"Any reward/count assigned to B while inactive changes its later UCB index without terminal evidence and is forbidden.","reset_stats_on_wake":"Discarding valid same-scope B statistics on wake loses accepted evidence; this trace preserves stats but changes generation fence."},
+  "invalid_event_controls":["duplicate wake event is idempotent","scope-mismatched wake cannot add B to active set","transport-uncertain eligibility check leaves prior durable eligibility unchanged/UNKNOWN rather than guessing","inactive assignment cannot receive new current reward credit"],
+  "guards":["active set is durable","selection domain equals active set exactly","sleeping intervals produce no reward/count imputation","late inactive-generation completion fenced","same-scope wake preserves valid statistics but allocates new generation","new active arm with zero observations gets bounded initialization probe","restart preserves eligibility and statistics","no external optimizer/runtime","no finite optional quota","incremental monetary cost zero","public semantics bind only after precommit readback","terminal credit only after exact terminal readback"],
+  "acceptance_rule":"PASS only if a public sleeping-bandit/available-actions mechanism treats the selectable action set as time-varying and evaluates decisions only among currently available actions, and the fixed trace/guards pass unchanged. No regret guarantee is claimed for the Chat reduction.",
+  "credit_rule":"This precommit earns zero credit; at most one credit after terminal exact readback.",
+  "frontier_nonempty":true
+}
