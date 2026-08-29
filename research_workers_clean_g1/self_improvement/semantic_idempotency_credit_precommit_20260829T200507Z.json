@@ -1,0 +1,37 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-SEMANTIC-IDEMPOTENCY-CREDIT-KEY-v1",
+  "precommitted_at":"2026-08-29T20:05:07Z",
+  "source_semantics_read_before_precommit":false,
+  "hypothesis":"Credit deduplication must use a predeclared semantic operation key, not artifact-byte identity, so retry artifacts with different timestamps/bytes cannot inflate credit for one underlying terminal claim.",
+  "key_definition":"credit_key = deterministic tuple(precommit_blob, assignment_epoch, test_case_id)",
+  "fixed_trace":[
+    {"step":1,"event":"retry artifact R1 for test T1 carries key K1","expected":"first exact terminal readback may claim K1 once"},
+    {"step":2,"event":"retry artifact R2 has different bytes/timestamp but same T1/K1","expected":"recognize same operation; no second credit"},
+    {"step":3,"event":"distinct test T2 carries K2","expected":"eligible for separate credit only if independently terminal/read back"},
+    {"step":4,"control":"deduplicate by artifact blob only","expected":"FAIL because R1 and R2 differ in bytes"},
+    {"step":5,"control":"generate key after observing results","expected":"FAIL because post-hoc keying can merge/split claims opportunistically"},
+    {"step":6,"control":"transport failure reading prior K1 claim","expected":"UNKNOWN; do not issue credit"},
+    {"step":7,"event":"late duplicate R1 after K1 already claimed","expected":"no second credit"}
+  ],
+  "guards":{
+    "G1":"key scheme and fixed trace frozen before public idempotency semantics audit",
+    "G2":"same underlying operation uses the same key across retries",
+    "G3":"different operation uses a different key",
+    "G4":"artifact-byte identity is not the deduplication authority",
+    "G5":"post-hoc key synthesis is rejected",
+    "G6":"K1 may change credit at most once",
+    "G7":"K2 is independent from K1",
+    "G8":"transport uncertainty cannot authorize a new claim",
+    "G9":"late duplicate cannot mutate credit again",
+    "G10":"terminal artifact and credit-claim state must be durably read back before credit",
+    "G11":"scope is the fixed role-local retry/credit trace only",
+    "G12":"accepted route has zero residual richer/protected/manual execution, zero finite optional quota dependency, and zero incremental monetary cost"
+  },
+  "acceptance":"PASS only if G1-G12 hold after public idempotency-key semantics are bound; no post-source rubric edits.",
+  "credit_rule":"Precommit earns zero credit; at most one role-local credit after terminal artifact exact readback.",
+  "exact_next_action":"Read back this precommit, then audit public idempotency-key semantics, apply only those semantics to R1/R2/K1 and T2/K2 plus controls, seal/read back terminal evidence, then and only then consider credit."
+}
