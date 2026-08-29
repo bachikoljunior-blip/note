@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
-  "updated_at": "2026-08-29T20:19:24+09:00",
-  "run_id": "user-correction-20260829T201607+0900-persistent-full-pool-optimization",
+  "updated_at": "2026-08-29T20:27:00+09:00",
+  "run_id": "o-parallel-optimizer-20260829T202442+0900-stagger-apply-hourly-platform-limit",
   "role": "automation_optimizer",
   "phase": {
     "id": "phase_1_chat_parity",
@@ -10,55 +10,69 @@
     "phase2_transition": false
   },
   "source_controls": {
-    "o_chat_parallel": {"control_revision": 10, "blob": "34015c0e1de414b925f44dcef8be05b139492b70"},
-    "desired_state": {"control_revision": 26, "blob": "481660fb6008a57cea162da38439cf115c8d7ebe"},
-    "downstream_state": {"control_revision": 33, "blob": "eb3ae22e291fb4bfea756ebbc3bb04842ae0d8fb"},
-    "scheduler_reconciliation": {"control_revision": 13, "blob": "d15d68ccfc7fec78d62dc40c92aafa03f1b15229"},
-    "scheduler_optimization": {"control_revision": 1, "blob": "4f82c93d777ca75dfd436b2e11802b4881019897"},
-    "previous_optimizer_state_blob": "084cfca9fe540493e4ba07bf0bb4db9af224306c"
+    "o_chat_parallel": {"control_revision":10,"blob":"34015c0e1de414b925f44dcef8be05b139492b70"},
+    "desired_state": {"control_revision":26,"blob":"481660fb6008a57cea162da38439cf115c8d7ebe"},
+    "downstream_state": {"control_revision":33,"blob":"eb3ae22e291fb4bfea756ebbc3bb04842ae0d8fb"},
+    "o_operations": {"control_revision":15,"blob":"25e744a5a9905fc7522028c55f77b08e1799b9c2"},
+    "scheduler_optimization": {"control_revision":2,"blob":"dbc87a1d57dbc9473a9ff95aae3b19f39e571c8c"},
+    "scheduler_reconciliation": {"control_revision":14,"blob":"426b2f73479af7bfe56c35c58052c4320ad6e2f4"},
+    "physical_scheduler_state": {"control_revision":14,"blob":"434cc36905ef05c98acd305aa529b8b4fa8d0457"},
+    "previous_optimizer_state_blob": "1e1ed298de41c15821ccd9e76f201ca86ab91386"
   },
-  "user_correction": {
-    "at": "2026-08-29T20:16:07+09:00",
-    "finding": "The optimizer is not actually optimizing while managed automations stop.",
-    "required_change": "Keep the full existing pool working and optimize the scheduler/method that causes or permits physical stops, rather than repeatedly recording temporary re-enables."
+  "observations": {
+    "live_physical_before": "10/19 intended roles enabled",
+    "live_missing_before": ["open_source","failure_evidence","cross_field","long_horizon","evaluation","multi_agent","evidence_comparator","integrator","bridge"],
+    "live_physical_after": "19/19 intended roles enabled by same-task update/readback responses",
+    "physical_drift_recurrence": true,
+    "optimizer_five_slot_schedule_supported": false,
+    "optimizer_frequency_limit": "one run per hour per automation",
+    "protected_o_monitor_enabled_and_unchanged": true,
+    "phase1_acceptance_allowed": false
   },
-  "critical_path": {
-    "priority": 0,
-    "problem": "recurrent_post_invocation_physical_disable",
-    "prior_method": "hourly reactive re-enable-only",
-    "prior_method_result": "failed repeatedly; control12 recorded a fourth drift from 19/19 to 11/19",
-    "selected_method": "SCHEDULER_OPTIMIZATION revision1 staggered pool plus frequent lightweight optimizer guards",
-    "physical_apply_status": "pending_next_optimizer_scheduler_surface",
-    "repository_control_apply_status": "applied_and_read_back"
+  "before_after_rationale": {
+    "before": "Control1 planned five optimizer guard/full executions per hour and a staggered worker map, but the live pool had again fallen to 10/19 and the schedule had not been physically applied.",
+    "attempt": "Re-enable every stopped intended role, apply the deterministic same-task stagger, and increase the existing optimizer cadence without creating tasks or touching primary/protected O.",
+    "capability_result": "The platform rejected the five-times-per-hour optimizer schedule with the explicit constraint that tasks cannot run more than once per hour.",
+    "after": "All 19 intended roles are immediately enabled, changed workers are staggered, failure_evidence is moved to minute13 to avoid the protected monitor's minute12 slot, and the existing optimizer is enabled exact-hourly at minute39. Persistence remains unproven.",
+    "why_no_semantic_reallocation": "Current O_CHAT10/DESIRED26/DOWNSTREAM33 assignments are already Phase-1 root-contributing and non-conflicting by control. Physical persistence is the active critical-path defect; semantic churn during scheduler repair would stale current evidence without reducing that defect."
   },
-  "mandatory_next_run_order": [
-    "Read current repository controls including SCHEDULER_OPTIMIZATION revision1 and live physical automation state.",
-    "Re-enable every stopped intended enabled_desired role on the same task id; exact-readback.",
-    "Update this optimizer's same task id to guard/full slots at minutes 03,15,27,39,51; exact-readback.",
-    "Apply the deterministic staggered same-task schedule map to existing roles; do not alter prompts or role assignments during scheduler repair; exact-readback every task.",
-    "Persist a compact application receipt with old/new schedules and live enabled state.",
-    "Run full Phase-1 role-and-method allocation at the full slot and lightweight liveness repair at guard slots.",
-    "Require two consecutive survived invocation boundaries per role before marking persistence solved."
-  ],
+  "method_state": {
+    "active": "staggered_existing_pool_plus_hourly_optimizer_reconcile_then_full_optimize",
+    "rejected": "five lightweight optimizer guard slots per hour because the actual scheduler refuses more-than-hourly execution",
+    "next_candidate_if_recurrence": "one non-primary condition_watch timing-mode canary after exact boundary/receipt capture and same-task re-enable",
+    "second_candidate_if_needed": "one repository-defined noncompletion terminal-method canary while retaining recurring execution and all 19 roles"
+  },
   "invariants": {
     "intended_role_denominator": 19,
     "disable_pause_delete_replace_or_reduce_allowed": false,
     "new_replacement_worker_allowed": false,
     "primary_o_change_allowed": false,
     "protected_monitor_change_allowed": false,
+    "worker_prompts_changed": false,
     "worker_base_role_and_continuation_preserved": true,
+    "clean_independence_preserved": true,
     "phase1_zero_residual_work_user_step": true,
     "phase1_zero_finite_quota_dependency": true,
     "phase1_zero_incremental_cost": true
   },
-  "allocation_policy": {
-    "after_physical_reconciliation": "Use all 19 roles on the highest-value non-conflicting Phase-1 leaves and optimize role allocation plus problem representation, decomposition, method, verification, concurrency, integration and switching thresholds.",
-    "blocked_or_completed_leaf": "Reassign inside Phase 1; do not restore unrelated base work and do not stop the role.",
-    "scheduler_guard_slots": "Do only live-state check, due same-task re-enable, schedule/readback verification and compact receipt unless a material scheduler defect requires method switching.",
-    "full_slot": "Perform the complete role-and-method optimization after physical reconciliation."
+  "contamination_audit": {
+    "clean_explorer_semantic_leak_detected": false,
+    "downstream_or_o_semantics_written_into_clean_worker_prompts": false,
+    "clean_worker_prompts_modified": false,
+    "primary_o_or_protected_monitor_mutated": false,
+    "duplicate_primary_writer_created": false,
+    "scope_note": "Only physical enabled state and schedules of existing managed non-primary roles plus the optimizer's own schedule were changed."
+  },
+  "rollback_metadata": {
+    "scheduler_control_before": "SCHEDULER_OPTIMIZATION control1 blob 4f82c93d777ca75dfd436b2e11802b4881019897",
+    "physical_state_before": "PHYSICAL_SCHEDULER_STATE control13 blob 8018ca70b4e3becde9952e741ef6394679a63c3e",
+    "condition": "Matched later evidence shows the staggered map lowers successful-slot coverage/useful output or increases conflict, excluding the unavailable five-run optimizer cadence.",
+    "action": "Restore preserved prior worker schedules on the same task ids while keeping all roles enabled, then test the next causal alternative. Never reduce the pool."
   },
   "acceptance": {
-    "scheduler_persistence": "19/19 roles survive two consecutive invocation boundaries with later live readback",
+    "immediate_physical_pool": "19/19",
+    "scheduler_persistence": "not_passed; requires two consecutive scheduled invocation boundaries with later live readback",
+    "semantic_phase1_gates": "remain open under O_CHAT_PARALLEL control10",
     "re_enable_only_is_not_completion": true,
     "phase1_complete": false,
     "phase2_transition": false
@@ -67,7 +81,8 @@
     "global_completion": false,
     "fully_blocked": false,
     "optimizer_remains_enabled": true,
-    "reason": "Repository optimization control is repaired, but physical schedules and enabled states require live application/readback by the optimizer scheduler surface, and Phase-1 semantic gates remain open."
+    "material_change": true,
+    "reason": "A physically executable scheduler method is now applied and the full pool is immediately restored, but persistence and the remaining Phase-1 zero-dependency/zero-quota/evidence gates are not yet proven."
   },
-  "exact_next_action": "Apply SCHEDULER_OPTIMIZATION revision1 physically, verify 19/19 and schedule readbacks, then continue full Phase-1 role-and-method optimization; do not stop at another temporary re-enable snapshot."
+  "exact_next_action": "At the next optimizer invocation, live-read all 19 intended task ids before semantic work. If all survive, record first survived-boundary evidence and continue the full Phase-1 role/method proof. If any role is stopped, capture exact terminal/platform evidence before repair, re-enable that same role immediately, and begin the non-primary condition_watch canary path because more-frequent optimizer guards are unavailable."
 }
