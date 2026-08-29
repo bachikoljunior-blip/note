@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 59,
+  "leaf_id": "cross-shard-promotion-atomicity",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "model": {
+    "scenario_count": 3456,
+    "strategy_evaluations": 17280,
+    "equal_weight_lattice": true,
+    "semantic_goal": "one logical promotion makes A and B authoritative together; before commit both retained copies are dead and GC-eligible unless reserved/fenced",
+    "axes": {
+      "fault_point": ["none", "after_first_shard", "after_both_shards"],
+      "gc_point": ["none", "before_first_shard", "between_shards", "after_both_before_commit"],
+      "gc_target": ["A", "B"],
+      "rate_limited_shard": ["none", "A", "B"],
+      "response_loss": ["none", "first_shard", "second_shard", "commit"],
+      "coordinator": ["current", "stale"],
+      "overlap": ["none", "same_id", "new_id"],
+      "abort_request": ["no", "before_commit"]
+    },
+    "strategies": [
+      "global_publish_before_bridges",
+      "sequential_bridges_no_intent",
+      "durable_intent_bridges_commit",
+      "global_single_ref_atomic",
+      "fail_closed"
+    ]
+  },
+  "aggregate": {
+    "global_publish_before_bridges": {"partial_authoritative_promotion":2976,"live_root_deleted_by_gc":1920,"orphan_prepared":0,"duplicate_promotion":1728,"false_blockage":0,"stale_authority_commit":2592,"promotion_committed":3456,"promotion_blocked":0,"dead_copy_deleted_by_gc":0,"response_reconcile":624,"recovery_reads":4080},
+    "sequential_bridges_no_intent": {"partial_authoritative_promotion":0,"live_root_deleted_by_gc":0,"orphan_prepared":1896,"duplicate_promotion":60,"false_blockage":600,"stale_authority_commit":60,"promotion_committed":120,"promotion_blocked":3336,"dead_copy_deleted_by_gc":1920,"response_reconcile":624,"recovery_reads":4080},
+    "durable_intent_bridges_commit": {"partial_authoritative_promotion":0,"live_root_deleted_by_gc":0,"orphan_prepared":0,"duplicate_promotion":0,"false_blockage":600,"stale_authority_commit":0,"promotion_committed":120,"promotion_blocked":3336,"dead_copy_deleted_by_gc":1920,"response_reconcile":654,"recovery_reads":8694},
+    "global_single_ref_atomic": {"partial_authoritative_promotion":0,"live_root_deleted_by_gc":0,"orphan_prepared":0,"duplicate_promotion":0,"false_blockage":0,"stale_authority_commit":0,"promotion_committed":1296,"promotion_blocked":2160,"dead_copy_deleted_by_gc":864,"response_reconcile":324,"recovery_reads":4212},
+    "fail_closed": {"partial_authoritative_promotion":0,"live_root_deleted_by_gc":0,"orphan_prepared":0,"duplicate_promotion":0,"false_blockage":0,"stale_authority_commit":0,"promotion_committed":0,"promotion_blocked":3456,"dead_copy_deleted_by_gc":0,"response_reconcile":0,"recovery_reads":3456}
+  },
+  "critical_slices": {
+    "authority_published_before_first_bridge": {
+      "n": 8,
+      "definition": "no crash/rate/takeover/overlap/abort; GC runs after early global publish but before first shard bridge; target and response-loss axis vary",
+      "global_publish_before_bridges": "8/8 live-root deletion and 8/8 partial authoritative bridge state",
+      "sequential_bridges_no_intent": "0 live-root deletion; GC sees a still-dead target and causes promotion to fail closed",
+      "durable_intent_bridges_commit": "0 live-root deletion; no authoritative promotion before both bridges",
+      "global_single_ref_atomic": "0 live-root deletion; pre-commit GC may make promotion fail rather than delete an already-live root"
+    },
+    "crash_after_first_bridge": {
+      "n": 8,
+      "definition": "no GC/rate/takeover/overlap/abort; crash after A bridge; target and response axis vary",
+      "global_publish_before_bridges": "8/8 partial authoritative promotion remains after crash",
+      "sequential_bridges_no_intent": "8/8 orphan prepared state: A is fenced but no durable operation-wide intent binds A to expected B and completion/abort policy",
+      "durable_intent_bridges_commit": "0 orphan state; 8/8 remain recoverable PREPARED/nonterminal under durable intent",
+      "global_single_ref_atomic": "promotion is one ref transition and has no between-shard crash point"
+    },
+    "second_shard_rate_limited": {
+      "n": 8,
+      "definition": "no crash/GC/takeover/overlap/abort; B bridge rate-limited; target/response axis vary",
+      "global_publish_before_bridges": "8/8 authoritative state with B not fenced",
+      "sequential_bridges_no_intent": "8/8 orphan A prepared state",
+      "durable_intent_bridges_commit": "0 orphan; 8/8 recoverable PREPARED and globally non-authoritative until B succeeds"
+    },
+    "stale_takeover_plus_new_intent_clean": {
+      "n": 2,
+      "definition": "no fault/GC/rate/response/abort; stale coordinator and overlapping new logical transition",
+      "global_publish_before_bridges": "2/2 stale-authority commit and 2/2 duplicate logical promotion",
+      "sequential_bridges_no_intent": "2/2 stale-authority commit and 2/2 duplicate logical promotion",
+      "durable_intent_bridges_commit": "0 stale commit, 0 duplicate promotion; coordinator epoch + durable intent fences old writer/new conflicting ID",
+      "global_single_ref_atomic": "0 stale commit, 0 duplicate promotion with current ref + deterministic transition identity"
+    }
+  },
+  "scope_safe_conclusion": {
+    "negative_ordering": "Publishing global authority before all target-shard fences is unsafe: GC can legitimately delete a shard-local dead copy after the global layer has already made it live.",
+    "no_intent_limit": "Bridging all shards before global commit removes live-root deletion but without a durable operation-wide intent, crashes/rate limits leave shard fences whose intended peer set, coordinator epoch, and completion-vs-abort decision are not reconstructible from one canonical root.",
+    "candidate": "Persist a deterministic PREPARED promotion intent containing promotion_id, expected target/shard set, coordinator epoch, effect/contract digest and terminal policy. Each target shard atomically advances its local root epoch/reservation only if that PREPARED intent+epoch is current. The global promotion may become COMMITTED only after every required shard bridge is proven current. Crash/rate-limit leaves a recoverable nonterminal PREPARED state; stale coordinator/new conflicting intent is fenced; response loss is reconciled from intent/shard/global transition IDs before retry. Abort before global COMMIT moves the intent to ABORTED and releases shard reservations with their own fenced transitions; never roll back an already-COMMITTED promotion by cleanup.",
+    "atomicity_boundary": "This is a recoverable prepare/commit protocol, not a claim that separate repository refs become physically atomic. Safety comes from withholding externally authoritative COMMIT until all shard fences are durable and from making GC honor those shard fences. Availability can be lower while PREPARED.",
+    "fallback": "One global ref remains the simpler atomic fallback when contention is acceptable; it avoids cross-shard prepared state but forfeits the sharding liveness gains from Part58.",
+    "not_proven": [
+      "The model does not prove wait-free progress; PREPARED can remain nonterminal under persistent rate limits.",
+      "Abort/release concurrency after a partially prepared promotion needs its own race model next.",
+      "Complete repository rollback that removes intent, shard epochs, and global transition witnesses remains unresolved."
+    ]
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "repository_transport": "deterministic role-local intent + shard/global ref/path/CAS/readback only; no hosted coordinator"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "Abort/release race: PREPARED A, B missing; abort and release A while B late-bridge or stale coordinator resumes. Require intent terminal state + shard epoch CAS to prevent post-abort resurrection.",
+    "Intent/GC compaction: decide when terminal promotion intents and shard bridge records can be collected without losing response-loss or stale-writer fencing evidence.",
+    "Adaptive shard split/merge while PREPARED promotion exists."
+  ],
+  "exact_continuation": "Model PREPARED abort/release vs late shard bridge and stale coordinator. Compare cleanup-by-delete, intent-ABORTED then shard release, shard-release then intent abort (negative), monotonic intent terminal state + per-shard reservation epoch, and fail-closed. Adversaries: B bridge arrives after abort, A release response loss, old coordinator takeover, new promotion reuses same target, one shard rate-limited, GC after release, and intent cleanup. Measure post-abort resurrection, live-root deletion, orphan reservation, duplicate release/promotion, false blockage, and recovery reads."
+}
