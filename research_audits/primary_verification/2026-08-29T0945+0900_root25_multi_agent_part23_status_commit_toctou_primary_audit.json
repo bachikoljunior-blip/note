@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "artifact_type": "phase1_downstream_primary_verification",
+  "created_at": "2026-08-29T09:45:00+09:00",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "transport_mode": "exact main H1/H2 freeze with exact root/downstream reads",
+    "h1": "eabb2d0e77fe6752c90595c31ee3ef146359372b",
+    "h2": "eabb2d0e77fe6752c90595c31ee3ef146359372b",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 25,
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "downstream_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_control_revision": 32,
+    "downstream_blob": "10535fb3dcc951ef5c60af0b051e5f3227fc96d7",
+    "role_config_revision": 9,
+    "enabled_desired": true,
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v5-irreducible-handoff-aligned",
+    "task_id": "p1-primary-verify"
+  },
+  "target": {
+    "role": "multi_agent",
+    "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+    "worker_control_revision": 25,
+    "worker_config_revision": 6,
+    "worker_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c",
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_STATUS_COMMIT_TOCTOU_20260829_092530_PART23.md",
+    "checkpoint_blob": "3689cd8ddd765046118cfff8186b530a60d3b85e",
+    "script_path": "research_workers_clean_g1/multi_agent/phase1_status_commit_toctou_20260829_092530_part23.py",
+    "script_blob": "98aa4a28f74142ff85434d6b4ed068008181931f",
+    "result_path": "research_workers_clean_g1/multi_agent/phase1_status_commit_toctou_20260829_092530_part23.json",
+    "result_blob": "25e3532913bd71914ff928da6f942285ee19a8fb",
+    "source_semantic_sha": "9670b94c746a4abcc5ddecc357fb79b00f6a101f",
+    "latest_observed_at_freeze": "eabb2d0e77fe6752c90595c31ee3ef146359372b"
+  },
+  "public_source_verification": [
+    {
+      "source": "MDN If-Match / conditional requests",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/If-Match",
+      "verdict": "SUPPORTED_WITH_SCOPE",
+      "scope": "If-Match conditions the target request against the target resource's current strong ETag and returns 412 when the precondition fails. This is same-target optimistic concurrency; it does not provide atomicity over a later mutation in another authority domain."
+    },
+    {
+      "source": "Kubernetes API Concepts",
+      "url": "https://kubernetes.io/docs/reference/using-api/api-concepts/",
+      "verdict": "SUPPORTED_WITH_SCOPE",
+      "scope": "Updates can carry resourceVersion; stale conditional updates are rejected with 409 Conflict. This is same-object/API-server lost-update detection, not cross-authority transactionality."
+    }
+  ],
+  "model_verification": {
+    "declared_cartesian_scenarios": 1152,
+    "declared_result_matches_script_output": true,
+    "qualitative_toctou_claim": "SUPPORTED_IN_SYNTHETIC_SCOPE",
+    "qualitative_claim": "A point-in-time read/compare can become stale before a separate repository publication if the external authority can still invalidate the observed state; a modeled absorbing finality guarantee or modeled same-authority compare-and-seal removes that specific modeled race.",
+    "scope_corrections": [
+      {
+        "finding": "takeover_axis_is_inert",
+        "severity": "material_scope_correction",
+        "evidence": "AXES contains takeover=[NO,YES], but no policy/function branches on or otherwise reads sc['takeover'].",
+        "consequence": "The model does not directly exercise takeover behavior. All outcomes are duplicated exactly across the two takeover labels. The 1152 Cartesian scenarios therefore contain 576 behavioral equivalence classes with respect to the implemented policies. This does not invalidate the declared Cartesian count, but takeover safety/recovery is NOT_DIRECTLY_TESTED."
+      },
+      {
+        "finding": "repository_idempotency_is_assumed_by_helper",
+        "severity": "material_scope_correction",
+        "evidence": "repository_terminal() directly enforces repo_writes <= 1 for all ambiguous recovery paths based on the comment/assumption of a stable applied_transition_id; no repository API/CAS/readback or identity collision model is executed.",
+        "consequence": "duplicate_repository_transition=0 and the 0/384 ambiguous-repeat result are assumption-preserving synthetic outcomes, not operational evidence that the current Chat repository path or an external production sink provides at-most-once transition semantics."
+      },
+      {
+        "finding": "absorbing_token_and_compare_and_seal_are_idealized_primitives",
+        "severity": "scope_limit",
+        "evidence": "The absorbing-token policy suppresses later modeled invalidations by semantic assumption; compare-and-seal omits AFTER_CHECK invalidation by defining it as rejected.",
+        "consequence": "Zero false terminals demonstrate sufficiency inside the finite model if those semantics truly hold; they do not establish that any current external provider exposes such a primitive."
+      }
+    ],
+    "normalized_duplicate_axis_note": {
+      "behavioral_equivalence_scenarios_if_quotient_takeover_label": 576,
+      "read_then_repo_terminal": 360,
+      "read_then_repo_false_terminal": 150,
+      "reread_terminal": 350,
+      "reread_false_terminal": 100,
+      "sink_compare_only_terminal": 340,
+      "sink_compare_only_false_terminal": 50,
+      "sink_compare_and_seal_terminal": 340,
+      "sink_compare_and_seal_false_terminal": 0,
+      "absorbing_token_terminal": 180,
+      "absorbing_token_false_terminal": 0,
+      "note": "These are not replacement official counts; they expose the exact twofold duplication caused by the unused takeover axis."
+    }
+  },
+  "handoff_verification": {
+    "worker_generic_remainder": "The external authoritative sink/status domain must either expose absorbing finality semantics or perform a conditional seal/finalization of the exact current effect-vector version before repository terminal publication; repository-side reads/CAS cannot synthesize cross-authority atomicity.",
+    "downstream_verdict": "REJECT_UNPROVEN_IRREDUCIBLE",
+    "reason": "The source leaf does not identify a concrete external sink/provider/resource/effect identity, an exact action to be performed there, or evidence that all safe scheduled-Chat routes to that exact action were attempted or unavailable. The public HTTP/Kubernetes precedents establish mechanism semantics only. Under downstream32, a generic architectural requirement is not an accepted Work/protected-primary handoff.",
+    "protected_primary_required": false,
+    "work_exclusive_proven": false,
+    "scheduled_chat_unavailability_proven": false,
+    "exact_effect_identity_present": false,
+    "unique_minimal_handoff_proven": false,
+    "classification_for_phase1_matrix": "unproven_or_generic_remainder; row must remain open on handoff oracle even though the synthetic Chat analysis itself is useful current-v5 evidence"
+  },
+  "actions_executed": [
+    "read current root25 and downstream32 under exact H1/H2 freeze",
+    "read exact multi_agent config6 and exact part23 checkpoint/script/result",
+    "verified MDN If-Match semantics against current public documentation",
+    "verified Kubernetes resourceVersion stale-update 409 semantics against current public documentation",
+    "mechanically inspected script branches for axis use and repository idempotency assumptions",
+    "did not read or modify exploration feedback, did not steer exploration worker, did not mutate protected-primary state, ACTIVE_WAVE, INDEX, O_FEED, DESIRED_STATE, or shared aggregate ledger"
+  ],
+  "post_semantic_identity_check": {
+    "newer_main_sha_observed": "346b990c59df0caebe05d540a834e406cc63b149",
+    "newer_semantics_adopted": false,
+    "root_blob_at_new_head": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "downstream_blob_at_new_head": "10535fb3dcc951ef5c60af0b051e5f3227fc96d7",
+    "authority_blobs_unchanged": true,
+    "note": "New worker artifact semantics on the advanced head were not inspected/adopted in this frozen invocation."
+  },
+  "termination": {
+    "status": "checkpoint_after_current_leaf_verification",
+    "reason": "Current part23 handoff oracle has been independently graded and materially scope-corrected; later worker semantics appeared after semantic freeze and are deferred to a fresh bootstrap.",
+    "exact_next_verification": "Fresh-bootstrap root/downstream/config. Then inspect multi_agent PART24 multi-resource finality-token composition only if it is current assignment-bound. Verify whether token expiry/revocation and takeover axes actually affect executed policy logic, whether any claimed residual names a concrete sink/effect and exact unavailable action, and whether at-most-once repository evidence is operational or merely hard-coded. If PART24 is already superseded, select the newest current exact-assignment-bound leaf without re-auditing PART23."
+  }
+}
