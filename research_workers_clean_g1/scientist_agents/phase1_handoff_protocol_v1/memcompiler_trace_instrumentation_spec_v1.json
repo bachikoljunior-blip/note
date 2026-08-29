@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "name": "MEMCOMPILER_BOUNDED_SELECTION_TRACE_INSTRUMENTATION",
+  "purpose": "Make the existing fixed-candidate-pool ScienceWorld mechanism replayable enough to support later fixed-selected-identity acceptance experiments, without putting raw memory contents into the receiver context.",
+  "target_public_revision": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
+  "target_runner": "tasks/run_manager_executor_scienceworld.py",
+  "capture_points": [
+    {
+      "when": "run bootstrap",
+      "capture": [
+        "source revision",
+        "dataset path/blob or dataset sha256",
+        "compiler model artifact id and immutable revision/digest",
+        "MEMCOMPILER_PATH logical id",
+        "memory database sha256"
+      ],
+      "reason": "bind evaluated implementation/model/input/memory bytes before retrieval"
+    },
+    {
+      "when": "immediately after once-per-episode retrieval",
+      "capture": [
+        "retrieval query sha256",
+        "retrieval config sha256",
+        "stable memory_id + content_sha256 for every candidate",
+        "canonical candidate_pool_digest"
+      ],
+      "reason": "prove candidate pool identity without replaying raw memory into downstream context"
+    },
+    {
+      "when": "immediately before every Manager/compiler call",
+      "capture": [
+        "step index",
+        "environment state revision + sha256",
+        "brief-state sha256",
+        "candidate_pool_digest",
+        "selector policy/model revision or digest"
+      ],
+      "reason": "bind current applicability context"
+    },
+    {
+      "when": "immediately after every Manager/compiler call and before Executor input",
+      "capture": [
+        "selected memory ids/digests or empty set",
+        "output type EXPERIENCE/BRIEF/HYBRID/NOACTION",
+        "compiled guidance sha256 or null",
+        "canonical selector_output_sha256",
+        "receiver effect inject/abstain",
+        "executor input sha256"
+      ],
+      "reason": "distinguish selected identity from final injection/abstention and permit causal pairing"
+    }
+  ],
+  "bounded_context_rule": "Persist raw memory text only in the existing memory store, not in the sidecar. The sidecar carries stable IDs/digests; normal executor context receives only compiled guidance when injected.",
+  "compatibility_with_existing_protocol": "The trace supplies the missing evidence needed by memory_selection_trace_binding_v1 to distinguish fixed_candidate_pool_state_conditioned from fixed_selected_identity_acceptance claims.",
+  "fail_closed_conditions": [
+    "memory database is not frozen during evaluation",
+    "candidate pool digest changes within an episode",
+    "selected memory id/digest is not a member of the frozen pool",
+    "NOACTION carries selected memory or compiled guidance",
+    "EXPERIENCE/HYBRID lacks selected identity or compiled guidance digest",
+    "selector output digest does not match the recorded selected identities/output type/guidance digest",
+    "duplicate step index"
+  ]
+}
