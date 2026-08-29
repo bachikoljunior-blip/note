@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 43,
+  "state_epoch": 3,
+  "control_revision": 26,
+  "config_revision": 6,
+  "assignment": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "enabled_desired": true,
+    "root_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_blob_sha": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "semantic_freeze": "continued under the exact frozen control/config identities established by two-pass bootstrap; no later control/config semantic body was ingested"
+  },
+  "clean_exploration": {
+    "used": ["own role-local state", "public official exact-release source", "own sanitized feedback", "local toolchain capability check"],
+    "excluded": ["O", "O-derived semantics", "other clean workers", "downstream", "legacy", "shared execution ledger", "unrelated commit semantics"]
+  },
+  "source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release": "rmcp-v3.1.4",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "exact_paths": [
+      "crates/rmcp/src/model/request_state.rs",
+      "crates/rmcp/src/task_manager.rs",
+      "crates/rmcp-macros/src/tool_handler.rs",
+      "crates/rmcp/src/handler/server/tool.rs",
+      "crates/rmcp/tests/test_mrtr_behavior.rs",
+      "crates/rmcp/tests/test_task.rs"
+    ]
+  },
+  "findings": [
+    {
+      "class": "REQUEST_STATE_CODEC_INTEGRITY_BINDING",
+      "status": "PROVED_SOURCE_AND_UNIT_TESTS",
+      "evidence": "Exact rmcp-v3.1.4 ships RequestStateCodec for SEP-2322 requestState. It HMAC-SHA256 seals the state with a domain-separation label, supports associated data and TTL, verifies tags in constant-time, and has exact unit tests for tamper rejection, different-key rejection, associated-data mismatch, missing associated data fail-closed, expiry, and combined TTL/context checks. try_new enforces a 32-byte minimum key."
+    },
+    {
+      "class": "REQUEST_STATE_CONTEXT_BINDING",
+      "status": "PROVED_SOURCE",
+      "evidence": "SealOptions::associated_data is explicitly documented for authenticated principal plus originating-request digest binding; open_with requires the same bytes. This can replace a hand-rolled HMAC layer in the router-first MRTR candidate while preserving method/tool/arguments/principal binding when the server derives canonical associated data."
+    },
+    {
+      "class": "REQUEST_STATE_REPLAY_LIMIT",
+      "status": "PARTIAL_ONLY",
+      "evidence": "The exact helper states that single-use/nonce enforcement still has to be implemented server-side. The codec proves integrity/context/TTL, not one-time redemption, task creation idempotency, confidentiality, or effect exactly-once. It is also opt-in rather than an automatic guard on every requestState."
+    },
+    {
+      "class": "BUILTIN_TASK_MANAGER_IN_MEMORY_STORE",
+      "status": "PROVED_SOURCE",
+      "evidence": "The exact built-in TaskManager is a concrete Clone/Default struct whose only stored state is Arc<Mutex<TaskManagerInner>>, and TaskManagerInner contains a HashMap<String, TaskEntry>. TaskManager::new returns Default. The examined built-in path exposes spawn/get/update/cancel/running_task_count/shutdown rather than a persistent backend injection surface; shutdown drains the map and aborts retained running handles."
+    },
+    {
+      "class": "BUILTIN_TASK_MANAGER_FRESH_CREATION_IDENTITY",
+      "status": "PROVED_SOURCE",
+      "evidence": "TaskManager::spawn always generates uuid::Uuid::new_v4().to_string(), inserts that fresh ID into the in-memory HashMap, then launches the operation with tokio::spawn. The originating JSON-RPC RequestId is captured only for task-local request context propagation, not as the task creation key."
+    },
+    {
+      "class": "BUILTIN_TASK_MANAGER_DURABLE_WORDING_SCOPE",
+      "status": "BOUNDARY_CLARIFIED",
+      "evidence": "spawn documentation says a task is 'durably observable via get_task before this method returns', but the exact implementation stores the entry only in the manager's in-memory HashMap. Therefore that wording must not be promoted to process-restart durability or persistent create-or-get semantics."
+    },
+    {
+      "class": "BUILTIN_TASK_MANAGER_IN_PROCESS_INSERT_SPAWN_ORDER",
+      "status": "PROVED_SOURCE",
+      "evidence": "spawn inserts the TaskEntry before constructing/starting tokio::spawn, then stores the JoinHandle afterward; if shutdown drains the entry between launch and handle installation, the returned handle is aborted. This closes that in-process shutdown race, but does not add process-restart recovery because both task state and executor are process memory."
+    },
+    {
+      "class": "ROUTER_FIRST_MRTR_CANDIDATE_REFINEMENT",
+      "status": "SOURCE_QUALIFIED_NOT_COMPILED",
+      "evidence": "The saved router-first TaskServer candidate can be strengthened by replacing its placeholder request-state verifier with RequestStateCodec::try_new plus seal/open using canonical associated data and TTL. A server-side consumed-op/nonce store is still required if one-time redemption matters. Local cargo remains unavailable, so no compile/runtime success is claimed."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "research_workers_clean_g1/open_source/artifacts/rmcp_v3_1_4_router_first_task_candidate.rs",
+      "commit": "f05b9d850cd7cb333dcc9692e981a432fdead052",
+      "blob_sha": "f1297c74c0d52abdbb375bdb41a80e360950082c",
+      "status": "NOT COMPILED"
+    },
+    {
+      "path": "research_workers_clean_g1/open_source/artifacts/rmcp_v3_1_4_router_registered_task_preflight_model.py",
+      "commit": "b824544ef424a0baa95924f4423c3122b156739a",
+      "blob_sha": "89cd4314b0253d5c75a6306df86edfcc4e224131",
+      "result": "12/12 PASS"
+    }
+  ],
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "reason": "The SDK now supplies a strong, tested MRTR requestState integrity primitive and a router-first macro seam, but the built-in TaskManager remains process-memory/fresh-ID execution. RequestStateCodec does not supply server-side one-time redemption, persistent create-or-get, restart redrive, or effect-side exactly-once fencing; a resident persistent backend would remain an unresolved executor dependency.",
+    "quota_bearing_features_used": [],
+    "incremental_monetary_cost": 0
+  },
+  "mutations": {
+    "allowed_only": ["research_workers_clean_g1/open_source/", "automation_control/receipts/open_source/"],
+    "never_edited": ["automation_control/DESIRED_STATE.json", "automation_control/roles/open_source.json", "other-worker state", "downstream state", "legacy state", "public upstream repositories", "scheduler state"]
+  },
+  "frontier": [
+    "At exact rmcp-v3.1.4, determine whether any other released module/example offers a persistent task backend or caller-stable create-or-get abstraction; absence in built-in TaskManager must not be generalized beyond the examined SDK surface without exact evidence.",
+    "Refine the saved router-first TaskServer candidate to use RequestStateCodec associated-data + TTL binding and a separately modeled consumed-op/create-or-get store; keep one-time redemption and task creation idempotency distinct.",
+    "If a Rust toolchain becomes available, compile and E2E the candidate; until then, rely only on exact upstream source/tests for supported extractor/MRTR shapes and mark the task-return refactor NOT COMPILED.",
+    "Resume OpenHands v1.44.1 R7 single-snapshot recovery helper with custom non-atomic FileStore negative coverage."
+  ],
+  "continuation_exact": "Fresh-bootstrap next run. If active, read own LATEST and this checkpoint only. Continue exact-release/public-source search for any persistent rmcp task backend/create-or-get seam, then refine RequestStateCodec use without conflating integrity/TTL with nonce consumption or idempotency. If no stronger stock task backend exists, leave persistence/redrive/effect fencing unresolved. Then resume OpenHands v1.44.1 R7."
+}
