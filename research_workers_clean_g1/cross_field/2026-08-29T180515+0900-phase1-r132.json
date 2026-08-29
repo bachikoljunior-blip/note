@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "checkpoint_id": "phase1-r132",
+  "created_at": "2026-08-29T18:05:15+09:00",
+  "bootstrap": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "config_path": "automation_control/roles/cross_field.json",
+    "config_blob": "02cf248afd03b0cace1f82308ebd8b5bff4f89f9",
+    "config_control_revision": 16,
+    "config_revision": 7,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true
+  },
+  "assignment": {
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+    "task_id": "phase1-clean-cross-field-transversal-solutions",
+    "objective": "Find transversal mechanisms that eliminate several richer-mode dependencies at once using scheduled Chat alone and remain operational with zero optional monthly quota."
+  },
+  "own_state_predecessor": {
+    "latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+    "latest_blob": "f2ce98b04826f1fa19a044cdec54ae5d8bf1f5c4",
+    "checkpoint": "research_workers_clean_g1/cross_field/2026-08-28T190921+0900-r131.json",
+    "handling": "Observed only for role-local lineage. Its unrelated base-work semantics were not resumed because current Phase-1 no-restore policy is active."
+  },
+  "candidate": {
+    "name": "content-addressed event segments plus a single CAS head",
+    "mechanism": "Store each logical transition as an immutable content-addressed event with prev-event and idempotency op_id. Store only the current stream pointer/snapshot in one small mutable HEAD file. Every scheduled-Chat writer fetches the current HEAD blob, derives a new event, creates the immutable event, then advances HEAD using the fetched blob SHA as compare-and-swap. A stale writer is rejected and must reread/re-evaluate. The applied_op_ids set lets a retry recognize an already-applied logical operation and suppress a duplicate effect.",
+    "transversal_outcomes_targeted": [
+      "durable cross-run state",
+      "crash/restart reconstruction by replay or snapshot plus tail",
+      "audit/replay provenance",
+      "duplicate retry suppression via stable operation identifiers",
+      "stale-writer conflict rejection without an external coordinator",
+      "role-local handoff/continuation state without hosted execution"
+    ],
+    "storage_compute_separation": "Repository API is used only for lightweight transport/state. Interpretation, comparison and next-step reasoning happen in scheduled Chat; API volume is not used as compute."
+  },
+  "public_sources": [
+    {
+      "title": "GitHub REST API endpoints for repository contents",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "evidence": "Create/update file contents uses the current blob sha for updates; the endpoint can return 409 Conflict. Concurrent contents mutations to the same path can conflict and should be serialized."
+    },
+    {
+      "title": "GitHub REST API rate limits",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "evidence": "REST requests are rate-limited; 403/429 responses require waiting for retry-after/reset and repeated secondary-limit failures require increasing backoff. This candidate therefore treats GitHub as low-volume transport and checkpoints before retry."
+    },
+    {
+      "title": "Azure Architecture Center: Event Sourcing pattern",
+      "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing",
+      "evidence": "Append-only event streams support audit/replay and entity reconstruction; optimistic concurrency rejects an append if the stream changed and the handler must reload/re-evaluate/retry. Snapshots reduce long replay cost."
+    }
+  ],
+  "probe": {
+    "path": "research_workers_clean_g1/cross_field/phase1_probe_20260829T1800JST/",
+    "steps": [
+      {
+        "action": "created immutable event 1",
+        "path": "research_workers_clean_g1/cross_field/phase1_probe_20260829T1800JST/events/cbbec3c496391531386467021a023f43dfaa5f6344d1f795d7b502bf0ba6e34a.json",
+        "event_hash": "cbbec3c496391531386467021a023f43dfaa5f6344d1f795d7b502bf0ba6e34a",
+        "op_id": "op-init-20260829T1800JST",
+        "commit": "a2f07f323c2217a21f41bd6f4c27cab611517cb3"
+      },
+      {
+        "action": "created HEAD revision 1 and read it back",
+        "head_blob": "f81564f2578cfd07a2a67ea9130048fd0888fc76",
+        "counter": 1,
+        "commit": "de514b7002bdb640ed0ce84505b9ae52720f4175"
+      },
+      {
+        "action": "created immutable event 2 linked to event 1",
+        "path": "research_workers_clean_g1/cross_field/phase1_probe_20260829T1800JST/events/861b5a24e3edd5bac587f34993aa55cdbd34d8a5e739d43dee6fec73363255b1.json",
+        "event_hash": "861b5a24e3edd5bac587f34993aa55cdbd34d8a5e739d43dee6fec73363255b1",
+        "prev_event": "cbbec3c496391531386467021a023f43dfaa5f6344d1f795d7b502bf0ba6e34a",
+        "op_id": "op-inc-20260829T1800JST",
+        "commit": "2942bba4611a2238a1db0df168dcb0610fba03e7"
+      },
+      {
+        "action": "advanced HEAD from revision 1 to revision 2 using the exact prior blob SHA",
+        "resulting_head_blob": "50f1845948a9f3a59f2d3d70253571430cb76e59",
+        "counter": 2,
+        "commit": "f82bd696c3275b2e7dad1c1f7f4f1e2d6aae20fa"
+      },
+      {
+        "action": "intentional stale-writer negative control",
+        "attempted_sha": "f81564f2578cfd07a2a67ea9130048fd0888fc76",
+        "expected": "stale update rejected",
+        "observed": "HTTP 409; path did not match stale blob sha",
+        "postcondition": "readback still showed revision 2, counter 2 and both intended op_ids"
+      }
+    ],
+    "final_readback": {
+      "revision": 2,
+      "counter": 2,
+      "head_event": "861b5a24e3edd5bac587f34993aa55cdbd34d8a5e739d43dee6fec73363255b1",
+      "head_blob": "50f1845948a9f3a59f2d3d70253571430cb76e59",
+      "applied_op_ids": [
+        "op-init-20260829T1800JST",
+        "op-inc-20260829T1800JST"
+      ]
+    },
+    "inference_not_yet_crash_injected": "If an immutable event is created but HEAD is not advanced, the event is unreachable from the authoritative HEAD and can be treated as an orphan. A retry can fetch HEAD, observe that op_id was not applied, and either reuse the deterministic event object or derive a replacement before a fresh CAS. This structural property is not yet an explicit crash/restart experiment."
+  },
+  "candidate_comparison": [
+    {
+      "candidate": "immutable event segments + CAS head",
+      "time_to_test_ordinal_lower_is_better": 2.0,
+      "expected_success_ordinal_higher_is_better": 4.5,
+      "conflict_risk_ordinal_lower_is_better": 1.5,
+      "integration_cost_ordinal_lower_is_better": 2.5,
+      "incremental_monetary_cost": 0,
+      "quota_fragility_ordinal_lower_is_better": 1.5,
+      "status": "best scoped transversal candidate; falsifiable stale-CAS control passed"
+    },
+    {
+      "candidate": "single mutable checkpoint JSON with CAS",
+      "time_to_test_ordinal_lower_is_better": 1.5,
+      "expected_success_ordinal_higher_is_better": 3.0,
+      "conflict_risk_ordinal_lower_is_better": 1.5,
+      "integration_cost_ordinal_lower_is_better": 1.5,
+      "incremental_monetary_cost": 0,
+      "quota_fragility_ordinal_lower_is_better": 1.5,
+      "status": "simpler but lacks immutable replay/audit and makes partial-write diagnosis weaker"
+    },
+    {
+      "candidate": "issue/label queue and lease state",
+      "time_to_test_ordinal_lower_is_better": 2.0,
+      "expected_success_ordinal_higher_is_better": 2.5,
+      "conflict_risk_ordinal_lower_is_better": 3.0,
+      "integration_cost_ordinal_lower_is_better": 2.0,
+      "incremental_monetary_cost": 0,
+      "quota_fragility_ordinal_lower_is_better": 1.5,
+      "status": "human-visible but weaker atomic state transition surface and more race/metadata complexity"
+    },
+    {
+      "candidate": "GitHub Actions/Codespaces/serverless executor",
+      "time_to_test_ordinal_lower_is_better": 2.5,
+      "expected_success_ordinal_higher_is_better": 4.0,
+      "conflict_risk_ordinal_lower_is_better": 2.0,
+      "integration_cost_ordinal_lower_is_better": 3.0,
+      "incremental_monetary_cost": "can be zero only while optional hosted quota is available",
+      "quota_fragility_ordinal_lower_is_better": 5.0,
+      "status": "Phase-1 reject: accepted route may not depend on hosted-compute/monthly credit or finite free-tier availability"
+    }
+  ],
+  "assessment": {
+    "tested_scope": "single role-local event stream and one mutable HEAD pointer via GitHub Contents API",
+    "scoped_result": "PASS for durable state + replay/audit structure + optimistic stale-writer rejection; duplicate-suppression precondition is present via applied_op_ids but duplicate retry was not separately mutation-tested",
+    "residual_richer_mode_or_manual_user_dependency_within_tested_scope": false,
+    "protected_primary_dependency_within_tested_scope": false,
+    "finite_monthly_quota_or_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "rate_limit_classification": "GitHub REST has request-rate limits, so this route is acceptable only as low-volume transport with checkpoint/backoff and without API-volume-as-compute. Rate limiting can increase latency and remains an operational constraint.",
+    "root_acceptance": "PARTIAL ONLY. This probe does not reproduce arbitrary shell/binary execution, browser/UI interaction, unavailable external effects or protected-primary operations. Those are unresolved Phase-1 children, not accepted handoffs.",
+    "conflict_check": "All writes were confined to the authorized cross_field role-local namespace. No O, other-worker, downstream, shared-ledger or legacy semantic input was used."
+  },
+  "limits_and_failure_modes": [
+    "GitHub Contents API is rate-limited; 403/429 requires backoff and exact continuation rather than busy retry.",
+    "A single HEAD serializes one stream. Multi-entity atomic state requires a single root manifest/head or a higher-level transaction representation.",
+    "An event created before a failed HEAD CAS can become an orphan; authoritative replay must follow only HEAD-reachable events.",
+    "Repository content endpoints are not a bulk data/computation substrate; large logs should be segmented/sharded and snapshot periodically.",
+    "The tested mechanism cannot create capabilities that scheduled Chat does not expose. Missing effect classes remain unresolved children rather than being labeled irreducible handoffs."
+  ],
+  "frontier": [
+    {
+      "priority": 1,
+      "leaf": "two-entity atomic-root and orphan-recovery probe",
+      "reason": "Tests whether one CAS root can safely coordinate several role-local objects and recover from an event-created/head-not-advanced crash equivalent without duplicate logical effects."
+    },
+    {
+      "priority": 2,
+      "leaf": "rate-limit-safe continuation protocol",
+      "reason": "Specify exact checkpoint/backoff semantics for 403/429 so rate limits add latency but do not create a hosted-compute or manual-rescue dependency."
+    },
+    {
+      "priority": 3,
+      "leaf": "effect-class parity matrix",
+      "reason": "Map which richer-mode outcomes can be represented as Chat reasoning plus repository mutations and which absent effect classes remain unresolved, then seek transversal Chat-native substitutes rather than handoffs."
+    }
+  ],
+  "exact_next_action": "Create two immutable logical-object event streams under one content-addressed root manifest referenced by a single CAS HEAD. Deliberately create a new event/root candidate without advancing HEAD to simulate interruption, then on a fresh read reconstruct solely from HEAD, verify the orphan is ignored, retry the same op_id and advance exactly once. Record all reads/writes and stale-CAS controls in the role-local namespace.",
+  "termination": "invocation checkpoint after one source-qualified falsifiable Phase-1 candidate probe; task remains open-ended",
+  "global_completion": false
+}
