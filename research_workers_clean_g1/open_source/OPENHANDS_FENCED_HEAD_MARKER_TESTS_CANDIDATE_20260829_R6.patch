@@ -1,0 +1,205 @@
+*** Source-qualified pytest candidate only; not applied or run upstream. ***
+*** Target: OpenHands/software-agent-sdk v1.44.1 commit 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a ***
+*** Companion implementation candidate: OPENHANDS_FENCED_HEAD_MARKER_PATCH_CANDIDATE_20260829_R6.patch ***
+*** Existing exact-source coverage already tests the unmatched ActionEvent crash-recovery path. ***
+*** This adds the missing ordinary user-MessageEvent event-file -> base-HEAD crash class. ***
+
+diff --git a/tests/cross/test_conversation_lease_behavior.py b/tests/cross/test_conversation_lease_behavior.py
+index 0000000..0000000 100644
+--- a/tests/cross/test_conversation_lease_behavior.py
++++ b/tests/cross/test_conversation_lease_behavior.py
+@@
+ from openhands.sdk.conversation.state import ConversationExecutionStatus
++from openhands.sdk.conversation.state import ConversationState
+@@
+ async def test_crash_recovery_error_is_on_active_branch_for_next_turn(tmp_path):
+@@
+             recovered_state.view.manipulation_indices
++
++
++@pytest.mark.asyncio
++async def test_pending_user_message_head_commit_recovers_after_lease_takeover(
++    tmp_path, monkeypatch
++):
++    """Recover a durable user event whose base-state HEAD write crashed.
++
++    This exercises the non-Action crash class that unmatched-action recovery
++    cannot infer from the log tail.  The implementation under test must have
++    written a durable pending-HEAD marker *before* the event file.  We then make
++    the outer ConversationState context fail exactly at its deferred
++    ``base_state.json`` save, leaving:
++
++      persisted old HEAD + pending marker + durable MessageEvent file.
++
++    After the old lease expires, a fresh EventService must install its own
++    lease-backed write guard, verify the marker/event binding, advance both
++    ``leaf_event_id`` and ``last_user_message_id``, persist the repaired base
++    snapshot, and remove the stale marker.  A subsequent user message must be
++    parented to the recovered message rather than the old persisted HEAD.
++    """
++    conversations_dir = tmp_path / "conversations"
++    workspace_dir = tmp_path / "workspace"
++    workspace_dir.mkdir()
++
++    class SimulatedProcessCrash(RuntimeError):
++        pass
++
++    async with ConversationService(conversations_dir=conversations_dir) as primary:
++        conversation_info, _ = await primary.start_conversation(_request(workspace_dir))
++        assert primary._event_services is not None
++        primary_event_service = primary._event_services[conversation_info.id]
++        state = await primary_event_service.get_state()
++        conversation = primary_event_service._conversation
++        assert conversation is not None
++        conversation_dir = conversations_dir / conversation_info.id.hex
++
++        # Establish an already-committed non-null HEAD.  This is the important
++        # subclass: legacy ``leaf_event_id is None`` tail fallback is not enough.
++        await primary_event_service.send_message(
++            Message(
++                role="user",
++                content=[TextContent(text="committed first message")],
++            ),
++            run=False,
++        )
++        stale_leaf = state.leaf_event_id
++        stale_last_user = state.last_user_message_id
++        assert stale_leaf is not None
++        assert stale_last_user == stale_leaf
++
++        pending_message = MessageEvent(
++            source="user",
++            llm_message=Message(
++                role="user",
++                content=[TextContent(text="durable event before base save")],
++            ),
++        )
++
++        original_save = ConversationState._save_base_state
++
++        def crash_only_primary_state(self, fs):
++            if self is state:
++                raise SimulatedProcessCrash("crash before deferred base-state commit")
++            return original_save(self, fs)
++
++        # LocalConversation's default callback runs inside the state context.
++        # append_event therefore writes marker + event and advances the in-memory
++        # HEAD; context exit is the deferred base snapshot boundary we fail.
++        monkeypatch.setattr(
++            ConversationState,
++            "_save_base_state",
++            crash_only_primary_state,
++        )
++        with pytest.raises(SimulatedProcessCrash):
++            conversation._on_event_with_state_lock(pending_message)
++        monkeypatch.setattr(ConversationState, "_save_base_state", original_save)
++
++        # The immutable event and marker survived, while the base snapshot still
++        # has the previously committed non-null HEAD/last-user ID.
++        disk_events = _load_disk_events(conversation_dir)
++        assert any(event.id == pending_message.id for event in disk_events)
++        marker_paths = list((conversation_dir / "pending_head_commits").glob("*.json"))
++        assert marker_paths
++        base_state = json.loads((conversation_dir / "base_state.json").read_text())
++        assert base_state["leaf_event_id"] == stale_leaf
++        assert base_state["last_user_message_id"] == stale_last_user
++
++        _expire_lease(conversation_dir)
++
++        async with ConversationService(conversations_dir=conversations_dir) as secondary:
++            assert secondary._event_services is not None
++            assert conversation_info.id in secondary._event_services
++            recovered = secondary._event_services[conversation_info.id]
++            recovered_state = await recovered.get_state()
++
++            assert recovered_state.leaf_event_id == pending_message.id
++            assert recovered_state.last_user_message_id == pending_message.id
++            assert [event.id for event in recovered_state.active_branch()][-1] == pending_message.id
++
++            repaired_base = json.loads(
++                (conversation_dir / "base_state.json").read_text()
++            )
++            assert repaired_base["leaf_event_id"] == pending_message.id
++            assert repaired_base["last_user_message_id"] == pending_message.id
++            assert not list(
++                (conversation_dir / "pending_head_commits").glob("*.json")
++            )
++
++            before = len(_load_disk_events(conversation_dir))
++            await recovered.send_message(
++                Message(
++                    role="user",
++                    content=[TextContent(text="follow up after recovery")],
++                ),
++                run=False,
++            )
++            new_events = _load_disk_events(conversation_dir)[before:]
++            follow_up = next(
++                event
++                for event in new_events
++                if isinstance(event, MessageEvent) and event.source == "user"
++            )
++            assert follow_up.parent_id == pending_message.id
++
++
++@pytest.mark.asyncio
++async def test_markerless_tail_event_is_not_auto_adopted(tmp_path):
++    """A unique descendant without a durable commit marker is not write intent.
++
++    This protects intentional navigation/fork semantics: startup recovery must
++    never infer the active branch merely because only one newer event file is
++    present.  The existing persisted non-null HEAD remains authoritative when
++    no pending-HEAD marker binds a transition.
++    """
++    conversations_dir = tmp_path / "conversations"
++    workspace_dir = tmp_path / "workspace"
++    workspace_dir.mkdir()
++
++    async with ConversationService(conversations_dir=conversations_dir) as primary:
++        conversation_info, _ = await primary.start_conversation(_request(workspace_dir))
++        assert primary._event_services is not None
++        service = primary._event_services[conversation_info.id]
++        state = await service.get_state()
++        conversation_dir = conversations_dir / conversation_info.id.hex
++
++        await service.send_message(
++            Message(role="user", content=[TextContent(text="committed head")]),
++            run=False,
++        )
++        committed_leaf = state.leaf_event_id
++        assert committed_leaf is not None
++
++        # Simulate an unrelated/orphan immutable log record without going through
++        # append_event, hence without a pending-HEAD marker.  EventLog is append-
++        # only storage; this record alone must not authorize moving HEAD.
++        orphan = MessageEvent(
++            source="user",
++            parent_id=committed_leaf,
++            llm_message=Message(
++                role="user", content=[TextContent(text="markerless orphan")]
++            ),
++        )
++        state.events.append(orphan)
++        assert any(event.id == orphan.id for event in _load_disk_events(conversation_dir))
++        assert not list((conversation_dir / "pending_head_commits").glob("*.json"))
++
++        _expire_lease(conversation_dir)
++
++        async with ConversationService(conversations_dir=conversations_dir) as secondary:
++            recovered = secondary._event_services[conversation_info.id]
++            recovered_state = await recovered.get_state()
++            assert recovered_state.leaf_event_id == committed_leaf
++            assert orphan.id not in {
++                event.id for event in recovered_state.active_branch()
++            }
++
++*** Validation status ***
++- The exact target test module already contains lease-takeover fixtures and the
++  ActionEvent stale-HEAD regression, so these cases extend the same integration
++  harness rather than inventing a new test environment.
++- Exact target source confirms LocalConversation default callback appends through
++  ConversationState while holding the state context; __exit__ is the deferred
++  base-state flush boundary; set_write_guard is installed by Agent Server after
++  lease claim; EventLog append is immutable/file-backed.
++- These pytest hunks have NOT been applied or run against upstream. They are a
++  source-qualified candidate to validate the companion implementation patch.
