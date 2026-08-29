@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 36,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "transport_mode": "exact_blob_two_pass_fallback_then_role_local_cas",
+  "frozen_control": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "identity_recheck": "same root/config blobs",
+    "control25_acceptance_semantics_imported": false
+  },
+  "predecessor": "research_workers_clean_g1/open_source/checkpoints/20260829T082000Z_openhands_recovery_atomicity_audit.json",
+  "predecessor_blob": "da7bdcc7dea37a33db65213c8a99ac2206a2972f",
+  "target": {
+    "repository": "OpenHands/software-agent-sdk",
+    "release": "v1.44.1",
+    "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "release_published_at": "2026-08-28T16:10:48Z",
+    "latest_release_rechecked": true
+  },
+  "r7_recovery_contract": {
+    "status": "SOURCE_EQUIVALENT_MODEL_VALIDATED_NOT_UPSTREAM_APPLIED",
+    "invariant": "No public ConversationState HEAD/bookkeeping field is mutated until every same-generation pending marker/event in the recovery set has been parsed, digest/parent checked, and arranged into one exact non-ambiguous chain from the persisted HEAD/head_is_empty state.",
+    "precommit_rules": [
+      "marker generation lower than persisted generation is stale cleanup residue and may be deleted without changing HEAD",
+      "marker generation higher than persisted generation fails closed",
+      "same-generation marker with no durable event is marker-before-event crash residue and may be deleted without changing HEAD",
+      "same-generation durable event must match marker parent and exact event digest",
+      "planning uses only local virtual leaf/head_is_empty/last_user_message_id values",
+      "exactly one marker may match each virtual HEAD step; ambiguity or unreachable residue fails closed with no HEAD mutation",
+      "after explicit empty HEAD, adopted tree event must be an explicit ROOT_PARENT_ID root",
+      "markerless event-log descendants are never inferred as active-branch intent"
+    ],
+    "commit_rule": "After the complete chain validates, persist one base-state snapshot containing final leaf_event_id, head_is_empty, last_user_message_id and persistence_generation+1. Then update in-memory fields without intermediate autosaves and only afterwards delete lower-generation markers.",
+    "crash_rule": "If base-state commit wins but marker cleanup is lost, next restart sees lower-generation markers and performs cleanup only; it must not replay the HEAD transition.",
+    "existing_action_recovery": "Preserve the existing unmatched executable ActionEvent recovery because it additionally synthesizes an explicit execution error/result boundary. The marker protocol addresses tree reachability and ordinary-event durability, not action-result semantics."
+  },
+  "executed_model": {
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T083000Z_openhands_r7_recovery_model.py",
+    "blob": "88bb47351aaefcd572e70f1324d56b7bbf71479b",
+    "result": "PASS 11/11",
+    "fixtures": [
+      "two-event chain commits final HEAD once",
+      "marker-before-event cleanup keeps HEAD unchanged",
+      "base commit before marker cleanup is restart-idempotent",
+      "ambiguous chain has no partial HEAD write",
+      "unreachable chain has no partial HEAD write",
+      "explicit empty HEAD accepts only explicit-root event",
+      "mixed action/user-message/observation chain preserves latest user-message id",
+      "markerless orphan is not adopted",
+      "old-generation marker after navigation is cleanup-only",
+      "digest mismatch has no HEAD write",
+      "future marker generation has no HEAD write"
+    ]
+  },
+  "source_binding": {
+    "autosave_fact": "Exact v1.44.1 ConversationState.__setattr__ immediately calls _save_base_state for changed public fields outside a state context; inside a context it marks dirty.",
+    "exception_flush_fact": "Exact v1.44.1 ConversationState.__exit__ flushes dirty state when save depth reaches zero without an exception-type exclusion, so validation must precede mutation rather than rely on exception rollback.",
+    "event_durability_fact": "Exact v1.44.1 EventLog.append serializes the event, writes it under lock/write guard, and then updates the in-memory index.",
+    "lease_fact": "Agent Server claims the ConversationLease and installs the lease-backed state/EventLog write guard before startup stale-action recovery; any marker reconciliation write must remain after that fence."
+  },
+  "phase1_assessment": {
+    "chat_native_research_and_role_local_persistence": "PASS",
+    "upstream_patch_application_or_upstream_test_execution": "UNRESOLVED_CHILD",
+    "reason_not_accepted_as_handoff": "control26 forbids counting a protected/richer-mode/user execution remainder as solved",
+    "finite_monthly_trial_paid_quota_dependency": "none consumed or required for the source/model evidence in this run",
+    "incremental_monetary_cost": 0,
+    "hosted_runner_codespaces_artifact_lfs_package_cloud_credit_used": false
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "OpenHands/software-agent-sdk upstream"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If this assignment remains active, read own LATEST and this checkpoint only. Next prioritize the MCP C# Tasks leaf: at current official SDK/release source, locate a supported restart-time API that re-enters the complete ordinary CallTool policy/filter pipeline for a durably claimed task. If none exists, pin the exact missing seam and model why direct McpServerTool.InvokeAsync replay is insufficient; keep the missing seam as an unresolved child, not a handoff. Then return to an OpenHands R7 source-qualified patch candidate only if it can express single-snapshot commit without intermediate __setattr__ autosaves and preserve lease/write-guard ordering."
+}
