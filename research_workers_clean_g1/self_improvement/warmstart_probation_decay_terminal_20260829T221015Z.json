@@ -1,0 +1,34 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-WARMSTART-PROBATION-DECAY-v1",
+  "precommit_blob":"fe6488d60352b5e05e83dadcad62485475de0f70",
+  "evaluated_at":"2026-08-29T22:10:15.493617+00:00",
+  "mechanism_id":"RFC7661-NONVALIDATED-STATE-PROBATION-REDUCTION",
+  "public_sources":[
+    {"url":"https://www.rfc-editor.org/rfc/rfc7661.html","bound_semantics":"RFC 7661 defines a non-validated phase where congestion-window state reflects a previous capacity measurement whose current validity is unknown. It constrains use/growth of that preserved state until fresh acknowledged traffic validates it, reacts conservatively to congestion/RTO, and reduces preserved state after a bounded non-validated period."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Treat inherited estimator state after an epoch rollover as non-validated adaptive state. Keep it shadow-only while fresh current-epoch terminal evidence is collected, analogous only to RFC 7661's validated/non-validated distinction.",
+    "probation_rule":"For exactly two distinct same-scope current-epoch terminal latency samples, active deadline stays at role-local conservative ceiling12 while shadow SRTT/RTTVAR is updated. After the second sample, activate the refreshed shadow deadline.",
+    "invalid_event_rule":"Duplicate, stale, scope-mismatched and transport-uncertain observations neither update shadow state nor advance probation.",
+    "literal_tcp_runtime_used":false,
+    "formula_note":"The two-sample count and deadline ceiling are role-local precommitted safety parameters, not RFC 7661 requirements."
+  },
+  "control_results":[
+    {"id":"P1_STABLE","result":"PASS","details":"Samples [2,2] are admitted under active deadline12. Shadow deadline evolves 3.6875 then3.265625; after the second fresh sample probation completes and active deadline becomes3.265625."},
+    {"id":"P2_ABRUPT_SHIFT","result":"PASS","details":"Samples [2,8] are both admitted under deadline12. Shadow deadline evolves3.6875 then10.015625; after the second fresh sample active deadline becomes10.015625 instead of timing out at inherited3.6875 before the latency8 observation can be learned."},
+    {"id":"P3_RESTART","result":"PASS","details":"After one fresh sample, durable state records probation_remaining=1 plus shadow SRTT/RTTVAR. Restart reconstructs those exact values and does not reactivate inherited state early."},
+    {"id":"P4_INVALID_EVENTS","result":"PASS","details":"Duplicate latency2, stale latency8 and transport-uncertain latency9 produce zero shadow updates and zero probation progress."}
+  ],
+  "ablation_result":{"immediate_full_trust":"FAIL_AS_INTENDED on abrupt-shift control because inherited/post-probe deadline3.6875 is below next valid latency8","probationary_shadow":"PASS fixed stable and abrupt-shift controls and eventually recovers a tighter stable deadline"},
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed synthetic latency trace only. RFC 7661 concerns TCP congestion-window validation, not timeout estimators; this result claims only the transferable control principle of marking inherited adaptive state non-validated until fresh evidence supports reuse."
+}
