@@ -1,0 +1,48 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-BOUNDED-INFLIGHT-CREDIT-WINDOW-v1",
+  "precommit_blob":"962de016d8fe6e5a56dfba124cbe42f383145c36",
+  "evaluated_at":"2026-08-29T21:16:53Z",
+  "mechanism_id":"TCP-SCTP-BOUNDED-FLOW-WINDOW-CUMULATIVE-PLUS-GAP-ACK-REDUCTION",
+  "public_sources":[
+    {
+      "url":"https://www.rfc-editor.org/rfc/rfc9293.html",
+      "bound_semantics":"TCP accepts sequence-space data only within the advertised receive window; a zero window admits no ordinary data, providing bounded flow control/backpressure."
+    },
+    {
+      "url":"https://www.rfc-editor.org/info/rfc2018/",
+      "bound_semantics":"TCP SACK represents non-contiguous received blocks beyond the cumulative acknowledgment; the cumulative ACK advances when missing data fills the left-edge gap."
+    },
+    {
+      "url":"https://www.rfc-editor.org/rfc/rfc9260.html",
+      "bound_semantics":"SCTP SACK carries a Cumulative TSN Ack plus Gap Ack Blocks and advertised receiver-window credit, combining contiguous-prefix progress with bounded receiving capacity."
+    }
+  ],
+  "chat_native_reduction":{
+    "literal_network_protocol_runtime_used":false,
+    "window_mapping":"The capacity-3 role-local window counts every epoch that is not yet reclaimable, including a terminal-readback-closed epoch behind an older gap, analogous to received/outstanding sequence-space that still occupies protocol state.",
+    "cumulative_mapping":"finalized-through is a cumulative acknowledgment; closed later epochs remain exact gap state until the oldest gap closes.",
+    "backpressure_rule":"When three epochs occupy tracked state, the controller does not open another epoch; this is a local scheduling guard, not a throughput claim."
+  },
+  "trace_results":[
+    {"step":1,"result":"PASS","details":"capacity=3 with tracked epochs7,8,9 blocks epoch10; no silent eviction"},
+    {"step":2,"result":"PASS","details":"late duplicate K8 is rejected by exact window state while epoch8 is behind gap7"},
+    {"step":3,"result":"PASS","details":"epoch7 terminal-or-aborted readback closes the oldest gap"},
+    {"step":4,"result":"PASS","details":"contiguous closed prefix advances finalized-through 6->8; only after marker readback are epoch7/8 exact sets reclaimed"},
+    {"step":5,"result":"PASS","details":"epoch10 may open after slots free; tracked not-yet-reclaimable epochs remain <=3"},
+    {"step":6,"result":"PASS","details":"capacity-bypass control is rejected"},
+    {"step":7,"result":"PASS","details":"transport uncertainty yields UNKNOWN and blocks opening/reclamation/credit"},
+    {"step":8,"result":"PASS","details":"late epoch7 completion after finalized-through=8 cannot reopen credit or authority"},
+    {"step":9,"result":"PASS","details":"scope/provenance mismatch rejects semantic use"}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; this file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed capacity-3 role-local trace only. This does not prove liveness if the oldest gap never reaches terminal/aborted readback; that remains the next child problem."
+}
