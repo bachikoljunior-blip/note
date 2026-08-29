@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:51:00+09:00",
+  "topic": "Persistent rollout-result cache key omits environment/runner/backend identity in exact public SpeedRunner code",
+  "source_revision": {
+    "repository": "JHU-CLSP/speedrunner",
+    "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+    "date": "2026-08-14T21:31:56Z"
+  },
+  "sources": [
+    {
+      "path": "src/speedrunner/core/telemetry.py",
+      "blob": "d6bd78f1d95bc16f767bfe92768ccb15ce57f805",
+      "facts": [
+        "ResultCache key is (puzzle_id, config_hash).",
+        "config_hash contains codebook.to_dict(), system prompt template, user prompt template, and generation_configs.",
+        "The key does not explicitly contain the runner source revision, ScienceWorld package/JAR identity, dataset record digest, server/backend endpoint or provider identity.",
+        "RunState can load and persist this cache from a filesystem path outside an individual run directory."
+      ]
+    },
+    {
+      "path": "src/speedrunner/benchmarks/scienceworld/train.py",
+      "blob": "41bfd63f340b77cacc14f6932815847624da6bce",
+      "facts": [
+        "ScienceWorld RunState uses cache_dir='./cache/<dataset name>'.",
+        "The paper-facing replay config sets dataset.name=scienceworld, so the path resolves to ./cache/scienceworld/result_cache.pkl rather than a run-specific location."
+      ]
+    },
+    {
+      "path": "src/speedrunner/core/rollout.py",
+      "blob": "09986e039f121a481738d5c96d906235c7949bd1",
+      "facts": [
+        "RolloutAgent checks the persistent cache only while the codebook is empty.",
+        "On a cache hit, it reuses cached final_answer, success, error, primitive count, steps, validation score, episode summary/metrics, termination reason, and usage/cost instead of executing the model/environment trajectory again.",
+        "On an uncached empty-codebook rollout, those outcome fields are written to ResultCache and the cache is saved to disk.",
+        "The cache lookup uses rendered system/user prompts and generation configs; rendered prompts may indirectly reflect an initial observation, but this does not bind future simulator transition semantics or the exact environment implementation."
+      ]
+    },
+    {
+      "path": "configs/scienceworld/asi-replay-gpt-t3.yaml",
+      "blob": "195604cf737810ab7afdf3a3dd812b3a92e16615",
+      "facts": [
+        "dataset.name=scienceworld and server.base_url=https://api.openai.com/v1.",
+        "No cache namespace or environment artifact identity is specified in this config."
+      ]
+    },
+    {
+      "path": "requirements.txt",
+      "blob": "0feca11531bb3fb6bb60c50291e440a9127f449a",
+      "fact": "The exact public SpeedRunner requirements list scienceworld without a version/hash, so a cache persisted across environment reinstall/update is not invalidated by package identity through the requirements surface."
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-102",
+      "claim": "In the exact public SpeedRunner implementation, persistent empty-codebook rollout cache authority is broader than the variables explicitly bound into its key. A cache hit can reuse a complete prior outcome while the key lacks exact runner revision, environment artifact/JAR, dataset-record digest, and backend/server fingerprint. Therefore a replayable scientific evaluation cache should be keyed or validated against those identities before a cached outcome is admitted as evidence.",
+      "scope": "Static implementation/provenance finding. It does not establish that any reported paper result actually consumed a stale or cross-environment cache entry."
+    },
+    {
+      "id": "p1-sa-103",
+      "claim": "Because ScienceWorld cache persistence is dataset-name scoped rather than run-directory scoped and the public dependency is unpinned, cache invalidation must be explicit across environment/runner/backend changes. Prompt equality is insufficient: two environment revisions can share the same initial rendered prompt yet differ in later transition dynamics.",
+      "scope": "Potential cross-run cache-reuse class; no observed stale-hit incident is claimed."
+    }
+  ],
+  "protocol_implication": {
+    "name": "EVALUATION_CACHE_CONTEXT_BINDING_GATE",
+    "rule": "A cached scientific rollout may be reused only when the cache entry is bound to the exact runner revision/artifact, environment distribution/JAR, dataset record, codebook, rendered prompts, generation settings, backend/server fingerprint and cache-policy revision; the current state must match all bindings before cached outcome fields acquire evidence authority.",
+    "empty_codebook_note": "The observed public implementation restricts normal cache lookup to empty-codebook rollouts. The gate should preserve that scope rather than generalize to non-empty-codebook cache behavior that the code does not perform."
+  },
+  "causal_boundary": "This is a cache/provenance invariant, not a performance ablation and not an allegation that cached outcomes changed any published metric."
+}
