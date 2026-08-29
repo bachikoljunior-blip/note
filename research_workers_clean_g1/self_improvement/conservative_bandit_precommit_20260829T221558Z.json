@@ -1,0 +1,31 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-CONSERVATIVE-BANDIT-SAFETY-BUDGET-v1",
+  "precommitted_at":"2026-08-29T22:15:58.277659+00:00",
+  "predecessor":{"sequence":230,"state_blob":"297d520c2f1fee92e294021651d3e9208dfd3ae8","latest_blob":"189ef1649efcfaf0a1c382b7f109342a1a110da6","credit_total":81},
+  "reward_domain":[0,1],
+  "safe_baseline":{"assignment":"A","known_fixed_reward":0.8},
+  "safety_floor":{"alpha":0.2,"constraint":"after every accepted terminal reward at horizon t, cumulative_reward >= (1-alpha)*0.8*t = 0.64*t"},
+  "pre_action_gate":"Before choosing uncertain B for step t+1, admit only if current cumulative_reward >= 0.64*(t+1), which guarantees the floor even if B's next bounded reward is0. Otherwise select baseline A.",
+  "fixed_trace":[
+    {"steps":"1-4","action":"A,A,A,A","rewards":[0.8,0.8,0.8,0.8],"after_t4":{"sum":3.2,"floor":2.56,"B_worst_case_gate_for_t5":"3.2>=3.2 PASS"}},
+    {"step":5,"action":"B","reward":0.0,"after":{"sum":3.2,"floor":3.2,"status":"SAFE_AT_BOUNDARY"}},
+    {"steps":"6-9","gate_actions":"B blocked; choose A four times","rewards":[0.8,0.8,0.8,0.8],"after_t9":{"sum":6.4,"floor":5.76,"B_worst_case_gate_for_t10":"6.4>=6.4 PASS"}},
+    {"step":10,"action":"B","reward":1.0,"after":{"sum":7.4,"floor":6.4,"status":"SAFE_AND_DISCOVERS_HIGH_REWARD"}},
+    {"step":11,"action":"B permitted by same gate","reward":1.0,"after":{"sum":8.4,"floor":7.04,"status":"SAFE"}}
+  ],
+  "unconstrained_control":{"actions":"After initial one-per-arm/UCB uncertainty pressure, B may be selected without accumulated safety budget.","falsifier":"Any policy that chooses B at t=1 with bounded worst-case reward0 can produce cumulative0 < floor0.64, violating the fixed safety constraint."},
+  "invalid_event_controls":[
+    {"event":"duplicate terminal semantic key","expected":"does not change horizon t, cumulative reward, or safety budget"},
+    {"event":"stale prior-scope reward1.0","expected":"does not replenish budget"},
+    {"event":"transport-uncertain apparent reward1.0","expected":"UNKNOWN and does not replenish budget or advance horizon"},
+    {"event":"restart after t5","expected":"reconstruct t=5,sum=3.2 exactly; B remains blocked until budget rebuilt"}
+  ],
+  "guards":["safety accounting uses only exact same-scope terminal readbacks","reward lower bound for uncertain arm is0 from fixed [0,1] domain","baseline reward0.8 is fixed evidence for this toy trace, not inferred online","duplicate/stale/transport-uncertain events have zero accounting effect","horizon and cumulative reward persist across restart","no hypothetical reward credits","no external optimizer/runtime","no finite optional quota","incremental monetary cost zero","public semantics bind only after precommit readback","terminal credit only after exact terminal readback","scope limited to fixed synthetic reward trace"],
+  "acceptance_rule":"PASS only if a public conservative-bandit mechanism formalizes a cumulative performance constraint relative to a baseline while allowing exploration when sufficient safety budget exists, and the fixed trace/controls pass unchanged. No regret, optimality or production safety claim may be inferred from this toy accounting rule.",
+  "credit_rule":"This precommit earns zero credit; at most one credit after terminal exact readback.",
+  "frontier_nonempty":true
+}
