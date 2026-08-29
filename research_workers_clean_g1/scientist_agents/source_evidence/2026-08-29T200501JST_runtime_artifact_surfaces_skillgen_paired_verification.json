@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "role": "scientist_agents",
+  "recorded_at": "2026-08-29T20:05:01+09:00",
+  "control_revision": 26,
+  "config_revision": 5,
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
+  "source_state": {
+    "state_path": "research_workers_clean_g1/scientist_agents/STATE.json",
+    "state_blob": "c6af55d6a507e69a07dc71b35c46107beee3d20d",
+    "checkpoint_path": "research_workers_clean_g1/scientist_agents/2026-08-29T190326JST.json",
+    "checkpoint_blob": "60a8c1f1bd2c6ff9d6b7c60dfb86282dead97da5"
+  },
+  "public_sources": [
+    {
+      "id": "speedrunner-main",
+      "kind": "official_git",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "paths": [".gitignore", "src/speedrunner/core/rollout.py", "src/speedrunner/core/telemetry.py"],
+      "observations": [
+        "The official main revision ignores /runs/, /local/, /wandb/, /data, /logs, /cache, **/output/, checkpoints and related runtime files.",
+        "Current rollout serialization maps training traces to <run_dir>/train_traces.jsonl and evaluation traces to <run_dir>/dev/<optional trace_output_subdir>/dev_epoch_<n>.jsonl.",
+        "Current list-task ScienceWorld evaluation uses task-family labels task_id_<family_id>; therefore task-3 raw evaluation traces under current semantics are written beneath <run_dir>/dev/task_id_3/dev_epoch_<n>.jsonl.",
+        "The official repository release collection is empty. The inspected main-branch GitHub Actions run was a dynamic dependency-graph update and exposed no workflow artifacts. No canonical Figure-12 task_id_3 run bundle was found in these official surfaces."
+      ],
+      "scope": "This identifies where current code would write raw task-3 traces and why they are absent from the versioned main tree. It does not prove the historical Figure-12 run used this revision or these exact paths."
+    },
+    {
+      "id": "memcompiler-pages-artifacts",
+      "kind": "official_git_actions_and_tree",
+      "repository": "air-embodied-brain/MemCompiler",
+      "observations": [
+        "The inspected GitHub Actions history contains three pages-build/deployment runs on the webpage branch rather than experiment workflows.",
+        "Run 26620557429 exposed an expired github-pages artifact of 1,564,024 bytes with digest sha256:0f6c2bfd02dc44816a80ff7b3cddf8ff607b1244a69da75440bc6333971fdb66 at webpage head cb030a6ebbdb04bfe945e661c4e41416b458b215.",
+        "Run 26612181670 exposed an expired github-pages artifact of 1,563,988 bytes with digest sha256:ccdc0906855074d0fa58aaca78f405e2560e039a3e8e963b8ad6971c5ddd2bfd.",
+        "Run 25805926332 exposed an expired github-pages artifact of 1,565,352 bytes with digest sha256:283a3753a6b9fa79d05c0d4709a08d3bba11299a575863c751129567cec67f51.",
+        "The complete recursive tree for webpage head cb030a6ebbdb04bfe945e661c4e41416b458b215 contains only docs/index.html, docs/style.css, and five static image assets including alfworld_scienceworld_results.png; no Chroma/SQLite memory snapshot, trajectory bundle, JSON run manifest, or evaluated memory state is present."
+      ],
+      "scope": "This closes the inspected official GitHub Pages/Actions artifact surface as a source of Table-3 memory-state provenance. It does not establish nonexistence on all author-controlled external storage or mirrors."
+    },
+    {
+      "id": "skillgen-paper",
+      "kind": "primary_paper",
+      "title": "SkillGen: Verified Inference-Time Agent Skill Synthesis",
+      "arxiv": "2605.10999v1",
+      "submitted_at": "2026-05-09T19:24:11Z",
+      "observations": [
+        "The paper explicitly models skills as interventions and compares outcomes on the same instances with and without the skill, counting both repairs and regressions.",
+        "ScienceWorld uses a 150-instance construction split and a 100-instance held-out test split in the controlled protocol.",
+        "Across the eight reported base agents, ScienceWorld held-out accuracy improves for every agent; the table reports deltas of +16, +3, +10, +3, +8, +25, +3, and +13 percentage points respectively.",
+        "The construction-time gate accepts a candidate only when verification net gain clears its threshold and persists failed candidates as deprecated no-op interventions for downstream evaluation.",
+        "The paper reports 2.2M construction tokens for ScienceWorld and states all experiments were orchestrated locally but model inference was executed through hosted LLM APIs routed through OpenRouter; the mean construction budget across benchmarks is reported as approximately USD 8.2 per generated skill."
+      ],
+      "scope": "This is strong same-instance paired intervention evidence and a useful evidence-packaging pattern, but its live construction/verification route fails the Phase-1 zero-optional-quota and zero-incremental-cost acceptance constraints."
+    },
+    {
+      "id": "skillgen-code",
+      "kind": "official_git",
+      "repository": "yccm/SkillGen",
+      "revision": "3c4537bb12ac287ceb1b5d410b491206089fdcb7",
+      "revision_chronology": "current public main commit 2026-05-08T17:36:46Z, preceding arXiv v1 submission by about 25h47m; Git timestamp is chronology metadata, not evaluated-run execution time",
+      "paths": ["effectiveness.py", "artifacts.py", "router.py", "config.yaml", "data/scienceworld/train.json", "data/scienceworld/test.json"],
+      "observations": [
+        "The current public repository includes exact ScienceWorld train/test JSON blobs at train sha ef71b989da4b3c68dc03723289350994f06c556a and test sha cfcf7ef2644c13c66c5475540942585c9828dde6.",
+        "effectiveness.py builds/reuses one baseline cache keyed by instance_id, executes the candidate skill on the same target-failure plus boundary-success instances, then records paired per-instance baseline_success, skill_success, outputs, repair/regression counts, net gain, baseline/skill trajectory JSONL paths, and a JSON summary.",
+        "artifacts.py serializes trajectories with explicit inference_model and judge_model fields, and provides checkpoint/resume files checkpoint_trajectories.jsonl plus checkpoint.json.",
+        "router.py is an optional per-instance gate that takes one task plus one fixed candidate skill and returns apply/skip; skipped instances clone the baseline trajectory. However router.enabled is false in the current default config and the arXiv paper text inspected contains no router mechanism, so router behavior is not attributed to the reported ScienceWorld results.",
+        "config.yaml routes model calls through hosted providers and uses OpenAI/OpenRouter models; it therefore does not provide a quota-zero live path."
+      ],
+      "scope": "The paired verification implementation is close to a same-candidate receiver-effect comparison at the instance level and provides a concrete auditable artifact schema. It is not a Phase-1 accepted execution mechanism because candidate generation and verification require hosted model calls; the optional router is code-level evidence only, not paper-result evidence."
+    }
+  ],
+  "findings": [
+    {
+      "id": "p1-sa-167",
+      "summary": "SpeedRunner current code gives an exact raw-artifact target for ScienceWorld task 3: task-family evaluation writes under <run_dir>/dev/task_id_3/dev_epoch_<n>.jsonl, while the root explicitly ignores /runs/. Official Releases are empty and the inspected main Actions run has no artifacts, so the missing Figure-12 raw bundle is now localized to a runtime-output/export gap rather than an unspecified repository search gap."
+    },
+    {
+      "id": "p1-sa-168",
+      "summary": "MemCompiler's official GitHub Actions artifact surface is pages-only. Three github-pages artifacts are identifiable by size and digest but expired after one day; the complete webpage tree contains only static docs/images and no memory DB/run manifest. This inspected official artifact surface therefore cannot bind Table-3 ScienceWorld evaluated memory state."
+    },
+    {
+      "id": "p1-sa-169",
+      "summary": "SkillGen supplies a stronger public evidence-packaging pattern than the previously inspected memory systems: the paper defines same-instance with/without-skill verification, and current code serializes paired baseline/skill trajectories plus per-instance outcomes and model metadata. ScienceWorld improves for all eight reported agents, but the live construction/verification route explicitly uses hosted APIs and nonzero token cost, so it is scientific evidence and a packaging blueprint, not a Phase-1 zero-quota/zero-cost accepted route."
+    },
+    {
+      "id": "p1-sa-170",
+      "summary": "SkillGen's optional current router is a true receiver-side apply/skip gate over one fixed skill and one task, with fail-safe skip-on-error semantics, but router.enabled=false by default and the inspected arXiv paper contains no router description. It must not be retroactively used to explain the published ScienceWorld gains without a run/source binding."
+    }
+  ],
+  "phase1_assessment": {
+    "evidence_audit_incremental_monetary_cost": 0,
+    "evidence_audit_finite_monthly_or_trial_quota_dependency": false,
+    "evidence_audit_residual_richer_mode_or_manual_user_execution_dependency": false,
+    "skillgen_live_route_accepted": false,
+    "skillgen_live_route_rejection_reasons": [
+      "Hosted LLM API/OpenRouter dependency",
+      "Nonzero reported construction token budget and monetary cost",
+      "No static published result bundle located that lets scheduled Chat reproduce the paired model outcomes without executing the model calls"
+    ]
+  },
+  "uncertainties": [
+    "No claim is made that SpeedRunner Figure-12 raw runs do not exist outside the inspected official GitHub release/action/tree surfaces.",
+    "No claim is made that MemCompiler Table-3 memory state does not exist on uninspected author-controlled storage or mirrors.",
+    "SkillGen current-code router semantics are not attributed to paper-time evaluation because the paper text inspected does not expose that component and current default routing is disabled.",
+    "Git commit timestamps are chronology evidence only, not execution-time or evaluated-run identity evidence."
+  ],
+  "exact_next_action": "Search SkillGen's public run/output surfaces for committed or externally archived effectiveness_*_baseline.jsonl, effectiveness_*_with_skill.jsonl, effectiveness_*_summary.json or final skill artifacts specifically for ScienceWorld. If a static paired result bundle exists, test whether scheduled Chat can fully audit the scientific outcome from immutable artifacts without model execution. In parallel, use the newly localized SpeedRunner target path pattern (runs/**/dev/task_id_3/dev_epoch_*.jsonl) in author/project mirrors and archival surfaces, and continue MemCompiler non-Git search for Chroma/output snapshots bound to Table 3. If these static bundles remain absent, broaden to science-domain systems that publicly ship same-instance/same-candidate paired outcome artifacts rather than only executable harnesses."
+}
