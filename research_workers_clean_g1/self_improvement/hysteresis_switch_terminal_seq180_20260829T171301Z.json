@@ -1,0 +1,29 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-HYSTERESIS-SWITCH-ANTI-FLAP-v1",
+  "observed_at":"2026-08-29T17:13:01+00:00",
+  "predecessor_sequence":179,
+  "precommit_blob":"c43501cd54ed2b62cf67962cf11f14246e5c73e5",
+  "source_binding":[
+    {"id":"S1","source":"Texas Instruments CD40106B Schmitt-trigger product description","url":"https://www.ti.com/product/CD40106B-MIL","semantics_used":"Schmitt-trigger inputs switch at different points for positive-going and negative-going signals; the difference is hysteresis voltage."},
+    {"id":"S2","source":"Analog Devices University, Schmitt trigger chapter","url":"https://wiki.analog.com/university/courses/electronics/text/chapter-4","semantics_used":"The switching threshold depends on the current output state; high output raises the threshold and low output lowers it, producing hysteresis."},
+    {"id":"S3","source":"Microchip, Comparators with Hysteresis (Schmitt Trigger)","url":"https://skills.microchip.com/introduction-to-operational-amplifiers/691898","semantics_used":"Positive feedback provides predetermined upper and lower comparator thresholds; output remains in its state until the opposite threshold is crossed."}
+  ],
+  "chat_native_reduction":{"id":"SCHMITT-CHAT-ASSIGNMENT-HYSTERESIS-v1","adaptation_note":"Voltage is replaced by same-scope utility difference d=utility(B)-utility(A), and electrical output state by current assignment. The numeric ±2.0 thresholds are precommitted controller parameters, not values implied by the electronics sources.","rules":["When current assignment is A, switch to B only after unique same-scope terminal evidence yields d>=+2.0 and the threshold-crossing evidence is durably read back.","When current assignment is B, switch back to A only after unique same-scope terminal evidence yields d<=-2.0 and the crossing is durably read back.","Within -2.0<d<+2.0 retain the current assignment, making state history part of the selection rule.","Deduplicate evidence identities and reject stale or cross-scope comparisons before threshold evaluation.","Transport/CAS/readback failure is non-semantic and leaves the prior durable assignment authoritative."],"external_runtime_required":false},
+  "fixed_trace_execution":{"events":[{"id":"E1","d":0.8,"result":"HOLD_A","status":"PASS"},{"id":"E2","d":0.9,"result":"HOLD_A","status":"PASS"},{"id":"E3","d":2.3,"result":"SWITCH_A_TO_B_AFTER_READBACK","status":"PASS"},{"id":"E3_DUP","result":"NO_SECOND_SWITCH_OR_CREDIT","status":"PASS"},{"id":"E2_STALE","result":"IGNORE_STALE","status":"PASS"},{"id":"E4","d":-0.9,"result":"HOLD_B","status":"PASS"},{"id":"E5","d":-2.3,"result":"SWITCH_B_TO_A_AFTER_READBACK","status":"PASS"}],"scope_mismatch_control":{"A_scope":"S1","B_scope":"S2","d":3.0,"result":"INCOMPARABLE_NO_SWITCH","status":"PASS"},"matches_required_trace":true},
+  "candidate_results":[
+    {"id":"HS-A","fatal_gate":null,"guard_pass":["G10"],"guard_fail":["G1","G2","G3","G4","G5","G6","G7","G8","G9"],"score":1,"outcome":"REJECT","reason":"sign-only switching crosses on E1 and E4 inside the precommitted deadband and is vulnerable to flapping/replay"},
+    {"id":"HS-B","fatal_gate":null,"guard_pass":["G1","G4","G6","G7","G8","G10"],"guard_fail":["G2","G3","G5","G9"],"score":6,"outcome":"REJECT","reason":"permanent stickiness suppresses valid threshold crossings E3/E5 and therefore fails adaptive switching"},
+    {"id":"HS-C","fatal_gate":null,"guard_pass":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"],"guard_fail":[],"score":10,"outcome":"PASS"},
+    {"id":"HS-D","fatal_gate":"F2","score":0,"outcome":"REJECT","reason":"requires external hosted controller"}
+  ],
+  "guard_summary":{"selected_pattern":"HS-C","passed":"10/10","fatal_gates_passed":true},
+  "scope":"constructed role-local A/B same-scope utility trace only; this tests hysteresis as an anti-flap switching rule, not optimality of the ±2.0 thresholds or any electrical behavior.",
+  "phase1_acceptance":{"residual_richer_mode_or_manual_user_execution_dependency":false,"finite_monthly_trial_paid_quota_dependency":false,"incremental_monetary_cost":0,"repository_api_use":"lightweight state/evidence transport only"},
+  "credit_rule_result":"ELIGIBLE_FOR_AT_MOST_ONE_NEW_LEAF_CREDIT_AFTER_THIS_TERMINAL_FILE_IS_INDEPENDENTLY_READ_BACK",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this terminal artifact back. Only after exact readback, advance controller credit by one and select another distinct switching/recovery failure mode; precommit it before reading public semantics."
+}
