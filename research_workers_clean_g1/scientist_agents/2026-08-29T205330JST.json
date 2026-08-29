@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "scientist_agents",
+  "timestamp": "2026-08-29T20:53:30+09:00",
+  "control_revision": 26,
+  "config_revision": 5,
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
+  "authority": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/scientist_agents.json",
+    "role_config_blob": "84d968713c9aa5537ba690521715e1b340fbd9d1",
+    "enabled_desired": true,
+    "bootstrap_valid": true,
+    "source_state_path": "research_workers_clean_g1/scientist_agents/STATE.json",
+    "source_state_blob": "cc2d76fa3f761ea6820e5029e5324eda5ae65ae0",
+    "source_checkpoint": "research_workers_clean_g1/scientist_agents/2026-08-29T204831JST.json"
+  },
+  "findings": [
+    {
+      "id": "p1-sa-176",
+      "title": "SkillGen paper's same-seed statement is not implementation-verified as model-inference RNG on ScienceWorld",
+      "observation": "Appendix C.2 of arXiv:2605.10999v1 states that each held-out instance is rolled out once without and once with the skill using the same instance identifier and random seed, default seed 42; Appendix C.3 also calls decoding deterministic at temperature 0. In the observed public ScienceWorld implementation, however, ScienceWorld is reduced to an offline plan-generation benchmark over fixed gold-path-derived prompts and does not run the ScienceWorld environment/JVM. The public eval path uses random.Random(args.seed) to select the instance subset, while the OpenRouter chat path exposes model/messages/temperature/max_tokens and no inference seed. Thus current public code does not bind the paper's same-seed statement to model-inference RNG equivalence.",
+      "source": {
+        "paper": "https://arxiv.org/html/2605.10999#Sx19",
+        "paper_claim_lines": "Appendix C.2-C.3",
+        "historical_eval_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:eval_skill.py",
+        "historical_llm_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:llm.py",
+        "historical_scienceworld_adapter_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:benchmarks/scienceworld_adapter.py",
+        "historical_prepare_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:scripts/prepare_scienceworld.py"
+      },
+      "scope_guard": "Do not infer that the paper is wrong or that temperature-zero API decoding is necessarily stochastic. Safe conclusion: inference-RNG equivalence is not executable-provenance-bound by the inspected public source; either paper-time runs used additional controls not preserved here or same seed refers to sampling/dataset protocol."
+    },
+    {
+      "id": "p1-sa-177",
+      "title": "The seed-provenance gap is already present in an observed preprint-adjacent public source snapshot",
+      "observation": "The Git history query for llm.py exposes commit f7304a5595ca35d92500f1be2cceb4aca545fe0b with Git author/committer timestamp 2026-05-08T17:32:39Z, while arXiv v1 is dated 2026-05-09. At that exact commit, llm.py already routes chat through OpenRouter with model/messages/temperature/max_tokens and no exposed inference seed; eval_skill.py already samples instances with random.Random(args.seed); scienceworld_adapter.py already defines the no-live-environment offline plan variant; prepare_scienceworld.py already uses seed 42 for deterministic stratified dataset construction; artifacts.py already serializes inference_model/judge_model without provider execution revision or inference RNG binding.",
+      "source": {
+        "commit": "f7304a5595ca35d92500f1be2cceb4aca545fe0b",
+        "git_timestamp": "2026-05-08T17:32:39Z",
+        "arxiv_v1_date": "2026-05-09",
+        "historical_files": [
+          "llm.py",
+          "eval_skill.py",
+          "benchmarks/scienceworld_adapter.py",
+          "scripts/prepare_scienceworld.py",
+          "artifacts.py"
+        ]
+      },
+      "scope_guard": "Git author/committer time is chronology metadata only, not a server-attested public-release time or evaluated-run execution certificate. This source snapshot is preprint-adjacent evidence, not a proven paper-run source revision."
+    },
+    {
+      "id": "p1-sa-178",
+      "title": "ScienceWorld seed 42 is concretely embedded in static dataset construction",
+      "observation": "At the same historical source snapshot, prepare_scienceworld.py documents the 150-train/100-test pilot with --seed 42 and uses random.Random(seed) for stratified sampling, with the test pool using seed XOR 0xDEAD. The versioned historical data/scienceworld/test.json identifies itself as scienceworld_test_n100_seed42 and contains fixed offline-plan prompts plus gold-path metadata. This provides direct executable evidence for a dataset-construction meaning of seed 42 in ScienceWorld, independent of any unobserved model-provider randomness semantics.",
+      "source": {
+        "historical_prepare_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:scripts/prepare_scienceworld.py",
+        "historical_test_ref": "f7304a5595ca35d92500f1be2cceb4aca545fe0b:data/scienceworld/test.json",
+        "dataset_id": "scienceworld_test_n100_seed42"
+      },
+      "scope_guard": "This does not prove that the paper's phrase 'same random seed' referred only to dataset construction; it shows that this meaning is explicitly implemented while an inference seed is not exposed in the inspected source."
+    },
+    {
+      "id": "p1-sa-179",
+      "title": "Broader indexed SkillGen artifact search still yields code/paper metadata rather than static ScienceWorld paired-run bytes",
+      "observation": "Targeted indexed searches for ScienceWorld effectiveness baseline/with-skill JSONL, skill.json, Zenodo/OSF/dataset records, and Hugging Face datasets surfaced the official code repository and paper-index pages but no static ScienceWorld effectiveness run bundle. The official README itself confirms the bundled dataset splits are the experiment splits and points live evaluation to generated local skill_output paths rather than a checked-in result archive.",
+      "source": {
+        "official_repo": "https://github.com/yccm/SkillGen",
+        "paper": "https://arxiv.org/abs/2605.10999"
+      },
+      "scope_guard": "Negative evidence is limited to the exact indexed searches and official surfaces checked in this run; it is not a global proof of absence."
+    }
+  ],
+  "protocol_status": {
+    "active_new_gate": "p1-protocol-063 PAIRED_INTERVENTION_RANDOMNESS_AND_PROVIDER_BINDING_GATE",
+    "preflight": "15/15 Draft-2020-12 structurally valid; 15/15 expected semantic decisions matched",
+    "interpretation": "SkillGen can support strong same-instance repair/regression evidence if raw paired artifacts are recovered, but strict receiver-effect-only counterfactual evidence must additionally satisfy provider/model/randomness bindings."
+  },
+  "phase1_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_dependency": false,
+    "finite_monthly_or_trial_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "accepted_scope": "This static public-source audit and protocol test are Chat-native and quota-independent. Live SkillGen hosted-API execution remains outside Phase-1 acceptance."
+  },
+  "frontier_exhausted": false,
+  "global_completion": false,
+  "termination_cause": "runtime checkpoint; research frontier remains open",
+  "exact_next_action": "Search author-controlled or archival static hosts for SkillGen ScienceWorld run outputs using exact artifact contracts and dataset_id scienceworld_test_n100_seed42, including baseline/with-skill JSONL, summary JSON, skill bytes, and any request/provider metadata. If found, recompute paired repair/regression/net gain and test whether archived provider/model/randomness evidence satisfies p1-protocol-063. Separately search for paper-run manifests that clarify the intended 'same random seed' semantics. Continue localized SpeedRunner task_id_3 run export/replay transaction search and MemCompiler Table-3-bound memory snapshot search; if those remain absent, broaden to science-domain systems with public static paired traces and explicit inference RNG/replay-equivalence binding."
+}
