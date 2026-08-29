@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "part": 50,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_authority": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "model": {
+    "scenario_count": 16384,
+    "strategy_evaluations": 114688,
+    "revocation_modes": ["prefix_only", "sparse_only", "prefix_plus_sparse", "family_recreate"],
+    "boolean_dimensions": ["should_be_revoked", "artifact_epoch_below_floor", "exact_hash_tombstoned", "bloom_false_positive", "revocation_state_current", "family_incarnation_matches", "current_reverify_possible", "current_policy_accepts", "old_artifact_replay", "revocation_response_loss", "complete_repository_rollback", "artifact_valid"],
+    "mechanism_invariant_slice_scenarios": 2048,
+    "mechanism_invariant_results": {
+      "immutable_acceptance_receipt_only": {"terminal": 1024, "unsafe_effect": 576, "false_exclusion": 0},
+      "family_floor_only": {"terminal": 256, "unsafe_effect": 64, "false_exclusion": 136},
+      "exact_tombstone_only": {"terminal": 256, "unsafe_effect": 64, "false_exclusion": 136},
+      "floor_plus_exact_tombstone": {"terminal": 128, "unsafe_effect": 0, "false_exclusion": 216},
+      "floor_plus_bloom_sparse": {"terminal": 64, "unsafe_effect": 0, "false_exclusion": 280, "bloom_false_exclusion": 96},
+      "current_policy_reverify": {"terminal": 128, "unsafe_effect": 0, "false_exclusion": 216},
+      "floor_tombstone_or_current_reverify": {"terminal": 224, "unsafe_effect": 0, "false_exclusion": 120}
+    },
+    "mode_specific_invariant_results": {
+      "family_floor_only": {"prefix_only_unsafe": 0, "sparse_only_unsafe": 32, "prefix_plus_sparse_unsafe": 32, "family_recreate_unsafe": 0},
+      "exact_tombstone_only": {"prefix_only_unsafe": 32, "sparse_only_unsafe": 0, "prefix_plus_sparse_unsafe": 32, "family_recreate_unsafe": 0},
+      "floor_plus_exact_tombstone": {"prefix_only_unsafe": 0, "sparse_only_unsafe": 0, "prefix_plus_sparse_unsafe": 0, "family_recreate_unsafe": 0},
+      "floor_plus_bloom_sparse": {"prefix_only_unsafe": 0, "sparse_only_unsafe": 0, "prefix_plus_sparse_unsafe": 0, "family_recreate_unsafe": 0},
+      "floor_tombstone_or_current_reverify": {"prefix_only_unsafe": 0, "sparse_only_unsafe": 0, "prefix_plus_sparse_unsafe": 0, "family_recreate_unsafe": 0, "prefix_plus_sparse_false_exclusion": 0}
+    },
+    "complete_rollback_adversary": {
+      "scenario_count": 32,
+      "description": "actual later authority revoked the artifact, but repository authority and remembered policy/revocation state are fully rewound so floor, tombstone, family incarnation and current-policy reverify all appear pre-revocation",
+      "unsafe": {
+        "immutable_acceptance_receipt_only": 32,
+        "family_floor_only": 32,
+        "exact_tombstone_only": 32,
+        "floor_plus_exact_tombstone": 32,
+        "floor_plus_bloom_sparse": 16,
+        "current_policy_reverify": 32,
+        "floor_tombstone_or_current_reverify": 32
+      },
+      "interpretation": "Bloom false positives happen to block half the equal-weight rollback slice but are not an authority proof. No repository-local mechanism in this model can distinguish a world that never advanced from one that advanced and was completely rolled back."
+    }
+  },
+  "interpretation": {
+    "prefix_vs_sparse": "A monotonic family epoch floor compactly represents prefix revocation but misses sparse revocations; an exact hash tombstone set represents sparse revocation but misses prefix revocation unless every old hash is materialized. Their conjunction covers both within the stated current-state invariants.",
+    "bloom_tradeoff": "Replacing the sparse exact set with an authoritative Bloom filter can preserve safety under the ideal no-false-negative construction but introduces false positive exclusions. It is therefore an availability/storage tradeoff, not a stronger proof.",
+    "reverify": "When an old artifact is blocked, current deterministic local re-verification can mint a new acceptance identity under the current policy hash and reduces false exclusions without resurrecting the revoked old acceptance.",
+    "family_recreate": "Policy-family delete/recreate requires an incarnation-sensitive family identity. Reusing only the family name can let old artifacts cross into a new policy family.",
+    "rollback_boundary": "Complete rollback of repository authority plus remembered local state remains indistinguishable from a world that never advanced. Revocation floors, tombstones, Bloom filters and current-policy reverify all inherit this authority-domain boundary."
+  },
+  "public_sources": [
+    "https://theupdateframework.github.io/specification/draft/",
+    "https://theupdateframework.io/docs/metadata/",
+    "https://docs.cloud.google.com/memorystore/docs/valkey/about-bloom-filters",
+    "https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter"
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_revocation_service": "not accepted",
+    "repository_transport": "role-local current authority artifacts only"
+  },
+  "unresolved_children": [
+    "no repository-local anti-rollback witness survives complete rollback of repository authority plus all remembered own state",
+    "a compact exact-hash grandfather/revocation registry is not currently exposed by frozen control/config",
+    "family-incarnation migration across delete/recreate requires current authority metadata; family name alone is insufficient"
+  ],
+  "exact_continuation": "Next leaf: rollback-domain escape without hosted coordination. Compare user-visible immutable prompt/control facts, Git object reachability/ancestry, branch protection/ruleset observations, local acceptance receipt chains, multiple independent repository refs, and fail-closed no-witness under force-rewind/delete-recreate/full-state-loss. The goal is to determine whether any scheduled-Chat-native zero-quota witness is genuinely outside the repository rollback domain; if none is available, formalize the indistinguishability boundary and select the next independent multi-agent leaf rather than declaring Phase-1 complete."
+}
