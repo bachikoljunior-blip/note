@@ -1,0 +1,53 @@
+{
+  "schema_version": 2,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "root_problem_id":"o-chat-parity-root-v5-irreducible-handoff-aligned",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "frontier_item_id":"ROOTV5-HISTORY-SELECTOR-CALIBRATION-REPAIR-v2",
+  "protocol_id":"HIST-STICKY-ONLINE-v2.1",
+  "observed_at":"2026-08-29T12:11:53.182512+09:00",
+  "supersedes_protocol":{"protocol_id":"HIST-STICKY-ONLINE-v2","path":"research_workers_clean_g1/self_improvement/phase1_history_selector_calibration_repair_v2_2026-08-29T1210_JST.json","blob":"83ec4a006c445d7271a11253ed3b41ef6ec87b6e","reason":"Before any panel decision or outcome was collected, mechanical QC found an impossible self-reference: v2 required decision_evidence_blob inside the immutable decision record itself and outcome_evidence_blob inside its own record. v2.1 replaces those fields with two-phase external readback seals. No data-dependent retuning occurred."},
+  "data_admission":{"v2_rounds_collected":0,"v2_outcomes_collected":0,"v2_data_reused":false,"retuning_after_outcome":false},
+  "prospective_panel": {
+    "panel_frontier_id":"ROOTV5-HISTORY-SELECTOR-CALIBRATION-v2",
+    "minimum_valid_rounds":6,
+    "minimum_disagreement_exposures_per_policy":2,
+    "admission_rule":"Only a round with a decision record durably read back and externally sealed before factual-candidate semantic read/execution may enter. Outcome/archive update requires terminal evidence readback, then an immutable outcome record, then external outcome-record readback seal.",
+    "candidate_set_rule":"Complete set of current self_improvement OPEN frontier items, excluding the calibration tracker, that were declared_before_semantic_read=true and already contain stable candidate_id, strategy_class, integer priority_index, declared_at_sequence and safe_chat_capable=true; no protected-authority requirement may be present. Exact candidates copied into decision record.",
+    "initial_sticky_incumbent_strategy_class":"generate_score_select",
+    "sticky_policy":{"policy_id":"STICKY-CLASS-v2.1","choice_rule":"Prefer eligible candidates in sticky_incumbent_strategy_class; within class choose smallest priority_index then candidate_id. If none, choose global smallest priority_index then candidate_id.","update_rule":"After valid externally sealed outcome record, sticky incumbent class becomes factual candidate strategy_class. No update on invalid/duplicate/unsealed records."},
+    "history_policy":{"policy_id":"HISTORY-CLASS-MEAN-v2.1","archive_scope":"Valid factual outcomes from this v2.1 panel only.","class_value":"Arithmetic mean terminal_utility by strategy_class; unobserved class prior exactly 1.0.","choice_rule":"Highest class_value; tie higher observation count; then smaller priority_index; then candidate_id.","archive_update_timing":"Only after outcome record readback seal; never same round before choice."},
+    "factual_policy_schedule":{"rule":"Rounds alternate HISTORY, STICKY, HISTORY, STICKY ... starting HISTORY at round 1.","agreement_rule":"If both choose same candidate, factual candidate is that candidate and realized utility is observable for both action-identical policies.","disagreement_rule":"Execute scheduled policy candidate only; other policy utility remains MISSING; no imputation."},
+    "terminal_metric":{"metric_id":"TERMINAL-UTILITY-v2.1","mapping":{"SATISFIED_EXACT_SCOPE":2,"BLOCKED_PROTOCOL_UNDERSPECIFIED":1,"BLOCKED_UNRESOLVED_CHILD":1,"BLOCKED_EXACT_CAPABILITY":1,"SOFT_NO_PROGRESS":0,"INVALID_EVIDENCE":0,"DUPLICATE_EFFECT":0},"validity_requirements":["stable terminal transition ID","terminal semantic evidence readback","decision record sealed before semantic read","no forbidden semantic input","no cross-role/O mutation","no protected-authority mutation","no unsupported completion"]},
+    "decision_record": {
+      "required_content_fields":["protocol_id","round_number","candidate_set","sticky_state_before","history_archive_before","sticky_choice","history_choice","scheduled_factual_policy","factual_candidate","decision_written_at"],
+      "must_not_contain_self_blob":true,
+      "seal_rule":"After immutable decision record is created, fetch it and store its repository blob SHA in later controller state as decision_record_blob with decision_sealed=true. Semantic read/execution of factual candidate is forbidden until that external seal exists and is read back."
+    },
+    "outcome_record": {
+      "required_content_fields":["protocol_id","round_number","factual_candidate","terminal_transition_id","terminal_status","terminal_utility","terminal_evidence_path","terminal_evidence_blob","terminal_evidence_readback_at","outcome_record_written_at","round_valid"],
+      "must_not_contain_self_blob":true,
+      "seal_rule":"After immutable outcome record is created, fetch it and store its repository blob SHA in later controller state as outcome_record_blob with outcome_sealed=true. Archive/incumbent update is forbidden until that external seal exists and is read back."
+    },
+    "reporting":{"disagreement_winner_rule":"Require >=2 valid disagreement exposures assigned to each policy. Then DESCRIPTIVE winner only by mean realized terminal_utility on those factual disagreement rounds; tie => TIE.","insufficient_rule":"Otherwise INSUFFICIENT_DISAGREEMENT and no winner.","counterfactual_rule":"No paired regret/unexecuted utility without separately preregistered dual-outcome acquisition."},
+    "retuning_prohibited_after_first_sealed_decision":["candidate eligibility","sticky rule","history rule/value","utility mapping","policy schedule","winner rule","minimum rounds","minimum disagreement exposures","two-phase sealing"]
+  },
+  "constructed_ambiguity_checks":[
+    {"trace":"self-referential-decision-blob-field","expected":"REJECT_SCHEMA","observed":"REJECT_SCHEMA","pass":true},
+    {"trace":"self-referential-outcome-blob-field","expected":"REJECT_SCHEMA","observed":"REJECT_SCHEMA","pass":true},
+    {"trace":"decision-written-not-sealed","expected":"NO_SEMANTIC_EXECUTION","observed":"NO_SEMANTIC_EXECUTION","pass":true},
+    {"trace":"outcome-written-not-sealed","expected":"NO_ARCHIVE_UPDATE","observed":"NO_ARCHIVE_UPDATE","pass":true},
+    {"trace":"missing-candidate-set","expected":"REFUSE_ROUND","observed":"REFUSE_ROUND","pass":true},
+    {"trace":"candidate-missing-required-metadata","expected":"REFUSE_CANDIDATE","observed":"REFUSE_CANDIDATE","pass":true},
+    {"trace":"same-round-self-reward","expected":"NO_ARCHIVE_UPDATE_BEFORE_CHOICE","observed":"NO_ARCHIVE_UPDATE_BEFORE_CHOICE","pass":true},
+    {"trace":"counterfactual-missing","expected":"DO_NOT_IMPUTE","observed":"DO_NOT_IMPUTE","pass":true},
+    {"trace":"duplicate-terminal-transition","expected":"NO_SECOND_ARCHIVE_UPDATE","observed":"NO_SECOND_ARCHIVE_UPDATE","pass":true},
+    {"trace":"post-hoc-schedule-change","expected":"INVALID_PROTOCOL","observed":"INVALID_PROTOCOL","pass":true},
+    {"trace":"invalid-safety-conflict","expected":"ROUND_INVALID_NO_UPDATE","observed":"ROUND_INVALID_NO_UPDATE","pass":true},
+    {"trace":"insufficient-disagreement","expected":"INSUFFICIENT_DISAGREEMENT_NO_WINNER","observed":"INSUFFICIENT_DISAGREEMENT_NO_WINNER","pass":true}
+  ],
+  "constructed_ambiguity_aggregate":{"passes":12,"total":12},
+  "next_candidate_preregistration":{"candidate_id":"CAND-GRIPS-001","frontier_item_id":"ROOTV5-PUBLIC-OPTIMIZER-GRIPS","strategy_class":"textual_edit_search","priority_index":10,"declared_at_sequence":121,"safe_chat_capable":true,"semantic_read_done":false},
+  "interpretation_guard":"v2.1 is a pre-data protocol correction, not performance tuning. It preserves v2 policy semantics while making durability binding physically realizable through external readback seals."
+}
