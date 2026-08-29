@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:24:00+09:00",
+  "topic": "Cached rollout reuse is counted in evaluation score while marked only as a cache hit in cost telemetry",
+  "repository": "JHU-CLSP/speedrunner",
+  "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+  "sources": [
+    {
+      "path": "src/speedrunner/core/rollout.py",
+      "blob": "09986e039f121a481738d5c96d906235c7949bd1",
+      "facts": [
+        "On a ResultCache hit, RolloutAgent reconstructs the cached final answer, success flag, validation score, steps and other outcome fields and sets llm_cache_hit=true in the cost record.",
+        "Evaluate.run aggregates trace.success and trace.validation_score from every returned trace into the current successes/mean-score calculation without excluding cache hits.",
+        "Cost aggregation separately reports llm_cache_hits and sets a replayed cached result's current total cost to zero while preserving original_total_usd.",
+        "The evaluation metric path therefore treats a memoized outcome as the result for the current evaluation invocation, while cost telemetry can identify that no new LLM execution occurred."
+      ]
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-104",
+      "claim": "A cached outcome and an independent replication are different statistical objects. The exact public SpeedRunner evaluator counts cached trace outcomes in the current success/mean-score aggregate and records cache-hit status in cost telemetry, but it does not automatically reject a cache hit when the experiment intends a new independent sample. A provenance gate must therefore bind intended reuse semantics explicitly: deterministic memoization may reuse the same execution, while an independent replication must execute anew.",
+      "scope": "Static code-path finding. No claim is made that Figure 12 or another published metric actually reused a cached result where an independent sample was intended."
+    }
+  ],
+  "protocol_relation": {
+    "protocol": "p1-protocol-056 EVALUATION_CACHE_CONTEXT_BINDING_GATE",
+    "existing_test_cases": [
+      "independent_replication_must_execute",
+      "memoized_hit_not_new_sample"
+    ],
+    "action": "Evidence strengthens the already-implemented semantics; no validator change required."
+  }
+}
