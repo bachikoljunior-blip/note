@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "role": "scientist_agents",
+  "timestamp": "2026-08-29T23:46:00+09:00",
+  "authority": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/scientist_agents.json",
+    "role_config_blob": "84d968713c9aa5537ba690521715e1b340fbd9d1",
+    "config_revision": 5,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "source_state": {
+    "path": "research_workers_clean_g1/scientist_agents/STATE.json",
+    "blob": "2c093b4e411ae22c293d02b8d11517a7678d5e91",
+    "checkpoint": "research_workers_clean_g1/scientist_agents/2026-08-29T225300JST.json",
+    "checkpoint_blob": "b88102d853254c578e85d21face714d22891e364"
+  },
+  "public_sources": [
+    {
+      "type": "primary_paper_html_v1",
+      "url": "https://arxiv.org/html/2605.20616v1",
+      "observations": [
+        "ScienceWorld online evaluation is described as a deterministic 660-task pool across seven sampled task types from the Hugging Face test split, using seed 42, shuffle-tasks and a frozen episodes list via --episodes-path episodes.jsonl.",
+        "For every task the paper says it records success, final environment score, episode length, retrieved entry IDs and token count, writer/dreamer events and bank size, streamed to per_task.jsonl, trajectories.jsonl and dreamer_calls.jsonl; aggregate summary.json reports success rate, mean score, bank sizes, wall-clock and role LLM/token counts.",
+        "The paper describes LanceDB per run_id with Qwen2.5-3B embeddings and dynamic refresh, and uses Qwen3.5-9B as ScienceWorld task agent with Qwen3-14B writer/consolidator components on the inspected configuration surface.",
+        "Appendix dataset statistics for the original ScienceWorld release are 3,604 train and 1,802 test examples."
+      ]
+    },
+    {
+      "type": "public_huggingface_dataset",
+      "url": "https://huggingface.co/datasets/uyffg/auto-dreamer",
+      "observations": [
+        "The public trace corpus README reports 3,592 ScienceWorld train episodes and 1,819 ScienceWorld test episodes and exposes rollout trajectories plus memory-writer outputs.",
+        "The public generic Dataset Preview currently fails schema generation with a column-casting mismatch across heterogeneous JSONL files; this is a viewer/schema-loader limitation and is not evidence that raw JSONL bytes are corrupt."
+      ]
+    },
+    {
+      "type": "public_huggingface_checkpoint_bridge",
+      "url": "https://huggingface.co/uyffg/auto-dreamer-ckpt-bridge-public",
+      "observations": [
+        "The inspected model page is public but has no model card or visible paper-run binding semantics on the card surface.",
+        "Tree/history inspection was blocked by a Hugging Face cache miss during this invocation; direct fallback also encountered transient network/DNS failure, so absence of a manifest inside the repository is not claimed."
+      ]
+    },
+    {
+      "type": "public_huggingface_scienceworld_checkpoint",
+      "url": "https://huggingface.co/uyffg/dreamer_sciworld_v2_step60",
+      "observations": [
+        "The inspected page identifies a Qwen3-tagged Safetensors checkpoint of about 15B parameters in BF16 and no inference provider.",
+        "The card surface has no model card or visible evaluated-run/split/consolidation-output binding semantics; file-tree inspection was transiently cache-blocked."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "p1-sa-205",
+      "title": "Auto-Dreamer paper localizes the missing historical replay package to concrete run-export files",
+      "observation": "The paper explicitly names a frozen episodes.jsonl and per-task/run exports per_task.jsonl, trajectories.jsonl, dreamer_calls.jsonl and summary.json. These are sufficient needles for future public-artifact discovery and materially narrow the causal replay gap from an unspecified missing trace to a specific unlocated export package.",
+      "scope_guard": "The paper's description proves intended logging semantics, not that the historical files are publicly released or immutable-bound to a reported run."
+    },
+    {
+      "id": "p1-sa-206",
+      "title": "The reported ScienceWorld online evaluation population is a frozen 660-task subset, not the full public test trace corpus",
+      "observation": "The paper describes 660 ScienceWorld evaluation tasks across seven sampled task types with seed 42 and a frozen episodes.jsonl, whereas the public trace corpus README reports 1,819 ScienceWorld test episodes. Therefore public test-corpus availability alone cannot certify identity with the reported evaluation population.",
+      "scope_guard": "No claim is made that the 1,819-row trace corpus is incorrect; a derivation or episode-manifest bridge can legitimately map it to the 660-task evaluation set."
+    },
+    {
+      "id": "p1-sa-207",
+      "title": "Original benchmark split counts and public collected trace-corpus counts are non-equivalent artifact populations",
+      "observation": "The paper reports original ScienceWorld split statistics of 3,604 train / 1,802 test, while the public Auto-Dreamer trace-corpus README reports 3,592 train / 1,819 test episodes. Count non-equivalence blocks any implicit one-to-one identity claim without an explicit derivation manifest.",
+      "scope_guard": "This is not a contradiction finding: the paper statistics describe the original benchmark split while the Hugging Face repository describes collected rollout trajectories plus writer outputs, so different counts may be expected."
+    },
+    {
+      "id": "p1-sa-208",
+      "title": "Public checkpoint pages still lack visible evaluated-run binding and tree inspection is transiently blocked",
+      "observation": "auto-dreamer-ckpt-bridge-public and dreamer_sciworld_v2_step60 are public and the ScienceWorld checkpoint exposes high-level model metadata, but the inspected card surfaces do not bind checkpoint bytes to a paper run, frozen episode manifest or consolidation output. Repository tree/history retrieval was cache/network blocked this invocation.",
+      "scope_guard": "Transient retrieval failure is an unresolved continuation item, not evidence that such files do not exist."
+    },
+    {
+      "id": "p1-sa-209",
+      "title": "Generic Hugging Face Dataset Preview is not a reliable replay schema for the heterogeneous Auto-Dreamer corpus",
+      "observation": "The dataset viewer currently raises a schema/casting generation error across heterogeneous JSONL files. Static audit should therefore bind raw file identities and file-specific schemas rather than relying on the viewer-generated unified table.",
+      "scope_guard": "Viewer failure does not imply raw artifact corruption or invalidate file-level audit."
+    }
+  ],
+  "checked_surface_negative": {
+    "query_needles": ["episodes.jsonl", "per_task.jsonl", "trajectories.jsonl", "dreamer_calls.jsonl", "summary.json"],
+    "result": "The checked public search/model-card/dataset-card surfaces did not expose a paper-run-bound ScienceWorld export bundle with these files.",
+    "scope_guard": "Checked-surface negative only; repository histories, mirrors and unindexed artifacts remain open."
+  },
+  "phase1_assessment": {
+    "static_public_artifact_audit": {
+      "residual_richer_mode_or_protected_or_manual_user_dependency": false,
+      "finite_monthly_or_trial_quota_dependency": false,
+      "incremental_monetary_cost": 0
+    },
+    "full_causal_replay": {
+      "accepted_phase1_route": false,
+      "reason": "The exact 660-task episode manifest, public run-export files, checkpoint/run binding, serialized pre/post memory rewrite transactions and verifier/environment binding are not yet co-packaged on the inspected public surface. Live regeneration would require external model/compute execution and therefore is not an accepted zero-quota route."
+    }
+  }
+}
