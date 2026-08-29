@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "retry graph with deliberate transient mutation cycles",
+  "terminal_states": ["DONE_NOOP","DONE","INTEGRITY_CONFLICT","PRECONDITION_CONFLICT"],
+  "mutation_states": ["ENSURE_IMMUTABLE_OBJECTS","ENSURE_ROOT","PUBLISH_CAS"],
+  "states": {
+    "RECONSTRUCT":{"on_success":"CHECK_APPLIED","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "CHECK_APPLIED":{"if_applied":"DONE_NOOP","if_absent":"DERIVE_CANDIDATE"},
+    "DERIVE_CANDIDATE":{"if_precondition_true":"ENSURE_IMMUTABLE_OBJECTS","if_precondition_false":"PRECONDITION_CONFLICT"},
+    "ENSURE_IMMUTABLE_OBJECTS":{"on_all_created":"ENSURE_ROOT","on_409":"FETCH_AND_COMPARE_OBJECTS","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "FETCH_AND_COMPARE_OBJECTS":{"if_equal":"ENSURE_ROOT","if_different":"INTEGRITY_CONFLICT","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "ENSURE_ROOT":{"on_create_success":"PUBLISH_CAS","on_409":"ENSURE_ROOT","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "FETCH_AND_COMPARE_ROOT":{"if_equal":"PUBLISH_CAS","if_different":"INTEGRITY_CONFLICT","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "PUBLISH_CAS":{"on_success":"READBACK","on_409":"PUBLISH_CAS","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "READBACK":{"if_expected":"DONE","if_unexpected":"RECONSTRUCT","on_403_or_429":"RATE_LIMIT_WAIT","on_interruption":"RECONSTRUCT"},
+    "RATE_LIMIT_WAIT":{"manual_rescue":false,"resume":"RECONSTRUCT"},
+    "DONE_NOOP":{},"DONE":{},"INTEGRITY_CONFLICT":{},"PRECONDITION_CONFLICT":{}
+  },
+  "deliberate_failures": ["ENSURE_ROOT.on_409 self-loop", "PUBLISH_CAS.on_409 self-loop"]
+}
