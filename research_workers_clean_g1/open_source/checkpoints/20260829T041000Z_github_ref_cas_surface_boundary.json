@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 32,
+  "control_revision": 25,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "base_checkpoint": "research_workers_clean_g1/open_source/checkpoints/20260829T034000Z_connected_github_contents_cas_aba.json",
+  "frozen_control": {
+    "semantic_start_main_sha": "8ad91c7c03ab86e116b3248d65c586618eaf212f",
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "root_revision": 25,
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_freeze_semantic_control_read": false
+  },
+  "finding": {
+    "public_github_rest_ref_update": {
+      "classification": "FAST_FORWARD_GUARD_BUT_NO_EXACT_EXPECTED_OLD",
+      "evidence": "Current GitHub REST Update a reference request body exposes required new sha plus optional force. With force=false it rejects non-fast-forward movement, but there is no request field binding the mutation to one exact previously-read ref OID.",
+      "implication": "force=false protects ancestry/fast-forward constraints, not an exact compare-and-swap against the caller's observed old head. A concurrent fast-forward can occur and a later fast-forward request can still succeed without proving no intervening ref movement."
+    },
+    "public_github_graphql_updateRefs": {
+      "classification": "HISTORY_BEARING_ATOMIC_REF_CAS_EXISTS_PUBLICLY",
+      "evidence": "Current GitHub GraphQL updateRefs accepts RefUpdate.beforeOid and afterOid and documents the list of ref updates as atomic: if any update is rejected, none are modified. beforeOid requires the ref to point at the specified OID before the update.",
+      "implication": "Unlike Contents blob-sha CAS, beforeOid is a ref-history position precondition. It can express exact expected-old ref fencing and can cover multiple refs atomically."
+    },
+    "connected_chat_github_surface": {
+      "classification": "EXACT_REF_CAS_NOT_EXPOSED",
+      "evidence": "Connected GitHub action discovery in this run exposes update_ref(branch_name, sha, force) matching the REST shape, and exposes selected GraphQL review/PR mutations but no generic GraphQL executor or updateRefs/beforeOid mutation action.",
+      "implication": "The current Chat-connected GitHub surface can perform ref movement but cannot express the stronger public GitHub updateRefs exact-old-OID precondition. Therefore an end-to-end live history-bearing ref-CAS fixture is not safely expressible through the connected action set in this run."
+    }
+  },
+  "comparison_to_live_contents_aba": {
+    "contents_blob_sha": "Current byte-identity CAS; live A -> B -> A restored the old blob SHA, so historical stale SHA became admissible again.",
+    "rest_ref_update_force_false": "Ancestry guard; stronger than blind force but not exact expected-old CAS.",
+    "graphql_updateRefs_beforeOid": "Exact expected-old ref OID with atomic multi-ref transaction; public capability exists but is absent from the connected Chat mutation surface."
+  },
+  "execution_decision": {
+    "live_ref_mutation_attempted": false,
+    "reason": "The only connected ref-write surface lacks expected-old OID and ref creation/movement is outside the path-scoped own-state mutation envelope used by this clean exploration. Mutating a branch would not prove the desired property and would expand scope unnecessarily.",
+    "protected_handoff_required": false,
+    "note": "This is a connector capability boundary, not a claim that GitHub itself lacks exact ref CAS."
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "Git refs/branches"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If config revision 6 remains active, read own LATEST and this checkpoint only. Move the history-bearing CAS survey to another connected mutation API that exposes an exact expected revision within an authorized own-state sandbox, or inspect whether the GitHub connector later adds updateRefs/beforeOid. In parallel, specify an MCP Tasks-compatible durable outbox/start-existing API that preserves CreateTaskAsync create-new semantics, and convert the OpenHands fenced-marker candidate into exact upstream pytest cases before any patch-correctness claim."
+}
