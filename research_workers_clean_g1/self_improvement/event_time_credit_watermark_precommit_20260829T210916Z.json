@@ -1,0 +1,39 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-OUT-OF-ORDER-CREDIT-WATERMARK-v1",
+  "precommitted_at":"2026-08-29T21:09:16Z",
+  "source_semantics_read_before_precommit":false,
+  "own_namespace_duplicate_check":"code search for watermark returned total_count=0 with incomplete_results=true; weak duplicate diagnostic only",
+  "hypothesis":"A monotonic event-time watermark can close old credit epochs so arbitrarily late outcomes cannot reopen finalized credit or mutate current authority, while later event-time outcomes remain independently eligible until the watermark advances.",
+  "fixed_initial_state":{"credit_watermark":8,"meaning":"epochs/event-times <= 8 are credit-finalized","current_authority":"A@9"},
+  "fixed_events":[
+    {"step":1,"event":"R7/K7 event_time=7 arrives at W=8","expected":"late/finalized; archive diagnostic only, no credit or authority mutation"},
+    {"step":2,"event":"R9/K9 event_time=9 arrives at W=8","expected":"on-time; independently eligible under A@9 rules, but no credit until terminal readback"},
+    {"step":3,"event":"duplicate R9/K9 before watermark advance","expected":"no duplicate effect"},
+    {"step":4,"control":"attempt watermark regression W=8 -> 7","expected":"FAIL; watermark remains 8"},
+    {"step":5,"control":"transport failure reading W or K9 claim","expected":"UNKNOWN/no semantic effect"},
+    {"step":6,"event":"after durable terminal/readback for R9, advance watermark W=8 -> 9","expected":"monotonic durable advance only"},
+    {"step":7,"event":"late distinct R9b/K9b event_time=9 after W=9","expected":"finalized/late; archive diagnostic only, no credit"},
+    {"step":8,"control":"scope/provenance mismatch on any outcome","expected":"reject semantic use regardless of watermark"}
+  ],
+  "guards":{
+    "G1":"watermark, event times, semantic keys and controls frozen before public source audit",
+    "G2":"event_time <= watermark is classified finalized/late for this controller",
+    "G3":"event_time > watermark may be evaluated but is not auto-credited",
+    "G4":"watermark never regresses",
+    "G5":"watermark advances only after durable terminal/readback for the covered epoch",
+    "G6":"semantic key prevents duplicate effects",
+    "G7":"late finalized outcomes cannot reopen credit or mutate authority",
+    "G8":"transport uncertainty is UNKNOWN/nonsemantic",
+    "G9":"scope/provenance mismatch rejects semantic use",
+    "G10":"terminal and watermark artifacts require exact readback before role credit",
+    "G11":"scope is this fixed role-local event-time trace only",
+    "G12":"accepted Chat-native reduction has zero residual richer/protected/manual execution, zero finite optional quota dependency and zero incremental monetary cost"
+  },
+  "acceptance":"PASS only if public stream-watermark semantics support monotonic event-time progress/late-data classification and all G1-G12 hold without post-source rubric edits.",
+  "credit_rule":"Precommit earns zero role credit; at most one role-local credit after exact terminal readback.",
+  "exact_next_action":"Read back this precommit, then audit public stream event-time/watermark semantics. Evaluate R7, R9, duplicate, regression, transport, W advance, late R9b and scope control exactly as frozen; seal/read back terminal evidence before credit."
+}
