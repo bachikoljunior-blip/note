@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id": "ROOTV4-PREQUENTIAL-HOLDOUT-EXPIRY-v1",
+  "precommitted_at": "2026-08-29T10:15:55-09:00",
+  "source_semantics_read_before_precommit": false,
+  "purpose": "Prevent repeated optimizer rounds from tuning against a permanently reusable holdout by enforcing time-ordered evaluate-before-adapt semantics and expiring consumed holdout evidence from current promotion authority.",
+  "mechanism_placeholder": "time-ordered evaluate-before-adapt holdout rotation",
+  "fixed_scope": "Constructed role-local repeated-round trace only; no statistical guarantee beyond the fixed chronological evidence sequence.",
+  "initial_state": {
+    "evaluation_generation": 40,
+    "selected_pair": ["Q1_DIRECT", "Q2_RELATION"],
+    "prior_holdout_artifact": "research_workers_clean_g1/self_improvement/phase1_checker_mutation_holdout_terminal_v1.json",
+    "prior_holdout_blob": "e955221f4e548444e87f7fbde4da50b58674ea6a",
+    "prior_holdout_status": "CONSUMED_HISTORY_NOT_CURRENT_SELECTION_AUTHORITY"
+  },
+  "chronological_evidence": [
+    {"id":"R1","generation":41,"expected_pair_result":"PASS","rule":"evaluate frozen pair first, then mark R1 consumed; only later generations may use R1 for tuning"},
+    {"id":"R2","generation":41,"expected_pair_result":"PASS","rule":"same evaluate-first rule"},
+    {"id":"R_BAD","generation":42,"expected_pair_result":"FAIL","rule":"failure cannot be repaired by tuning on R_BAD and retesting R_BAD in the same generation"}
+  ],
+  "promotion_rule": "A candidate may be promoted in generation 41 only after the pair frozen before R1/R2 sees both fresh items as terminal PASS and those artifacts are sealed/read back. Prior consumed holdout evidence cannot substitute for R1/R2.",
+  "adaptation_rule": "After a fresh evidence item has been terminally evaluated, it may enter immutable history and can influence a later generation's checker selection, but never the same generation whose evaluation it scored.",
+  "fixed_trace": [
+    {"step":1,"event":"reuse prior consumed holdout as if fresh","expected":"reject for current promotion authority"},
+    {"step":2,"event":"evaluate frozen generation-41 pair on R1 then R2 before any adaptation","expected":"both PASS; generation-41 promotion may proceed after readback"},
+    {"step":3,"event":"late duplicate R1","expected":"ignore as consumed duplicate; no extra credit/evidence count"},
+    {"step":4,"event":"generation-42 pair fails fresh R_BAD","expected":"no promotion; mark failure terminal; do not tune on R_BAD and immediately retest it in generation 42"},
+    {"step":5,"event":"adaptation after R_BAD","expected":"may affect generation 43 only; requires new fresh evaluation evidence"},
+    {"step":6,"control":"no new fresh evidence after adaptation","expected":"remain unresolved with frontier_nonempty=true and zero new credit"}
+  ],
+  "guards": {
+    "G1":"prior holdout remains immutable history but is expired from current promotion authority once consumed",
+    "G2":"checker pair is frozen before fresh chronological evaluation evidence is read for that generation",
+    "G3":"fresh evidence is evaluated before it can influence adaptation",
+    "G4":"same evidence item cannot both tune and validate the same generation",
+    "G5":"R1/R2 must be unique fresh terminal evidence to qualify generation-41 promotion",
+    "G6":"duplicate or stale consumed evidence cannot add evaluation weight or credit",
+    "G7":"R_BAD failure cannot be erased by same-generation tune-and-retest",
+    "G8":"post-R_BAD adaptation can affect generation 43 only and needs new fresh evaluation evidence",
+    "G9":"transport failure/UNKNOWN/scope mismatch never count as fresh PASS",
+    "G10":"absence of new fresh evidence leaves controller unresolved with nonempty frontier",
+    "G11":"terminal leaf artifact must be independently read back before any role-local credit",
+    "G12":"accepted route has zero residual richer/protected/manual execution, zero finite optional monthly/trial/paid quota dependency, and zero incremental monetary cost"
+  },
+  "acceptance": "PASS only if G1-G12 hold after public-source mechanism binding; no post-source chronology or rubric edits.",
+  "credit_rule": "Precommit earns zero credit; at most one credit after terminal readback.",
+  "frontier_if_terminal": "Select another non-conflicting switching/recovery failure mode; preserve the limitation that evaluate-before-adapt ordering does not by itself guarantee representative future evidence."
+}
