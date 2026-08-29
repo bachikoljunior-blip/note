@@ -1,0 +1,52 @@
+{
+  "role": "open_source",
+  "artifact_kind": "exact_source_qualified_protocol_candidate_and_model_evidence",
+  "created_at": "2026-08-29T21:55:00Z",
+  "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+  "revision_of_prior_candidate": "A custom task-capable call_tool is not the smallest safe seam. The released macro/router surface permits keeping the SDK-generated router-first call_tool and moving task materialization into the registered tool handler after router policy and extractor validation.",
+  "exact_source_evidence": [
+    "#[tool_handler] generates call_tool only when the ServerHandler impl does not define one. The generated method constructs ToolCallContext and calls the selected ToolRouter.call.",
+    "The same macro preserves user-defined get_info and other ServerHandler methods, so an impl can advertise Tasks and override get_task/update_task/cancel_task while still letting the macro generate router-first call_tool.",
+    "ToolRouter.call rejects disabled routes before invoking a handler and converts standard Parameters deserialization failures into a tool error result. Thus a registered task-capable tool receives control only after current route availability and typed argument extraction have succeeded.",
+    "ToolCallContext/handler extractors expose RequestContext<RoleServer>, Parameters<P>, RequestState, InputResponses and Extensions. An authenticated principal inserted by application middleware can be retrieved as Extension<Principal>; RequestStateCodec associated_data can bind that principal plus tool/method/argument digest.",
+    "IntoCallToolResult supports InputRequiredResult and CallToolResponse, and CallToolResponse includes Task(CreateTaskResult). Therefore a registered tool handler can return side-effect-free InputRequired on round one and a CreateTaskResult on round two without replacing call_tool.",
+    "InputRequiredResult explicitly permits requestState with no inputRequests. RequestStateCodec provides HMAC-SHA256 integrity, associated-data binding and TTL; single-use still requires server-side state.",
+    "ServerHandler get_task/update_task/cancel_task are overrideable. Stock TaskManager itself has no storage backend trait: TaskContext privately contains Arc<Mutex<TaskManagerInner>>, and TaskManager.spawn always creates a fresh UUIDv4 in its process-local HashMap.",
+    "The generic Service dispatcher checks the client's Tasks capability after call_tool returns a Task. A task-capable registered handler must therefore check client Tasks capability inside the handler before persistent create-or-get; the dispatcher check is only a wire guard, not a materialization fence."
+  ],
+  "smallest_candidate_shape": [
+    "Use #[tool_router] on the server's registered tools and #[tool_handler] on ServerHandler, but do NOT implement call_tool. Let the macro-generated router-first call_tool remain authoritative for route disablement and extractor/argument validation.",
+    "Implement get_info manually with enable_tools().enable_tasks(), and implement get_task/update_task/cancel_task against the custom persistent store.",
+    "For each task-capable registered tool, accept typed Parameters<Args>, RequestContext<RoleServer>, RequestState, and an application Extension<Principal> (or equivalent authenticated principal extractor).",
+    "Round 1: after router/extractor validation and before any task/effect, verify client Tasks capability. Mint server op_id, seal {op_id, protocol version/expiry as needed} with RequestStateCodec associated_data over principal + tools/call + tool name + canonical args digest, return InputRequiredResult::from_request_state.",
+    "Round 2: router/extractors run again, so policy revocation/disabled route and argument validity are current. Open requestState with the re-derived associated data; then atomically persistent create-or-get(op_id, intent_hash). Return CreateTaskResult::new(seed_task) for both the winner and exact duplicate retry.",
+    "Only the create winner may claim/schedule execution. The persistent executor/redriver must use a monotonic attempt generation and invoke the factored business effect, not recursively call the tool handler. Terminal state writes are generation-CAS; external effects still require effect-side idempotency or fencing.",
+    "tasks/get/update/cancel operate on the persistent task row; any in-task MRTR/input request persistence is a separate custom responsibility because stock TaskContext is tied to TaskManagerInner."
+  ],
+  "why_router_first_matters": "The official TaskDemo manually parses arguments and branches to TaskManager.spawn before ToolRouter for task-capable slow_sum. That example therefore has to duplicate policy/validation. Keeping macro-generated call_tool and returning Task from the registered tool handler avoids this duplication: disabled-route checks and standard extractors run before application task materialization on every MRTR round.",
+  "model_execution": {
+    "result": "10/10 PASS",
+    "runtime": "stdlib-only Python source-equivalent behavioral model executed in this run",
+    "fixtures": [
+      "round-one preflight creates zero task/effect",
+      "lost CreateTaskResult retry returns same persistent task",
+      "disabled route rejects before handler/task",
+      "typed parameter failure creates no task",
+      "policy revocation between MRTR rounds creates no task",
+      "requestState args binding rejects changed args",
+      "requestState principal binding rejects different principal",
+      "tampered requestState rejects",
+      "persistent task remains discoverable across modeled server restart",
+      "non-Tasks client path materializes no task"
+    ]
+  },
+  "compile_status": {
+    "rust_toolchain_available_in_current_runtime": false,
+    "cargo": "not found",
+    "rustc": "not found",
+    "candidate_compiled": false,
+    "note": "This is exact-signature/source qualification plus behavioral model evidence, not a compile claim."
+  },
+  "strict_phase1_boundary": "The seam removes a policy/validation duplication problem but does not remove the resident durable store/executor/redriver dependency. It therefore does not satisfy strict Phase-1 by itself. Handle recovery, execution liveness, and external-effect duplicate safety remain separate proof obligations.",
+  "exact_continuation": "Write a concrete Rust skeleton using the exact rmcp-v3.1.4 imports/signatures for a registered task-capable tool plus manual get_info/get_task/update_task/cancel_task and no manual call_tool; source-check Principal Extension and RequestStateCodec calls against exact release tests/examples. Compilation cannot be claimed until a Rust toolchain executor is available under the zero-quota/zero-cost constraints."
+}
