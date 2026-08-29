@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 58,
+  "leaf_id": "batched-sharded-gc-publication-hotspot",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "model": {
+    "scenario_count": 576,
+    "strategy_evaluations": 2880,
+    "equal_weight_lattice": true,
+    "initial_state": "retained copies A and B are both dead at the GC snapshot; later promotions may make A/B live",
+    "axes": {
+      "promotion_after_gc_snapshot": ["none", "A", "B", "both"],
+      "overlapping_second_sweeper": [false, true],
+      "gc_rate_limited_shard": ["none", "A", "B"],
+      "publish_response": ["observed_success", "applied_response_lost"],
+      "target_reincarnation": ["none", "A", "B"],
+      "unrelated_head_churn": ["none", "global_unrelated", "A_unrelated", "B_unrelated"]
+    },
+    "strategies": [
+      "global_single_ref_batch",
+      "global_root_check_then_shard_delete",
+      "shard_local_no_bridge",
+      "shard_local_with_bridge",
+      "no_delete"
+    ]
+  },
+  "aggregate": {
+    "global_single_ref_batch": {"deleted_live_root":0,"deleted_dead_copy":8,"wrong_incarnation_delete":0,"blocked_dead_copy":376,"duplicate_delete_attempt":0,"false_conflict_dead":336,"rate_limited_dead":128,"publication_units":4,"batch_abort":572,"overlap_conflict":2,"response_reconcile":2,"reads":1730},
+    "global_root_check_then_shard_delete": {"deleted_live_root":256,"deleted_dead_copy":256,"wrong_incarnation_delete":0,"blocked_dead_copy":128,"duplicate_delete_attempt":512,"false_conflict_dead":0,"rate_limited_dead":128,"publication_units":512,"batch_abort":0,"reads":2304},
+    "shard_local_no_bridge": {"deleted_live_root":192,"deleted_dead_copy":192,"wrong_incarnation_delete":0,"blocked_dead_copy":192,"duplicate_delete_attempt":0,"false_conflict_dead":96,"rate_limited_dead":128,"publication_units":384,"overlap_conflict":192,"response_reconcile":192,"reads":2496},
+    "shard_local_with_bridge": {"deleted_live_root":0,"deleted_dead_copy":192,"wrong_incarnation_delete":0,"blocked_dead_copy":192,"duplicate_delete_attempt":0,"false_conflict_dead":96,"rate_limited_dead":128,"publication_units":192,"overlap_conflict":96,"response_reconcile":96,"reads":2400},
+    "no_delete": {"deleted_live_root":0,"deleted_dead_copy":0,"wrong_incarnation_delete":0,"blocked_dead_copy":384,"duplicate_delete_attempt":0,"publication_units":0,"batch_abort":576,"reads":576}
+  },
+  "critical_slices": {
+    "single_target_promotion_clean": {
+      "n": 4,
+      "definition": "A is promoted live after the GC snapshot; no rate limit, reincarnation, or unrelated churn; overlap/response vary",
+      "global_single_ref_batch": "0 unsafe delete but aborts 4/4 and blocks the still-dead B copy 4/4",
+      "global_root_check_then_shard_delete": "deletes promoted A live 4/4 and dead B 4/4; 8 duplicate delete attempts across overlap/response axes",
+      "shard_local_no_bridge": "deletes promoted A live 4/4 and dead B 4/4 because global promotion is invisible to shard authority",
+      "shard_local_with_bridge": "0 live-root deletion; promotion first advances A shard root epoch, so A conflicts while dead B is deleted 4/4"
+    },
+    "global_unrelated_churn_clean": {
+      "n": 4,
+      "definition": "both targets remain dead; no rate limit/reincarnation; only unrelated global head churn",
+      "global_single_ref_batch": "aborts 4/4 and blocks 8 dead-target deletions",
+      "shard_local_with_bridge": "deletes both dead targets 8/8 because global-unrelated churn is outside their shard refs"
+    },
+    "one_shard_rate_limited": {
+      "n": 4,
+      "definition": "both targets remain dead; A GC path rate-limited; no churn/reincarnation",
+      "global_single_ref_batch": "aborts whole batch 4/4 and blocks A+B",
+      "shard_local_with_bridge": "blocks A 4/4 but deletes independent B 4/4"
+    },
+    "clean_applied_response_lost": {
+      "n": 1,
+      "definition": "both dead; no rate limit/reincarnation/churn/overlap; publication applies and response is lost",
+      "global_root_check_then_shard_delete": "2 duplicate delete attempts under blind retry",
+      "global_single_ref_batch": "0 duplicate delete attempts; one transition readback reconcile",
+      "shard_local_with_bridge": "0 duplicate delete attempts; two shard transition readback reconciles"
+    }
+  },
+  "scope_safe_conclusion": {
+    "global_batch": "A single global ref preserves safety but turns unrelated churn, one-shard rate limits, or one-target promotion into whole-batch blockage/hotspot pressure.",
+    "unsafe_sharding": "Shard-local atomic deletion is not enough if the authoritative LATEST/root promotion occurs in another domain; without a promotion bridge the GC shard can delete a globally-live target.",
+    "candidate": "Shard GC is safe only when every authority transition that can make target T live first advances T's shard-local root epoch (or otherwise atomically fences that shard) before the promotion is externally authoritative. Then the shard-local tree/commit deletes T and updates its shard manifest in one ref publication, with deterministic transition IDs and readback reconciliation. Global-unrelated churn and other-shard rate limits need not block T's shard.",
+    "tradeoff": "The bridge moves contention from one global GC ref to per-shard root epochs. Cross-shard operations that atomically promote multiple targets still need an explicit multi-shard protocol; this leaf does not claim atomic cross-shard root promotion.",
+    "not_proven": [
+      "No positive claim for promotions that become authoritative before the target shard epoch is advanced.",
+      "No positive claim for atomic cross-shard root transitions; that is the next child.",
+      "Complete repository rollback that loses all shard/root transition witnesses remains unresolved."
+    ]
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "repository_transport": "role-local repository ref/tree/path/readback only; rate-limit interruption blocks only affected shard in the positive model"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "Cross-shard promotion atomicity: when one LATEST/root transition makes A and B live together, test bridge orderings A->B, B->A, durable intent + shard epochs + final root publish, and fail-closed integrator; detect partial promotion or GC racing between shard bridges.",
+    "Adaptive shard membership: split/merge a retention shard while GC or promotion is in flight; require stable target->authority-domain mapping or topology epoch fencing."
+  ],
+  "exact_continuation": "Model cross-shard promotion atomicity. Use two target shards A/B and a global promotion intent. Compare sequential shard bridge then global publish, global publish then shard bridges (negative), durable PREPARED intent + both shard epoch transitions + COMMITTED root, single global ref fallback, and fail-closed. Adversaries: crash between shard bridges, GC between bridges, response loss, stale coordinator takeover, one shard rate-limited, overlapping promotion, and abort/cleanup. Measure partial authoritative promotion, live-root deletion by GC, orphan prepared states, duplicate promotion, false blockage, and recovery reads."
+}
