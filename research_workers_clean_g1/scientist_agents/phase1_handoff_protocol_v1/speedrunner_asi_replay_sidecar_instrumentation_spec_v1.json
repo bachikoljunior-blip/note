@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:39:00+09:00",
+  "target": {
+    "repository": "JHU-CLSP/speedrunner",
+    "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+    "file": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+    "blob": "1359d8b5759e5fc1f00e4df41d1b9774ab735419",
+    "support_file": "src/speedrunner/core/environment.py",
+    "support_blob": "27609dc3b99a3bf1807e2279af28f97555eb2b0b"
+  },
+  "goal": "Emit a durable replay-admission provenance sidecar without changing ASI candidate generation, replay execution, commit/revert decisions, prompts, environment actions, or codebook behavior.",
+  "non_behavior_change_constraints": [
+    "Sidecar hashing and serialization occur only after values already used by the algorithm exist; they must not alter prompts or tool inputs.",
+    "Instrumentation failure is fail-open for the original ASI algorithm but must emit/log an instrumentation_error and must not produce a replay_verified_admission claim.",
+    "Never retry LLM, environment, or replay actions solely because sidecar persistence failed.",
+    "Do not sort successful_task_ids before algorithmic replay unless the original algorithm is independently changed; the sidecar records the actual iteration/replay order observed rather than perturbing it.",
+    "Raw prompts/trajectories need not be copied into downstream receiver context; store their exact byte digests plus content-addressed local artifacts in a provenance namespace."
+  ],
+  "required_hook_points": [
+    {
+      "hook": "update_entry",
+      "location": "ASISleep.update immediately after traces/problem_loader validation",
+      "capture": [
+        "implementation revision/blob",
+        "allow_replay",
+        "use_llm_evaluator",
+        "pre_codebook canonical SHA256",
+        "incoming trace IDs and canonical trace digests",
+        "problem_loader dataset manifest digest",
+        "policy revision"
+      ]
+    },
+    {
+      "hook": "successful_filter_complete",
+      "location": "after successful is computed and before _ASIState is constructed",
+      "capture": [
+        "ordered successful trace IDs",
+        "successful trace digests",
+        "filter/evaluator decision artifact digests where applicable"
+      ]
+    },
+    {
+      "hook": "candidate_generation_complete",
+      "location": "after agent.run_sync and before state.added_names branch",
+      "capture": [
+        "candidate generation prompt SHA256",
+        "agent result artifact SHA256",
+        "ordered added_names",
+        "each candidate function source SHA256",
+        "candidate codebook canonical SHA256",
+        "submitted per-task test_trajectories with exact ordered-call artifact SHA256"
+      ]
+    },
+    {
+      "hook": "static_no_replay_commit",
+      "location": "allow_replay=false branch immediately before returning state.codebook",
+      "capture": [
+        "decision=commit",
+        "claim_level=transaction_only",
+        "post_codebook SHA256=candidate codebook SHA256",
+        "decision packet SHA256"
+      ]
+    },
+    {
+      "hook": "missing_test_revert",
+      "location": "missing successful_ids-state.test_trajectories.keys() branch",
+      "capture": [
+        "decision=revert",
+        "missing task IDs",
+        "post_codebook SHA256=pre_codebook SHA256",
+        "decision packet SHA256"
+      ]
+    },
+    {
+      "hook": "replay_start",
+      "location": "immediately before each _run_replay call",
+      "capture": [
+        "task_id",
+        "exact dataset record canonical SHA256 found in problem_loader.data",
+        "test trajectory ordered-call artifact SHA256",
+        "candidate codebook SHA256",
+        "environment package/distribution artifact SHA256 and transition-contract/replay-equivalence packet SHA256 supplied by run manifest"
+      ]
+    },
+    {
+      "hook": "replay_result",
+      "location": "immediately after each _run_replay returns",
+      "capture": [
+        "task_id",
+        "ok",
+        "used_new",
+        "error class/text digest",
+        "result artifact SHA256",
+        "actual replay ordinal"
+      ],
+      "limitation": "The current _run_replay API does not expose reset-observation or full action/observation trace. For strong exact-state replay, minimally extend it to return a provenance-only replay record or add a non-mutating environment tracing wrapper. Same task_id alone is insufficient."
+    },
+    {
+      "hook": "replay_failure_revert",
+      "location": "not (ok and used_new) branch immediately before returning original codebook",
+      "capture": [
+        "decision=revert",
+        "failing task_id",
+        "all replay records completed so far",
+        "post_codebook SHA256=pre_codebook SHA256",
+        "decision packet SHA256"
+      ]
+    },
+    {
+      "hook": "all_replays_pass_commit",
+      "location": "immediately before final return state.codebook",
+      "capture": [
+        "decision=commit",
+        "one replay record for every successful task",
+        "post_codebook SHA256=candidate codebook SHA256",
+        "decision packet SHA256",
+        "claim_level=replay_verified_admission only if environment replay-equivalence packet and exact per-replay state/trace evidence are present; otherwise transaction_only"
+      ]
+    }
+  ],
+  "minimal_support_changes": [
+    {
+      "file": "src/speedrunner/core/environment.py",
+      "change": "Add a pure ProblemLoader.get_record(problem_id) helper (or equivalent local lookup in instrumentation) that returns the existing immutable in-memory dataset record without constructing/resetting an environment; canonical-hash that record for sidecar identity. This does not alter environment behavior."
+    },
+    {
+      "file": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+      "change": "Accept an optional provenance_sink or sidecar_path keyword rather than swallowing it in **_. The default None preserves current behavior. Persist to a dedicated run/provenance namespace, not the evaluator input artifact root unless that namespace is excluded from primary scoring."
+    },
+    {
+      "file": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+      "change": "For replay_verified_admission, wrap or minimally extend _run_replay so provenance captures reset observation/state digest and the ordered executed call/result/observation digest chain. Do not re-run the replay solely for provenance."
+    }
+  ],
+  "sidecar_contract": "research_workers_clean_g1/scientist_agents/phase1_handoff_protocol_v1/skill_replay_admission_sidecar_v1.schema.json",
+  "composition": [
+    "p1-instrumentation-001 SKILL_REPLAY_ADMISSION_PROVENANCE_SIDECAR",
+    "SCIENCEWORLD_ACTION_PREFIX_REPLAY_EQUIVALENCE_GATE",
+    "p1-protocol-057 REVIEWER_INPUT_SNAPSHOT_AND_ARCHIVE_COHERENCE_GATE",
+    "p1-protocol-058 REVIEWER_OUTPUT_NONREENTRY_GATE"
+  ],
+  "tested_scope": "Instrumentation design only. No external SpeedRunner repository was modified and no ScienceWorld replay was executed by this specification."
+}
