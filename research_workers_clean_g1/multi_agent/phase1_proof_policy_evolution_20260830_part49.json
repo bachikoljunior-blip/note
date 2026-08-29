@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "part": 49,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_authority": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "model": {
+    "scenario_count": 4096,
+    "strategy_evaluations": 24576,
+    "policy_change_kinds": ["unchanged", "compatible_minor", "stricter_new_evidence", "scope_broadens_external"],
+    "boolean_dimensions": ["current_policy_accepts", "evidence_complete_for_current", "allow_old_version", "allow_old_hash", "latest_lookup_authoritative", "same_version_bytes_unchanged", "old_artifact_replay", "response_loss", "artifact_hash_matches", "schema_valid"],
+    "strategies": {
+      "latest_unpinned_policy": {"terminal": 288, "false_terminal": 72, "duplicate_integration": 216, "stale_policy_replay": 96, "unsafe_effect": 234, "false_exclusion": 460, "unsupported": 1024},
+      "exact_version_allowlist": {"terminal": 512, "false_terminal": 116, "duplicate_integration": 0, "stale_policy_replay": 96, "unsafe_effect": 168, "false_exclusion": 280},
+      "exact_hash_allowlist": {"terminal": 512, "false_terminal": 0, "duplicate_integration": 0, "stale_policy_replay": 0, "unsafe_effect": 0, "false_exclusion": 164},
+      "monotonic_minor_range_negative": {"terminal": 384, "false_terminal": 108, "duplicate_integration": 0, "stale_policy_replay": 128, "unsafe_effect": 200, "false_exclusion": 400, "unsupported": 1024},
+      "current_hash_bound_reverify": {"terminal": 96, "false_terminal": 0, "duplicate_integration": 0, "stale_policy_replay": 0, "unsafe_effect": 0, "false_exclusion": 580, "unsupported": 1024},
+      "hybrid_hash_allowlist_or_current_reverify": {"terminal": 560, "false_terminal": 0, "duplicate_integration": 0, "stale_policy_replay": 0, "unsafe_effect": 0, "false_exclusion": 116}
+    }
+  },
+  "interpretation": {
+    "policy_identity_rule": "Version strings are not sufficient if policy bytes can change under the same version. A safe grandfather path binds the exact old policy hash in current authority; a safe migration path re-evaluates under the exact current policy hash.",
+    "minor_version_rule": "A same-major/minor-compatible parsing contract does not by itself preserve a previous ALLOW/terminal decision. Old artifacts may be semantically correct but incomplete for a stricter current verifier, so current acceptance must still be checked or explicitly grandfathered.",
+    "result_identity_rule": "Acceptance identity must include the exact policy hash (old grandfathered hash or current re-verification hash). Reusing a result identity across policy changes permits stale replay to masquerade as current acceptance.",
+    "hybrid_candidate": "Current sanitized authority may either explicitly allowlist an exact historical policy hash, or the verifier may re-evaluate the artifact and complete embedded evidence under the exact current deterministic local policy hash. Any external-fact/all-role scope without explicit grandfather authority fails closed.",
+    "current_repository_gap": "The frozen root/role config does not expose a generic exact-historical-policy-hash grandfather registry. Therefore that branch is a generic architecture candidate/unresolved control-surface child, not claimed as a currently deployed repository capability. Current-policy re-evaluation remains usable only where the predicate is locally decidable from allowed inputs."
+  },
+  "public_sources": [
+    "https://github.com/in-toto/attestation/blob/main/spec/v1/README.md",
+    "https://slsa.dev/spec/v1.2-rc2/build-provenance",
+    "https://theupdateframework.github.io/specification/draft/",
+    "https://theupdateframework.io/docs/metadata/"
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_policy_or_signature_service": "not accepted",
+    "repository_transport": "sanitized current control/config plus role-local immutable artifacts only"
+  },
+  "unresolved_children": [
+    "generic exact-historical-policy-hash allowlist is not present in frozen control/config",
+    "complete authority-domain rollback remains outside this leaf: if repository authority and all remembered state roll back together, current-hash identity cannot prove a later policy ever existed",
+    "policy evolution that changes the predicate to require external facts or all-role completeness remains nonterminal unless exact current authority explicitly grandfathers the old proof"
+  ],
+  "exact_continuation": "Next leaf: policy revocation and grandfather-compaction without a global historical allowlist. Compare per-artifact current re-verification, compact revocation floor keyed by predicate family, exact policy-hash tombstone set, Bloom/approximate revocation negative control, and immutable acceptance receipt under policy deletion/recreate, hash collision assumption, role-local state loss, response loss and full repository rollback. Target a self-local zero-quota revocation proof that does not require enumerating other-role artifacts."
+}
