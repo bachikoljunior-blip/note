@@ -8,10 +8,10 @@
   "phase_id": "phase_1_chat_parity",
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
-  "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_FENCED_APPLICATION_GC_20260830_073446_PART57.md",
-  "mechanism_script_path": "research_workers_clean_g1/multi_agent/phase1_fenced_application_gc_20260830_073446_part57.py",
-  "mechanism_result_path": "research_workers_clean_g1/multi_agent/phase1_fenced_application_gc_20260830_073446_part57.json",
-  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_SNAPSHOT_RETENTION_GC_BOUNDARY_20260830_073446_PART56.md",
+  "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_CROSS_SHARD_PROMOTION_ATOMICITY_20260830_073446_PART59.md",
+  "mechanism_script_path": "research_workers_clean_g1/multi_agent/phase1_cross_shard_promotion_atomicity_20260830_073446_part59.py",
+  "mechanism_result_path": "research_workers_clean_g1/multi_agent/phase1_cross_shard_promotion_atomicity_20260830_073446_part59.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_BATCHED_SHARDED_GC_20260830_073446_PART58.md",
   "receipt_path": "automation_control/receipts/multi_agent/20260830T073446-part56-boundary.json",
   "presemantic_liveness_receipt_path": null,
   "presemantic_liveness_diagnostic_path": "research_workers_clean_g1/multi_agent/PHASE1_SNAPSHOT_RETENTION_GC_BOUNDARY_20260830_073446_PART56.md",
@@ -27,28 +27,29 @@
   "presemantic_liveness_witness_status": "write attempted twice before first role-local/public semantic read; both role-authorized receipt writes were blocked by OpenAI safety checks. Config8 makes this nonterminal; blocker is durably recorded in Part56 state. No scheduler mutation attempted.",
   "own_state_conflict_detected": false,
   "phase1_leaf_result": {
-    "part57_scenario_count": 384,
-    "part57_strategy_evaluations": 1920,
-    "age_only": "144 live-root deletions; 24 wrong-incarnation deletions",
-    "unfenced_mark_sweep": "72 live-root deletions; 12 wrong-incarnation deletions",
-    "recheck_then_contents_delete_sha": "6 live-root deletions; 0 wrong-incarnation; 42 dead-copy leaks; 4 duplicate delete attempts",
-    "single_ref_commit_fenced": "0 live-root deletion; 0 wrong-incarnation; 0 duplicate delete attempts; 45 dead-copy leaks; 21 false blockages",
-    "critical_toctou": "root flip after final check: per-file Contents delete 6/6 live-root deletion vs single-ref publication 0/6"
+    "part59_scenario_count": 3456,
+    "part59_strategy_evaluations": 17280,
+    "global_publish_before_bridges": "2976 partial-authority states; 1920 live-root deletions by GC; 1728 duplicate logical promotions; 2592 stale-authority commits",
+    "sequential_bridges_no_intent": "0 live-root deletion but 1896 orphan prepared states; 60 duplicate promotions; 60 stale-authority commits",
+    "durable_intent_bridges_commit": "0 live-root deletion; 0 partial authority; 0 orphan prepared; 0 duplicate; 0 stale commit; 3336 recoverable nonterminal/blocked",
+    "global_single_ref_atomic": "0 live-root/partial/orphan/duplicate/stale; 1296 commit, 2160 block"
   },
   "phase1_acceptance": {
-    "gc_authority_rule": "A retained target may be deleted only when its complete recovery-root predicate, sweeper epoch, target incarnation and deletion effect share one atomic repository publication domain.",
-    "single_ref_candidate": "Pin current commit/tree; derive roots/epoch; build one tree deleting exact target and advancing GC/root manifest with applied_transition_id; create child commit; publish only via update_ref(force=false); conflicts/rate limits/reincarnation fail closed and recompute.",
-    "contents_delete_caveat": "Per-file current-SHA delete fences target incarnation but not another file's root-membership predicate; recheck-then-delete has a TOCTOU gap.",
-    "scope_caveat": "Positive claim excludes root predicates outside the same ref/tree domain and complete repository rollback losing every transition witness.",
+    "ordering_rule": "Global authority may not become COMMITTED before all target-shard fences for that promotion are durable/current.",
+    "intent_rule": "Use deterministic PREPARED intent with exact target/shard set, coordinator epoch, contract digest and terminal policy; intent is recovery metadata, not authority by itself.",
+    "shard_rule": "Each shard bridge atomically binds its reservation/root epoch to current PREPARED promotion_id+coordinator epoch; GC honors current reservation.",
+    "commit_rule": "Global COMMITTED publishes only after every required bridge is verified current for the same promotion ID/epoch; response loss reconciles current intent/shard/global transition IDs before retry.",
+    "abort_rule": "Abort before COMMIT is monotonic ABORTED then fenced shard release; never cleanup-reverse a COMMITTED promotion.",
+    "scope_caveat": "Separate refs are not physically atomic; persistent rate limits may leave PREPARED nonterminal. Complete repository rollback remains unresolved.",
     "global_phase1_closure_claimed": false
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
     "optional_monthly_trial_paid_quota_dependency_added": false,
     "richer_mode_protected_manual_execution_dependency": false,
-    "repository_transport": "Chat-exposed GitHub create_tree/create_commit/update_ref plus role-local readback; rate limits fail closed",
+    "repository_transport": "deterministic role-local intent + shard/global ref/path/CAS/readback only; no hosted coordinator",
     "external_coordination": "not required and not accepted as a dependency"
   },
   "base_continuation_preserved": "Resolve/freeze latest sanitized control. Continue unrelated base work only if Phase 1 later deactivates.",
-  "continuation": "Next non-conflicting leaf: batched/sharded GC publication vs hotspot pressure. Compare one global retention-root commit, prefix-sharded manifests with shard-local atomic deletion publication, deterministic batch IDs, and no-delete fallback. Adversaries: two sweepers select overlapping dead sets, concurrent LATEST/root promotion across shards, one shard rate-limited, batch response loss, target reincarnation, and unrelated head churn. Measure live-root deletion, duplicate batch/delete effects, dead-copy leakage, false conflict/hotspot pressure, and recovery reads. Positive claims require each target's root-membership predicate and deletion publication to share one atomic authority domain; otherwise retain/fail closed."
+  "continuation": "Next leaf: PREPARED abort/release vs late shard bridge and stale coordinator. Compare cleanup-by-delete, shard-release-then-intent-abort, intent-ABORTED-then-name-only release, monotonic intent terminal state + per-shard reservation epoch, and fail-closed. Adversaries: B bridge after abort, A release response loss, stale coordinator takeover, new promotion reuses the same target, one shard rate-limited, GC after release, and intent cleanup. Measure post-abort resurrection, stale release of new reservation, live-root deletion, orphan reservation, duplicate release/promotion, false blockage, and recovery reads."
 }
