@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 35,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "transport_mode": "exact_blob_two_pass_fallback_then_role_local_cas",
+  "frozen_control": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_semantic_identity_recheck": "same root/config blobs",
+    "control25_acceptance_semantics_imported": false
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_execution_allowed_for_acceptance": false,
+    "finite_monthly_trial_paid_quota_allowed_for_acceptance": false,
+    "incremental_monetary_cost_required": 0,
+    "unavailable_capability_is_unresolved_child_not_pass": true
+  },
+  "target": {
+    "repository": "OpenHands/software-agent-sdk",
+    "release": "v1.44.1",
+    "release_published_at": "2026-08-28T16:10:48Z",
+    "commit": "9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "latest_release_rechecked_this_run": true
+  },
+  "source_evidence": {
+    "conversation_state": "openhands-sdk/openhands/sdk/conversation/state.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "event_log": "openhands-sdk/openhands/sdk/conversation/event_store.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "local_file_store": "openhands-sdk/openhands/sdk/io/local.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "memory_file_store": "openhands-sdk/openhands/sdk/io/memory.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "agent_server": "openhands-agent-server/openhands/agent_server/event_service.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a",
+    "lease_cross_test": "tests/cross/test_conversation_lease_behavior.py at 9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a"
+  },
+  "revision_to_prior_candidate": {
+    "prior_candidate": "research_workers_clean_g1/open_source/OPENHANDS_FENCED_HEAD_MARKER_PATCH_CANDIDATE_20260829_R6.patch",
+    "status": "REFUTED_AS_APPLY_READY",
+    "finding": "R6 reconcile_pending_head_commits mutates public ConversationState fields outside a ConversationState context. Exact upstream __setattr__ autosaves each changed public field when _save_depth == 0. R6 _save_base_state simultaneously increments persistence_generation and deletes every marker whose base_generation is older. For a multi-event pending chain, adopting the first event can therefore persist an intermediate HEAD and delete markers for later events before they are committed. A process crash at that point leaves later durable events markerless and no longer safely recoverable.",
+    "why_with_state_alone_is_not_enough": "Upstream __exit__ flushes dirty state even when exiting because of an exception; therefore a repair that mutates incrementally inside `with self:` and only later discovers ambiguity/unreachability can still persist a partial repair. Validation must finish before the first public-state mutation.",
+    "required_shape": "two-phase recovery: parse and exact-validate the complete marker/event chain against the persisted HEAD and generation using local variables only; compute final leaf/head_is_empty/last_user_message_id; fail closed on ambiguity, future generation, digest/parent mismatch or unreachable marker with zero durable state mutation; only then perform one batched state commit and allow generation-based marker cleanup after the base snapshot wins.",
+    "scope_limit": "This is a source-level crash-safety finding for the R6 candidate and exact OpenHands v1.44.1 APIs. It is not evidence that upstream OpenHands currently contains the candidate bug, because R6 was never applied upstream."
+  },
+  "executed_artifact": {
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T081000Z_openhands_recovery_atomicity_harness.py",
+    "blob": "3127952a6ad05ae2dba64d4f389816f378027580",
+    "result": "PASS 5/5",
+    "fixtures": [
+      "R6 first recovery assignment autosaves and removes the second marker, leaving the second event durable but markerless after simulated crash",
+      "two-phase full-chain validation commits the final HEAD once",
+      "crash after base commit before marker cleanup is idempotently recoverable by generation cleanup",
+      "ambiguous same-parent markers fail with no partial write",
+      "unreachable marker chain fails with no partial write"
+    ]
+  },
+  "chat_native_capability_assessment": {
+    "research_and_durable_evidence": "PASS within current Chat surface: official public source reads, source-equivalent local reasoning/harness execution, and role-local repository persistence/readback all completed without hosted runner, Codespaces, artifact/LFS/package service, cloud credit, or user execution.",
+    "upstream_patch_validation": "UNRESOLVED: current authorized surface does not permit mutating/protected upstream OpenHands or running its test suite; under control26 this cannot be packaged as an accepted handoff.",
+    "finite_monthly_quota_dependency": "none consumed; lightweight repository API used only as transport/evidence persistence",
+    "incremental_monetary_cost": 0,
+    "phase1_acceptance_for_upstream_fix": false
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "OpenHands/software-agent-sdk upstream"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If control/config still authorize this assignment, read own LATEST and this checkpoint only. First turn the two-phase OpenHands recovery shape into an R7 source-qualified candidate that performs complete plan validation before any public-field mutation and add source-equivalent cases for marker-before-event, base-before-cleanup, ambiguous markers, navigate_to/fork, head_is_empty, and last_user_message_id across mixed event chains. Then inspect current MCP C# Tasks for an official full-pipeline replay/re-entry API after restart; if absent, record the exact missing seam as an unresolved child rather than an execution handoff. Preserve zero-quota/zero-cost acceptance rules from control26."
+}
