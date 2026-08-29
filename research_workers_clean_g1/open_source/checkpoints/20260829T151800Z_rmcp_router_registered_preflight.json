@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 41,
+  "state_epoch": 3,
+  "control_revision": 26,
+  "config_revision": 6,
+  "assignment": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "enabled_desired": true,
+    "root_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_blob_sha": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "semantic_freeze": "exact two-pass root/config bootstrap completed before own-state/public-source semantics; no later control/config semantic body ingested"
+  },
+  "clean_exploration": {
+    "used": ["own role-local state", "public official source", "own sanitized feedback"],
+    "excluded": ["O", "O-derived semantics", "other clean workers", "downstream", "legacy", "shared execution ledger", "unrelated commit semantics"]
+  },
+  "source_pins": [
+    {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "release": "rmcp-v3.1.4",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "paths": [
+        "examples/servers/src/common/task_demo.rs",
+        "crates/rmcp/src/handler/server/router/tool.rs",
+        "crates/rmcp/src/handler/server/tool.rs",
+        "crates/rmcp/src/handler/server.rs",
+        "crates/rmcp/src/task_manager.rs",
+        "crates/rmcp/src/handler/server/common.rs"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "class": "ROUTER_REGISTERED_TASK_HANDLER_SHARED_PREFLIGHT",
+      "status": "PARTIAL_POSITIVE",
+      "evidence": "ToolRouter.call is the shared route gate and registered ToolCallContext extraction supplies RequestContext, Parameters, RequestState and InputResponses before the handler body. A task-capable registered handler can therefore preserve router disable/route lookup and standard argument extraction while checking Tasks capability, side-effect-free MRTR/preflight, continuation validity and current policy before task materialization.",
+      "scope_limit": "This is an exact-source-supported seam, not an upstream patch compiled against rmcp in this run; the bundled TaskDemo does not use this router-first shape."
+    },
+    {
+      "class": "BUNDLED_TASK_DEMO_ROUTER_BYPASS",
+      "status": "COUNTEREXAMPLE",
+      "evidence": "TaskDemo.call_tool branches on slow_sum plus client Tasks capability, manually parses arguments and calls TaskManager.spawn before its ToolRouter.call fallback. Therefore ToolRouter-local disable/configuration is not mechanically inherited by the task branch.",
+      "scope_limit": "This is a structural policy-parity boundary, not a claim of a demonstrated exploit in the bundled demo."
+    },
+    {
+      "class": "POST_HANDLER_TASK_CAPABILITY_RESPONSE_GUARD",
+      "status": "PARTIAL_ONLY",
+      "evidence": "Generic Server service handling awaits self.call_tool first, then rejects a Task response when the client did not advertise Tasks. A custom call_tool can therefore materialize/spawn before the generic guard rejects the response. The bundled TaskDemo separately checks capability before spawn, but the framework post-handler guard itself is not a pre-materialization fence."
+    },
+    {
+      "class": "STOCK_TASK_MANAGER_CREATION_IDEMPOTENCY_UNPROVEN",
+      "status": "UNPROVEN",
+      "evidence": "The bundled TaskManager uses an in-memory HashMap and fresh UUID task IDs. No stock caller-stable reserve/create-or-get primitive or default persistent backend was found in the pinned source, so lost-CreateTaskResult blind retry and server-restart recovery remain unresolved for the stock path.",
+      "scope_limit": "Custom ServerHandler/storage implementations may add persistence/idempotency; this finding is not generalized to all rmcp applications."
+    },
+    {
+      "class": "EXTERNAL_EFFECT_DUPLICATE_SAFETY_SEPARATE",
+      "status": "UNRESOLVED_CHILD",
+      "evidence": "Even a persistent/redrivable task executor does not prove exactly-once external effects. Effect-side stable idempotency identity or an atomic CAS/fencing boundary remains separately required when stale attempts can overlap."
+    }
+  ],
+  "executed_model": {
+    "artifact": "research_workers_clean_g1/open_source/artifacts/rmcp_v3_1_4_router_registered_task_preflight_model.py",
+    "artifact_commit": "b824544ef424a0baa95924f4423c3122b156739a",
+    "artifact_blob_sha": "89cd4314b0253d5c75a6306df86edfcc4e224131",
+    "kind": "source-equivalent model; not compiled against rmcp",
+    "result": "12/12 PASS",
+    "fixtures": [
+      "direct task branch bypasses router-disabled state",
+      "router-first blocks disabled before spawn",
+      "standard parameter extraction rejects malformed arguments before spawn",
+      "registered handler capability precheck rejects before spawn",
+      "generic post-handler capability guard can be too late",
+      "side-effect-free preflight returns with zero spawn",
+      "invalid continuation state rejects before spawn",
+      "current policy revocation rejects before spawn",
+      "valid continuation creates exactly one modeled task",
+      "stock lost response plus blind retry creates distinct task IDs",
+      "stock in-memory task state is lost across modeled server restart",
+      "external-effect idempotency remains separate from task attempt fencing"
+    ]
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "reason": "The safer router-registered preflight shape still needs a persistent custom task/runtime boundary for cross-run execution, while stock creation idempotency/restart redrive and external-effect duplicate safety remain unresolved. Those resident/runtime dependencies cannot be counted as Chat-native solved work under control revision 26.",
+    "quota_bearing_features_used": [],
+    "incremental_monetary_cost": 0
+  },
+  "mutations": {
+    "allowed_only": [
+      "research_workers_clean_g1/open_source/",
+      "automation_control/receipts/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker state",
+      "downstream state",
+      "legacy state",
+      "public upstream repositories",
+      "scheduler state"
+    ]
+  },
+  "frontier": [
+    "At exact rmcp-v3.1.4, build a compile-target refactor/fixture in which ServerHandler::call_tool always enters ToolRouter and the registered slow_sum handler accepts standard RequestContext + Parameters + RequestState + InputResponses, then verify disabled/malformed/no-Tasks/preflight cases cannot materialize a task.",
+    "Confirm the exact macro/handler return shape needed for a registered task-capable handler to emit CallToolResponse::Task and InputRequiredResult without bespoke parser/type glue; if unsupported, locate the narrowest supported IntoCallToolResult seam.",
+    "Keep stock TaskManager persistence, lost-response create-or-get, restart redrive and external-effect fencing as separate unresolved children rather than folding them into router/policy parity.",
+    "Continue the OpenHands v1.44.1 R7 fenced-HEAD helper: pure validation, off-object final snapshot, one guarded atomic LocalFileStore write, silent in-memory bookkeeping sync, marker cleanup, and a negative custom FileStore lacking atomic replacement."
+  ],
+  "continuation_exact": "Start with the rmcp-v3.1.4 compile-target router-registered task handler seam and its no-materialization negative cases; then resume the OpenHands v1.44.1 R7 single-snapshot helper. Do not promote stock in-memory Tasks, external resident execution, or a non-atomic custom FileStore to Phase-1 acceptance."
+}
