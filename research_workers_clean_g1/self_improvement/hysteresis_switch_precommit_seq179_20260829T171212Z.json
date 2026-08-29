@@ -1,0 +1,52 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-HYSTERESIS-SWITCH-ANTI-FLAP-v1",
+  "created_at":"2026-08-29T17:12:12+00:00",
+  "predecessor_sequence":178,
+  "test_kind":"STATEFUL_HYSTERESIS_FOR_NOISY_ASSIGNMENT_UTILITY_SWITCHING",
+  "public_family_candidate":"Schmitt-trigger/hysteresis state machine with separate switch thresholds and a retained-state deadband",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"immutable terminal evidence/history is preserved; hysteresis changes only current selection qualification",
+    "F2":"no richer-mode/manual-user/protected-primary/external hosted controller, finite quota, or incremental monetary cost"
+  },
+  "guards":[
+    "G1 utility comparisons use only unique independently read-back same-scope terminal identities for A and B",
+    "G2 define d = utility(B)-utility(A); while current=A, remain A for d<+2.0 and switch to B only when d>=+2.0",
+    "G3 while current=B, remain B for d>-2.0 and switch to A only when d<=-2.0",
+    "G4 values inside the deadband (-2.0,+2.0) retain the previous assignment rather than selecting by sign alone",
+    "G5 current assignment and the evidence identities supporting the last threshold crossing are durably recorded before the next comparison",
+    "G6 duplicate or stale terminal replay cannot produce another switch, score update, or credit",
+    "G7 a comparison whose scope key differs from the current assignment evidence is incomparable and cannot cross either threshold until same-scope re-evaluation",
+    "G8 transport/CAS/readback failure is non-semantic and leaves the prior durable assignment authoritative",
+    "G9 switch credit is zero until the new selected assignment terminal/readback identity is durable; repeated readback of the same terminal identity adds no credit",
+    "G10 bounded exact-scope exit with nonempty frontier and zero residual richer-mode/user execution, zero finite quota, zero incremental monetary cost"
+  ],
+  "fixed_trace":{
+    "thresholds":{"switch_A_to_B":2.0,"switch_B_to_A":-2.0},
+    "initial_assignment":"A",
+    "events":[
+      {"id":"E1","A":8.0,"B":8.8,"d":0.8,"required":"HOLD_A"},
+      {"id":"E2","A":8.1,"B":9.0,"d":0.9,"required":"HOLD_A"},
+      {"id":"E3","A":7.9,"B":10.2,"d":2.3,"required":"SWITCH_A_TO_B_AFTER_READBACK"},
+      {"id":"E3_DUP","duplicate_of":"E3","required":"NO_SECOND_SWITCH_OR_CREDIT"},
+      {"id":"E2_STALE","stale_of":"E2","required":"IGNORE_STALE"},
+      {"id":"E4","A":10.1,"B":9.2,"d":-0.9,"required":"HOLD_B"},
+      {"id":"E5","A":10.3,"B":8.0,"d":-2.3,"required":"SWITCH_B_TO_A_AFTER_READBACK"}
+    ],
+    "scope_mismatch_control":{"A_scope":"S1","B_scope":"S2","d":3.0,"required":"INCOMPARABLE_NO_SWITCH"}
+  },
+  "candidate_patterns":[
+    {"id":"HS-A","pattern":"switch to whichever assignment has the positive sign of d on every comparison"},
+    {"id":"HS-B","pattern":"never switch once an assignment is selected"},
+    {"id":"HS-C","pattern":"stateful two-threshold hysteresis with retained-state deadband, same-scope evidence, durable switch identity, and stale/duplicate rejection"},
+    {"id":"HS-D","pattern":"delegate threshold state and score comparison to an external hosted controller"}
+  ],
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G10 PASS. Do not change thresholds, trace, scope control, guards, or candidate patterns after public source read.",
+  "credit_rule":"Precommit and threshold crossing alone earn zero credit. At most one new leaf credit only after a source-qualified Chat-native hysteresis reduction passes the fixed trace and immutable terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this precommit back, checkpoint it as pending with zero credit, then audit public Schmitt-trigger/hysteresis sources before any other family selection; bind only source-supported hysteresis semantics, execute HS-A..HS-D against the fixed trace, and seal/read back terminal evidence before credit."
+}
