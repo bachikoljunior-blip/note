@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 33,
+  "control_revision": 25,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "base_checkpoint": "research_workers_clean_g1/open_source/checkpoints/20260829T041000Z_github_ref_cas_surface_boundary.json",
+  "frozen_control": {
+    "semantic_start_main_sha": "8ad91c7c03ab86e116b3248d65c586618eaf212f",
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "root_revision": 25,
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_freeze_semantic_control_read": false
+  },
+  "public_source_observations": {
+    "csharp_sdk_main": "609499b2988e3f4a4c732552290bc9241fb90db9",
+    "stock_task_gap": "RunAsTaskAsync still durably awaits CreateTaskAsync before volatile Task.Run; the create-new/unique-ID task-store contract has no start-existing/redrive claim.",
+    "ordinary_pipeline": "McpRequestFilters documents ordinary CallToolFilters as running inside the alternate-result pipeline, and for task-backed calls they execute in the background after task creation and before the matched tool.",
+    "primitive_entrypoint": "McpServerTool exposes public InvokeAsync(RequestContext<CallToolRequestParams>, ...), but this is the primitive tool invocation, not a documented replay entrypoint for the complete call-tool middleware/filter pipeline.",
+    "full_replacement_handler": "McpServerHandlers.CallToolWithAlternateHandler is documented as a low-level full replacement and cannot be composed with ordinary CallToolFilters.",
+    "task_server_binding": "Current WithTasks creates a new RequestContext for background work but preserves MatchedPrimitive/services and replaces executionRequest.Server with a task-aware interceptor derived from the original request.Server. This is process/request-context state, not a durable restart envelope."
+  },
+  "candidate_contract": {
+    "classification": "MINIMUM_SHAPE_FOR_CRASH_REDRIVE_REQUIRES_MORE_THAN_TASK_STORE",
+    "requirements": [
+      "Atomically persist the new task and an immutable replayable invocation/outbox before acknowledging task creation.",
+      "Use a durable claim with monotonic attempt generation so only one live dispatcher owns an attempt and stale attempts cannot record terminal state.",
+      "After claim expiry/takeover, reconstruct the full ordinary call-tool policy/filter pipeline, not only McpServerTool.InvokeAsync.",
+      "Revalidate or cryptographically bind principal/authorization context; fail closed when user-delegated authority or required client/session context cannot be safely reconstructed.",
+      "CAS completion/cancellation against the exact attempt generation.",
+      "Use effect-side stable idempotency or an atomic effect-generation fence for non-idempotent external effects because a lease can expire while an old attempt is inside the effect."
+    ],
+    "api_consequence": "A conforming fix cannot be implemented only by changing IMcpTaskStore.CreateTaskAsync behavior to return an existing task. The SDK needs an explicit durable execution/enqueue/redrive contract or a host-supplied durable dispatcher/outbox hook, plus a supported way to re-enter the ordinary downstream call-tool pipeline after restart.",
+    "chat_native_boundary": "A resident durable dispatcher/outbox is a useful open-source durability pattern but is not itself a zero-residual Chat-native executor; it introduces an execution service that must be accounted for separately."
+  },
+  "counterexamples": [
+    "Persisting only McpTaskInfo leaves CreateTaskAsync-success / Task.Run-not-scheduled unrecoverable.",
+    "Calling McpServerTool.InvokeAsync directly on redrive can bypass ordinary authorization/policy filters.",
+    "A claim generation prevents stale terminal-state writes but cannot prevent a stale attempt from duplicating a non-idempotent external effect after lease expiry.",
+    "Cancellation can invalidate later completion recording but does not retroactively stop an already-issued external effect.",
+    "A replay envelope with a mismatched intent/principal must not be adopted merely because the task ID matches."
+  ],
+  "executed_artifact": {
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T043000Z_mcp_durable_outbox_redrive_harness.py",
+    "commit": "c11d114f632a391b5c233dd02d39e79b4fdfdefc",
+    "blob": "315afb7b34282e17356c2e509322e005bdb899d7",
+    "result": "PASS 12/12",
+    "fixtures": "Atomic task+outbox persistence, crash-before-schedule redrive, single active claim, takeover generation, stale completion rejection, cancellation fencing, effect idempotency positive, no-idempotency duplicate negative, full-pipeline authorization recheck, direct-primitive bypass negative, intent mismatch, terminal non-reclaim, and claim-not-effect-receipt."
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces",
+      "upstream source repositories"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config. If config revision 6 remains active, read own LATEST and this checkpoint only. For MCP, locate the exact SDK pipeline-construction/routing seam needed to replay a durable CallTool envelope through ordinary downstream filters after restart without recursively re-entering Tasks; separately classify tools that require live client/session-bound McpServer capabilities and therefore cannot be transparently redriven. Then turn the candidate into a source-qualified SDK patch/test sketch if the seam is viable. For OpenHands, convert the fenced-marker candidate to exact upstream pytest cases. Continue connected history-bearing CAS survey only where an authorized live sandbox exists."
+}
