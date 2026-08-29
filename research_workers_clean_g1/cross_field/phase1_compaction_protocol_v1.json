@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "name": "bounded replay via immutable packed segments and snapshots",
+  "goal": "Keep role-local continuation/replay practical without LFS, artifact/package storage, hosted runners or external object storage.",
+  "source_constraints": {
+    "github_repository_limits": "GitHub recommends individual objects around <=1 MB and directory width <=3000 entries; Contents API directory retrieval has a 1000-entry upper limit in its documented behavior.",
+    "event_sourcing": "Snapshots can reduce rehydration cost while the append-only eventstream remains the source of truth.",
+    "merkle_optional": "RFC 6962 demonstrates that Merkle roots/consistency proofs can verify append-only log extension with logarithmic proof size; this protocol does not require full Merkle implementation for the current small role-local log."
+  },
+  "layout": {
+    "loose_tail": "at most K not-yet-packed events reachable after the latest snapshot",
+    "packed_segment": "immutable text file containing full canonical event bodies plus their hashes; target <=128 events and <=512 KiB",
+    "epoch_directory": "start a new directory after <=512 packed segments, keeping Contents-directory listing below 1000 items",
+    "snapshot": "immutable state plus object heads, through_segment hash and through_event_count",
+    "publication_head": "small mutable CAS file naming the current snapshot and any tail after it"
+  },
+  "safe_compaction_order": [
+    "RECONSTRUCT current publication head/root.",
+    "Create a canonical immutable packed segment for an already-authoritative event range.",
+    "Create an immutable snapshot whose state/object heads equal replay through that segment.",
+    "CAS-publish the new compact head/snapshot and read it back.",
+    "Only after successful publication may redundant loose source objects become garbage-collection candidates. GC failure is safe redundancy; GC before publication is forbidden.",
+    "After any CAS conflict, reconstruct and recompute segment boundaries against current authority."
+  ],
+  "audit_property": "Packed segments preserve full event bodies, so state can be restored from the snapshot while detailed historical audit/replay can load segments on demand. A snapshot alone is not treated as the source of truth.",
+  "live_probe": {
+    "path": "research_workers_clean_g1/cross_field/phase1_probe_20260829T1800JST/compaction/",
+    "segment_hash": "248535090a1b53631cb63d471d499c7a41041e901431b8ee0d3d9d4671769389",
+    "segment_event_count": 4,
+    "segment_canonical_size_bytes": 1334,
+    "snapshot_hash": "48d3452850b9060e89b3797261597b0a919a1ead7a3095587037c9e632c98ec0",
+    "snapshot_state": {"A": 7, "B": 23},
+    "compact_head_blob": "17825e2dd2c001f7a2af0f66c05f3a53b1574213",
+    "reconstruction_reads": ["COMPACT_HEAD", "snapshot"],
+    "tail_events_after_snapshot": 0,
+    "audit_readback": "packed segment read back with all four canonical event bodies and hashes",
+    "loose_event_gc_tested": false,
+    "reason_gc_not_run": "The existing TX_HEAD still directly references the original per-object event graph and a cross-run pending operation depends on that test fixture. Deleting source events here would conflate the independent compaction replica with the active transaction probe."
+  },
+  "boundedness": {
+    "reconstruction_work_after_snapshot": "O(K) tail events; current probe K-tail=0",
+    "directory_width": "<=512 segment files per epoch by protocol",
+    "individual_segment_target": "<=512 KiB and <=128 events",
+    "long_term_growth": "one packed segment per up to 128 events plus snapshots; if segment count itself becomes material, add a higher-level content-addressed segment index/Merkle tree without changing publication/CAS semantics"
+  },
+  "quota_and_cost": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency": false,
+    "forbidden_dependencies": ["GitHub Actions", "Codespaces", "LFS", "artifact/package storage", "external object storage"],
+    "repository_api": "low-volume text transport only; rate-limit backoff rules from phase1_retry_state_machine_v1 apply"
+  },
+  "next_test": "After the pending cross-run operation is completed, compact its resulting new events into a second segment/snapshot, CAS-publish a compact head update, then in an isolated duplicate fixture test post-publication deletion of redundant loose event copies and interruption during GC."
+}
