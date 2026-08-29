@@ -1,0 +1,28 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-FAILURE-CIRCUIT-BREAKER-SWITCHING-v1",
+  "observed_at":"2026-08-29T17:11:10+00:00",
+  "predecessor_sequence":177,
+  "precommit_blob":"0ee8f6a09bccc547385ea46fe5d837f1072537ae",
+  "source_binding":[
+    {"id":"S1","source":"Microsoft Azure Architecture Center, Circuit Breaker pattern","url":"https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker","semantics_used":"CLOSED counts recent failures and opens at a threshold; OPEN rejects protected operations; after a reset interval the breaker becomes HALF_OPEN and allows a limited number of trial requests; success closes/reset counters and failure reopens."},
+    {"id":"S2","source":"Martin Fowler, CircuitBreaker","url":"https://martinfowler.com/bliki/CircuitBreaker.html","semantics_used":"A self-resetting breaker retries a protected call after a suitable interval; HALF_OPEN is a real trial call whose success resets the breaker and whose failure restarts the timeout."}
+  ],
+  "chat_native_reduction":{"id":"CIRCUIT-BREAKER-CHAT-ASSIGNMENT-v1","adaptation_note":"The public pattern uses elapsed time for the reset interval. This fixed scheduled-Chat trace preserves the CLOSED/OPEN/HALF_OPEN semantics but represents the reset interval as two monotonic durable controller transitions, avoiding dependence on an external timer service. This is a reduction, not a claim of literal equivalence to time-based breaker implementations.","rules":["Count only unique same-scope terminal failure identities that have independent readback.","Do not count transport/CAS/search interruption or unevaluated work as semantic failure.","At the precommitted threshold of three qualifying consecutive failures, append OPEN state for that assignment family.","While OPEN, make only that family temporarily ineligible; unrelated frontier work proceeds.","After exactly two durable unrelated controller transitions, append HALF_OPEN and permit exactly one bounded same-scope probe.","HALF_OPEN terminal success closes and resets the breaker-local consecutive-failure counter; terminal failure reopens.","Deduplicate terminal/probe identities so stale or duplicate replay cannot change breaker state twice.","Breaker state is append-only qualification over immutable evidence; CAS/readback failure leaves the prior durable breaker state authoritative."],"external_runtime_required":false},
+  "fixed_trace_execution":{"states":[{"event":"F1 terminal failure read back","result":"CLOSED counter=1"},{"event":"transport timeout without terminal evidence","result":"CLOSED counter=1"},{"event":"F2 terminal failure read back","result":"CLOSED counter=2"},{"event":"duplicate F2 replay","result":"CLOSED counter=2"},{"event":"F3 terminal failure read back","result":"OPEN counter=3"},{"event":"Y1 unrelated durable transition","result":"OPEN; X ineligible"},{"event":"Y2 unrelated durable transition","result":"HALF_OPEN; exactly one P1 permitted"}],"success_branch":{"event":"P1 terminal PASS read back","result":"CLOSED counter=0","status":"PASS"},"failure_branch":{"event":"P1 terminal FAIL read back","result":"OPEN; duplicate P1 replay ignored","status":"PASS"},"matches_required_trace":true},
+  "candidate_results":[
+    {"id":"CB-A","fatal_gate":null,"guard_pass":[],"guard_fail":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"],"score":0,"outcome":"REJECT","reason":"indefinite retry does not distinguish semantic from transport failures, does not open, and has no bounded recovery probe"},
+    {"id":"CB-B","fatal_gate":"F1","score":0,"outcome":"REJECT","reason":"permanent blacklist violates bounded recoverability and the explicit no-permanent-blacklist gate"},
+    {"id":"CB-C","fatal_gate":null,"guard_pass":["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"],"guard_fail":[],"score":10,"outcome":"PASS"},
+    {"id":"CB-D","fatal_gate":"F2","score":0,"outcome":"REJECT","reason":"requires external hosted monitoring/workflow state"}
+  ],
+  "guard_summary":{"selected_pattern":"CB-C","passed":"10/10","fatal_gates_passed":true},
+  "scope":"constructed role-local repeated-failure switching trace only; this tests controller breaker semantics, not service reliability or optimality of threshold=3/reset=2 transitions.",
+  "phase1_acceptance":{"residual_richer_mode_or_manual_user_execution_dependency":false,"finite_monthly_trial_paid_quota_dependency":false,"incremental_monetary_cost":0,"repository_api_use":"lightweight state/evidence transport only"},
+  "credit_rule_result":"ELIGIBLE_FOR_AT_MOST_ONE_NEW_LEAF_CREDIT_AFTER_THIS_TERMINAL_FILE_IS_INDEPENDENTLY_READ_BACK",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this terminal artifact back. Only after exact readback, advance controller credit by one and select another distinct switching/recovery failure mode; precommit it before reading public semantics."
+}
