@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T10:30:00+09:00",
+  "source_scope": {
+    "paper": "MemCompiler: Compile, Don't Inject -- State-Conditioned Memory for Embodied Agents, arXiv:2605.07594v2",
+    "paper_submitted": "2026-05-08",
+    "paper_revised": "2026-05-14",
+    "official_code_repo": "air-embodied-brain/MemCompiler",
+    "code_revision_inspected": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
+    "model_artifact": "xinrui-23/thor-5.0-16-Qwen2.5-14B-Instruct-Qwen2.5-7B-Instruct",
+    "model_artifact_main_commit": "32c9274 (Hugging Face short revision shown by public UI, committed 2026-05-29)"
+  },
+  "findings": [
+    {
+      "id": "p1-sa-070",
+      "claim": "MemCompiler provides a science-domain matched delivery intervention with the same retrieved task memory candidate pool: on Qwen-2.5-14B ScienceWorld, full state-conditioned compilation scores 46.67 completion / 69.33 partial versus AMMI static injection of the same retrieved M at 27.93 / 52.68. The paper explicitly says this AMMI row injects the same retrieved M and isolates dynamic compilation. This is stronger evidence than a generic retrieval-vs-no-retrieval comparison, but it still changes the whole delivery/compilation mechanism rather than only a final accept/reject bit for an already-selected item.",
+      "scope_guard": "Do not interpret as exact per-step selected-memory-identity-fixed acceptance-only ablation. Candidate pool M is matched; per-step compiled m* is deliberately different under SCMC and absent as a selector under AMMI."
+    },
+    {
+      "id": "p1-sa-071",
+      "claim": "The current official ScienceWorld runner retrieves Task Memory once per episode from task_text before the execution loop, then passes the same task_memory object together with current observation, score, working memory and history to the Manager at every step. Thus current public code implements fixed episode-level candidate-pool retrieval plus per-step state-conditioned Manager guidance, not per-step bank retrieval.",
+      "scope_guard": "Claim is about current public revision ec5a579...; it is not an exact binding to the paper's evaluated revision."
+    },
+    {
+      "id": "p1-sa-072",
+      "claim": "The current public ScienceWorld detailed trajectory records Manager inputs/outputs and only a task_memory_summary count, not stable IDs/digests for the exact candidate-pool members or a machine-readable identity for the per-step memory entry selected/compiled into guidance. Therefore an offline replay cannot establish exact per-item fixed-retrieval causality from the logged trace alone without additional instrumentation.",
+      "scope_guard": "This is an observability/provenance limitation of the inspected public runner, not evidence that the authors did not use richer private logs."
+    },
+    {
+      "id": "p1-sa-073",
+      "claim": "The official project page now links a 44.8 GB Hugging Face model artifact whose public history has two commits on 2026-05-29. This partially resolves the prior search for an external evaluated artifact, but the model has no model card and the inspected public surfaces do not bind it to a particular Table-3 run, memory-bank snapshot, or candidate-pool digest.",
+      "scope_guard": "Public learned-model artifact found; immutable evaluated memory snapshot and exact run binding remain unresolved."
+    }
+  ],
+  "primary_public_evidence": [
+    "arXiv HTML v2: fixed task-memory candidate pool M is retrieved once at episode start; Memory Compiler compiles m*(t) from current state and M; NOACTION is allowed when no entry is applicable; Table 3 Full=46.67/69.33 ScienceWorld, AMMI static injection same memory=27.93/52.68.",
+    "Official GitHub current code: Memcompiler.retrieve_memory(query_task) operates on task-level query; ScienceWorld runner calls it once before while-not-done and reuses task_memory across steps; detailed_out stores task_memory_summary counts rather than exact memory identities.",
+    "Official project page links Hugging Face model; public model page shows 44.8 GB and commit 32c9274 on May 29 with no model card."
+  ],
+  "causal_boundary": "Strong same-candidate-pool science-domain evidence for dynamic state-conditioned delivery versus static injection; still not the sought exact fixed selected-item identity + receiver accept/reject-only manipulation."
+}
