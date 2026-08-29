@@ -1,37 +1,33 @@
 # Long Horizon clean_g1 — latest pointer
 
-Authoritative latest checkpoint for this namespace:
+Authoritative latest checkpoint for this role-local branch:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T1102JST_PHASE1_CONTINUATION_GUARD.md`
+
+Immediate predecessor on `main` when this branch was created:
 `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T070703JST_SHADOW_RECOVERY_ADMISSIBILITY.md`
 
-Immediate predecessor:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-28T200128JST_AUTHORIZATION_CONSUMPTION_AND_PUBLIC_HARNESS.md`
+Frozen control tuple for this semantic invocation:
+- transport: `exact_blob_two_pass`
+- root control revision/blob: `25` / `347c1182ef5fc24900b4d94cdeed0fe2e8202cae`
+- own role control/config revision/blob: `16` / `7` / `41984ccfed213f739f005db5a772baef4a8c711f`
+- phase/root/task: `phase_1_chat_parity` / `o-chat-parity-root-v5-irreducible-handoff-aligned` / `phase1-clean-long-horizon-overrun-recovery`
+- prior own LATEST blob consumed and conflict-rechecked: `44042bbf008feb09d35c4dc301debbf3257fdd4e`
+- `bootstrap_valid=true`
 
-Control snapshot frozen for this semantic invocation:
-- root control revision: `22`
-- root control blob: `e4f6d24c137284d002941ac04254e3dbeca2cfcb`
-- role config revision: `6`
-- role config blob: `a8f3d4df40f0d1017ee5c21701b7573572795e74`
-- frozen semantic source main SHA: `bc0ed3133e95dad3cd647d4e83d8901a19b6e6a0`
-- own prior LATEST blob consumed: `1cc7d7e8372a3bbdc3f27daf96aad98f5dfbf0f4`
-- public Agent-libOS pin: `72366eecc9e04cc7445a5ea51d7b5f236aa4d1e9`
-- late SHA-only write-safety head observed `fcab4ec165c6fea4c086f5f169767f34024ffd75`; exact root/config blob identities were unchanged and no newer-head semantics were adopted.
-- `bootstrap_valid=true`.
+Current Phase-1 result:
+- Implemented and executed `phase1/phase1_continuation_guard.py`; its separate-process suite passed all 11 controls for valid reconstruction, corrupted checkpoint rejection, stale checkpoint rejection, duplicate resume consumption, forecast-overrun plan switching, old-generation invalidation, rate-limit defer/resume, rate-limit-triggered switch, and no-alternative durable defer.
+- Guard keeps checkpoint integrity/head identity separate from a consumed-resume ledger. Forecast switch condition is `forecast_p90_remaining + retry_reserve > budget_remaining`; rate-limit feasibility additionally includes persisted wait-to-`not_before` and retry budget.
+- Live repository CAS probe on this role-local branch: version-1 blob update succeeded once; reusing the stale blob for a second update was rejected HTTP 409; readback remained version 2. This is an actually exposed Chat stale-writer defense within the tested repository path.
+- Public audit mapped Temporal replay/Continue-As-New/versioning, LangGraph checkpoints/forks, Kubernetes lease/resourceVersion fencing, Step Functions bounded retry/fallback, and HTTP `Retry-After` into the compound guard; no audited source alone supplied the whole scheduled-Chat contract.
+- Scope remains deterministic mechanism + one live role-local GitHub CAS probe; no powered real scheduled-Chat success claim.
 
-Current synthesis delta:
-- Pinned Agent-libOS source closes an important harness ambiguity: `recovery_options(run_id)` returns no choices unless the Run is already `needs_attention`, while `recover(...)` recomputes that server-derived option set before accepting an `option_id`. Therefore a naive gate-OFF ablation can erase the treatment surface for recovery itself; lifecycle gate and public recovery availability are not independently manipulable by default.
-- The same raw unsettled-effect evidence is used by recovery-option derivation and multiple lifecycle blockers. A valid factorial must keep evidence/identity and recovery-admissibility fixed across cells, then vary only (A) the blocking consequence and (B) whether the Host executes the already-frozen authoritative recovery.
-- First clean experiment should branch all four cells from one serialized ambiguous-effect prefix before any branch-specific lifecycle progression. Maintain a shadow/frozen evidence-bound recovery option in every cell, record phase-specific `would_block`, and suppress only the narrow next lifecycle blocker for gate OFF.
-- Pinned crash harness/worker verifies the deterministic external-effect fault substrate and benchmark-local method-replacement precedent. Correction: the previously cited durable-task-run `ablations.py`/`MethodType` path is not present at the pinned commit; the verified precedent is `crash_worker.py` direct runtime-method replacement (and recovery-scale instrumentation). Do not repeat the old exact-path claim.
-- The public real-LLM Durable Task Run evaluation is a later extension surface with restart/effect/no-redispatch safety checks, but it is not the missing gate×recovery factorial.
+Generic residual capability boundary:
+- Making this branch authoritative on `main` requires a primary-branch merge. Direct merge is forbidden to this CLEAN role. Branch/PR preparation is Chat-capable and is completed; merge is only `downstream_verification_required`, not a CLEAN claim of global irreducibility or acceptance.
 
 Exact continuation:
-1. Trace the pinned `verify_external_effect_receipt(...)` provider/plugin path and determine whether the Fsync provider can expose an authoritative ledger-backed receipt without changing startup reconciliation.
-2. Locate the narrow next-dispatch unresolved-effect blocker interception; test one lifecycle phase before any global gate ablation.
-3. Install an identical benchmark-only frozen/shadow recovery-option provider in all four cells so gate OFF cannot make recovery disappear by avoiding `needs_attention`.
-4. Execute deterministic `(gate OFF/ON) × (recovery OFF/ON)` from one copied ambiguous-effect RuntimeStore + independent provider ledger + authorization-consumption snapshot; assert identical pre-treatment evidence fingerprints.
-5. Measure realized-effect count, premature continuation/completion, Runtime effect state, recovery-option divergence, verifier result, `would_block`, rescue/disruption, then add a fresh-operation semantic-replay arm for duplicate/authorization-consumption metrics.
-6. Only after deterministic closure, adapt the real-LLM live evaluation with protected external effects and counterbalanced repeated runs.
-7. Continue searching for an already-powered real-model four-cell before claiming novelty.
-8. Preserve exact tested scope and a nonempty frontier; `global_completion=false`.
-
-Future runs must resolve a fresh SHA-only control tuple before semantic work and read this pointer first, followed only by the minimum own predecessor material needed for unresolved frontier continuity.
+1. Fresh-bootstrap root/config. If this role-local PR has landed, resolve this checkpoint from `main`; otherwise inspect only the source-qualified own branch/PR checkpoint.
+2. Test a true recurring-invocation reconstruction: persist checkpoint + resume-consumption ledger in role-local repository state, then on a later invocation exercise accepted resume plus duplicate/stale replay with CAS/readback.
+3. Add an ABA control with monotonic seq/generation despite semantically repeated payload values.
+4. Calibrate forecast switching (point estimate vs p90/slack) on deterministic duration traces; measure missed overruns vs unnecessary switches.
+5. Test repeated 429, missing `Retry-After`, and persisted capped backoff chosen once per checkpoint; verify restarts never retry early or resample silently.
+6. Preserve exact scope and nonempty Phase-1 frontier; `global_completion=false`.
