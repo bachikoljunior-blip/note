@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "control_revision": 25,
+  "config_revision": 6,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap_main_sha": "039a96d2dbf60e7e09c1c1d6d24885571c6658f0",
+  "semantic_freeze": {
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "post_start_head_observed": "8ab6378fcdd332d946118dac9d707dd603d7d425",
+    "new_control_semantics_read_after_drift": false
+  },
+  "public_exact_pin": {
+    "repository": "modelcontextprotocol/csharp-sdk",
+    "commit": "6fa3825973949a9c4f0cd8af344e15a8db09dc35",
+    "release_context": "v2.2.0"
+  },
+  "findings": {
+    "pre_task_creation_seam": {
+      "classification": "EXACT_SOURCE_CONFIRMED",
+      "detail": "C# SDK v2.2.0 exposes the experimental public McpServerOptions.Filters.Request.CallToolWithAlternateFilters pipeline. WithTasks appends its own alternate-result filter at the current end of that list. Exact docs and source state that alternate-result filters registered before Tasks run before task creation; ordinary CallTool filters run inside Tasks after durable task creation for task-backed calls.",
+      "implication": "A custom alternate-result filter registered before WithTasks can safely short-circuit round 1 with InputRequiredResult/requestState without reaching CreateTaskAsync or the tool. This is the smallest typed request-aware seam found; message filters are lower-level and ordinary AddCallToolFilter is too late."
+    },
+    "mrtr_composition_boundary": {
+      "classification": "REFINED",
+      "detail": "Tool-body MRTR is not a substitute for the preflight seam: exact WithTasks background execution catches InputRequiredException and records failure with 'MRTR and tasks cannot be composed via [McpServerTool] yet.' The preflight must therefore return InputRequiredResult directly from the pre-Tasks alternate-result filter rather than invoke ElicitAsync/SampleAsync from the task-backed tool body."
+    },
+    "deterministic_task_identity": {
+      "classification": "SOURCE_EQUIVALENT_DUPLICATE_RECOVERY_PROVED",
+      "detail": "IMcpTaskStore.CreateTaskAsync has no request/idempotency argument, but the custom store itself chooses the unique TaskId. A signed requestState can carry a server-minted op_id bound to method/tool/args/principal/expiry; on execute round, ambient verified identity can make custom CreateTaskAsync atomically create taskId=op_id plus intent metadata. Duplicate creation must fail before WithTasks reaches Task.Run. The pre-Tasks filter catches that conflict, exact-reads the existing task and returns an equivalent CreateTaskResult without invoking Tasks again.",
+      "concurrency": "Two identical execute-round retries can both pass the pre-check; atomic create gives one winner. The losing CreateTaskAsync raises before scheduling, the outer filter returns the same existing handle, so only the winner schedules. Mismatching intent/principal for an existing deterministic id fails closed.",
+      "stock_contract_compatibility": "IMcpTaskStore requires a unique task id but does not prescribe GUIDs; the bundled InMemoryMcpTaskStore happens to use Guid.NewGuid(). McpTaskInfo.TaskId and CreateTaskResult.TaskId are strings. Deterministic server-minted op_id is therefore compatible with the interface if uniqueness and durable visibility are enforced."
+    },
+    "create_before_schedule_gap": {
+      "classification": "STILL_OPEN_IN_STOCK_WITHTASKS",
+      "detail": "Exact RunAsTaskAsync first awaits durable _store.CreateTaskAsync, then installs cancellation state, then calls Task.Run. A process crash after CreateTaskAsync returns but before Task.Run is scheduled leaves a durable Working task with no execution. Deterministic-id response recovery finds and returns that task, but stock WithTasks does not redrive it, so duplicate-safe handle recovery alone can produce a permanent orphan.",
+      "safety_consequence": "Do not classify preflight+deterministic task identity as full crash-safe execution. It closes the unknown-handle/blind-retry duplication window but not the durable-create-to-volatile-schedule liveness window.",
+      "next_design_requirement": "A full protocol needs a durable execution claim/generation or transactional outbox/queue and an effect-bound idempotency/fencing check. If a retry is allowed to re-drive an expired claim, stale attempts must be unable to perform the external effect; stock WithTasks does not expose such a generation in McpTaskInfo or the tool request by itself."
+    },
+    "return_existing_handle": {
+      "classification": "EXACT_MAPPING_AVAILABLE",
+      "detail": "CreateTaskResult is public and contains TaskId/status/timestamps/TTL/poll interval/status message. Exact WithTasks private ToCreateTaskResult is a direct field mapping from McpTaskInfo, so the outer filter can reproduce the same wire alternate for a verified existing task using the public ResultOrAlternate.FromAlternate plus serializer metadata."
+    }
+  },
+  "source_evidence": [
+    {
+      "path": "docs/concepts/filters.md",
+      "blob": "80d6d465314874edfcde37273db697f1178404a8",
+      "claim": "alternate-result filters before Tasks run before task creation; ordinary filters run in background after task creation"
+    },
+    {
+      "path": "src/ModelContextProtocol.Extensions.Tasks/Server/McpTasksBuilderExtensions.cs",
+      "blob": "e61466a69b550ee0761e99e4541b5a6dd888a7a0",
+      "claim": "WithTasks appends alternate filter; CreateTaskAsync precedes Task.Run; tool-body InputRequiredException fails; exact ToCreateTaskResult mapping"
+    },
+    {
+      "path": "src/ModelContextProtocol.Extensions.Tasks/Server/IMcpTaskStore.cs",
+      "blob": "6851f21ac41464fba93fc5a02cfdcd109a9db314",
+      "claim": "CreateTaskAsync receives only CancellationToken; implementation chooses unique id and must make it durably visible before return"
+    },
+    {
+      "path": "src/ModelContextProtocol.Extensions.Tasks/Server/InMemoryMcpTaskStore.cs",
+      "blob": "d1014c110a601c0baed83cab93a4edacae104ad1",
+      "claim": "bundled development store chooses GUID, demonstrating id generation belongs to store implementation"
+    },
+    {
+      "path": "src/ModelContextProtocol.Core/Server/McpRequestFilters.cs",
+      "blob": "a1aad71123efd86935a1e3080adcaf35946cab76",
+      "claim": "public experimental CallToolWithAlternateFilters compose outside ordinary filters in registration order"
+    },
+    {
+      "path": "src/ModelContextProtocol.Core/Protocol/InputRequiredResult.cs",
+      "blob": "e82c3ec4db32d8d7135ba49e5da65df0a00b8fbb",
+      "claim": "requestState-only input_required result is a supported shape"
+    },
+    {
+      "path": "src/ModelContextProtocol.Core/Protocol/ResultOrAlternate.cs",
+      "blob": "8303978fe824f1c9019c80395b7c8680bbfed0fc",
+      "claim": "public FromAlternate seam for typed alternate results"
+    },
+    {
+      "path": "src/ModelContextProtocol.Extensions.Tasks/Protocol/CreateTaskResult.cs",
+      "blob": "7cbb5d134d377a7fbac54399bbd6a1ef06b786e9",
+      "claim": "public stable task handle/result fields"
+    }
+  ],
+  "executed_artifact": {
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T020526Z_mcp_pre_tasks_deterministic_identity_harness.py",
+    "local_execution": "13/13 PASS",
+    "fixtures": [
+      "preflight_zero_task",
+      "first_execute_one_schedule_one_effect",
+      "lost_response_retry_same_task_no_duplicate",
+      "concurrent_retry_atomic_conflict_one_schedule",
+      "create_before_schedule_orphan_window_exists",
+      "handle_recovery_does_not_redrive_orphan",
+      "tamper_rejected",
+      "principal_rejected",
+      "args_rejected",
+      "method_rejected",
+      "tool_rejected",
+      "expiry_rejected",
+      "preexisting_task_intent_mismatch_blocked"
+    ],
+    "scope": "stdlib source-equivalent protocol model; not compiled against the SDK because the local container could not resolve the external network proxy for cloning/restoring packages. Exact SDK source was inspected through the connected GitHub surface."
+  },
+  "revision": {
+    "worker_revision": 29,
+    "previous_worker_revision": 28,
+    "change": "located exact pre-Tasks typed seam; proved deterministic-id duplicate recovery under response loss/concurrent retry; discovered distinct durable-create -> volatile Task.Run orphan window"
+  },
+  "frontier": [
+    "At the same exact C# SDK pin, design the smallest durable execution-claim/generation layer that can recover a task created before Task.Run scheduling without allowing a stale or concurrent attempt to perform the external effect. Separate handle recovery, execution liveness, and effect exactly-once/idempotency as three independent properties.",
+    "Determine whether an ordinary pre-tool filter plus AsyncLocal/request-scoped generation can carry a custom store claim into the Task.Run execution and fail stale attempts before the tool; then construct a counterexample for lease expiry during a non-idempotent external effect. Prefer a real effect-side idempotency/CAS key over process-local fencing.",
+    "Convert the OpenHands v1.44.1 fenced pending-commit marker model into an exact-source patch/regression candidate preserving current unmatched-Action startup repair and intentional forks.",
+    "Audit another mutating open-source API with caller-supplied stable creation identity plus exact lookup/CAS, and check whether the connected Chat surface exposes the needed mutation/readback primitives."
+  ],
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative control/config first. If config revision 6 remains active, read own LATEST and this checkpoint only. Continue from the exact C# SDK v2.2.0 pin: model a durable task execution claim/generation around the confirmed pre-Tasks alternate-result seam and custom deterministic task store. Prove or refute recovery from the CreateTaskAsync-success/Task.Run-not-scheduled crash while preventing concurrent/stale effect execution; explicitly require effect-side idempotency/CAS when a lease can expire mid-effect. Then move to the OpenHands exact-v1.44.1 fenced-marker patch candidate and another caller-identity mutation API."
+}
