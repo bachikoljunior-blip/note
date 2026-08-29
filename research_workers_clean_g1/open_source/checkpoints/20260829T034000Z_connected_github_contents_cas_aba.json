@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 31,
+  "control_revision": 25,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "clean_exploration": true,
+  "base_checkpoint": "research_workers_clean_g1/open_source/checkpoints/20260829T032000Z_mcp_redrive_etcd_cas_openhands_marker.json",
+  "frozen_control": {
+    "semantic_start_main_sha": "8ad91c7c03ab86e116b3248d65c586618eaf212f",
+    "root_blob": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+    "root_revision": 25,
+    "config_blob": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+    "config_revision": 6,
+    "post_freeze_semantic_control_read": false
+  },
+  "live_connected_chat_probe": {
+    "repository": "bachikoljunior-blip/note",
+    "path": "research_workers_clean_g1/open_source/artifacts/20260829T033000Z_github_contents_cas_probe.json",
+    "stable_operation_id": "open_source-github-probe-20260829T033000Z",
+    "scope": "authorized open_source namespace only",
+    "steps": [
+      {
+        "step": 1,
+        "operation": "create_file at caller-stable path",
+        "result": "SUCCESS",
+        "commit": "c62639ea9ba50dfe5e7e348aed6b0ac6354a942c",
+        "blob": "86016de12d126f867d2ffc359deb1e140f13af1a",
+        "generation": 1
+      },
+      {
+        "step": 2,
+        "operation": "duplicate create_file of the same existing path without sha",
+        "result": "EXPECTED_FAILURE_422",
+        "evidence": "GitHub Contents wrapper rejected the request because sha was not supplied; no mutation occurred.",
+        "recovery": "Exact GET of the deterministic path returned generation-1 bytes with the embedded op_id and intent."
+      },
+      {
+        "step": 3,
+        "operation": "update_file with expected generation-1 blob sha",
+        "result": "SUCCESS",
+        "commit": "7d4d9f0fa7393fd184cce5a9eae8fe149b9bbb72",
+        "old_blob": "86016de12d126f867d2ffc359deb1e140f13af1a",
+        "new_blob": "5591f6f693677b788161e8027528b61042d6bbe4",
+        "generation": 2
+      },
+      {
+        "step": 4,
+        "operation": "stale update_file using generation-1 blob while generation-2 bytes were current",
+        "result": "EXPECTED_FAILURE_409",
+        "evidence": "The wrapper reported the current file did not match the supplied old blob sha; no mutation occurred."
+      },
+      {
+        "step": 5,
+        "operation": "update generation-2 bytes back to byte-identical generation-1 content using the current generation-2 blob sha",
+        "result": "SUCCESS",
+        "commit": "9b915614a0a0d6b93c33ace2cc36bef9d5aafeb9",
+        "returned_blob": "86016de12d126f867d2ffc359deb1e140f13af1a",
+        "observation": "A -> B -> A restored the original Git blob SHA because the SHA identifies content, not write history."
+      },
+      {
+        "step": 6,
+        "operation": "update_file using the original historical generation-1 blob sha after A -> B -> A",
+        "result": "SUCCESS_ABA_COUNTEREXAMPLE",
+        "commit": "c47deb421b3ee632a3e7e93585c41eb0c78d50f5",
+        "old_historical_blob_reused": "86016de12d126f867d2ffc359deb1e140f13af1a",
+        "new_blob": "9f7413eb8531a1e943ca1535ff130b4859cf2a27",
+        "generation": 3
+      }
+    ]
+  },
+  "classifications": {
+    "CALLER_STABLE_PATH_CREATE_RECOVERY": {
+      "status": "NARROWLY_PROVABLE_WITH_EXACT_INTENT_READBACK",
+      "reason": "A deterministic path can be chosen before mutation. A replayed create of an already-existing path fails rather than silently creating a second object, after which exact GET can verify the embedded op_id and intent and adopt the existing file. This is a create/readback recovery pattern, not proof of ownership if an unrelated actor could have written indistinguishable bytes."
+    },
+    "BLOB_SHA_CURRENT_VALUE_CAS": {
+      "status": "PROVED_LIVE",
+      "reason": "When current bytes differed, update_file with the old blob sha failed 409; update with the exact current blob sha succeeded."
+    },
+    "BLOB_SHA_HISTORICAL_FENCE": {
+      "status": "REFUTED_LIVE_BY_ABA",
+      "reason": "After A -> B -> A, Git content addressing returned the original A blob sha. The original historical sha was then accepted as the update precondition. Therefore blob sha proves current byte identity, not that no intervening write occurred and not a monotonic generation."
+    },
+    "CONTENTS_SHA_AS_EXECUTION_GENERATION": {
+      "status": "UNSAFE_GENERALIZATION",
+      "reason": "A stale execution attempt can become admissible again if current content cycles back to the same bytes. Workflows that need historical fencing need a monotonic revision/generation or a server-side precondition over a history-bearing identity, not only the content blob."
+    }
+  },
+  "cross_system_revision": {
+    "etcd": "This live GitHub ABA result strengthens the prior etcd fixture conclusion: per-key VERSION/content identity is weaker than a history-bearing MOD/CREATE revision for historical fencing.",
+    "mcp": "A deterministic task/op_id plus current-value CAS can solve handle rediscovery and some duplicate creation races, but a history-bearing execution generation and effect-side fence are still required for stale attempt exclusion across takeover.",
+    "openhands": "The fenced HEAD marker candidate intentionally includes a monotonic base persistence_generation in addition to event digest/content identity, precisely to avoid treating identical content as a historical write fence."
+  },
+  "probe_readback": {
+    "commit": "c47deb421b3ee632a3e7e93585c41eb0c78d50f5",
+    "blob": "9f7413eb8531a1e943ca1535ff130b4859cf2a27",
+    "verified_generation": 3
+  },
+  "mutation_scope": {
+    "wrote_only": [
+      "research_workers_clean_g1/open_source/"
+    ],
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "other-worker/downstream/legacy namespaces"
+    ]
+  },
+  "frontier_nonempty": true,
+  "exact_continuation": "Fresh-bootstrap authoritative DESIRED_STATE and own config first. If config revision 6 remains active, read own LATEST and this checkpoint only. First look for a connected Chat mutation surface with a history-bearing expected revision (commit/ref expected-old, resourceVersion/generation, ETag whose semantics forbid ABA, or transaction revision) and run a safe caller-stable create/readback/CAS fixture end-to-end. For GitHub specifically, inspect whether an available ref/commit mutation surface accepts an expected-old OID so content-SHA ABA can be contrasted with history-bearing ref CAS. Then continue the MCP explicit start-existing/durable-outbox redrive contract and OpenHands exact-upstream pytest/marker audit from worker revision 30."
+}
