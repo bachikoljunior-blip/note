@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 57,
+  "leaf_id": "fenced-application-gc-retention-root-concurrency",
+  "frozen_semantic_tuple": {
+    "control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 8,
+    "role_config_blob": "f6bade5e0f774a0623e615b1fc5f924475732d5c",
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_sha": "b7d7a2b031311a014bd7f4347218fe4a7cfb569c"
+  },
+  "public_and_capability_observations": [
+    {
+      "source": "https://docs.github.com/en/rest/git/trees",
+      "observation": "A Git tree can encode multiple path additions/deletions relative to a base tree; publishing requires creating a commit and then updating a branch ref."
+    },
+    {
+      "source": "https://docs.github.com/en/rest/git/commits",
+      "observation": "GitHub exposes creation of a commit from a tree SHA and explicit parent commit SHA."
+    },
+    {
+      "source": "https://docs.github.com/en/rest/git/refs",
+      "observation": "Update-reference with force=false enforces a fast-forward update and can return conflict; the ref is the publication boundary after tree/commit creation."
+    },
+    {
+      "source": "current Chat GitHub connector schema",
+      "observation": "This invocation exposes create_tree, create_commit and update_ref(force=false), so the candidate publication primitive is Chat-exposed rather than an unavailable external executor. The destructive GC path was not executed against primary/protected state."
+    }
+  ],
+  "model": {
+    "scenario_count": 384,
+    "strategy_evaluations": 1920,
+    "equal_weight_lattice": true,
+    "axes": {
+      "marked_dead": [false, true],
+      "current_root_at_final_snapshot": ["dead", "live"],
+      "root_change_after_check": ["none", "becomes_live"],
+      "target_path_after_check": ["same", "recreated"],
+      "sweeper_epoch": ["current", "stale"],
+      "branch_head_before_publish": ["same", "advanced"],
+      "delete_or_publish_response": ["observed_success", "applied_response_lost", "not_applied_response_lost"],
+      "repository_transport": ["ok", "rate_limit"]
+    },
+    "scope": "Repository-local retained checkpoint whose complete recovery-root membership, sweeper epoch, and target incarnation are represented in the same branch/tree publication domain. Complete repository rollback or roots outside that domain are excluded from the positive claim and remain unresolved."
+  },
+  "strategies": {
+    "age_only": {"deleted_live_root":144,"deleted_wrong_incarnation":24,"deleted_dead_copy":24,"leaked_dead_copy":0,"duplicate_delete_attempt":64,"fail_closed":192,"false_blockage":0,"avg_reads":1.0},
+    "mark_sweep_unfenced": {"deleted_live_root":72,"deleted_wrong_incarnation":12,"deleted_dead_copy":12,"leaked_dead_copy":36,"duplicate_delete_attempt":32,"fail_closed":96,"false_blockage":0,"avg_reads":1.0},
+    "recheck_then_contents_delete_sha": {"deleted_live_root":6,"deleted_wrong_incarnation":0,"deleted_dead_copy":6,"leaked_dead_copy":42,"duplicate_delete_attempt":4,"fail_closed":372,"false_blockage":18,"avg_reads":3.0},
+    "single_ref_commit_fenced": {"deleted_live_root":0,"deleted_wrong_incarnation":0,"deleted_dead_copy":3,"leaked_dead_copy":45,"duplicate_delete_attempt":0,"fail_closed":381,"false_blockage":21,"avg_reads":3.0026},
+    "no_delete_fail_closed": {"deleted_live_root":0,"deleted_wrong_incarnation":0,"deleted_dead_copy":0,"leaked_dead_copy":48,"duplicate_delete_attempt":0,"fail_closed":384,"false_blockage":48,"avg_reads":1.0}
+  },
+  "critical_slices": {
+    "root_flip_after_final_check": {"n":6,"definition":"marked dead, final check sees unrooted/current epoch/same target, then target becomes a live recovery root before deletion","recheck_then_contents_delete_sha":"6/6 deletes live root","single_ref_commit_fenced":"0/6 live-root deletion; 6/6 publication conflict/fail-closed because root change advances the same ref domain"},
+    "same_path_reincarnation_after_mark": {"n":6,"definition":"marked dead/currently unrooted, path is recreated before effect","age_or_unfenced_mark_sweep":"6/6 delete wrong incarnation","recheck_then_contents_delete_sha":"0/6 wrong-incarnation deletion via target-SHA fence","single_ref_commit_fenced":"0/6 wrong-incarnation deletion via ref publication conflict"},
+    "unrelated_head_advance": {"n":3,"definition":"target remains dead/same incarnation/current epoch but another branch-head change occurs before publish","recheck_then_contents_delete_sha":"3/3 safe delete","single_ref_commit_fenced":"0/3 delete; 3/3 false blockage/leak until retry on the newer head"},
+    "applied_response_lost_happy_path": {"n":1,"definition":"all strong guards pass, publication applies, response is lost","recheck_then_contents_delete_sha":"correct deletion but 1 duplicate delete attempt on blind retry","single_ref_commit_fenced":"correct deletion, 0 duplicate delete attempts by ref/transition readback reconciliation"}
+  },
+  "scope_safe_conclusion": {
+    "negative": "A per-file current-SHA delete fences target reincarnation but does not atomically fence a concurrent change to the recovery-root manifest; root recheck then Contents delete has a TOCTOU gap.",
+    "candidate": "When all recovery-root membership and target identity are in one repository ref authority domain, build one tree/commit that both removes the exact retained target and advances the GC/root manifest, with the pinned current commit as parent; publish only via update_ref(force=false). Any intervening root-set change, target reincarnation, or unrelated head advance makes the proposal non-fast-forward and must fail closed/recompute. Persist an applied_transition_id in the resulting manifest/tree so ambiguous response is reconciled by current-ref/tree readback before retry.",
+    "tradeoff": "The single-ref commit is safety-strong but conservative: unrelated head advances produce false blockage/leak until a retry rebuilds from the new head. In this lattice it leaked 45 dead copies versus 42 for recheck+per-file delete, while eliminating the latter's 6 live-root deletions.",
+    "not_proven": [
+      "No claim for recovery roots stored outside the same ref/tree authority domain.",
+      "No claim against complete repository rollback/restore that erases every current manifest and transition witness.",
+      "No destructive GC execution against protected/primary authority was performed; this is a finite model plus documented/exposed primitive audit."
+    ]
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "external_hosted_coordination_dependency": false,
+    "chat_exposed_primitive": "GitHub create_tree/create_commit/update_ref plus readback; repository rate-limit interruption remains fail-closed"
+  },
+  "global_phase1_closure_claimed": false,
+  "frontier": [
+    "GC throughput / hotspot leaf: batch multiple dead retained copies into one tree/commit and compare whole-root CAS contention against sharded retention manifests without reintroducing cross-domain root/delete races.",
+    "Complete repository rollback with loss of every transition witness remains unresolved and must not be papered over with paid/protected external coordination."
+  ],
+  "exact_continuation": "Model batched and sharded GC publication. Compare one global retention-root commit, prefix-sharded manifests with per-shard ref or path roots, deterministic batch IDs, and no-delete fallback. Adversaries: two sweepers selecting overlapping dead sets, concurrent LATEST/root promotion across shards, batch response loss, one shard rate-limited, target reincarnation, and unrelated head churn. Measure live-root deletion, duplicate batch/delete effects, dead-copy leakage, false conflicts/hotspot pressure, and recovery reads. Positive claims require root membership and deletion publication to share an atomic authority domain; otherwise retain/fail closed."
+}
