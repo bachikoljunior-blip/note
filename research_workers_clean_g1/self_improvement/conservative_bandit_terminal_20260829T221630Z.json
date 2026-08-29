@@ -1,0 +1,39 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-CONSERVATIVE-BANDIT-SAFETY-BUDGET-v1",
+  "precommit_blob":"517ca5ea53959be3a2793b79c2cbc30df15a4c8c",
+  "evaluated_at":"2026-08-29T22:16:30.541329+00:00",
+  "mechanism_id":"CLUCB-CUMULATIVE-BASELINE-SAFETY-BUDGET-REDUCTION",
+  "public_sources":[
+    {"url":"https://proceedings.neurips.cc/paper/2017/file/bdc4626aa1d1df8e14d80d345b2a442d-Paper.pdf","bound_semantics":"Kazerouni et al. define a conservative performance constraint requiring cumulative expected reward at every round to remain at least (1-alpha) times cumulative baseline reward. CLUCB plays the optimistic action only if the constraint holds for the worst parameter in its confidence set; otherwise it plays the baseline."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Use a fixed exact-reward baseline A=0.8 and bounded unknown B reward in [0,1]. Maintain durable accepted horizon t and accepted cumulative reward S_t. Before an uncertain B step t+1, require S_t >= 0.64*(t+1), which is a role-local deterministic worst-case lower-bound gate using B's known support lower bound0; otherwise play A.",
+    "relation_to_source":"This preserves the source control principle of allowing exploratory/optimistic action only when a conservative baseline-relative cumulative constraint survives a worst-case check. It does not reproduce CLUCB's linear confidence-set estimator.",
+    "literal_bandit_runtime_used":false,
+    "theorem_scope":"The source's high-probability expected-reward guarantees and regret bounds are not claimed for this realized deterministic toy trace."
+  },
+  "fixed_trace_results":[
+    {"phase":"t1-t4 baseline build","result":"PASS","details":"Four A rewards produce S4=3.2; safety floor=.64*4=2.56; B worst-case admission at t5 requires3.2>=3.2 and passes."},
+    {"phase":"t5 first exploration","result":"PASS","details":"B reward0 yields S5=3.2 exactly equal to floor3.2; constraint holds at boundary."},
+    {"phase":"t6-t9 recovery","result":"PASS","details":"B worst-case gate remains below threshold until four baseline A rewards rebuild S9=6.4; t10 B gate requires6.4>=6.4 and passes."},
+    {"phase":"t10-t11 discovery","result":"PASS","details":"B rewards1.0 then1.0 yield S10=7.4>=6.4 and S11=8.4>=7.04; conservative gate eventually permits and discovers the high-reward branch."}
+  ],
+  "unconstrained_control":{"result":"FAIL_AS_INTENDED","details":"Choosing uncertain B at t1 with bounded worst-case realized reward0 can yield S1=0 < floor.64, violating the precommitted safety floor."},
+  "invalid_event_results":[
+    {"event":"duplicate terminal key","result":"PASS","details":"No t/S update."},
+    {"event":"stale prior-scope reward1.0","result":"PASS","details":"Does not replenish safety budget."},
+    {"event":"transport-uncertain apparent reward1.0","result":"PASS","details":"UNKNOWN; does not replenish budget or advance horizon."},
+    {"event":"restart after t5","result":"PASS","details":"Reconstructs t=5,S=3.2 and leaves B blocked until baseline budget is rebuilt."}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed exact-reward synthetic trace only. No production safety, CLUCB regret, expected-reward confidence calibration, or general safe-exploration guarantee is claimed."
+}
