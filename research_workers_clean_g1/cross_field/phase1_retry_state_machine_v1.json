@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "name": "deterministic-content-CAS retry state machine",
+  "scope": "scheduled-Chat role-local repository transport; no hosted execution",
+  "inputs": ["stable op_id", "deterministic operation intent", "authoritative HEAD path"],
+  "invariants": [
+    "Only HEAD-reachable immutable objects are authoritative.",
+    "Every logical operation has a stable op_id across retries.",
+    "Immutable candidate object paths are deterministic from canonical content.",
+    "A HEAD update always uses the blob SHA fetched during the current reconstruction.",
+    "After any 409 on HEAD publication, reread HEAD and re-evaluate the operation; never blindly replay a candidate derived from stale state.",
+    "Repository API is transport only; no busy retry and no API-volume-as-compute.",
+    "No manual user or richer-mode rescue branch exists in this state machine."
+  ],
+  "states": {
+    "RECONSTRUCT": {
+      "action": "Fetch HEAD and the immutable root it references; reconstruct current logical state and HEAD blob SHA.",
+      "next": "CHECK_APPLIED",
+      "on_403_or_429": "RATE_LIMIT_WAIT",
+      "on_interruption": "RECONSTRUCT"
+    },
+    "CHECK_APPLIED": {
+      "action": "If op_id is already present in the authoritative root/HEAD applied set, return DONE_NOOP; otherwise derive the intended transition from current authoritative state.",
+      "if_applied": "DONE_NOOP",
+      "else": "ENSURE_IMMUTABLE_OBJECTS"
+    },
+    "ENSURE_IMMUTABLE_OBJECTS": {
+      "action": "Create each canonical immutable event/object at its deterministic content path.",
+      "on_create_success": "ENSURE_ROOT",
+      "on_409": "FETCH_AND_COMPARE_OBJECT",
+      "on_403_or_429": "RATE_LIMIT_WAIT",
+      "on_interruption": "RECONSTRUCT"
+    },
+    "FETCH_AND_COMPARE_OBJECT": {
+      "action": "Fetch the deterministic path. If stored canonical content equals expected content, reuse it; otherwise classify a deterministic-path integrity conflict and checkpoint unresolved.",
+      "if_equal": "ENSURE_ROOT",
+      "if_different": "INTEGRITY_CONFLICT"
+    },
+    "ENSURE_ROOT": {
+      "action": "Create the immutable transaction/root manifest at its deterministic content path; a 409 is resolved by fetch-and-compare exactly as for an object.",
+      "on_success_or_equal_existing": "PUBLISH_CAS",
+      "on_403_or_429": "RATE_LIMIT_WAIT",
+      "on_interruption": "RECONSTRUCT"
+    },
+    "PUBLISH_CAS": {
+      "action": "Update HEAD to the new root using the exact HEAD blob SHA from RECONSTRUCT.",
+      "on_success": "READBACK",
+      "on_409": "RECONSTRUCT",
+      "on_403_or_429": "RATE_LIMIT_WAIT",
+      "on_interruption": "RECONSTRUCT"
+    },
+    "READBACK": {
+      "action": "Fetch HEAD again. Succeed only if the expected op_id/root is authoritative; otherwise return to RECONSTRUCT.",
+      "if_expected": "DONE",
+      "else": "RECONSTRUCT",
+      "on_403_or_429": "RATE_LIMIT_WAIT"
+    },
+    "RATE_LIMIT_WAIT": {
+      "action": "Persist exact op_id, current deterministic candidate refs, last authoritative HEAD/root and exact next state. Respect retry-after when present; otherwise if remaining=0 wait through x-ratelimit-reset; otherwise wait at least one minute and exponentially increase delay for repeated secondary-limit failures. Resume at RECONSTRUCT rather than blindly repeating the last mutation.",
+      "manual_rescue": false,
+      "resume": "RECONSTRUCT"
+    },
+    "DONE_NOOP": {
+      "action": "Return success without mutation because the logical op_id is already authoritative."
+    },
+    "DONE": {
+      "action": "Return success after authoritative readback."
+    },
+    "INTEGRITY_CONFLICT": {
+      "action": "Checkpoint the deterministic-path mismatch as an unresolved child; do not overwrite the immutable object and do not route to richer-mode/manual rescue."
+    }
+  },
+  "source_rules": {
+    "github_contents": "https://docs.github.com/en/rest/repos/contents",
+    "github_rate_limits": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+  },
+  "tested_branches": {
+    "PUBLISH_CAS_success": "phase1_probe_20260829T1800JST TX_HEAD revision1->2",
+    "PUBLISH_CAS_409": "intentional stale old-blob update returned HTTP 409 and final HEAD stayed revision2",
+    "ENSURE_ROOT_409_same_deterministic_path_or_repo_head_movement": "a unique root create transiently returned HTTP 409 during concurrent repository-head movement; retry of identical deterministic path/content succeeded",
+    "CHECK_APPLIED_DONE_NOOP": "validated by reading final TX_HEAD containing tx-transfer-3-20260829T1807JST; a retry should perform no mutation",
+    "RATE_LIMIT_WAIT": "source-backed but not triggered in this run",
+    "interruption_after_immutable_create": "explicitly injected: object events/root candidate existed while HEAD remained revision1; fresh reconstruction ignored the unreachable candidate"
+  },
+  "cost_and_quota": {
+    "incremental_monetary_cost": 0,
+    "hosted_compute_or_monthly_credit_dependency": false,
+    "repository_api_dependency": "low-volume transport with request-rate limits and backoff"
+  }
+}
