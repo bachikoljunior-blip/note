@@ -1,0 +1,36 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-SLEEPING-BANDIT-ACTIVE-SET-v1",
+  "precommit_blob":"dfaab261b2680446e4575e544c801bfce7f03b74",
+  "evaluated_at":"2026-08-29T22:17:46.761257+00:00",
+  "mechanism_id":"SLEEPING-BANDIT-DURABLE-ACTIVE-SET-REDUCTION",
+  "public_sources":[
+    {"url":"https://research.ibm.com/publications/regret-bounds-for-sleeping-experts-and-bandits","bound_semantics":"Kleinberg, Niculescu-Mizil and Sharma study online decision problems in which the set of actions available to the decision algorithm varies over time, including partial-information multi-armed bandits."},
+    {"url":"https://link.springer.com/content/pdf/10.1023/A:1013689704352.pdf","bound_semantics":"UCB1 initializes each available machine once and thereafter compares current average reward plus sqrt(2 ln n/n_j); in this reduction that index arithmetic is reused only after exact active-set filtering."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Persist a time-varying exact eligible assignment set. Optimize only over that set; sleeping assignments retain prior same-scope accepted statistics but acquire no reward/count while inactive. Eligibility transitions allocate a fresh generation fence so late completions cannot act as current evidence.",
+    "new_arm_rule":"A newly active assignment with zero accepted observations receives one bounded initialization probe before UCB index comparison, matching the already validated UCB1 initialization principle.",
+    "literal_bandit_runtime_used":false,
+    "theorem_scope":"Sleeping-bandit regret bounds and UCB1 stochastic regret assumptions are not claimed for this deterministic role-local trace."
+  },
+  "fixed_trace_results":[
+    {"step":5,"result":"PASS","details":"B becomes inactive; active set is {A}; select A reward.8. A becomes n3,sum2.4; B remains n2,sum1.8; N=5."},
+    {"event":"restart","result":"PASS","details":"Reconstruct active set {A}, unchanged B statistics and the B generation fence."},
+    {"event":"late B old-generation completion","result":"PASS","details":"Rejected as stale/inactive; no B/N update and no eligibility change."},
+    {"step":6,"result":"PASS","details":"B wakes under same scope with new generation. Active set {A,B}; A index1.8358371534, B2.1686362412; select B reward1.0; B becomes n3,sum2.8,N=6."},
+    {"step":7,"result":"PASS","details":"New active C has n=0 and receives one initialization probe reward.6, becoming n1,sum.6,N=7."}
+  ],
+  "ablation_results":{"ignore_active_set":"FAIL_AS_INTENDED: a selector using historical means without eligibility filtering can choose inactive B at step5.","impute_sleeping_rewards":"REJECTED: would change B's later index without terminal evidence.","reset_stats_on_wake":"REJECTED_FOR_THIS_SCOPE: same-scope valid historical evidence is preserved while only generation changes."},
+  "invalid_event_results":{"duplicate_wake":"PASS_IDEMPOTENT","scope_mismatch_wake":"PASS_REJECT","transport_uncertain_eligibility":"PASS_KEEP_PRIOR_DURABLE_STATE_AND_UNKNOWN","inactive_reward_credit":"PASS_REJECT"},
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed synthetic eligibility-changing assignment trace only. No sleeping-bandit regret guarantee, availability model claim, or production scheduler correctness is asserted."
+}
