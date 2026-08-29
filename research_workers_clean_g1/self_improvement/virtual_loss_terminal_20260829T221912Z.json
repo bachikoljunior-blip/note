@@ -1,0 +1,37 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-PENDING-EVIDENCE-VIRTUAL-LOSS-v1",
+  "precommit_blob":"7edb98b12dc2df92957e417709039f5532f5e671",
+  "evaluated_at":"2026-08-29T22:19:12.885895+00:00",
+  "mechanism_id":"PARALLEL-MCTS-VIRTUAL-LOSS-PENDING-RESERVATION-REDUCTION",
+  "public_sources":[
+    {"url":"https://link.springer.com/article/10.1007/s10462-022-10228-y","bound_semantics":"A review of parallel MCTS describes virtual loss in shared-tree parallelization: when a process selects a node, a worst/penalized temporary outcome reduces its UCT attractiveness so later processes are discouraged from choosing the same node until the correct result is back-propagated."},
+    {"url":"https://www.scitepress.org/Papers/2017/62058/index.html","bound_semantics":"An empirical analysis treats virtual loss as a mechanism compensating for parallel tree-search overhead caused by concurrent path selection."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Represent each in-flight assignment evaluation as a durable pending reservation. Subtract a precommitted scheduling-only penalty 0.2 per pending reservation from the already validated UCB score. The penalty has no reward/credit semantics and is removed exactly once when the matching evaluation terminalizes or is explicitly aborted.",
+    "sequential_scope":"The tested trace is logical two-slot scheduling performed serially by recurring Chat; no actual external parallel worker or throughput capability is required.",
+    "literal_mcts_runtime_used":false,
+    "source_scope":"Public virtual-loss sources justify only the temporary discouragement-and-release control principle; the exact 0.2 penalty, durable generation fence and UCB mapping are role-local guards."
+  },
+  "fixed_trace_results":[
+    {"event":"slot1","result":"PASS","details":"A raw UCB1.9774100225 exceeds B1.8774100225; launch A@g1 and persist A pending=1 without changing terminal reward statistics."},
+    {"event":"slot2 ablation","result":"FAIL_AS_INTENDED","details":"Without pending reservation, reward statistics are unchanged and raw UCB selects A again, concentrating both slots on the same unresolved assignment."},
+    {"event":"slot2 virtual loss","result":"PASS","details":"A adjusted index1.7774100225 < B1.8774100225; select B and persist B@g1 pending=1."},
+    {"event":"restart","result":"PASS","details":"Reconstruct both reservations and adjusted scheduling scores; no reward, N increment or credit is invented."},
+    {"event":"A terminal","result":"PASS","details":"Exact A@g1 terminal reward.8 releases one A reservation, then updates A to n2,sum1.6,N3."},
+    {"event":"duplicate A terminal","result":"PASS","details":"Semantic-key idempotency prevents a second reservation release or reward update."},
+    {"event":"B abort then late completion","result":"PASS","details":"Abort releases B@g1 reservation once and fences generation; late B@g1 reward1.0 is stale and cannot underflow pending state or earn reward/credit."},
+    {"event":"transport uncertainty","result":"PASS","details":"Uncertain result leaves matching reservation pending until a separately valid terminal/abort transition and creates no guessed reward."}
+  ],
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed logical two-slot delayed-feedback trace only. No actual parallel execution, MCTS strength, throughput speedup, UCB regret, or production scheduling guarantee is claimed."
+}
