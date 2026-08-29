@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "supersedes": "research_workers_clean_g1/cross_field/phase1_retry_state_machine_v1.json",
+  "reason_for_revision": "A graph-check attempt found ENSURE_ROOT's 409 behavior was described only in prose, so v1 was not fully machine-checkable as a transition system. v2 makes every tested transient/error branch explicit.",
+  "name": "deterministic-content-CAS retry state machine",
+  "terminal_states": ["DONE_NOOP","DONE","INTEGRITY_CONFLICT","PRECONDITION_CONFLICT"],
+  "mutation_states": ["ENSURE_IMMUTABLE_OBJECTS","ENSURE_ROOT","PUBLISH_CAS"],
+  "states": {
+    "RECONSTRUCT": {
+      "on_success":"CHECK_APPLIED",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "CHECK_APPLIED": {
+      "if_applied":"DONE_NOOP",
+      "if_absent":"DERIVE_CANDIDATE"
+    },
+    "DERIVE_CANDIDATE": {
+      "if_precondition_true":"ENSURE_IMMUTABLE_OBJECTS",
+      "if_precondition_false":"PRECONDITION_CONFLICT"
+    },
+    "ENSURE_IMMUTABLE_OBJECTS": {
+      "on_all_created":"ENSURE_ROOT",
+      "on_409":"FETCH_AND_COMPARE_OBJECTS",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "FETCH_AND_COMPARE_OBJECTS": {
+      "if_equal":"ENSURE_ROOT",
+      "if_different":"INTEGRITY_CONFLICT",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "ENSURE_ROOT": {
+      "on_create_success":"PUBLISH_CAS",
+      "on_409":"FETCH_AND_COMPARE_ROOT",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "FETCH_AND_COMPARE_ROOT": {
+      "if_equal":"PUBLISH_CAS",
+      "if_different":"INTEGRITY_CONFLICT",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "PUBLISH_CAS": {
+      "on_success":"READBACK",
+      "on_409":"RECONSTRUCT",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "READBACK": {
+      "if_expected":"DONE",
+      "if_unexpected":"RECONSTRUCT",
+      "on_403_or_429":"RATE_LIMIT_WAIT",
+      "on_interruption":"RECONSTRUCT"
+    },
+    "RATE_LIMIT_WAIT": {
+      "manual_rescue":false,
+      "resume":"RECONSTRUCT"
+    },
+    "DONE_NOOP": {},
+    "DONE": {},
+    "INTEGRITY_CONFLICT": {},
+    "PRECONDITION_CONFLICT": {}
+  },
+  "operational_semantics": {
+    "RECONSTRUCT":"Fetch authoritative HEAD/root and current blob SHA.",
+    "CHECK_APPLIED":"Use stable op_id; already-authoritative operation is a no-op success.",
+    "DERIVE_CANDIDATE":"Derive candidates from current authority, never from stale planned snapshots.",
+    "ENSURE_IMMUTABLE_OBJECTS":"Create canonical objects at deterministic paths.",
+    "FETCH_AND_COMPARE_OBJECTS":"Reuse an existing deterministic path only if canonical content is equal.",
+    "ENSURE_ROOT":"Create canonical immutable root manifest.",
+    "FETCH_AND_COMPARE_ROOT":"Reuse existing deterministic root only if canonical content is equal.",
+    "PUBLISH_CAS":"Update HEAD with the blob SHA fetched in current RECONSTRUCT.",
+    "READBACK":"Success requires authoritative readback of expected op/root.",
+    "RATE_LIMIT_WAIT":"Persist exact continuation; obey retry-after/reset/backoff; resume at reconstruction rather than repeating mutation blindly."
+  },
+  "source_rules": {
+    "github_contents":"https://docs.github.com/en/rest/repos/contents",
+    "github_rate_limits":"https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+  },
+  "phase1_constraints": {
+    "manual_or_richer_rescue":false,
+    "api_volume_as_compute":false,
+    "incremental_monetary_cost":0,
+    "optional_monthly_trial_paid_quota_dependency":false
+  }
+}
