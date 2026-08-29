@@ -1,0 +1,45 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf":"ROOTV4-PARTIAL-SWITCH-COMPENSATION-v1",
+  "created_at":"2026-08-29T17:07:56+00:00",
+  "predecessor_sequence":174,
+  "test_kind":"PARTIAL_ASSIGNMENT_SWITCH_FORWARD_RECOVERY_VS_COMPENSATION",
+  "public_family_candidate":"saga/compensating-transaction recovery for partially completed assignment switches",
+  "public_semantics_status":"PRE_SOURCE_NOT_VERIFIED",
+  "fatal_gates":{
+    "F1":"immutable prior assignment/switch history is never rewritten or deleted; recovery is append-only qualification state",
+    "F2":"no richer-mode/manual-user/protected-primary/external hosted orchestrator, finite quota, or incremental monetary cost on accepted route"
+  },
+  "guards":[
+    "G1 each switch attempt has a durable instance id, source assignment, target assignment, and ordered step status before any semantic effect is credited",
+    "G2 recovery appends step/compensation events; it never edits or deletes prior switch evidence",
+    "G3 after interruption, if the target preconditions are still valid, resume from the first incomplete forward step rather than restart completed steps",
+    "G4 if target preconditions are no longer valid, compensate only already-completed reversible steps and do so in reverse order",
+    "G5 every compensation has a stable idempotency identity; duplicate replay cannot apply the semantic reversal twice",
+    "G6 a late stale completion from the old forward path cannot reactivate a target after that switch instance has entered compensation or terminal abort",
+    "G7 the last durably committed assignment remains authoritative until a distinct target-active terminal readback; nonterminal preparation never creates double-credit or zero-authority",
+    "G8 transport/CAS/readback failure is non-semantic and resumes from the last durable step state",
+    "G9 switch/recovery credit is zero until one exact terminal outcome is independently read back, and duplicate terminal replay cannot add credit",
+    "G10 bounded exact-scope exit with nonempty frontier and zero residual richer-mode/user execution, zero finite quota, zero incremental monetary cost"
+  ],
+  "fixed_trace":{
+    "initial":{"assignment":"A","switch_instance":"SW-8","target":"B","epoch":8},
+    "case_forward":{"durable_before_interrupt":["SW-8:INTENT","SW-8:B_PREPARED"],"interruption":"before B_ACTIVE","later_condition":"B preconditions remain valid","required_terminal":"B_ACTIVE; A superseded only after B_ACTIVE readback"},
+    "case_compensate":{"durable_before_interrupt":["SW-8:INTENT","SW-8:B_PREPARED"],"interruption":"before B_ACTIVE","later_condition":"new same-scope evidence invalidates B before terminal activation","required_terminal":"SW-8 ABORTED after idempotent compensation of B_PREPARED; A remains authoritative"},
+    "case_duplicate_compensation":{"input":"same compensation identity replayed after successful compensation","required":"NO_SECOND_SEMANTIC_EFFECT"},
+    "case_stale_forward":{"input":"late B_ACTIVE completion from SW-8 after SW-8 ABORTED","required":"REJECT_STALE_COMPLETION"}
+  },
+  "candidate_patterns":[
+    {"id":"SC-A","pattern":"blindly restart the whole switch after interruption"},
+    {"id":"SC-B","pattern":"always roll back immediately, even when safe forward completion is available"},
+    {"id":"SC-C","pattern":"durable saga-like step log; resume forward when valid, otherwise reverse-order idempotent compensation; terminal readback gates authority and credit"},
+    {"id":"SC-D","pattern":"delegate recovery to an external hosted workflow/orchestrator"}
+  ],
+  "score_rule":"Fatal F1/F2 failure => 0. Otherwise one point per G1-G10 PASS. Do not change cases, guards, or candidate patterns after public source read.",
+  "credit_rule":"Precommit and nonterminal recovery steps earn zero credit. At most one new leaf credit only after a source-qualified Chat-native reduction passes all fixed cases and immutable terminal evidence is independently read back.",
+  "frontier_nonempty":true,
+  "exact_next_action":"Read this precommit back. Then, before any other family selection, audit primary/public saga or compensating-transaction sources, bind only source-supported recovery semantics, assess zero dependency/quota/cost, execute SC-A..SC-D against the fixed cases, and seal/read back terminal evidence before credit."
+}
