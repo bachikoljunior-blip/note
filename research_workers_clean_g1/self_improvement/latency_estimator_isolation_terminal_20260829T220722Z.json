@@ -1,0 +1,43 @@
+{
+  "schema_version":1,
+  "role":"self_improvement",
+  "phase_id":"phase_1_chat_parity",
+  "assignment_task_id":"phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id":"ROOTV4-LATENCY-ESTIMATOR-STATE-ISOLATION-v1",
+  "precommit_blob":"994f8c7b126fe6791d1c742234a5ed00b99f6a34",
+  "evaluated_at":"2026-08-29T22:07:22.293485+00:00",
+  "mechanism_id":"QUIC-PER-PATH-RTT-ESTIMATOR-ISOLATION-REDUCTION",
+  "public_sources":[
+    {"url":"https://www.rfc-editor.org/rfc/rfc9002.html","bound_semantics":"RFC 9002 computes min_rtt, smoothed_rtt and rttvar for each network path; on a new path/estimator reset the first RTT sample initializes fresh state; packets sent on other paths do not contribute RTT samples to the current path."},
+    {"url":"https://www.rfc-editor.org/rfc/rfc9000.html#section-9.4","bound_semantics":"RFC 9000 section 9.4 states packets sent on the old path MUST NOT contribute to congestion control or RTT estimation for the new path, and normally resets the RTT estimator for the new path to initial values; port-only migration is an explicit exception, so this reduction binds only the conservative reset/isolation branch."}
+  ],
+  "chat_native_reduction":{
+    "mapping":"Treat exact (scope_id, assignment_id, assignment_epoch) as the independent adaptive-state context analogous only to QUIC path identity; do not claim protocol equivalence.",
+    "state_rule":"Persist a map of estimator state by exact context key. Restart reconstructs the map without merging keys.",
+    "sample_gate":"Only valid same-scope current-epoch terminal readbacks may update the current key. Stale, duplicate, scope-mismatched, transport-uncertain and timeout-only observations are excluded by the role-local evidence gate.",
+    "new_epoch_rule":"A new assignment epoch starts with fresh estimator state in this tested reduction; no cross-epoch inheritance is accepted here.",
+    "literal_quic_runtime_used":false
+  },
+  "fixed_trace_results":[
+    {"event":1,"result":"PASS","details":"A@7 first latency-2 sample initializes SRTT=2, RTTVAR=1, deadline=6."},
+    {"event":2,"result":"PASS","details":"A@7 second latency-2 sample yields SRTT=2, RTTVAR=.75, deadline=5."},
+    {"event":3,"result":"PASS","details":"Switch to B@8 does not merge A@7 estimator state."},
+    {"event":4,"result":"PASS","details":"B@8 first latency-10 sample initializes fresh state; unclamped deadline=30 and role-local bound yields 12."},
+    {"event":5,"result":"PASS","details":"B@8 second latency-10 sample remains independent; unclamped deadline=25 and bound yields 12."},
+    {"event":6,"result":"PASS","details":"Restart reconstructs distinct A@7 and B@8 estimator entries; no averaging or cross-key contamination occurs."},
+    {"event":7,"result":"PASS","details":"Late A@7 latency-2 observation is stale after switch and is not allowed to train current B@8 or future A epoch state."},
+    {"event":8,"result":"PASS","details":"Switch B@8 to new epoch A@9 starts a fresh estimator entry."},
+    {"event":9,"result":"PASS","details":"A@9 first valid latency-2 sample yields deadline=6, independent of B@8's high-latency regime."}
+  ],
+  "global_contamination_control":{
+    "result":"FAIL_AS_INTENDED",
+    "details":"If context keys are ignored, valid sample sequence [2,2,10,10,2] yields unclamped deadlines [6,5,13.25,18.5625,16.53125]; with the role-local upper bound the final A@9 deadline is 12 instead of the keyed fresh value 6. This demonstrates the precommitted contamination failure mode."
+  },
+  "guard_results":{"G1":"PASS","G2":"PASS","G3":"PASS","G4":"PASS","G5":"PASS","G6":"PASS","G7":"PASS","G8":"PASS","G9":"PASS","G10":"PASS_PENDING_READBACK","G11":"PASS","G12":"PASS"},
+  "provisional_outcome":"PASS_SUBJECT_TO_EXACT_READBACK",
+  "credit_rule":"At most one role-local credit after exact terminal readback; file creation alone earns zero credit.",
+  "residual_richer_mode_or_manual_execution_dependency":false,
+  "finite_optional_quota_dependency":false,
+  "incremental_monetary_cost":0,
+  "scope_limit":"Fixed role-local logical-latency trace only. The QUIC standards support per-path estimator separation; they do not prove this controller mapping, statistical optimality, restart persistence implementation correctness, or production timeout behavior."
+}
