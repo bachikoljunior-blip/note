@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "worker": "scientist_agents",
+  "recorded_at": "2026-08-29T14:38:00+09:00",
+  "topic": "Exact public SpeedRunner ASI replay implementation, nominal same-task replay binding, and remaining Figure-12 run-provenance gap",
+  "sources": [
+    {
+      "id": "speedrunner-public-revision",
+      "type": "official_github_commit",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "date": "2026-08-14T21:31:56Z",
+      "message": "Speedrunner: initial public release",
+      "observed_history": "The public repository commit collection currently contains this initial commit only; GitHub releases are empty."
+    },
+    {
+      "id": "speedrunner-asi-implementation",
+      "type": "official_github_file",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "path": "src/speedrunner/methods/wake_sleep/asi_sleep.py",
+      "blob": "1359d8b5759e5fc1f00e4df41d1b9774ab735419",
+      "facts": [
+        "The implementation explicitly ports the upstream ASI verification design and has allow_replay as a runtime switch.",
+        "Candidate induction mutates a deepcopy of the incoming codebook, not the live input object.",
+        "With allow_replay=false, proposed functions that pass static construction checks are immediately returned as the new codebook.",
+        "With allow_replay=true, a scripted test trajectory is required for every successful task shown to induction; missing tests cause return of the original codebook.",
+        "Each replay is executed on a fresh environment loaded by the same task_id, and must both satisfy env.check_solution and lexically invoke at least one newly added function.",
+        "Any failed replay returns the original codebook; all replays passing returns the candidate codebook. This is in-memory transactional commit/rollback."
+      ],
+      "persistence_gap": "The per-candidate test trajectories and replay results live in the local _ASIState and are not emitted as a structured durable manifest by ASISleep.update."
+    },
+    {
+      "id": "speedrunner-problem-loader-and-scienceworld-record",
+      "type": "official_github_files",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "paths": [
+        "src/speedrunner/core/environment.py",
+        "src/speedrunner/benchmarks/scienceworld/scienceworld_env.py"
+      ],
+      "blobs": [
+        "27609dc3b99a3bf1807e2279af28f97555eb2b0b",
+        "697f56633ca999a12537998962a64ce4bb5b6af3"
+      ],
+      "facts": [
+        "ProblemLoader maps replay task_id back to the exact dataset record and constructs a fresh environment before env.reset(record).",
+        "A ScienceWorld record binds task_name and variation_idx; the record id embeds the family (when present), task name, and variation index.",
+        "make_data uses random.Random(seed=42) for reproducible sampling within the installed ScienceWorld task/split enumeration.",
+        "Thus replay is bound to the same nominal dataset record, but not to serialized simulator state bytes or an exact observation/state digest."
+      ]
+    },
+    {
+      "id": "speedrunner-replay-config",
+      "type": "official_github_file",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "path": "configs/scienceworld/asi-replay-gpt-t3.yaml",
+      "blob": "195604cf737810ab7afdf3a3dd812b3a92e16615",
+      "facts": [
+        "method=asi",
+        "GPT-5.4-mini is used for rollout and sleep agents",
+        "allow_replay=true",
+        "task_id=[3], train_size=200, test_size=30, wake_cycle_length=1, eval_every=50"
+      ]
+    },
+    {
+      "id": "speedrunner-nonreplay-current-config",
+      "type": "official_github_file",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "path": "configs/scienceworld/asi-gpt-t3t4.yaml",
+      "blob": "5532872eebb8659ad1bde8634953fe7eb1f93b39",
+      "facts": [
+        "method=asi",
+        "GPT-5.4-mini is used for rollout and sleep agents",
+        "allow_replay=false",
+        "task_id=[3,4], train_size=200 and test_size=30 per task family, wake_cycle_length=1, eval_every=50"
+      ],
+      "boundary": "The current public tree has no asi-gpt-t3.yaml for GPT non-replay task-3-only. Therefore the two currently named config files cannot themselves serve as a one-field matched run manifest for Figure 12, even though the paper states algorithmically that all other ASI components were left unchanged."
+    },
+    {
+      "id": "speedrunner-dependency-surface",
+      "type": "official_github_file",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "path": "requirements.txt",
+      "blob": "0feca11531bb3fb6bb60c50291e440a9127f449a",
+      "claim": "The public requirements specify 'scienceworld' without a version or artifact hash."
+    },
+    {
+      "id": "speedrunner-artifact-persistence-surface",
+      "type": "official_github_files",
+      "repository": "JHU-CLSP/speedrunner",
+      "revision": "1f041a9b0331dc8e23cbc710d7e51a8443ba32bc",
+      "paths": [".gitignore", "src/speedrunner/methods/wake_sleep/loop.py"],
+      "blobs": ["4b65a67d1f8e14711d498d4f7b84c23ce4394eb9", "026d236af186cc49c9e8363a22660e1b2804aa49"],
+      "facts": [
+        "The wake/sleep loop saves codebook snapshots and generic checkpoints into the run directory.",
+        "Although it passes a sleep_trace_path argument to the sleep strategy, ASISleep.update accepts and ignores unmatched kwargs and does not write its replay test trajectories/results to that path.",
+        "The repository gitignores /runs/, /logs, *.log, /data and output directories, so normal run logs/checkpoints are absent from the public Git tree."
+      ]
+    },
+    {
+      "id": "scienceworld-public-stochasticity",
+      "type": "official_github_issue",
+      "repository": "allenai/ScienceWorld",
+      "issue": 33,
+      "title": "Heat transfer is stochastic",
+      "opened": "2022-11-04T19:26:08Z",
+      "closed": "2026-08-19T14:39:29Z",
+      "facts": [
+        "Maintainer reproducer states that the same task, variation, simplification and command sequence could yield different outcomes: steam missing in 6/8 runs in one repetition and 4/8 in another, versus expected 0/8.",
+        "Comments explicitly note remaining simulator non-determinism and use of unordered Set structures.",
+        "The issue remained open until after the SpeedRunner paper date (2026-08-11) and initial public code release date (2026-08-14)."
+      ],
+      "scope_warning": "This issue is a heat-transfer reproducer. It is evidence that nominal task+variation identity was not universally equivalent to exact simulator state/trajectory on the then-public ScienceWorld line; it is not evidence that SpeedRunner Figure-12 task 3 specifically encountered this bug."
+    },
+    {
+      "id": "scienceworld-pypi-current-stable",
+      "type": "official_pypi_project",
+      "observed_on": "2026-08-29",
+      "version": "1.2.3",
+      "release_date": "2025-07-13",
+      "claim": "PyPI's current stable ScienceWorld release is 1.2.3. An unpinned fresh install can therefore resolve differently from a version-specific evaluated environment; this observation does not identify what version the authors actually used."
+    }
+  ],
+  "derived_scope_limited_findings": [
+    {
+      "id": "p1-sa-099",
+      "claim": "The exact public SpeedRunner implementation closes the earlier mechanism-byte gap for the ASI adaptation: allow_replay is an explicit receiver/admission switch over a deepcopy-staged candidate codebook, with no-replay committing after static checks and replay mode requiring same-record fresh-environment tests before all-pass commit. This matches the paper's qualitative replay-verification intervention much more closely than upstream ASI code alone.",
+      "scope": "Exact current public adaptation bytes at the initial public release commit; still not a table/figure evaluated-run manifest."
+    },
+    {
+      "id": "p1-sa-100",
+      "claim": "Same nominal ScienceWorld problem_id is weaker than same replay state. SpeedRunner's replay reconstructs a fresh environment from the same task_name+variation_idx record, while its public ScienceWorld dependency is unpinned and the benchmark maintained a known non-deterministic same-command reproducer through 2026-08-19. Therefore a scientific admission proof should bind exact environment artifact identity and either serialized/restorable state or repeated exact-replay equivalence, not only problem_id.",
+      "scope": "General replay-proof provenance requirement. No claim that the Figure-12 task-3 runs were affected by the heat-transfer bug."
+    },
+    {
+      "id": "p1-sa-101",
+      "claim": "The public SpeedRunner tree does not yet make Figure 12 numerically replayable: the only current GPT replay config is task-3-only, the current GPT non-replay config covers task families [3,4], run/log directories are ignored, ScienceWorld is unpinned, and the structured ASI sleep path does not persist candidate test trajectories/results. Thus the paper-level 'all other ASI components unchanged' statement remains the strongest matched-intervention evidence, while file-level run identity and exact plotted values remain unresolved.",
+      "scope": "Absence on the observed initial public Git tree and release surface only; not a claim that the authors lacked internal run artifacts."
+    }
+  ],
+  "protocol_relation": {
+    "existing_gates": [
+      "TRANSACTIONAL_SKILL_ADMISSION_WITH_REPLAY_PROOF",
+      "SCIENCEWORLD_ACTION_PREFIX_REPLAY_EQUIVALENCE_GATE"
+    ],
+    "composition_rule": "A replay-verified admission packet should satisfy both transaction binding (candidate/pre-state/replay transcript/verifier/post-state) and environment replay equivalence (exact distribution/JAR + restorable-state or repeated exact-prefix evidence). A pass from a fresh nominally identical task instance is not, by itself, sufficient evidence of exact-state replay.",
+    "new_validator": "not added; this is a cross-protocol composition requirement rather than a new lifecycle state"
+  },
+  "next_actions": [
+    "Search public SpeedRunner project/author artifact surfaces for Figure-12 run directories, plotted numeric data, or a task-3-only non-replay run manifest.",
+    "Inspect SpeedRunner telemetry/checkpoint format to determine whether the codebook snapshot can at least reconstruct admitted skill state at each evaluation checkpoint despite missing replay transcripts.",
+    "If no raw Figure-12 artifact is public, specify the minimal extra replay-admission sidecar fields needed to make the current exact ASISleep implementation replay-auditable without storing full prompts in the receiver context."
+  ]
+}
