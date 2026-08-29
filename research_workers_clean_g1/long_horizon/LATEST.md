@@ -1,10 +1,16 @@
 # Long Horizon clean_g1 — latest pointer
 
-Authoritative latest checkpoint for this role-local Phase-1 branch:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_RECURRING_BOUNDARY_ABA.md`
+Canonical Phase-1 role branch:
+`clean-long-horizon-phase1-active`
 
-Immediate predecessor Phase-1 checkpoint:
-`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T1102JST_PHASE1_CONTINUATION_GUARD.md`
+Authority record:
+`research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
+
+Authoritative latest checkpoint on the canonical role branch:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_ACTIVE_BRANCH_RATE_SEED.md`
+
+Immediate predecessor checkpoint:
+`research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_RECURRING_BOUNDARY_ABA.md`
 
 Frozen authority:
 - transport: `exact_blob_two_pass`
@@ -14,17 +20,15 @@ Frozen authority:
 - `bootstrap_valid=true`
 
 Current result:
-- True later-invocation reconstruction succeeded from the prior role-local checkpoint.
-- A set-once resume-consumption claim was created/read back; duplicate creation was rejected HTTP 422.
-- Prior-invocation `LATEST` blob advanced once by exact CAS; stale replay of that old blob was rejected HTTP 409 and readback retained the new pointer.
-- Live ABA `A1 -> B2 -> A3` retained monotonic sequence/generation; stale A1 replay was rejected HTTP 409 even though semantic payload returned to A.
-- Synthetic eight-case forecast calibration: point rule missed 3 overruns with 0 unnecessary switches; p90/slack missed 0 with 2 unnecessary switches, within this declared trace only.
-- Persisted rate-limit trace covers repeated 429, explicit/missing Retry-After, restart-stable not-before/backoff, retry exhaustion switch/defer, slack-triggered switching and a zero-optional-quota dependency inventory.
-- Accepted route uses no richer-mode/Work/protected-primary/manual execution step, hosted runner, finite monthly/trial/paid compute credit, or optional quota-bearing rescue; incremental monetary cost is zero. Lightweight repository state transport remains rate-limit-aware.
+- Later-invocation checkpoint reconstruction, set-once resume consumption, duplicate rejection, stale-pointer CAS rejection, and A->B->A monotonic authority controls are live and persisted.
+- A fixed canonical role branch now resolves the observed two-branch ambiguity without protected main: exact `clean-long-horizon-phase1-active` plus `BRANCH_AUTHORITY.json` generation 1. The authority file exists on the canonical branch and not on the older timestamped role branch.
+- A live cross-invocation rate-limit state is seeded at `phase1/LIVE_RATE_LIMIT_STATE.json`, blob `a7b16b13f8db830bd6c0a538dce5e929359dffac`, with persisted `not_before=2026-08-29T22:50:00+09:00`, attempt 1 and server-derived 1800s delay.
+- Next eligible invocation must reconstruct that exact state and, only after eligibility, persist the planned missing-Retry-After attempt-2 transition with deterministic 120s backoff chosen once.
+- No richer-mode/Work/protected-primary/manual execution step or finite monthly/trial/paid compute credit is used; incremental monetary cost is zero. Lightweight repository state transport remains rate-limit-aware.
 
 Exact continuation:
-1. Deterministically resolve authority if multiple role-local Phase-1 branches exist, without using protected main as arbiter.
-2. Promote the advisory rate-limit trace to a live persisted multi-invocation state-transition probe.
-3. Test interruption after resume-claim creation but before pointer advancement, and the converse pointer-advanced/receipt-missing case.
-4. Begin predeclared forecast calibration from repeated own scheduled-Chat duration observations.
+1. Fresh-bootstrap root/config, then fetch exactly `clean-long-horizon-phase1-active`; validate `BRANCH_AUTHORITY.json` before `LATEST`.
+2. Reconstruct `LIVE_RATE_LIMIT_STATE.json`. If at/after persisted `not_before`, CAS-update to sequence 2 / retry attempt 2 with a planned synthetic 429 missing Retry-After and deterministic 120s backoff. If still early, preserve/defer with no state resampling.
+3. On a later invocation verify the 120s backoff persists unchanged; then exhaust retry budget into switch/defer with monotonic generation.
+4. Test claim-created/pointer-not-advanced and pointer-advanced/receipt-missing interruption recovery.
 5. Preserve exact scope and a nonempty frontier; `global_completion=false`.
