@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "leaf_id": "ROOTV4-PROBATIONARY-AUTHORITY-ROLLBACK-v1",
+  "evaluated_at": "2026-08-29T10:08:53-09:00",
+  "precommit_path": "research_workers_clean_g1/self_improvement/phase1_probationary_authority_rollback_precommit_v1.json",
+  "precommit_blob": "4d9f727b4c00e140aaab9d238b5f616effce66bc",
+  "source_binding": {
+    "mechanism": "event-sourced compensating rollback plus expected-revision optimistic concurrency",
+    "public_sources": [
+      {
+        "url": "https://learn.microsoft.com/azure/architecture/patterns/event-sourcing",
+        "claim_used": "Event sourcing keeps events append-only/immutable; undo is represented by a compensating event while the original event remains in history."
+      },
+      {
+        "url": "https://docs.kurrent.io/clients/rust/legacy/v4.0/appending-events",
+        "claim_used": "A stream append can require an exact expected revision; revision mismatch provides optimistic-concurrency rejection for stale writers."
+      },
+      {
+        "url": "https://docs.kurrent.io/clients/tcp/dotnet/21.2/appending",
+        "claim_used": "Duplicate appends can be idempotently recognized by event identity when optimistic concurrency is not disabled."
+      }
+    ],
+    "literal_external_runtime_accepted": false,
+    "literal_external_runtime_reason": "No EventStoreDB/Kurrent/Azure hosted service, SDK runner, external model, or cloud allowance is on the accepted route. The public systems supply mechanism semantics only.",
+    "chat_native_reduction": "Represent promotion, contradictions, and rollback as immutable role-local event artifacts. Treat current role-local sequence/blob identity as the expected revision and authority_epoch as a fencing token. Append a compensating rollback event instead of rewriting prior evidence."
+  },
+  "fixed_trace_result": [
+    {
+      "step": 1,
+      "input": "B terminal qualification",
+      "result": "append PromoteBProbationary; authority=B; status=PROBATIONARY; authority_epoch=11; A evidence retained",
+      "pass": true
+    },
+    {
+      "step": 2,
+      "input": "unique same-scope terminal contradiction C1 at epoch 11",
+      "result": "append C1; contradiction_count=1; B remains probationary authority",
+      "pass": true
+    },
+    {
+      "step": 3,
+      "input": "duplicate C1",
+      "result": "same evidence identity is idempotently ignored; contradiction_count remains 1",
+      "pass": true
+    },
+    {
+      "step": 4,
+      "input": "scope-mismatched contradiction Cx",
+      "result": "not appended to S1 rollback qualification set; contradiction_count remains 1",
+      "pass": true
+    },
+    {
+      "step": 5,
+      "input": "transport failure",
+      "result": "no semantic event appended; contradiction_count remains 1",
+      "pass": true
+    },
+    {
+      "step": 6,
+      "input": "unique same-scope terminal contradiction C2 at epoch 11",
+      "result": "append C2; threshold 2 reached; append compensating RollbackToA with current expected revision; authority=A; authority_epoch=12; B history retained",
+      "pass": true
+    },
+    {
+      "step": 7,
+      "input": "late B promotion completion carrying epoch 11 / old expected revision",
+      "result": "reject because authority epoch and expected revision are stale; authority remains A epoch 12",
+      "pass": true
+    }
+  ],
+  "guard_results": {
+    "G1": {"pass": true, "evidence": "Promotion and rollback are appended events; A and B history are not rewritten."},
+    "G2": {"pass": true, "evidence": "Promotion event is explicitly PROBATIONARY and rollback-capable."},
+    "G3": {"pass": true, "evidence": "Three-valid-terminal-observation probation window was fixed in the precommit."},
+    "G4": {"pass": true, "evidence": "Only same-scope S1 terminal contradiction events enter the rollback set."},
+    "G5": {"pass": true, "evidence": "Duplicate C1 shares a durable identity and does not increment the set."},
+    "G6": {"pass": true, "evidence": "Transport failure creates no semantic event."},
+    "G7": {"pass": true, "evidence": "Threshold 2 was frozen before public source audit."},
+    "G8": {"pass": true, "evidence": "Trace starts with A_scope_valid=true; invalid-fallback branch remains fail-closed."},
+    "G9": {"pass": true, "evidence": "Rollback advances authority_epoch from 11 to 12."},
+    "G10": {"pass": true, "evidence": "Late epoch-11 completion is rejected by epoch plus expected-revision mismatch."},
+    "G11": {"pass": true, "evidence": "This terminal artifact must be independently fetched before credit is added."},
+    "G12": {"pass": true, "evidence": "Accepted path is recurring Chat reasoning plus lightweight repository state transport only; no richer/protected/manual execution, no finite optional monthly/trial/paid quota, zero incremental monetary cost."}
+  },
+  "score": "12/12",
+  "terminal_status": "PASS_PENDING_READBACK",
+  "scope_limit": "Constructed role-local fixed trace only. This does not establish production EventStoreDB correctness, distributed transaction safety, or optimizer superiority.",
+  "quota_cost_assessment": {
+    "residual_richer_mode_or_manual_dependency": false,
+    "finite_optional_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_note": "GitHub repository API is used only as lightweight state/evidence transport; rate-limit interruption is checkpoint/retryable and API volume is not used as compute."
+  },
+  "new_credit_if_readback_matches": 1
+}
