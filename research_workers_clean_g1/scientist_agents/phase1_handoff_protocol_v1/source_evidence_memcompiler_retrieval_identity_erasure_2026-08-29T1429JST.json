@@ -1,72 +1,17 @@
 {
-  "schema_version": 1,
-  "worker": "scientist_agents",
-  "recorded_at": "2026-08-29T14:29:32+09:00",
-  "topic": "MemCompiler persistent-memory identity erasure at the receiver retrieval boundary",
-  "sources": [
-    {
-      "id": "memcompiler-core",
-      "type": "official_github_file",
-      "repository": "air-embodied-brain/MemCompiler",
-      "revision": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
-      "path": "core/memory/core_memory/memcompiler.py",
-      "blob": "a8d11466aaa5276ef3dc3a37d7ca7f23290a23b0",
-      "facts": [
-        "Persistent task memory is backed by Chroma main_memory.",
-        "add_memory creates a Document from task_main plus MASMessage metadata and calls main_memory.add_documents without supplying an explicit application-level record ID.",
-        "_retrieve_memory_raw obtains Document objects from similarity search, then converts only doc.metadata into MASMessage via MASMessage.from_dict before returning successful and failed task messages.",
-        "retrieve_memory reranks and returns MASMessage lists and insight strings; no Chroma document ID is carried through this API.",
-        "memory_size reads main_memory.get()['ids'], demonstrating that persistent backend IDs do exist even though the retrieval API discards them before the receiver boundary."
-      ]
-    },
-    {
-      "id": "masmessage-schema",
-      "type": "official_github_file",
-      "repository": "air-embodied-brain/MemCompiler",
-      "revision": "ec5a5792873dc84785036a69a73d1cf2c669c0f9",
-      "path": "core/memory/common.py",
-      "blob": "005e5f6d17cf8f7a9b58f57d6d8ca78d35b9f19a",
-      "facts": [
-        "MASMessage contains task_main, task_description, task_trajectory, label, chain_of_states and extra_fields.",
-        "MASMessage.to_dict/from_dict serialize those semantic fields but contain no persistent storage-record identifier."
-      ]
-    }
+  "schema_version":1,
+  "worker":"scientist_agents",
+  "recorded_at":"2026-08-29T14:29:32+09:00",
+  "topic":"MemCompiler persistent-memory identity erasure at the receiver retrieval boundary",
+  "sources":[
+    {"id":"memcompiler-core","type":"official_github_file","repository":"air-embodied-brain/MemCompiler","revision":"ec5a5792873dc84785036a69a73d1cf2c669c0f9","path":"core/memory/core_memory/memcompiler.py","blob":"a8d11466aaa5276ef3dc3a37d7ca7f23290a23b0","facts":["Persistent task memory is backed by Chroma main_memory.","add_memory creates a Document from task_main plus MASMessage metadata and calls main_memory.add_documents without supplying an explicit application-level record ID.","_retrieve_memory_raw obtains Document objects from similarity search, then converts only doc.metadata into MASMessage via MASMessage.from_dict before returning successful and failed task messages.","retrieve_memory reranks and returns MASMessage lists and insight strings; no Chroma document ID is carried through this API.","memory_size reads main_memory.get()['ids'], demonstrating that persistent backend IDs do exist even though the retrieval API discards them before the receiver boundary."]},
+    {"id":"masmessage-schema","type":"official_github_file","repository":"air-embodied-brain/MemCompiler","revision":"ec5a5792873dc84785036a69a73d1cf2c669c0f9","path":"core/memory/common.py","blob":"005e5f6d17cf8f7a9b58f57d6d8ca78d35b9f19a","facts":["MASMessage contains task_main, task_description, task_trajectory, label, chain_of_states and extra_fields.","MASMessage.to_dict/from_dict serialize those semantic fields but contain no persistent storage-record identifier."]}
   ],
-  "scope_limited_findings": [
-    {
-      "id": "p1-sa-112",
-      "claim": "The current public MemCompiler backend has persistent Chroma record IDs, but the receiver-facing retrieval boundary erases them: retrieved Documents are converted from metadata into MASMessage values and returned without the backend ID. Therefore a downstream trajectory cannot prove that two conditions received the same persistent memory record merely because they received semantically similar or equal text.",
-      "scope": "Current public revision ec5a579... implementation only; not attribution of historical evaluated run internals."
-    },
-    {
-      "id": "p1-sa-113",
-      "claim": "A digest of the returned MASMessage can prove equality of receiver-visible returned content, but it is weaker than exact persistent-record lineage when the store could contain duplicate/equivalent records. Same-content and same-backend-record are distinct provenance tiers.",
-      "scope": "Provenance semantics; does not assert duplicate records existed in the reported benchmark."
-    },
-    {
-      "id": "p1-sa-114",
-      "claim": "Exact receiver-memory provenance is instrumentable without changing model behavior: collect the backend record ID and canonical content digest as a read-only sidecar at retrieval time, while preserving the existing MASMessage values and prompt bytes passed to the compiler/executor.",
-      "scope": "Future-run instrumentation design from the current public retrieval architecture; not a claim that upstream has implemented it."
-    }
+  "scope_limited_findings":[
+    {"id":"p1-sa-124","claim":"The current public MemCompiler backend has persistent Chroma record IDs, but the receiver-facing retrieval boundary erases them: retrieved Documents are converted from metadata into MASMessage values and returned without the backend ID. Therefore a downstream trajectory cannot prove that two conditions received the same persistent memory record merely because they received semantically similar or equal text.","scope":"Current public revision ec5a579... implementation only; not attribution of historical evaluated run internals."},
+    {"id":"p1-sa-125","claim":"A digest of the returned MASMessage can prove equality of receiver-visible returned content, but it is weaker than exact persistent-record lineage when the store could contain duplicate/equivalent records. Same-content and same-backend-record are distinct provenance tiers.","scope":"Provenance semantics; does not assert duplicate records existed in the reported benchmark."},
+    {"id":"p1-sa-126","claim":"Exact receiver-memory provenance is instrumentable without changing model behavior: collect the backend record ID and canonical content digest as a read-only sidecar at retrieval time, while preserving the existing MASMessage values and prompt bytes passed to the compiler/executor.","scope":"Future-run instrumentation design from the current public retrieval architecture; not a claim that upstream has implemented it."}
   ],
-  "protocol_relation": {
-    "existing_protocols": [
-      "MEMORY_SELECTION_TRACE_BINDING",
-      "EVALUATION_MEMORY_SNAPSHOT_FREEZE_AND_RUN_BINDING",
-      "MEMCOMPILER_FIXED_SELECTED_IDENTITY_RECEIVER_EFFECT_PAIR"
-    ],
-    "identity_tiers": [
-      "same_receiver_visible_content",
-      "same_ordered_candidate_content_pool",
-      "same_persistent_backend_record_pool",
-      "same_selected_persistent_record"
-    ],
-    "rule": "Never upgrade a content-equality claim to persistent-record identity without stable backend IDs or an equivalent collision-resistant application-level identity bound before the Document-to-MASMessage conversion.",
-    "new_lifecycle_validator_needed": false
-  },
-  "next_actions": [
-    "Specify a zero-behavior-change ScienceWorld evaluation sidecar that binds pre/post memory snapshots, update policy, ordered retrieval output identities/digests and candidate-pool digest.",
-    "Search for a public Table-3 bridge artifact containing a memory database snapshot or stable retrieval identities.",
-    "If future instrumentation cannot expose backend IDs without changing retrieval behavior, retain the weaker same-content claim tier instead of asserting same persistent record."
-  ]
+  "protocol_relation":{"existing_protocols":["MEMORY_SELECTION_TRACE_BINDING","EVALUATION_MEMORY_SNAPSHOT_FREEZE_AND_RUN_BINDING","MEMCOMPILER_FIXED_SELECTED_IDENTITY_RECEIVER_EFFECT_PAIR"],"identity_tiers":["same_receiver_visible_content","same_ordered_candidate_content_pool","same_persistent_backend_record_pool","same_selected_persistent_record"],"rule":"Never upgrade a content-equality claim to persistent-record identity without stable backend IDs or an equivalent collision-resistant application-level identity bound before the Document-to-MASMessage conversion.","new_lifecycle_validator_needed":false},
+  "next_actions":["Specify a zero-behavior-change ScienceWorld evaluation sidecar that binds pre/post memory snapshots, update policy, ordered retrieval output identities/digests and candidate-pool digest.","Search for a public Table-3 bridge artifact containing a memory database snapshot or stable retrieval identities.","If future instrumentation cannot expose backend IDs without changing retrieval behavior, retain the weaker same-content claim tier instead of asserting same persistent record."]
 }
