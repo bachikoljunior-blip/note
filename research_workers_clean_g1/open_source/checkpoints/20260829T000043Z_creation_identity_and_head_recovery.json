@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "generation": "g1",
+  "created_at": "2026-08-29T00:00:43Z",
+  "control_revision": 25,
+  "control_path": "automation_control/DESIRED_STATE.json",
+  "control_blob_sha": "347c1182ef5fc24900b4d94cdeed0fe2e8202cae",
+  "config_path": "automation_control/roles/open_source.json",
+  "config_revision": 6,
+  "config_blob_sha": "3aeff2e6964079f0f2d607874f47422c54d8b30d",
+  "assignment_id": "phase1-clean-open-source-chat-capability-patterns",
+  "semantic_boundary": "own role-local clean state + public sources only; O, other-worker, downstream, legacy semantics excluded",
+  "finding": {
+    "title": "Pre-handle ambiguity has three distinct protocol families",
+    "families": [
+      {
+        "name": "server_minted_handle_after_create",
+        "example": "stock MCP Tasks",
+        "result": "PRE_HANDLE_AMBIGUITY",
+        "reason": "task may be durably created before CreateTaskResult reaches the requester; modern Tasks has no list operation to rediscover an unknown task id, so blind retry can duplicate task/effect unless application-level idempotency closes the gap"
+      },
+      {
+        "name": "client_minted_stable_identity_before_create",
+        "example": "Kubernetes metadata.name",
+        "result": "IDEMPOTENT_CREATE_RECOVERABLE",
+        "reason": "a deterministic client-chosen name can be retried as create-or-verify: on response loss/AlreadyExists, GET exact name and verify stable ownership/intent before adoption; UID distinguishes historical replacement and resourceVersion supplies later optimistic concurrency"
+      },
+      {
+        "name": "server_minted_preflight_continuation_before_effect",
+        "example": "MCP MRTR requestState used as a custom preflight fence",
+        "result": "IDEMPOTENT_CREATE_RECOVERABLE only with extra conditions",
+        "reason": "first round must perform no effect and return integrity-bound requestState; requester durably persists it; second round uses a custom durable atomic create-or-get keyed by a stable operation identity inside/bound to requestState; retries verify and return the existing task/effect"
+      }
+    ]
+  },
+  "mcp_current_protocol": {
+    "protocol_version": "2026-07-28",
+    "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/basic",
+      "https://modelcontextprotocol.io/extensions/tasks/overview",
+      "https://modelcontextprotocol.io/community/seps/1050-tasks",
+      "https://csharp.sdk.modelcontextprotocol.io/concepts/filters.html"
+    ],
+    "evidence": [
+      "JSON-RPC request id is a correlation identity, not a durable logical idempotency key; MRTR retries explicitly use a different JSON-RPC request id.",
+      "requestState is server-issued opaque continuation state returned with input_required; clients echo exact request params plus requestState on retry.",
+      "SEP-1050 recommends integrity protection and binding requestState to originating method, arguments, and principal/identity.",
+      "requestState only helps after it has reached and been persisted by the requester; direct Task creation still has a first-response-loss window.",
+      "A protocol-compliant preflight can move the stable continuation boundary before effects, but duplicate-safe creation still requires an atomic keyed create-or-get store/effect ledger; stock C# Tasks CreateTaskAsync interface previously pinned in own state has no such key.",
+      "C# server filters run before Tasks processing, which makes a custom pre-Tasks preflight/idempotency layer structurally plausible, not automatically provided."
+    ],
+    "negative": "Never treat JSON-RPC request id itself as a durable idempotency key. Never treat requestState as closing a response-loss window that occurs before requestState was received."
+  },
+  "kubernetes_benchmark": {
+    "sources": [
+      "https://kubernetes.io/docs/concepts/overview/working-with-objects/names",
+      "https://kubernetes.io/docs/reference/using-api/api-concepts/"
+    ],
+    "safe_recipe": [
+      "Choose deterministic metadata.name before mutation and include stable ownership/intent annotation or canonical intent hash.",
+      "POST create.",
+      "On success, persist returned UID and resourceVersion.",
+      "On lost response or AlreadyExists, GET exact same name and verify apiVersion/kind plus stable ownership/intent and relevant spec identity; adopt only on exact match.",
+      "On mismatch, fail closed as name collision.",
+      "Use resourceVersion for subsequent read-modify-write CAS; after delete/recreate, reject stale identity because UID changes."
+    ],
+    "counterexample": "generateName is server-generated and does not give the caller a pre-known stable logical create identity; blind retry may create another object."
+  },
+  "temporal_benchmark": {
+    "sources": [
+      "https://docs.temporal.io/references/api",
+      "https://api-docs.temporal.io/"
+    ],
+    "finding": "A stable client-chosen Workflow ID plus WorkflowIdConflictPolicy USE_EXISTING is a response-loss-recoverable start pattern for the workflow identity, but Temporal depends on persistent server/workers and therefore remains an external-executor benchmark rather than a direct Chat-native store mutation."
+  },
+  "openhands_recovery_design": {
+    "pin": {
+      "release": "v1.44.1",
+      "commit": "9d143aac3eeb5902327fb5c9cf79535d671a6b93"
+    },
+    "prior_source_level_gap": "ordinary durable user MessageEvent may exist while persisted non-null active leaf and last_user_message_id remain old; cold load trusts non-null persisted leaf and existing startup repair is specific to unmatched executable ActionEvent",
+    "unique_descendant_reconcile": {
+      "classification": "PARTIAL_BRANCH_INTENT",
+      "safe_subset": "advance only across exactly one structurally valid descendant chain and fail closed on forks",
+      "remaining_problem": "unique graph structure does not itself prove that the descendant was intended to become the active branch in a system supporting retrospective forks"
+    },
+    "fenced_commit_marker": {
+      "classification": "FENCED_COMMIT_RECOVERABLE within supported local-filesystem durability scope",
+      "write_protocol": [
+        "While holding ConversationLease generation G and expected old leaf L, durably write pending marker containing G, L, new event id E, parent/hash, and head-derived updates.",
+        "Persist event E with parent L and exact-readback/hash it.",
+        "Persist base_state active leaf E and derived last_user_message_id.",
+        "Clear marker only after exact verification."
+      ],
+      "restart_protocol": [
+        "If marker exists and head is L, E exists with exact expected parent/hash and no conflicting marker/fork, a takeover writer may finish the prior fenced intent then clear marker.",
+        "If head already equals E and E verifies, clear stale marker.",
+        "If E is missing, do not advance head; marker can be abandoned/cleared according to recovery policy.",
+        "If head moved to an incompatible F, multiple markers exist, or event/hash/parent conflicts, fail closed instead of tail-picking."
+      ],
+      "scope_limit": "Do not generalize the local file lease/ordering argument to NFS/network filesystems where the pinned source already warns flock is unreliable. Preserve the existing unmatched executable Action repair as a separate recovery class."
+    }
+  },
+  "classifier": {
+    "path": "research_workers_clean_g1/open_source/artifacts/creation_identity_recovery_classifier_20260829.py",
+    "blob_sha": "0388702c8dbdc67efea2f87c8eaf556d5f03f840",
+    "local_self_test": "10/10 fixtures passed",
+    "classes": [
+      "PRE_HANDLE_AMBIGUITY",
+      "UNSAFE_CORRELATION_ONLY",
+      "PARTIAL_PREFLIGHT",
+      "PARTIAL_CLIENT_KEY",
+      "IDEMPOTENT_CREATE_RECOVERABLE",
+      "EXTERNAL_EXECUTOR_RECOVERABLE_CREATE",
+      "ACTIVE_HEAD_AMBIGUITY",
+      "PARTIAL_BRANCH_INTENT",
+      "FENCED_COMMIT_RECOVERABLE"
+    ]
+  },
+  "control25_revision_note": "Previous control24 zero-residual-executor oracle is stale for positive acceptance. Under control25, exhaust all safely Chat-capable work first; a remaining protected/primary-writer capability may be recorded only as a generic downstream-verification-required boundary, never as CLEAN-final acceptance.",
+  "generic_residual_boundary": {
+    "status": "none asserted for this research leaf",
+    "reason": "The current work is public/source analysis plus role-local artifact/checkpoint mutation, all of which was Chat-capable. Future implementation against an external protected system must be capability-audited rather than assumed unavailable."
+  },
+  "acceptance_counterexamples": [
+    "Lost direct MCP CreateTaskResult plus no task id => unknown created task; blind retry unsafe.",
+    "JSON-RPC request id reused as logical operation key => blocked: correlation semantics do not establish durable idempotency.",
+    "MCP requestState received but custom store lacks atomic create-or-get => partial only.",
+    "MRTR preflight creates effect before client persists requestState => does not close first-response-loss.",
+    "Kubernetes deterministic name exists but intent/ownership mismatch => collision, fail closed.",
+    "Kubernetes same name after delete/recreate but UID differs => historical identity changed; reject stale adoption.",
+    "Kubernetes generateName response lost => caller lacks stable pre-known name; blind retry can duplicate.",
+    "OpenHands unique descendant under fork-capable history => structure alone insufficient to prove active intent.",
+    "OpenHands marker valid + event valid + stale head => recoverable completion candidate.",
+    "OpenHands marker/head/event conflict => BLOCKED; never choose log tail by recency."
+  ],
+  "frontier": [
+    "Prototype the MCP MRTR preflight create-or-get pattern against current protocol/source: determine the smallest custom server/filter/store surface that can durably bind requestState operation identity before built-in Tasks creation without inventing unsupported protocol semantics.",
+    "Turn the OpenHands fenced commit-marker matrix into an exact v1.44.1 patch/regression candidate while preserving unmatched Action repair and intentional fork semantics; keep source-level only if dependencies remain unavailable.",
+    "Find another open-source mutating API with a caller-supplied idempotency identity plus exact lookup/readback after response loss, preferably a surface plausibly exposed to Chat connectors.",
+    "Audit actually connected mutation surfaces for Kubernetes-like deterministic create + exact GET + CAS patterns and distinguish Chat-capable predecessors from any genuinely protected residual effect under control25."
+  ],
+  "termination": "Frontier persisted; semantic exploration stops at current invocation runtime boundary, not completion."
+}
