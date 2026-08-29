@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "part": 35,
+  "leaf": "cancellation_tombstone_retention_and_compaction",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_semantic_tuple": {
+    "note_main_sha": "68446d6322630d4ba65d734db1422c50a5782f78",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 6,
+    "role_config_blob": "9a3edbe40ee5cbf3a94fe3206606aa58841c955c",
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "scenario_count": 576,
+  "strategy_evaluations": 3456,
+  "strong_incarnation_slice": {
+    "conditions": "cell incarnation-sensitive && task/effect key incarnation-sensitive; complete repository rewind excluded",
+    "per_strategy": [
+      {"strategy":"permanent_tombstone","n":144,"unsafe":0,"false_block":0,"gc_done":0,"asymptotic_state":"O(cancelled reservations)"},
+      {"strategy":"gc_after_clean_no_floor","n":144,"unsafe":36,"false_block":0,"gc_done":72,"asymptotic_state":"small but unsafe under stale-cell restore"},
+      {"strategy":"per_cell_floor_gc","n":144,"unsafe":0,"false_block":0,"gc_done":32,"asymptotic_state":"O(stable logical cells)"},
+      {"strategy":"terminal_index","n":144,"unsafe":0,"false_block":0,"gc_done":72,"asymptotic_state":"O(terminal reservations) unless the index itself is compacted"},
+      {"strategy":"generation_watermark","n":144,"unsafe":0,"false_block":0,"gc_done":72,"asymptotic_state":"O(canonical task/effect key incarnations)"},
+      {"strategy":"fail_closed_no_gc","n":144,"unsafe":0,"false_block":0,"gc_done":0,"asymptotic_state":"O(cancelled reservations)"}
+    ]
+  },
+  "key_slices": {
+    "naive_gc_stale_cell_restore": {"n":36,"unsafe":36},
+    "per_cell_floor_full_before_gc": {"n":32,"unsafe":0,"gc_done":32},
+    "per_cell_floor_cell_recreate_without_incarnation": {"n":12,"unsafe":12,"gc_done":12},
+    "generation_watermark_strong_gc_attempts": {"n":72,"unsafe":0,"gc_done":72},
+    "generation_watermark_key_reuse_without_key_incarnation": {"n":72,"false_block":72},
+    "terminal_index_key_reuse_without_key_incarnation": {"n":72,"false_block":72}
+  },
+  "complete_same_domain_rewind_indistinguishability": {
+    "world_A": "The repository legitimately never advanced beyond S = GRANTED(g1).",
+    "world_B": "The repository advanced to CANCELLED(g1), compacted witnesses, then every allowed repository witness was completely rewound/restored to byte-identical S = GRANTED(g1).",
+    "current_allowed_observation": "identical byte state S in both worlds",
+    "consequence": "Any deterministic stateless decision using only allowed current same-domain state is identical. Admit preserves liveness in A but re-admits stale authority in B; reject preserves B safety but false-blocks A. A non-rewound monotonic assumption/witness is necessary to distinguish the pair.",
+    "repository_local_same_domain_solution_claimed": false
+  },
+  "mechanism_conclusion": {
+    "preferred_scoped_compaction": "Under the explicit no-complete-authority-rewind assumption, a monotonic generation watermark per incarnation-sensitive canonical task/effect key is the smallest tested compact witness: every old reservation generation at or below the watermark remains retired after its bulky tombstone is removed, including stale-cell restore, provided every authority path consults that watermark and stable cell incarnation identity is preserved.",
+    "per_cell_floor_alternative": "A monotonic retired-holder floor on every stable logical cell is also safe, but a spanning reservation cannot drop its tombstone until the full required cell set has durable floors. Partial floor propagation therefore retains the tombstone longer.",
+    "naive_cleanup_gc": "Deleting a reservation tombstone merely because cells are currently clean is unsafe if a stale holder row can later be restored.",
+    "key_incarnation": "Watermarks and terminal indexes must be scoped to a task/effect key incarnation; logical-key reuse without incarnation causes false rejection of the new history.",
+    "complete_rewind": "No witness stored entirely in the completely rewound repository state can distinguish never-cancelled from cancelled-then-rewound when the resulting bytes are identical."
+  },
+  "phase1_assessment": {
+    "repository_local_generation_watermark": "Chat-capable and zero incremental cost in the tested no-complete-rewind scope; uses lightweight repository state/CAS only and no hosted compute, paid/trial/monthly credit, external coordinator, or manual user execution.",
+    "branch_protection_as_anti_rollback": "Not accepted as a generic Phase-1 solution: it is protected/admin repository configuration, and GitHub documents plan-dependent availability for private repositories. It may be a deployment assumption in some environments but cannot satisfy the fixed zero-protected-step/zero-paid-dependency requirement generically.",
+    "finite_monthly_quota_credit_dependency": "none accepted",
+    "incremental_monetary_cost": "0",
+    "residual_richer_mode_or_manual_user_execution": "none for scoped repository-local watermark compaction",
+    "unresolved_children": [
+      "complete repository authority rewind/restore with no surviving anti-rollback witness",
+      "arbitrary protected external effect after AUTHORIZED"
+    ],
+    "global_phase1_closure_claimed": false
+  },
+  "scope_limit": "One cancelled reservation at a time over one to three stable logical cells; compaction witnesses are abstract monotonic fields. Full rewind is an explicit indistinguishability pair rather than a probabilistic failure model.",
+  "exact_continuation": "Anti-rollback redesign without protected/admin settings or paid/quota-bearing infrastructure. Audit whether any scheduled-Chat-visible, zero-cost, non-rewound state exists outside the repository authority bytes (for example immutable connector response identity, current Git object ancestry reachable without a remembered SHA, or automation-native durable state) while respecting CLEAN semantic-input rules. Falsify each candidate against a complete branch rewind where all repository current bytes and own role-local files revert. If no admissible surviving state exists, formalize the complete-rewind case as an unresolved capability boundary and move to the next non-conflicting concurrency leaf: crash-safe effect-status reconciliation for repository-local AUTHORIZED transitions."
+}
