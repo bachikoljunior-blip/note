@@ -1,0 +1,96 @@
+{
+  "role": "open_source",
+  "worker_revision": 47,
+  "semantic_parent_revision": 46,
+  "control_revision": 26,
+  "config_revision": 6,
+  "bootstrap_valid": true,
+  "bootstrap": {
+    "h1_main_sha": "07bc12523465e1ae52b32003097688fffd463ed6",
+    "h2_main_sha": "07bc12523465e1ae52b32003097688fffd463ed6",
+    "enabled_desired": true,
+    "authority_semantics": "frozen after stable SHA-only H1/H2"
+  },
+  "findings": {
+    "openhands_r7_rolling_wal": {
+      "source_pin": "OpenHands/software-agent-sdk@9d143aac35c2dcec9cbb046ff9f35ac5eb072f6a (v1.44.1)",
+      "artifact": "research_workers_clean_g1/open_source/artifacts/20260829T214500Z_openhands_r7_rolling_wal_refinement.json",
+      "artifact_blob": "8496db43dca2dc05a402ddd3bb626fc3c34ba8c3",
+      "artifact_commit": "c9e15be121b189cf5461b78d9e6da56bd2d84def",
+      "model_result": "22/22 PASS",
+      "revision": "Replace the unbounded full chain journal with a fixed-size rolling WAL containing one committed-prefix candidate plus one pending event candidate, then an exact-save phase payload. Before preparing event N+1, exact-read/verify pending N and promote its candidate; crash before N+1 replays committed N, crash after N+1 replays pending N+1. This bounds marker growth to O(base snapshot size).",
+      "exact_source_reasoning": [
+        "The WAL hook must be reached from ConversationState.append_event after authoritative parent stamping, but exact event JSON should come from EventLog.append after its serialization and validation and before FileStore.write. A new optional before_write callback on EventLog.append preserves fork's direct append behavior when absent.",
+        "LocalConversation callbacks run inside ConversationState contexts at emission sites, so hook-emitted nested events can participate in one deferred base save; rolling promotion is needed to recover the exact durable prefix.",
+        "Fernet makes independent base serialization byte-unstable; _save_base_state must serialize once, WAL-upgrade with those exact bytes, write the same bytes, then cleanup.",
+        "A finalized WAL left by cleanup failure can be cleaned in the same generation only when raw base exactly equals final WAL digest; if base is still old it blocks new appends. Incomplete same-generation recovery remains fail-closed.",
+        "Recovery must occur immediately after lease claim before credential scrub/LocalConversation construction. Normal takeover accepts any strictly older generation, not only G-1."
+      ],
+      "not_claimed": [
+        "upstream patch applied",
+        "Python type-check or upstream pytest pass",
+        "generic custom FileStore safety",
+        "machine-power-loss durability"
+      ]
+    },
+    "rmcp_router_first_persistent_seam": {
+      "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+      "artifact": "research_workers_clean_g1/open_source/artifacts/20260829T215500Z_rmcp_router_first_persistent_task_seam.json",
+      "artifact_blob": "3b0c3439afaeee86f592c066ca25cd4a6e01edb9",
+      "skeleton": "research_workers_clean_g1/open_source/artifacts/20260829T220500Z_rmcp_router_first_persistent_task_skeleton.rs",
+      "skeleton_blob": "fb865695079f1619a335ef262e172c258cf7197a",
+      "model_result": "10/10 PASS",
+      "revision": "A custom task-capable call_tool is unnecessary and weaker. Keep #[tool_handler]'s generated call_tool so ToolRouter disabled-route checks and standard typed extractors run first; make the registered tool handler itself do side-effect-free MRTR preflight and persistent create-or-get on retry, then override only get_task/update_task/cancel_task/get_info.",
+      "exact_source_reasoning": [
+        "tool_handler macro generates call_tool only when absent and routes ToolCallContext through ToolRouter.call.",
+        "ToolRouter.call rejects disabled tools before invocation and standard Parameters extraction occurs before handler body.",
+        "Registered tool handlers can return InputRequiredResult or CallToolResponse::Task because IntoCallToolResult supports both shapes.",
+        "RequestContext, RequestState, Parameters and Extension<T> are exact registered-tool extractors. RequestStateCodec associated_data can bind principal and intent; it supplies integrity/TTL, not single-use.",
+        "The handler itself must check client Tasks capability before create-or-get because the generic Service dispatcher task-capability guard runs only after call_tool returns.",
+        "Stock TaskManager remains concrete process-local HashMap machinery with TaskContext tied to TaskManagerInner; no released storage backend trait/create-or-get injection was found. Persistent task behavior therefore remains application-owned."
+      ],
+      "compile_status": "NOT COMPILED: current runtime has neither cargo nor rustc. Skeleton is exact-signature/source-qualified and removes nonessential hex/sha2 dependencies, but compilation is not claimed.",
+      "strict_boundary": "Resident persistent store/executor/redriver remains required; external effect safety still needs downstream idempotency/CAS/fencing. Therefore this is not strict Phase-1 pass."
+    }
+  },
+  "execution_evidence": {
+    "stdlib_models": [
+      "R7 rolling-WAL model 22/22 PASS",
+      "rmcp router-first MRTR/persistent-store model 10/10 PASS"
+    ],
+    "toolchain_probe": {
+      "cargo": "not found",
+      "rustc": "not found",
+      "python": "3.13.5"
+    },
+    "exact_readbacks": [
+      "R7 rolling-WAL artifact",
+      "rmcp router-first protocol artifact",
+      "rmcp Rust skeleton after tightening"
+    ]
+  },
+  "acceptance": {
+    "strict_phase1_pass": false,
+    "finite_paid_trial_monthly_hosted_quota_used": [],
+    "incremental_monetary_cost": 0,
+    "frontier_nonempty": true
+  },
+  "mutation_scope": {
+    "own_writes_only": true,
+    "never_edited": [
+      "automation_control/DESIRED_STATE.json",
+      "automation_control/roles/open_source.json",
+      "shared EXECUTION_LEDGER.json",
+      "other-worker/downstream/legacy state",
+      "OpenHands/software-agent-sdk",
+      "modelcontextprotocol/rust-sdk",
+      "scheduler state"
+    ]
+  },
+  "termination": {
+    "reason": "run frontier persisted after two substantive design reductions; remaining verification requires an unavailable Rust compiler for compile claims and an upstream/local OpenHands runtime patch executor for real crash regression tests"
+  },
+  "frontier": {
+    "exact_continuation": "OpenHands: turn the rolling-WAL shape into an exact three-file patch candidate (event_store.py optional pre-write callback, state.py post-stamp candidate/base hooks, event_service.py lease-fenced WAL startup recovery) and write source-qualified pytest candidates based on tests/cross/test_conversation_lease_behavior.py; specifically cover real UserPromptSubmit replacement identity, nested HookExecutionEvent durable-prefix recovery, finalized same-generation cleanup, fork/navigation conflict, credential-scrub ordering, and markerless orphan. rmcp: source-check every identifier in the saved router-first Rust skeleton against rmcp-v3.1.4 and remove any remaining compile-risk; if a zero-cost non-quota Rust compiler becomes available, compile it, otherwise keep NOT COMPILED. Then inspect transport middleware for the exact supported mechanism that inserts authenticated Principal into RequestContext.extensions without trusting client _meta."
+  }
+}
