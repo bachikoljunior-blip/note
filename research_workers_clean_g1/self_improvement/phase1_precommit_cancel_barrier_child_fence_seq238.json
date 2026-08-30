@@ -1,0 +1,39 @@
+{
+  "role": "self_improvement",
+  "phase": 1,
+  "sequence_candidate": 238,
+  "credit_delta": 0,
+  "leaf": "ROOTV4-CANCEL-BARRIER-CHILD-FENCE-v1",
+  "status": "PRECOMMITTED_NONTERMINAL",
+  "parent_sequence": 237,
+  "parent_credit_total": 86,
+  "mechanical_duplicate_audit": {
+    "scope": "own namespace only",
+    "result": "no material duplicate identified by exact-leaf and abort/cancel keyword checks"
+  },
+  "fixed_trace": [
+    {"step": 1, "state": "ACTIVE", "epoch": 12, "registered_children": ["c1", "c2"]},
+    {"step": 2, "event": "cancel_requested", "expect": "durable CANCELLING@12; authority/resource release remains blocked"},
+    {"step": 3, "event": "c1_terminal_success_after_cancel", "expect": "historical outcome only; no current promotion or authority resurrection"},
+    {"step": 4, "event": "c2_transport_unknown", "expect": "UNKNOWN is not acknowledgement; remain CANCELLING and blocked"},
+    {"step": 5, "event": "durable_generation_fence_advance", "new_epoch": 13, "expect": "all epoch-12 current-side effects fenced"},
+    {"step": 6, "event": "c2_late_terminal_at_epoch12", "expect": "may close historical bookkeeping but cannot mutate epoch-13 authority"},
+    {"step": 7, "event": "all_registered_epoch12_children_terminal_or_fenced", "expect": "CANCELLED terminal becomes eligible; release only after terminal evidence readback"},
+    {"step": 8, "event": "new_assignment_epoch13", "expect": "allowed only after cancellation barrier terminal readback"}
+  ],
+  "precommitted_guards": [
+    "cancel intent must be durably represented before release or reassignment",
+    "late success after cancellation begins cannot resurrect current authority",
+    "transport uncertainty cannot count as child acknowledgement",
+    "release requires every registered old-generation child to be terminal or fenced",
+    "old-generation completions cannot mutate the new generation",
+    "credit and pointer advancement require terminal artifact exact readback"
+  ],
+  "precommitted_ablations": [
+    "remove durable cancellation marker: late child success can resurrect authority",
+    "treat transport-unknown as acknowledgement: release can occur while an old child still acts",
+    "remove generation fence: late old-generation completion can mutate the replacement assignment"
+  ],
+  "acceptance_scope": "constructed role-local fixed-trace controller-mechanism conformance only; no production or formal-verification claim",
+  "continuation": "Read only minimal public cancellation/finalization semantics after this precommit is exact-read back; bind mechanism to the fixed trace; seal and exact-read back one terminal artifact; then and only then update role state/LATEST and credit if all precommitted guards pass. Do not start a second leaf."
+}
