@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 58,
+  "semantic_parent_revision": 57,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 8,
+  "lifecycle_control_revision": 1,
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_main_ref_h1_h2_stable",
+    "frozen_main_sha": "d4e7433f341cb2432c00d5bdd798a807018d6a3e",
+    "instruction_manifest_blob": "69d051afef01b81aed99eebbd49cf556f8c2a7e5",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "sanitized_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "own_role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d"
+  },
+  "slice": {
+    "kind": "single_bounded_source_audit",
+    "leaf": "Inspect exact rmcp-v3.1.4 ServerHandler tasks/get, tasks/update, tasks/cancel seams plus stock TaskManager/TaskContext ownership to test application-owned durable task-store decoupling while tool creation stays router-first.",
+    "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+    "sources": [
+      {"path":"crates/rmcp/src/handler/server.rs","exact_commit":"4a738b9dd99eaca418b614afa433a0cbdaf8d056"},
+      {"path":"crates/rmcp/src/task_manager.rs","exact_commit":"4a738b9dd99eaca418b614afa433a0cbdaf8d056"}
+    ],
+    "result": "SOURCE_QUALIFIED_PARTIAL_POSITIVE_WITH_STOCK_CONTEXT_BLOCKER",
+    "finding": "At the released ServerHandler boundary, tasks/get, tasks/update and tasks/cancel are ordinary overridable handler methods taking only protocol params plus RequestContext<RoleServer>; the generic dispatcher capability-checks and then calls self.get_task/self.update_task/self.cancel_task. Their signatures do not require TaskManager or TaskContext, and the defaults are method_not_found. Therefore an application can keep router-first tools/call while implementing these three protocol methods against its own durable task store without coupling those handlers to stock TaskManager. However stock TaskContext is not backend-pluggable: it owns private task_id plus Arc<Mutex<TaskManagerInner>>, TaskManagerInner is private, and TaskManager::spawn constructs that context internally after allocating a fresh UUID task in its own in-memory map. The released public API therefore does not let an application reuse stock TaskContext/request_input/cancellation against an application-owned durable store.",
+    "architecture_boundary": "Protocol-method decoupling is positive; stock execution-context reuse is blocked. A custom persistent create-or-get path can override task query/update/cancel, but restart-safe execution, input routing and cooperative cancellation require an application-owned executor/context (or an SDK change), not merely a custom store behind stock TaskContext.",
+    "scope_limits": [
+      "No claim that a full durable executor is implemented or compile-tested in this runtime.",
+      "No claim that custom task creation is yet proven independent of TaskManager; the next slice must pin CallToolResponse::Task/CreateTaskResult construction and registered-tool return conversion at the same exact release.",
+      "Resident execution/redrive and external-effect idempotency/fencing remain separate unresolved proof obligations."
+    ]
+  },
+  "acceptance_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": "UNRESOLVED_OVERALL_ROUTE: an application-owned resident executor/context is still required for restart-safe execution and in-task input/cancellation; no accepted Chat-native replacement has been proven.",
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0
+  },
+  "clean_exploration": {
+    "forbidden_semantic_inputs_used": false,
+    "shared_ledger_read": false,
+    "scheduler_mutation_by_worker": false
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: pin exact rmcp-v3.1.4 model/router return seams for constructing CallToolResponse::Task(CreateTaskResult) from an application-owned durable Task record, without invoking TaskManager::spawn. Verify whether a registered router-first tool handler can return that task handle through the released conversion surface; if not, record the exact type/API blocker. Do not start OpenHands or any second optional leaf in that invocation."
+}
