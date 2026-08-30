@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "role": "reasoning",
+  "task_id": "P1-CLEAN-REASONING-11",
+  "slice_id": "P1-CLEAN-REASONING-11-durable-effect-commit",
+  "title": "DURABLE_EFFECT_COMMIT_PROTOCOL",
+  "status": "bounded_slice_checkpointed_recurring_open",
+  "control_snapshot": {
+    "desired_revision": 26,
+    "enabled_desired_observed": true,
+    "phase1_open": true,
+    "instruction_manifest_verified": true,
+    "role_control_verified": true
+  },
+  "clean_exploration": true,
+  "question": "How should the current controller make externally effectful tool execution replay-safe across retries, ambiguous network outcomes, crashes, delegation, and resumptions without pretending that workflow-state rollback equals world-state rollback?",
+  "hypothesis": "Treat each external effect as a durable commit protocol rather than a transient tool call: persist a canonical effect intent before invocation, bind retries to provider-scoped idempotency or a durable receipt query, classify unknown outcomes as unresolved rather than failed, and distinguish compensation from rollback. This should prevent duplicate effects and semantic replay without requiring the model itself to infer whether a timed-out call committed.",
+  "revision": {
+    "primary": "DURABLE_EFFECT_COMMIT_PROTOCOL",
+    "subcontracts": [
+      "EFFECT_COMMIT_PROTOCOL",
+      "AMBIGUOUS_EFFECT_QUERY_BEFORE_RETRY",
+      "IDEMPOTENCY_SCOPE_AND_TTL",
+      "COMPENSATION_IS_NOT_ROLLBACK"
+    ]
+  },
+  "evidence": [
+    {
+      "source": "Google Cloud Workflows retry documentation",
+      "url": "https://docs.cloud.google.com/workflows/docs/reference/syntax/retrying",
+      "source_type": "current_primary_platform_documentation",
+      "evidence_level": "documented_runtime_semantics",
+      "observed_date": "2026-08-30",
+      "claim": "Google Workflows explicitly distinguishes retry policies for idempotent and non-idempotent steps. Its idempotent default retries 429/502/503/504 plus connection/timeout errors, whereas the non-idempotent default is narrower. The error taxonomy further warns that a ConnectionError after connection establishment may mean the message was delivered and retries might not be idempotent, while ConnectionFailedError means connection was not established and retries are idempotent.",
+      "negative_or_limit": "A retry predicate only constrains when a workflow repeats a call; it does not itself prove exactly-once external effects or resolve a provider-side commit whose response was lost."
+    },
+    {
+      "source": "Stripe API idempotency and advanced error handling documentation",
+      "url": "https://docs.stripe.com/error-low-level",
+      "source_type": "current_primary_platform_documentation",
+      "evidence_level": "documented_provider_semantics",
+      "observed_date": "2026-08-30",
+      "claim": "Stripe documents the ambiguous-network-outcome problem directly: if the client does not know whether the server received a mutation, retrying with the same idempotency key and parameters lets the server reconcile the attempt. Stripe API v1 treats replays within a 24-hour retention window as the same operation; API v2 scopes replay to the same API/account or sandbox and extends the window to 30 days. This makes key scope and retention part of the correctness contract, not incidental metadata.",
+      "negative_or_limit": "Idempotency semantics are provider- and API-version-specific. Reusing a pruned v1 key can create a new request, and new keys after an indeterminate server error can duplicate side effects. Controller policy must therefore record provider/API/scope/expiry with the effect intent."
+    },
+    {
+      "source": "Microsoft Durable Task programming model",
+      "url": "https://learn.microsoft.com/th-th/azure/durable-task/common/programming-model-overview",
+      "source_type": "current_primary_platform_documentation",
+      "evidence_level": "documented_runtime_semantics",
+      "observed_date": "2026-08-30",
+      "claim": "Durable Task activities have at-least-once execution: if an activity completes but its result is not recorded, the runtime may run it again. Microsoft therefore recommends idempotent activity logic or checking for existing results before creating new resources. This is the exact crash window a reasoning controller must model when durable orchestration wraps effectful tools.",
+      "negative_or_limit": "At-least-once orchestration durability does not imply exactly-once external effects. The activity or sink still needs deduplication or externally verifiable state."
+    },
+    {
+      "source": "Beyond Single-Use Tokens: Durable Authorization State for Replay-Resistant LLM Agent Actions",
+      "url": "https://arxiv.org/abs/2608.01710",
+      "source_type": "2026_public_research",
+      "evidence_level": "agent_specific_mechanism_and_experimental_evidence",
+      "submitted": "2026-08-03",
+      "claim": "The paper defines semantic replay: replanning, retry, delegation, concurrency, confirmation replay, or crash recovery can exceed one authorization instance even when each token identifier is single-use. Its CapLease and equally stateful server-ledger control prevent duplicate admission, and with an idempotent sink prevent duplicate external effects, by retaining monotonic durable state over the canonical action, confirmation, and remaining execution budget.",
+      "negative_or_limit": "Durable authorization state and external-effect idempotency solve different layers. Preventing duplicate admission alone is not a guarantee against duplicate world effects unless the sink or effect protocol is also replay-safe."
+    },
+    {
+      "source": "Atomix: Timely, Transactional Tool Use for Reliable Agentic Workflows",
+      "url": "https://arxiv.org/abs/2602.14849",
+      "source_type": "2026_public_research",
+      "evidence_level": "agent_runtime_mechanism_with_fault_injection",
+      "submitted": "2026-02-16",
+      "claim": "Atomix separates tool execution from effect settlement, records idempotency keys and effect classes, gates bufferable/irreversible effects until commit, and compensates already-externalized reversible effects on abort. Under heavy fault injection on tau-bench it reports 57% clean task success while non-Checkpoint-Replay baselines fall to 0-7%; under an irreversible-send test it reports 0/500 invalid sends and releases all 500 valid ones. It explicitly notes that restoring agent memory cannot roll back an email, booking, or remote API update.",
+      "negative_or_limit": "The prototype does not claim distributed crash-safe exactly-once; crash-safe deduplication is unit-tested rather than established by the main evaluation. Compensation can fail, reversible-with-cost actions can leave residue, and multiple heterogeneous irreversible releases cannot be made atomically above the tool layer."
+    }
+  ],
+  "synthesis": {
+    "mechanism": "Controller durability should straddle two ledgers: (a) authorization consumption, which prevents semantic re-admission of the same authorized action, and (b) external effect settlement, which prevents or resolves duplicate world mutations. A checkpoint/retry engine provides neither by itself.",
+    "controller_rule": "Before any externally effectful call, durably persist a canonical effect intent. If the provider supports scoped idempotency, invoke with the persisted key. If the result is ambiguous, first query the provider receipt or target postcondition using the same identity; retry only inside a live dedupe domain or when absence is proven. Persist the effect receipt and next controller transition before allowing later dependent effects. If neither idempotent replay nor authoritative receipt/state query is available, mark the effect UNRESOLVED_EFFECT and route to compensation, operator/high-assurance adjudication, or a gated retry policy rather than blind replay.",
+    "key_distinction": "COMPENSATION_IS_NOT_ROLLBACK: local workflow rollback restores controller state; compensation is a new forward effect that may cost money, be visible, fail, or be impossible. Irreversible effects should be delayed until commit when an adapter can gate them.",
+    "current_stack_implication": "Existing retry/recovery/delegation contracts should gain an effect-layer state machine so model-level retries cannot silently cross the external-effect commit boundary. Resume tokens, attempt IDs, and delegation IDs should reference the same canonical effect intent rather than minting a fresh world-effect identity."
+  },
+  "controller_contract": {
+    "before_call": [
+      "canonical_effect_intent_id",
+      "canonical_action_hash",
+      "authorization_instance_id",
+      "provider_api_identity",
+      "target_resource_scope",
+      "expected_postcondition",
+      "effect_class: bufferable|reversible|irreversible|idempotent_known_outcome",
+      "idempotency_key_if_supported",
+      "idempotency_scope",
+      "idempotency_expiry_or_retention",
+      "receipt_query_or_state_probe",
+      "compensation_handler_if_any"
+    ],
+    "effect_state_machine": [
+      "INTENT_DURABLE",
+      "DISPATCHED",
+      "CONFIRMED_COMMITTED",
+      "CONFIRMED_ABSENT",
+      "UNRESOLVED_EFFECT",
+      "COMPENSATING",
+      "COMPENSATED_WITH_RESIDUE",
+      "IRREVERSIBLE_COMMITTED"
+    ],
+    "ambiguous_result_rule": "Timeout, connection loss after dispatch, crash after provider execution but before local receipt persistence, or indeterminate 5xx must not be normalized to FAILED. They enter UNRESOLVED_EFFECT until a provider receipt/postcondition resolves the state or a policy explicitly accepts residual risk.",
+    "retry_rule": "Automatic replay is allowed only when the effect is intrinsically idempotent, a provider idempotency key is still valid in the exact dedupe scope, or authoritative state proves the original effect absent. A fresh attempt ID never implies a fresh effect intent.",
+    "commit_rule": "Dependent irreversible effects are released only after prerequisites are durably confirmed and, where applicable, transaction footprint/progress checks are satisfied.",
+    "recovery_rule": "On resume, reload effect ledger first; reconcile DISPATCHED/UNRESOLVED_EFFECT intents before replanning can emit an equivalent effect."
+  },
+  "failure_modes": [
+    {
+      "name": "post-effect_pre-receipt_crash",
+      "description": "Provider commits; response or local receipt persistence is lost; restarted controller repeats the call and duplicates the world effect."
+    },
+    {
+      "name": "semantic_replay_via_fresh_attempt_identity",
+      "description": "Retry/delegation/resume mints a new token or attempt identifier for the same canonical authorized action and accidentally resets its execution budget."
+    },
+    {
+      "name": "idempotency_ttl_expiry",
+      "description": "Controller reuses a historical key outside the provider retention window and falsely assumes deduplication still applies."
+    },
+    {
+      "name": "checkpoint_rollback_world_mismatch",
+      "description": "Agent state rolls back while the external effect remains visible, causing reasoning from a pre-effect state and possible duplicate or contradictory action."
+    },
+    {
+      "name": "compensation_equated_with_undo",
+      "description": "Controller treats cancellation/refund/delete as perfect rollback although it can have cost, visibility, residue, or failure."
+    },
+    {
+      "name": "heterogeneous_partial_commit",
+      "description": "One of multiple irreversible providers commits before another fails; no application-layer mechanism can retroactively make the set atomic."
+    }
+  ],
+  "evaluation_cases": [
+    "Payment-like mutation commits remotely; response is lost; crash and replay: blind retry must duplicate in the control condition, while canonical intent plus same-key/query reconciliation must not.",
+    "Repeat the same case after provider idempotency retention expires: the controller must refuse to treat the historical key as sufficient evidence of deduplication.",
+    "Issue fresh retry/delegation IDs for one user-confirmed effect: durable authorization budget must remain consumed and prevent semantic replay.",
+    "Rollback local workflow after an email-like irreversible send: controller must preserve the external-effect receipt and must not claim full rollback.",
+    "Force compensation failure after a reversible external effect: outcome must be residue/unresolved, not success or rolled_back.",
+    "Run a provider without idempotency or receipt query under an ambiguous timeout: automatic replay must be blocked and classified UNRESOLVED_EFFECT."
+  ],
+  "metrics": [
+    "duplicate_external_effect_rate",
+    "semantic_replay_admission_rate",
+    "ambiguous_outcome_blind_retry_rate",
+    "effect_reconciliation_success_rate",
+    "unresolved_effect_rate",
+    "compensation_failure_or_residue_rate",
+    "irreversible_precommit_leak_rate",
+    "recovery_task_success",
+    "added_latency_and_provider_queries_per_effect",
+    "idempotency_scope_or_ttl_violation_rate"
+  ],
+  "limitations": [
+    "Provider idempotency contracts differ by API version, endpoint, account/sandbox scope, retention window, and error class; the controller cannot infer a universal rule from HTTP method alone.",
+    "A read-after-timeout receipt or target-state query can itself be stale or ambiguous; authoritative query semantics must be part of the adapter contract.",
+    "Cross-provider exactly-once atomicity is generally unavailable. The practical choices are effect gating, durable dedupe, sagas/compensation, or explicit partial-commit handling.",
+    "Atomix gives useful agent-specific evidence, but its own paper limits the claim: its prototype is single-process and does not establish distributed crash-safe exactly-once.",
+    "This slice establishes a controller mechanism and failure-oriented evaluation contract; it does not yet measure effect incidence in the current deployment workload."
+  ],
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "next_plan": "On the next invocation, reread INSTRUCTION_CONTROL_MANIFEST.json and RUN_LIFECYCLE.json first, then DESIRED_STATE.json and roles/reasoning.json, verify the frozen controls, inspect only this reasoning role's authorized state for overlap, choose exactly one still-open nonconflicting Phase-1 reasoning slice other than DURABLE_EFFECT_COMMIT_PROTOCOL, persist and exact-read back that one bounded checkpoint with a nonempty continuation, and preserve enabled_desired=true plus clean_exploration.",
+  "termination": "bounded_slice_checkpointed_recurring_open"
+}
