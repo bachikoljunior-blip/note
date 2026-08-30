@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "precommit",
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "family": "ROOTV4-PROGRESSIVE-WIDENING-ABORT-RELEASE-LATE-TERMINAL-RACE-v1",
+  "parent_state_sequence": 238,
+  "observed_at": "2026-08-30T14:02:16+09:00",
+  "raw_clock_observation_utc": "2026-08-30T05:02:16Z",
+  "bootstrap": {
+    "transport_mode": "exact_sha_ref",
+    "main_sha": "ecb24ecffa231bcbf324757579927f4ec5efb34f",
+    "instruction_manifest_revision": 4,
+    "instruction_manifest_blob": "bac557be2ce0ef7c272c1d66e0bb309d1f85d863",
+    "run_lifecycle_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "bootstrap_valid": true
+  },
+  "frozen_initial_state": {
+    "N": 3,
+    "progressive_widening_cap": 1,
+    "active": ["A@g7"],
+    "queued_frozen_order": ["B@g1", "C@g1"],
+    "pending_reservation": "R-A1",
+    "reservation_owner": "A@g7",
+    "abort_tombstone": null
+  },
+  "precommitted_rules": {
+    "cap_rule": "max(1,floor(sqrt(N)))",
+    "N_increment_rule": "Only a distinct valid same-scope terminal exact-readback may increment N; abort, duplicate, stale, scope-mismatch and transport-uncertain events may not.",
+    "abort_release_rule": "A durable abort of A@g7 must release R-A1 exactly once, persist an abort-generation tombstone/fence before slot reuse, and must not increment N or create reward/credit.",
+    "late_terminal_rule": "Any later terminal carrying the aborted generation A@g7 is stale by the persisted abort fence and must be rejected without N increment, reward/credit, reservation release or authority effect.",
+    "slot_reuse_rule": "After durable abort-release, admission may fill only currently free capacity under the unchanged widening cap; it may admit at most the next candidate in frozen queue order.",
+    "restart_rule": "Restart must reconstruct N, active set, frozen queue order, reservation-release state and abort tombstone without phantom increments, releases or admissions."
+  },
+  "fixed_trace_to_evaluate_next_invocation": [
+    {"step":1,"event":"reconstruct initial state","expected":"N=3 cap=1 active=[A@g7] queue=[B@g1,C@g1] R-A1=pending abort_tombstone=none"},
+    {"step":2,"event":"durable abort A@g7","expected":"persist abort_tombstone=A@g7; release R-A1 exactly once; N remains 3; remove A@g7 from active; no reward/credit"},
+    {"step":3,"event":"post-abort width reconciliation","expected":"cap remains 1; exactly B@g1 is admitted from frozen queue because one slot is free; active=[B@g1]; queue=[C@g1]"},
+    {"step":4,"event":"late valid-looking terminal for A@g7","expected":"reject by abort-generation fence; N remains 3; no reward/credit; no second release; active/queue unchanged"},
+    {"step":5,"event":"duplicate late A@g7 terminal or transport-uncertain replay","expected":"same no-op rejection; no N increment, release or admission"},
+    {"step":6,"event":"restart","expected":"reconstruct N=3 cap=1 active=[B@g1] queue=[C@g1], R-A1 released, abort_tombstone=A@g7; no phantom effects"}
+  ],
+  "acceptance_guards": [
+    "abort release is durable before slot reuse",
+    "abort does not increment N",
+    "reservation release is exactly once",
+    "abort-generation fence survives restart",
+    "late aborted-generation terminal cannot increment N or create reward/credit",
+    "late terminal cannot release reservation twice",
+    "abort does not increase widening cap",
+    "post-abort admission is bounded by free capacity and frozen queue order"
+  ],
+  "scope_limit": "This precommits only a constructed role-local controller race trace. It does not claim MCTS performance, production safety, or general equivalence to richer execution.",
+  "residual_richer_mode_or_protected_or_user_execution_dependency": false,
+  "finite_monthly_trial_paid_quota_dependency": false,
+  "incremental_monetary_cost": 0,
+  "credit_eligible": false,
+  "enabled_desired": true,
+  "phase1_completion_claimed": false,
+  "global_completion": false,
+  "exact_next_action": "Fresh-bootstrap current manifest, RUN_LIFECYCLE, sanitized root, role config and own LATEST. Reconstruct sequence 239 and exact-read this precommit before any new family selection. Then audit only public semantics needed for abort/cancellation generation fencing and evaluate exactly the six frozen trace steps and eight guards above. Seal/read back terminal evidence before any credit; do not start a second leaf in that invocation."
+}
