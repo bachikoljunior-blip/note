@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "role": "continual_learning",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-continual-learning-durable-adaptation",
+  "bootstrap": {
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "0d4eed5d464aa69bb0bceb84a842df7a3e4121c4",
+    "manifest_control_revision": 13,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/continual_learning.json",
+    "role_config_blob": "9422363bb312a52a9fbe062c22fc213f890a4975",
+    "role_control_revision": 10,
+    "role_config_revision": 7
+  },
+  "predecessor": {
+    "path": "research_workers_clean_g1/continual_learning/PHASE1_DURABLE_ADAPTATION_20260831T0317_JST.json",
+    "blob": "1d84b6fb07668816cef00f8bad31f982464cea0e",
+    "latest_pointer_blob_before": "ab365ecf6c5310e29f1f868b887128f78d86b403"
+  },
+  "slice": {
+    "name": "rebased_stale_writer_exactly_once_replay",
+    "purpose": "Recover the previously rejected stale writer by rebuilding its complete frame against writer A's current chain, accept that rebased event once, then replay the identical rebased frame and verify deterministic idempotent no-op behavior with no second effect or chain movement.",
+    "mechanism_extension": {
+      "canonicalization": "UTF-8 canonical JSON with sorted keys and separators ',' ':'; event_payload_digest is SHA256(canonical event).",
+      "commit_digest": "SHA256(canonical JSON of {event,event_payload_digest,prev_chain}); the complete candidate frame adds commit_digest and one trailing newline.",
+      "rebase_rule": "A stale writer is never implicitly rebased. It must reconstruct a new complete candidate using the unchanged event payload and the newly observed current chain.",
+      "duplicate_rule": "After payload/commit validation, consult an applied-event registry keyed by event_id. If the same event_id already maps to the same payload digest, return duplicate_already_applied_noop before prev_chain comparison; do not reapply state and do not advance chain. Reuse of the event_id with a different payload digest is a conflict, not a duplicate.",
+      "new_event_commit_rule": "For an event_id not yet applied, require frame.prev_chain to equal the current committed chain before applying its patch, registering event_id->payload_digest, and advancing current_chain to frame.commit_digest."
+    },
+    "fixture": {
+      "state_before_rebase": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C",
+        "delta": "D_A"
+      },
+      "state_before_rebase_digest": "e43e18a068fd286d3bed15a9012cf0694d7ac428756e845725f84ca872fa7353",
+      "current_chain_before_rebase": "1f85222b849bbe70399c138e37e02da030515407207b2fa489cf966974c97dfc",
+      "writer_b_event": {
+        "event_id": "e4b",
+        "op": "patch",
+        "changes": {
+          "epsilon": "E_B"
+        }
+      },
+      "writer_b_event_payload_digest": "9f1b2481c467ac787b39c68f3499a1e56a12e0962173b876b7d7ca838f8a9f04",
+      "rebased_writer_b_prev_chain": "1f85222b849bbe70399c138e37e02da030515407207b2fa489cf966974c97dfc",
+      "rebased_writer_b_commit_digest": "c8eb9c60a9190246145563be3710aadbafbab97ae57ac2ea4aa57a2cf1ebd8d8",
+      "rebased_writer_b_frame_bytes": 323
+    },
+    "observed": {
+      "first_rebased_attempt_status": "applied",
+      "first_rebased_attempt_payload_digest_valid": true,
+      "first_rebased_attempt_commit_digest_valid": true,
+      "first_rebased_attempt_prev_chain_matched": true,
+      "state_after_first_apply": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C",
+        "delta": "D_A",
+        "epsilon": "E_B"
+      },
+      "state_after_first_apply_digest": "a6739dc997e04f1741a972637f43c7533c8e23a158134cb5d17335e2757aee8d",
+      "chain_after_first_apply": "c8eb9c60a9190246145563be3710aadbafbab97ae57ac2ea4aa57a2cf1ebd8d8",
+      "replay_status": "duplicate_already_applied_noop",
+      "replay_identical_event_id": true,
+      "replay_identical_payload_digest": true,
+      "replay_frame_prev_chain_is_now_stale": true,
+      "replay_duplicate_detected_before_prev_chain_gate": true,
+      "state_after_replay": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C",
+        "delta": "D_A",
+        "epsilon": "E_B"
+      },
+      "state_after_replay_digest": "a6739dc997e04f1741a972637f43c7533c8e23a158134cb5d17335e2757aee8d",
+      "chain_after_replay": "c8eb9c60a9190246145563be3710aadbafbab97ae57ac2ea4aa57a2cf1ebd8d8",
+      "writer_a_effect_retained": true,
+      "writer_b_effect_present": true,
+      "writer_b_second_effect_applied": false,
+      "state_unchanged_by_replay": true,
+      "chain_unchanged_by_replay": true
+    },
+    "metrics": {
+      "stale_writer_recovery_acceptance": 1.0,
+      "writer_b_first_apply_rate": 1.0,
+      "duplicate_replay_effect_rate": 0.0,
+      "old_writer_effect_retention_after_rebase_and_replay": 1.0,
+      "state_digest_match_before_vs_after_duplicate_replay": 1.0,
+      "chain_digest_match_before_vs_after_duplicate_replay": 1.0,
+      "modeled_forgetting_rate_for_preexisting_keys": 0.0
+    },
+    "tested_scope": "Deterministic small text state; one explicit stale-writer rebase, one serialized acceptance, and one immediate identical-frame replay using a modeled applied-event registry. This establishes exact-once/no-second-effect behavior for that replay boundary while retaining writer A's earlier effect. It does not establish crash-safe persistence of the idempotency registry across process loss, arbitrary delayed duplicates after intervening events, lock-free progress, fairness, semantic model-weight adaptation, or indefinite repository availability.",
+    "zero_dependency_assessment": {
+      "residual_richer_mode_or_protected_or_manual_user_execution": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost": 0,
+      "transport_note": "All adaptation, rebase, digest, and duplicate logic in this slice is deterministic Chat-local computation. Repository contents API is lightweight durable transport only; no hosted runner, Codespaces, artifact/LFS/package storage, cloud credit, external model/API credit, richer execution mode, protected authority, manual user execution, or scheduler mutation is required. A repository transport rate limit would remain a retry-next-invocation condition rather than a compute dependency."
+    },
+    "conflict_check": "No O/O-derived, downstream, other-worker, shared-ledger, other-role receipt/config, or legacy semantic input was consumed. Repository discovery metadata was used only to resolve transport authority, not as semantic evidence. No protected-primary or scheduler mutation occurred."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "next_invocation_resumes_exact_continuation": true,
+  "exact_continuation": "Next invocation: simulate a restart after the accepted e4b frame, reconstruct the applied-event idempotency index only from the durable framed journal, then replay the identical e4b frame and verify cross-run duplicate recognition preserves state digest a6739dc997e04f1741a972637f43c7533c8e23a158134cb5d17335e2757aee8d and chain c8eb9c60a9190246145563be3710aadbafbab97ae57ac2ea4aa57a2cf1ebd8d8 with zero second effect. Persist only that reconstruction-plus-replay evidence; do not start another leaf."
+}
