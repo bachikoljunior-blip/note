@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 63,
+  "semantic_parent_revision": 62,
+  "state_epoch": 3,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "status": "bounded_source_surface_progress_recurring_open",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 10,
+    "instruction_manifest_blob": "f33de8209ada96ea0e2e1f3237b21a3cc555a242",
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 1,
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_control_revision": 14,
+    "config_revision": 7,
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "transport_mode": "sha_only_main_ref_h1_h2_stable_authority_frozen",
+    "h1_main_sha": "c400a13bcf61dda0072253ea115b530d598bf09d",
+    "h2_main_sha": "c400a13bcf61dda0072253ea115b530d598bf09d"
+  },
+  "source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release": "rmcp-v3.1.4",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": [
+      "crates/rmcp/src/model.rs",
+      "crates/rmcp/src/model/task.rs",
+      "crates/rmcp/src/handler/server.rs"
+    ]
+  },
+  "bounded_slice": "Source-pin exact rmcp-v3.1.4 tasks/update wire/dispatch semantics and define one application-owned durable InputResponses transition validator with generation/CAS and a durable redrive-outbox boundary; stop before executor/effect work.",
+  "findings": {
+    "update_task_wire": "UpdateTaskParams contains task_id plus InputResponses. Exact release docs say every supplied response key MUST correspond to a currently-outstanding inputRequests key.",
+    "task_state_wire": "TaskPayload::InputRequired carries InputRequests; exact release docs describe those keys as arbitrary server-assigned identifiers unique over the task lifetime. tasks/update success returns TaskAckResult only; changed task state is observed through a later tasks/get.",
+    "dispatch_boundary": "Server dispatch validates the Tasks capability before ServerHandler::update_task and maps handler success to a task acknowledgement. The handler hook is therefore the application seam for durable response-transition validation before redrive.",
+    "subset_inference": "Pinned source requires every supplied key to be currently outstanding but does not require one update to answer all outstanding keys. Accepting a nonempty supplied key set as a subset is an application-owned strict interpretation, not an additional rmcp guarantee.",
+    "opaque_values": "InputResponses values are opaque JSON at this generic task layer. This validator checks task/status/key/generation invariants only; request-specific response-shape validation remains unresolved.",
+    "durable_transition_rule": "Load by task_id; require generation CAS match and status=input_required; reject an empty response map as an application no-op guard; require every supplied key to exist in current outstanding InputRequests; stage the whole change atomically; move accepted keys from outstanding into an accumulated accepted-response record; increment generation once. If outstanding keys remain, persist input_required with the reduced set. If none remain, persist working plus the accumulated responses and atomically append a redrive-outbox row bound to the new generation. Only after commit may a runtime redriver claim that generation.",
+    "duplicate_rule": "A committed response key is removed from outstanding, so replay of that key is rejected instead of reapplied. Concurrent same-generation writers are serialized by CAS: at most one commits and later writers must reread current state.",
+    "crash_boundary": "The final-response transaction must include the redrive outbox atomically with generation/status update. This removes commit-before-volatile-schedule orphaning for this transition slice; it does not make downstream external effects exactly-once.",
+    "compiler_surface": "No Rust compiler/runtime execution was performed in this slice; Rust compile success is not claimed."
+  },
+  "application_owned_candidate": "StoredInputRoundV1 holds round_id, outstanding InputRequests and accepted InputResponses. apply_input_responses(row, expected_generation, UpdateTaskParams) requires CAS generation equality, input_required state, nonempty responses, and keys subset of outstanding; stages changes on copies; moves accepted keys; bumps generation once; persists reduced input_required state or, when empty, working state plus an atomic redrive-outbox row for the new generation. Runtime redrive begins only after commit. Persistent-store code is NOT COMPILED.",
+  "source_equivalent_model_test": {
+    "runtime": "local Python transition model only; not Rust compiler/runtime evidence",
+    "result": "12/12 PASS",
+    "positive_cases": [
+      "partial permitted subset accepted; remains input_required; generation increments; no outbox",
+      "final response accepted; transitions working; generation increments; redrive outbox appended",
+      "multi-key final set accepted once",
+      "opaque JSON-shaped response values accepted generically",
+      "post-commit/pre-runtime-schedule crash model retains working state plus redrive outbox"
+    ],
+    "negative_cases": [
+      "unknown response key rejected",
+      "already-answered key replay rejected",
+      "update while not input_required rejected",
+      "stale generation rejected",
+      "empty response set rejected by application strictness",
+      "concurrent same-generation second writer loses CAS",
+      "mixed valid+invalid key set rejected atomically"
+    ]
+  },
+  "tested_scope": "Exact released rmcp-v3.1.4 model/task and server-dispatch source plus an application-owned source-equivalent transition model. No Rust compile, stock TaskManager runtime, persistent database, actual ServerHandler override, restart redriver process, or external effect was executed.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "residual_dependency_detail": "Production parity still needs a real quota-independent durable store/redriver, exact request-specific InputResponses validation, restart claim/fencing, and effect-side idempotency/fencing. These remain unresolved children, not accepted handoffs.",
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "Only own role-local clean state plus public official rust-sdk source was consumed; no O, other-worker, downstream, legacy, shared-ledger or other-role semantic input was used and no scheduler or non-role repository surface was mutated.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: source-pin exact rmcp-v3.1.4 examples/servers/src/common/task_demo.rs plus the stock TaskManager update/input-request handling it calls. Determine whether stock code itself enforces input_required status, currently-outstanding-key membership, duplicate-response handling, and durable post-update redrive. If any are absent, define only the minimal custom ServerHandler/storage error-mapping seam needed to preserve the validator above. Keep external effect execution out of that slice and stop after its durable checkpoint."
+}
