@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 52,
+  "semantic_parent_revision": 51,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "status": "valid_semantic_progress_recurring_open",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "transport_mode": "sha_only_main_ref_h1_h2_stable",
+    "h1_main_sha": "bd51f3f673dd0d98ff7cde7259b2d9933c8c3f5b",
+    "h2_main_sha": "bd51f3f673dd0d98ff7cde7259b2d9933c8c3f5b",
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "blob": "b288c95adab1ef949ed1791275176815a67b7d11",
+      "control_revision": 2
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+      "control_revision": 1
+    },
+    "sanitized_root": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+      "control_revision": 26
+    },
+    "role_config": {
+      "path": "automation_control/roles/open_source.json",
+      "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+      "control_revision": 14,
+      "config_revision": 7
+    }
+  },
+  "slice": {
+    "leaf": "rmcp_v3_1_4_axum_http_authenticated_principal_middleware_api",
+    "result": "SOURCE_QUALIFIED_API_SHAPE_CONFIRMED",
+    "source_scope": "modelcontextprotocol/rust-sdk exact release commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4), plus Axum 0.8 documentation matching the exact release's declared dev-dependency major/minor",
+    "findings": [
+      "The exact rmcp-v3.1.4 crate declares http = version 1 and dev-dependency axum = version 0.8 for its Streamable HTTP tests.",
+      "The exact release test crates/rmcp/tests/test_subscriptions_streamable_http.rs constructs StreamableHttpService, nests it at /mcp, then wraps the router with axum::middleware::from_fn whose closure arguments are axum::extract::Request and axum::middleware::Next and which calls next.run(request).await. This source-qualifies an Axum middleware layer executing around the rmcp service before service dispatch.",
+      "Axum 0.8 documentation gives the authentication middleware form async fn auth(mut req: Request, next: Next), then req.extensions_mut().insert(current_user), then next.run(req).await. Therefore the precise candidate insertion form for a server-authenticated Principal is request.extensions_mut().insert(principal) before next.run(request).await.",
+      "The exact rmcp-v3.1.4 Streamable HTTP server source later injects inbound http::request::Parts into MCP request extensions with req.request.extensions_mut().insert(part). Because http::request::Parts carries its own Extensions map, a Principal inserted by the outer Axum middleware is preserved inside Parts.extensions for later handler-side extraction.",
+      "Cargo.lock is not present at the exact release commit, so this slice does not claim a specific Axum patch release beyond the declared compatible 0.8 series. The API form is nevertheless directly documented for Axum 0.8 and matches the exact release test's Request/Next middleware shape."
+    ],
+    "source_evidence": [
+      {
+        "type": "exact_release_source",
+        "url": "https://github.com/modelcontextprotocol/rust-sdk/blob/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/tests/test_subscriptions_streamable_http.rs",
+        "evidence": "Router::nest_service('/mcp', service).layer(axum::middleware::from_fn(...)); closure takes axum::extract::Request and axum::middleware::Next and forwards with next.run(request).await"
+      },
+      {
+        "type": "exact_release_source",
+        "url": "https://github.com/modelcontextprotocol/rust-sdk/blob/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/Cargo.toml",
+        "evidence": "http = version 1; dev-dependency axum = version 0.8 with http1,tokio features"
+      },
+      {
+        "type": "exact_release_source",
+        "url": "https://github.com/modelcontextprotocol/rust-sdk/blob/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/transport/streamable_http_server/tower.rs",
+        "evidence": "inbound http::request::Parts is inserted into MCP request extensions before handler dispatch"
+      },
+      {
+        "type": "official_dependency_docs",
+        "url": "https://docs.rs/axum/0.8.9/src/axum/docs/middleware.md",
+        "evidence": "authentication middleware mutates Request extensions with req.extensions_mut().insert(current_user) before next.run(req).await"
+      }
+    ],
+    "candidate_shape": "let router = axum::Router::new().nest_service(\"/mcp\", service).layer(axum::middleware::from_fn(|mut request: axum::extract::Request, next: axum::middleware::Next| async move { let principal = authenticate_server_side(&request)?; request.extensions_mut().insert(principal); Ok::<_, AuthError>(next.run(request).await) }));",
+    "scope_limit": "Source-qualified API shape only. Not compiled in this runtime and not a claim that authentication itself, persistent task storage, restart redrive, or effect fencing is solved.",
+    "compiled_or_runtime_tested": false
+  },
+  "phase1_gates": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true,
+    "residual_richer_mode_protected_user_execution_dependency_for_this_middleware_seam": false,
+    "finite_monthly_quota_credit_dependency_for_this_middleware_seam": false,
+    "incremental_monetary_cost": 0,
+    "unresolved_children": [
+      "persistent caller-stable create-or-get task identity",
+      "server-restart task redrive/liveness",
+      "external-effect idempotency or fencing",
+      "compile-checked end-to-end principal bridge against exact rmcp-v3.1.4 dependency resolution"
+    ]
+  },
+  "conflict_check": {
+    "clean_boundary_preserved": true,
+    "forbidden_semantic_inputs_read": false,
+    "scheduler_mutated": false,
+    "shared_ledger_read_or_written": false,
+    "other_worker_or_downstream_semantics_used": false
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: source-check the exact http 1 / Axum 0.8 type bounds and handler-side retrieval chain for a Principal inserted into the inbound Axum Request extensions: RequestContext.extensions.get::<http::request::Parts>() followed by parts.extensions.get::<Principal>(), including fail-closed behavior and any Clone + Send + Sync + 'static bounds required by http::Extensions::insert/get. Refine the same rmcp-v3.1.4 principal-bridge skeleton only if exact identifiers or bounds differ. Do not start persistent-store, OpenHands, or another optional leaf in that invocation. Keep strict Phase-1 pass false until persistent create-or-get, restart redrive, and external-effect fencing are solved with zero finite quota, zero incremental cost, and no richer-mode/protected/user execution dependency."
+}
