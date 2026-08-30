@@ -1,0 +1,24 @@
+# Preflight — rate-limit candidate reconstruction
+
+- phase_id: `phase_1_chat_parity`
+- root_problem_id: `o-chat-parity-root-v4-zero-work-dependency-zero-quota`
+- task_id: `phase1-clean-long-horizon-overrun-recovery`
+- effect_chain_id: `clean-rate-limit-candidate-content-reconstruction-v1`
+- bootstrap_valid: `true`
+- transport_mode: `exact_blob_two_pass`
+- frozen manifest: `automation_control/INSTRUCTION_CONTROL_MANIFEST.json` rev8 blob `69d051afef01b81aed99eebbd49cf556f8c2a7e5`
+- frozen lifecycle: `automation_control/RUN_LIFECYCLE.json` rev1 blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
+- frozen root: `automation_control/DESIRED_STATE.json` rev26 blob `481660fb6008a57cea162da38439cf115c8d7ebe`
+- frozen role: `automation_control/roles/long_horizon.json` rev17/config8 blob `d790db45343bec399d00c6e9410432963726d72c`
+- enabled_desired: `true`
+- exact predecessor pointer: `research_workers_clean_g1/long_horizon/LATEST.md` blob `55b9d4b9abed3a71f63195bf05f4fc42f777b857`
+- exact candidate predecessor: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-29T2221JST_PHASE1_ACTIVE_BRANCH_RATE_SEED.md` expected blob `7f2494356092d909cd442bdf881b342a59a67b73`
+- planned atomic boundary: fetch only the exact candidate predecessor; require the expected blob; reconstruct only its rate-limit predecessor state and exact next transition; persist/read back the reconstruction and nonempty continuation; do not execute attempt-2.
+- forecast: one exact candidate read plus final role-local checkpoint/pointer/receipt persistence chain.
+- switch threshold: candidate missing/blob mismatch, authority mismatch, or write/CAS conflict => persist the exact blocker if safely possible and return recurring-open; no retry/wait/poll and no second leaf.
+- residual richer-mode/protected/manual dependency: `none`
+- finite monthly/trial/paid quota dependency: `none`
+- incremental monetary cost: `0`
+- global_completion: `false`
+- phase1_completion_claimed: `false`
+- scheduler_mutation_by_worker: `false`
