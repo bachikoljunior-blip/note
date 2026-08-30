@@ -2,16 +2,22 @@
   "schema_version": 1,
   "role": "reasoning",
   "exploration_state_id": "research_workers_clean_g1",
-  "timestamp": "2026-08-31T03:22:03+09:00",
+  "timestamp": "2026-08-31T05:24:00+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
-    "manifest_blob": "9430aa7ee49a1683e26a65f3997451a3e85de567",
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "0d4eed5d464aa69bb0bceb84a842df7a3e4121c4",
+    "manifest_revision": 13,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
     "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "run_lifecycle_revision": 1,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
     "desired_state_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
     "desired_state_revision": 26,
+    "reasoning_role_path": "automation_control/roles/reasoning.json",
     "reasoning_role_blob": "e5d15694c2f3964a0be9bb69cfad60ebf237f36d",
     "reasoning_role_revision": 10,
     "transport_mode": "exact_blob_two_pass",
@@ -20,33 +26,44 @@
     "task_id": "phase1-clean-reasoning-direct-architecture",
     "bootstrap_valid": true
   },
-  "slice_type": "phase1_direct_architecture_test",
-  "slice_id": "reasoning-20260831T032203+0900-cas-checkpoint-chat-native-transducer",
-  "candidate": "CAS-checkpointed Chat-native state transducer",
-  "source_qualified_findings": [
-    "GitHub repository-content updates require the blob SHA of the file being replaced; this supplies a stale-write/CAS guard for role-local state transport: https://docs.github.com/en/rest/repos/contents",
-    "GitHub REST capacity is governed by resettable rate-limit windows such as per-hour limits rather than a monthly compute/storage allowance: https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
-    "GitHub recommends serial requests and stopping until reset after rate-limit errors, which is compatible with checkpoint-and-return rather than same-run polling: https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api"
-  ],
-  "architecture": [
-    "Read only frozen controls plus own role-local state/evidence.",
-    "Perform one bounded semantic transformation inside scheduled Chat.",
-    "Commit role-local state with predecessor blob SHA as a CAS guard and exact-read back before normal return.",
-    "Resume from durable state next invocation; use an effect identity derived from task, predecessor state and leaf identity to reject duplicate replay."
-  ],
-  "tested_scope": "Durable cross-invocation text/state reasoning outcomes representable as bounded Chat transformations plus role-local repository mutation.",
+  "predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
+  "slice_type": "phase1_duplicate_resume_idempotency_test",
+  "slice_id": "reasoning-20260831T052400+0900-duplicate-resume-idempotency-v1",
+  "candidate_architecture": "CAS-checkpointed Chat-native state transducer",
+  "test": {
+    "leaf_id": "duplicate-resume-idempotency-v1",
+    "effect_key_formula": "sha256(task_id + '|' + predecessor_state_blob + '|' + leaf_id)",
+    "effect_key": "a472dd2645f1087c539d2aba6bdd57cedac93cdf94ba2da944d4f7201e2c0dcb",
+    "admission_rule": "admit only if candidate.predecessor_state_blob == current_state_blob AND effect_key not in committed_effect_keys",
+    "initial_case": {
+      "current_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
+      "candidate_predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
+      "committed_effect_keys": [],
+      "dry_run_verdict": "admissible_once"
+    },
+    "simulated_post_commit_state_blob": "0a2a2d5c26ba6a25e8e5c9b9c8caeb70efcc2b106ee5fcc3facf8e762ea20d48",
+    "stale_replay_case": {
+      "current_state_blob": "0a2a2d5c26ba6a25e8e5c9b9c8caeb70efcc2b106ee5fcc3facf8e762ea20d48",
+      "candidate_predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
+      "committed_effect_keys": ["a472dd2645f1087c539d2aba6bdd57cedac93cdf94ba2da944d4f7201e2c0dcb"],
+      "dry_run_verdict": "reject",
+      "reasons": ["stale_predecessor", "duplicate_effect_key"]
+    },
+    "second_semantic_commit_attempted": false,
+    "result": "PASS_WITHIN_SYNTHETIC_STATE_TRANSITION_SCOPE"
+  },
+  "tested_scope": "Synthetic duplicate-resume handling for repository-text/state reasoning effects whose admission can be guarded by predecessor blob identity plus deterministic effect-key deduplication.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
-    "conflict_check": "Only own state/evidence, sanitized controls and public GitHub documentation were used. No O, downstream, other-worker, legacy or shared-ledger semantics were read.",
-    "scope_limit": "No claim is made for arbitrary code execution, GUI interaction, local binaries, private-network effects or other effects scheduled Chat cannot directly perform; those remain unresolved Phase-1 children."
+    "conflict_check": "Only frozen sanitized controls and own reasoning STATE were used; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics were used.",
+    "scope_limit": "This dry-run establishes the admission invariant only. It does not prove atomicity for external side effects, arbitrary code execution, GUI effects, private-network effects or any action outside Chat-visible repository/state mutation. Those remain unresolved Phase-1 children."
   },
-  "write_note": "A larger evidence append was rejected by the connector safety layer, so this compact role-local checkpoint is the single durable slice artifact for this invocation.",
   "termination": "bounded_slice_complete_recurring_open",
   "remaining_frontier": [
-    "Test duplicate-resume idempotency for this architecture using a synthetic stale predecessor without committing a second semantic effect.",
-    "Find a separate Chat-native architecture for an effect class not representable as repository text/state mutation, rejecting any richer-mode/protected/user or finite-quota executor."
+    "Find and test one separate Chat-native architecture for an effect class not representable as repository text/state mutation, rejecting any richer-mode/protected/user or finite-quota executor.",
+    "Test crash-window semantics where an external effect could occur before role-local checkpoint commit; require a zero-dependency Chat-native prevention or classify the effect class unresolved."
   ],
-  "continuation": "On the next invocation, after fresh manifest/RUN_LIFECYCLE/root/role bootstrap and exact two-pass control freeze, exact-read this STATE and own evidence; execute exactly one bounded duplicate-resume test by deriving an effect key from task_id + predecessor_state_blob + leaf_id and presenting a stale replay candidate. Verify that the architecture rejects a second semantic commit, persist and exact-read back the result plus a nonempty next frontier, and return recurring-open."
+  "continuation": "On the next invocation, after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/reasoning-role bootstrap and exact two-pass authority freeze, exact-read this STATE. Execute exactly one bounded Phase-1 leaf: test the crash-window child for effects whose action could become externally visible before the role-local checkpoint is durably committed. First try a Chat-native design that makes effect publication conditional on successful CAS/readback; if the effect surface cannot provide that ordering without richer-mode/protected/user execution or finite monthly quota, record the exact unresolved capability instead of treating a handoff as a solution. Persist and exact-read back one role-local checkpoint plus nonempty continuation, keep enabled_desired=true, and return recurring-open."
 }
