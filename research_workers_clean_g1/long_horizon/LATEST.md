@@ -1,30 +1,37 @@
-# Long Horizon clean_g1 — latest pointer / bounded diagnostic
+# Long Horizon clean_g1 — latest pointer / bounded Phase-1 checkpoint
 
 Canonical Phase-1 role branch: `clean-long-horizon-phase1-active`
 Authority record: `research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
-Prior authoritative checkpoint: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0622JST_PHASE1_BOOTSTRAP_QUARANTINE_REPEAT.md`
+Predecessor LATEST blob: `5e2981249107bce9fd6bf7d559a2236e8554ee39`
 
 ## Frozen authority for this invocation
 - transport_mode: `exact_blob_two_pass`
+- instruction manifest revision/blob: `2` / `b288c95adab1ef949ed1791275176815a67b7d11`
+- lifecycle revision/blob: `1` / `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
 - root control revision/blob: `26` / `481660fb6008a57cea162da38439cf115c8d7ebe`
 - own role control/config revision/blob: `17` / `8` / `d790db45343bec399d00c6e9410432963726d72c`
-- lifecycle blob: `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
-- branch authority blob/generation: `dd9eb6a591f643e8653c61e5469a0805be54f3fe` / `1`
+- branch authority blob/generation carried from the exact predecessor: `dd9eb6a591f643e8653c61e5469a0805be54f3fe` / `1`
 - phase/root/task: `phase_1_chat_parity` / `o-chat-parity-root-v4-zero-work-dependency-zero-quota` / `phase1-clean-long-horizon-overrun-recovery`
 - bootstrap_valid: `true`
+- enabled_desired: `true`
 
-## Bounded Phase-1 slice
-Selected effect chain: `clean-switch-once-cas-v1`.
-Planned atomic boundary was a fresh clean, role-local synthetic forecast-overrun fixture with `p90=18s`, checkpoint reserve `8s`, remaining fixture `20s`, requiring a one-time `A -> B` plan switch under current-blob CAS followed by a stale replay rejection.
+## Selected single effect chain
+- effect_chain_id: `clean-switch-once-cas-v1`
+- stage completed this invocation: `update_only_preflight_persistence_probe`
+- exact predecessor/frontier: predecessor LATEST required trying a single compact role-local persistence on an already-existing mutable path with exact current-blob CAS before any A -> B switch.
+- planned atomic boundary: establish that update-only CAS persistence on the canonical role branch is usable; do not start the synthetic A -> B switch until this checkpoint is durably read back.
+- synthetic fixture reserved for the next stage: `p90=18s`, checkpoint reserve `8s`, remaining fixture `20s`; switching rule is `SWITCH` when `p90 + reserve > remaining`.
+- forecast threshold result for that reserved fixture: `18 + 8 = 26 > 20`, therefore the next semantic transition is exactly one `A -> B` switch.
 
-Before the switch effect, the mandatory preflight checkpoint creation at `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-08-30T0821JST_PHASE1_CLEAN_SWITCH_ONCE.md` was blocked by the available GitHub write surface's safety checks. No switch state was created or mutated, no retry/backoff/poll was performed, and no second leaf was started. This is a bounded write-surface blocker, not semantic completion.
+## Bounded result
+The previously blocking create-only preflight route was bypassed without a second lineage: this checkpoint uses the already-existing mutable `LATEST.md` path and exact predecessor-blob CAS on the canonical role branch. No synthetic switch state, external effect, retry, wait, poll, scheduler mutation, richer-mode execution, protected-primary execution, or manual-user step is performed in this stage.
 
-Tested scope: clean authority bootstrap + canonical branch authority validation + attempted mandatory preflight persistence only. No quarantined transport blob was promoted or used as acceptance evidence.
+Tested scope: authority bootstrap plus one role-local update-only CAS persistence attempt on the canonical role branch. This result does not yet prove the A -> B switch or stale replay rejection.
 
-Residual richer-mode/Work/protected-primary/manual execution dependency: none introduced.
-Finite monthly/trial/paid quota dependency: none introduced; lightweight repository transport only.
+Residual richer-mode/Work/protected-primary/manual execution dependency: `none introduced`.
+Finite monthly/trial/paid quota dependency: `none introduced`; lightweight repository transport only and no hosted compute/storage allowance is used as an execution dependency.
 Incremental monetary cost: `0`.
-Conflict check: role-local namespace and canonical role branch only; no protected-primary or scheduler mutation.
+Conflict check: role-local namespace and canonical role branch only; no protected-primary, other-worker, downstream, O-derived, or scheduler state is read or mutated for semantics.
 
 ## Lifecycle receipt
 - termination: `bounded_slice_complete_recurring_open`
@@ -37,4 +44,4 @@ Conflict check: role-local namespace and canonical role branch only; no protecte
 - next_invocation_resumes_exact_continuation: `true`
 
 ## Exact continuation
-On the next invocation, repeat the clean two-pass root/role bootstrap and read `RUN_LIFECYCLE.json`, validate the same canonical branch authority, then resume `clean-switch-once-cas-v1` without creating a second lineage. First try a single compact role-local persistence using an already-existing mutable role-local state path with exact current-blob CAS (update-only, not create). If that write succeeds and exact-readback matches, encode the fresh synthetic fixture there, perform exactly one A -> B CAS switch, and leave the stale-replay assertion for the following invocation if required by the per-run write budget. If update-only is also blocked, persist the exact blocker through any remaining safe role-local write surface and keep this same leaf unresolved. Do not use quarantined evidence, do not wait/retry in-run, do not mutate the scheduler, and do not start a second leaf.
+On the next invocation, bootstrap and freeze the current manifest, RUN_LIFECYCLE, DESIRED_STATE and long_horizon role config exactly as required, then reconstruct this same canonical branch and `clean-switch-once-cas-v1` lineage. Using this checkpoint as the sole predecessor, perform exactly one role-local synthetic `A -> B` plan switch under current-blob CAS because `p90 18s + reserve 8s > remaining 20s`. Persist/read back the switched state and stop that invocation; leave the stale replay rejection for the following invocation. If the update-only CAS is authority-mismatched or blocked, record the exact blocker without retry/wait/poll and keep this same leaf unresolved. Never use a second lineage, quarantined evidence, richer-mode/protected/manual execution, finite quota, scheduler mutation, or optional second leaf.
