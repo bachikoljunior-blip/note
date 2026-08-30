@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 64,
+  "semantic_parent_revision": 63,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_control_revision": 12,
+    "lifecycle_control_revision": 1,
+    "root_control_revision": 26,
+    "role_control_revision": 14,
+    "config_revision": 7,
+    "frozen_main_sha": "3703eb739f0688fbb2aead2e1905b793025b3af7",
+    "transport_mode": "sha_only_main_ref_h1_h2_stable_authority_frozen",
+    "bootstrap_valid": true
+  },
+  "slice": "rmcp-v3.1.4 stock tasks/update and input-request semantics",
+  "source_pins": [
+    {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "ref": "rmcp-v3.1.4",
+      "path": "examples/servers/src/common/task_demo.rs"
+    },
+    {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "ref": "rmcp-v3.1.4",
+      "path": "crates/rmcp/src/task_manager.rs",
+      "blob_sha": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc"
+    }
+  ],
+  "finding": {
+    "task_demo_dispatch": "ServerHandler::update_task forwards request.input_responses directly to TaskManager::update_task; no additional validation/redrive is present in the demo handler.",
+    "input_required_status": "TaskManager derives input_required from pending_inputs being nonempty. TaskContext::request_input inserts a unique key into pending_inputs and waits on an in-memory oneshot receiver.",
+    "outstanding_key_membership": "TaskManager::update_task only removes and sends responses for keys currently present in pending_inputs, but unknown/already-answered/superseded keys are silently ignored rather than rejected. Partial response sets are accepted.",
+    "duplicate_response_handling": "After the first accepted response removes a pending key, later responses for that key are ignored. request_input separately forbids reusing a key over the task lifetime via used_input_keys.",
+    "durable_post_update_redrive": "Absent in the stock path examined. Accepted responses are delivered to the currently running operation through process-memory tokio oneshot channels; no durable accepted-response state, generation CAS, or persistent redrive outbox is written by TaskManager::update_task.",
+    "restart_scope": "TaskManager state is process-local Arc<Mutex<...>>; therefore this stock path does not provide server-restart task/input-response durability."
+  },
+  "minimal_custom_seam": "Keep stock wire types/ServerHandler method signatures, but back update_task with an application-owned persistent task record. Validate task generation and input_required/current outstanding-key subset atomically, persist accepted responses, and create a redrive outbox atomically when the final outstanding response is accepted. Map unknown task/generation/conflict/invalid-key conditions explicitly instead of relying on stock ignore semantics. External-effect execution remains out of this slice.",
+  "tested_scope": "Exact rmcp-v3.1.4 example handler and TaskManager source only; no claim about unretrieved custom handlers or future releases.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "residual_dependency_note": "The application-owned persistent store/redriver and effect-side idempotency/fencing are still unresolved Phase-1 children; this finding does not accept them as a handoff.",
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "Own-state/public-source-only slice; no O, other-worker, downstream, legacy, shared-ledger or other-role semantic input used.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: pin rmcp-v3.1.4 model and ServerHandler error surfaces used by tasks/update. Determine the exact ErrorData code/constructor mapping available for unknown task, stale generation/intent conflict, non-input_required update, and non-outstanding response key in a custom persistent handler, without inventing fields or compiling. Persist a source-qualified mapping candidate and stop after durable checkpoint; do not enter external-effect execution."
+}
