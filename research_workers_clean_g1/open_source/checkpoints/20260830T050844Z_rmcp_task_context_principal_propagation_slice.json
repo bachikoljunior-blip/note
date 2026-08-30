@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 55,
+  "semantic_parent_revision": 54,
+  "state_epoch": 3,
+  "status": "valid_semantic_progress_recurring_open",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "transport_mode": "sha_only_main_ref_h1_h2_stable",
+    "frozen_main_sha": "5ed5195e94e00737b6a2521f3e380e26811eb18e",
+    "h1_main_sha": "5ed5195e94e00737b6a2521f3e380e26811eb18e",
+    "h2_main_sha": "5ed5195e94e00737b6a2521f3e380e26811eb18e",
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "blob": "e383016c8c140f886dc6046b46ca5f9260276645",
+      "control_revision": 5
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+      "control_revision": 1
+    },
+    "sanitized_root": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+      "control_revision": 26
+    },
+    "own_role_config": {
+      "path": "automation_control/roles/open_source.json",
+      "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+      "control_revision": 14,
+      "config_revision": 7
+    }
+  },
+  "slice": {
+    "leaf": "rmcp-v3.1.4 task lifecycle authorization-context propagation under Streamable HTTP",
+    "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+    "source_files": [
+      "crates/rmcp/src/handler/server.rs",
+      "crates/rmcp/src/transport/streamable_http_server/tower.rs",
+      "crates/rmcp/src/service.rs"
+    ],
+    "result": "SOURCE_QUALIFIED_POSITIVE_FOR_EVIDENCED_STREAMABLE_HTTP_PATHS",
+    "finding": "At exact rmcp-v3.1.4, ServerHandler::get_task(GetTaskParams, RequestContext<RoleServer>), update_task(UpdateTaskParams, RequestContext<RoleServer>), and cancel_task(CancelTaskParams, RequestContext<RoleServer>) all receive RequestContext. Service<RoleServer>::handle_request validates the Tasks capability and passes that same context into each task method. Streamable HTTP injects http::request::Parts into the inbound MCP request Extensions before dispatch, including the evidenced negotiated-stateless, ordinary stateless, initialization/session, and general request paths. The generic service loop swaps request Extensions into RequestContext.extensions. Therefore a server-authenticated Principal previously inserted by trusted HTTP middleware into Parts.extensions can be recovered with one fail-closed nested lookup helper from RequestContext in call_tool and all three handler-exposed task lifecycle methods on these Streamable HTTP paths.",
+    "task_result_endpoint_note": "No separate ServerHandler get_task_result method exists in the exact handler surface inspected; tasks/get is get_task and returns GetTaskResult. The handler-exposed task update path is update_task; cancellation is cancel_task.",
+    "safe_helper_shape": "fn principal(ctx: &RequestContext<RoleServer>) -> Result<&Principal, McpError> { ctx.extensions.get::<http::request::Parts>().and_then(|p| p.extensions.get::<Principal>()).ok_or_else(auth_context_missing_error) }",
+    "fail_closed_conditions": [
+      "RequestContext has no http::request::Parts",
+      "Parts.extensions has no server-authenticated Principal",
+      "Principal type does not satisfy the HTTP Extensions insertion/retrieval bounds",
+      "transport path is not one of the evidenced Streamable HTTP paths"
+    ],
+    "scope_limits": [
+      "Source-qualified only; no Rust compiler/runtime was available in this Chat execution and the helper was not compiled.",
+      "This proves context propagation for exact rmcp-v3.1.4 Streamable HTTP source paths, not stdio or arbitrary custom transports.",
+      "It does not prove any particular authentication middleware correctly validates credentials or inserts Principal before rmcp consumes the request.",
+      "It does not solve persistent task create-or-get, restart redrive, or external-effect idempotency/fencing."
+    ]
+  },
+  "phase1_gates": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true,
+    "residual_richer_mode_protected_user_execution_dependency": false,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "conflict_check": "No O, other-worker, downstream, legacy, shared-ledger, other-role config/receipt semantics consumed; only own state, sanitized root/config controls, and public rmcp source were used. No scheduler mutation."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: inspect the exact rmcp-v3.1.4 StreamableHttpService/Tower/Axum integration surface plus one canonical public authentication-middleware composition to determine the smallest source-qualified place where a trusted server Principal can be inserted into http::Request::extensions before rmcp splits the request into Parts. Produce a compile-risk-minimized fail-closed helper/composition shape and exact blocker if the integration surface cannot guarantee pre-dispatch insertion. Do not start persistent-store, OpenHands, or any second optional leaf in that invocation."
+}
