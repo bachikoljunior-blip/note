@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 66,
+  "semantic_parent_revision": 65,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 13,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "status": "valid_semantic_progress_recurring_open",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "transport_mode": "sha_only_main_ref_h1_h2_stable_authority_frozen",
+  "frozen_main_sha": "71370b9fdd3f12c069ca991626356b5773991113",
+  "frozen_root": {
+    "path": "automation_control/DESIRED_STATE.json",
+    "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "parsed_revision": 26
+  },
+  "frozen_role_config": {
+    "path": "automation_control/roles/open_source.json",
+    "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "parsed_control_revision": 14,
+    "parsed_config_revision": 7
+  },
+  "slice": "rmcp_v3_1_4_tasks_update_exact_fields_gate_and_persistent_adapter",
+  "public_source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "release_scope": "rmcp-v3.1.4",
+    "files": [
+      "crates/rmcp/src/model.rs",
+      "crates/rmcp/src/task_manager.rs",
+      "crates/rmcp/src/handler/server.rs"
+    ],
+    "observed_blob_task_manager": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc"
+  },
+  "findings": [
+    "UpdateTaskParams is a non_exhaustive camelCase request-params struct with exactly the public fields meta: Option<RequestMetaObject>, task_id: String, and input_responses: InputResponses. UpdateTaskParams::new(task_id, input_responses) sets meta=None.",
+    "On the standard ServerHandler Service<RoleServer> dispatch path, UpdateTaskRequest is capability-gated before the custom update_task handler is invoked. If the server does not advertise Tasks, the dispatcher returns Method not found; if the client did not declare Tasks, it returns Missing Required Client Capability. Only after that gate does it call self.update_task(request.params, context) and map Ok(()) to the stock task acknowledgement.",
+    "Stock TaskManager::update_task first sweeps expiry, resolves the task by id, returns unknown_task(task_id) when absent, consumes supplied inputResponses by removing only matching pending-input keys and sending their values, ignores unknown/already-answered/superseded keys, touches last_updated_at, recomputes current status, and returns Ok(()).",
+    "unknown_task(task_id) is ErrorData::invalid_params(format!(\"unknown task: {task_id}\"), None). The exact source test states nonexistent taskId is INVALID_PARAMS for tasks/get and SHOULD be INVALID_PARAMS for update/cancel.",
+    "No Tasks-specific post-handler error conversion changes update_task errors. The only post-dispatch remap in this handler is RESOURCE_NOT_FOUND to INVALID_PARAMS for 2026-07-28+ peers, which is unrelated to TaskManager::unknown_task because that helper already emits INVALID_PARAMS.",
+    "Therefore revision 65's error-map conclusion survives exact release verification: unknown/nonexistent taskId maps directly to INVALID_PARAMS; an application-owned stale-generation or intent-conflict check has no stock task-specific error code and may use INVALID_PARAMS as a non-invented request-parameter rejection, but that extension mapping remains application policy rather than an rmcp guarantee."
+  ],
+  "compile_risk_reduced_adapter_sketch": {
+    "status": "source_qualified_pseudocode_not_compiled",
+    "shape": "Implement ServerHandler::update_task with the exact released signature update_task(&self, request: UpdateTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_. Route request.task_id plus request.input_responses into the application-owned persistent task store. Return Ok(()) on accepted delivery; map UnknownTask to McpError::invalid_params. If the persistent protocol adds stale-generation/intent checks, reject them before mutation and map them consistently as application-level INVALID_PARAMS unless a separately source-qualified extension contract defines another code.",
+    "do_not_duplicate": [
+      "Do not manufacture TaskAckResult inside update_task; standard Service dispatch maps Result<(), McpError> to ServerResult::task_ack.",
+      "Do not duplicate the stock Tasks capability gate inside update_task when all remote requests enter through the standard ServerHandler Service dispatch; direct internal method calls would bypass that dispatcher gate and must not be treated as equivalent remote-policy execution.",
+      "Do not use stock TaskManager as the persistent backend; its in-memory TaskContext/HashMap lifetime boundary remains unresolved for restart durability."
+    ]
+  },
+  "tested_scope": {
+    "exact_release_source_read": true,
+    "compile_executed": false,
+    "runtime_executed": false,
+    "external_effect_executed": false,
+    "scope_limit": "This slice verifies released wire fields, standard dispatcher capability gating, stock update control flow/error mapping, and a compile-risk-reduced adapter shape only. It does not prove the custom persistent store, restart redriver, or effect fencing."
+  },
+  "residual_richer_mode_protected_user_execution_dependency": true,
+  "residual_dependency_detail": "A persistent application-owned task store/redriver plus external-effect idempotency or fencing remains an unresolved child; this slice does not convert that architecture into a Phase-1 pass.",
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "Own role-local state plus public release source only; no O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config semantics were consumed.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: at modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, pin the exact InputResponses type/wire shape and the released get_task/cancel_task ServerHandler signatures plus stock TaskManager get/cancel behavior. Then persist a source-qualified, not-compiled persistent-handler adapter trio that constructs GetTaskResult/DetailedTask without relying on stock TaskManager process memory and preserves the standard dispatcher Tasks capability gate. Do not compile and do not enter external-effect execution in that slice."
+}
