@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 59,
+  "semantic_parent_revision": 58,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "authority": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_blob": "69d051afef01b81aed99eebbd49cf556f8c2a7e5",
+    "instruction_manifest_control_revision": 8,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_config_revision": 7,
+    "transport_mode": "sha_only_main_ref_h1_h2_stable",
+    "h1_main_sha": "c9f765da885d9575aa880a4661b86e0f1bb3388a",
+    "h2_main_sha": "c9f765da885d9575aa880a4661b86e0f1bb3388a",
+    "bootstrap_valid": true
+  },
+  "source_pin": "modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 (rmcp-v3.1.4)",
+  "slice": "Verify the exact released construction and router-handler return seam for an application-owned durable task handle without invoking stock TaskManager::spawn.",
+  "evidence": [
+    {
+      "path": "crates/rmcp/src/model/task.rs",
+      "finding": "Task::new(task_id,status,created_at,last_updated_at) and CreateTaskResult::new(Task) are public constructors; CreateTaskResult embeds the server-generated stable task id and seed task state."
+    },
+    {
+      "path": "crates/rmcp/src/model/mrtr.rs",
+      "finding": "CallToolResponse has public Task(CreateTaskResult), From<CreateTaskResult> for CallToolResponse, and conversion of CallToolResponse::Task into ServerResult::CreateTaskResult."
+    },
+    {
+      "path": "crates/rmcp/src/handler/server/tool.rs",
+      "finding": "Registered tool adapters accept return R: IntoCallToolResult. IntoCallToolResult is implemented for CallToolResponse, but not directly for CreateTaskResult in this file; therefore the handler can return CallToolResponse::Task(CreateTaskResult::new(task)) (or an equivalent CallToolResponse conversion) without calling TaskManager::spawn."
+    }
+  ],
+  "result": "SOURCE_QUALIFIED_POSITIVE_WITH_TYPE_NUANCE: rmcp-v3.1.4 exposes a released public path for a router-first registered tool handler to return an application-owned Task as a protocol CreateTaskResult without invoking stock TaskManager::spawn. Return the handle as CallToolResponse (CreateTaskResult alone is not shown implementing IntoCallToolResult).",
+  "scope_limits": [
+    "Source-qualified only; no local cargo/rustc compile or runtime execution was performed in this slice.",
+    "This closes only handle construction/return through the released tool-response surface.",
+    "It does not prove application-store tasks/get wiring, restart redrive, cancellation/update semantics, task capability pre-materialization, or external-effect exactly-once safety.",
+    "No inference is made beyond rmcp-v3.1.4 exact release source."
+  ],
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "residual_dependency_detail": "Full Phase-1 parity remains unresolved because a durable application-owned executor/store, restart redrive, and external-effect idempotency/fencing are still required proof obligations; this slice does not count those as solved.",
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "One bounded rmcp continuation leaf only; no OpenHands or second optional leaf started; no scheduler or non-role-local mutation.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "Next invocation only: source-pin the exact rmcp-v3.1.4 ServerHandler get_task/update_task/cancel_task signatures and GetTaskResult/DetailedTask constructors needed to back those methods from an application-owned durable store, then write a compile-oriented minimal skeleton that returns CallToolResponse::Task from the router-first tool handler and serves tasks/get without stock TaskManager or TaskContext. Mark it NOT COMPILED unless an in-scope compiler surface actually exists. Stop after that one slice; do not start OpenHands or a second optional leaf."
+}
