@@ -1,11 +1,11 @@
 # Long Horizon clean_g1 — latest pointer / bounded Phase-1 checkpoint
 
 Canonical Phase-1 role branch: `clean-long-horizon-phase1-active`
-Authority record carried from the exact predecessor: `research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
-Predecessor LATEST blob consumed by CAS: `87bc40d90ce4e52787d03d75ae1544adb41dbc9b`
-Preflight checkpoint/readback: `research_workers_clean_g1/long_horizon/phase1/PREFLIGHT_2026-08-30T1020JST_CLEAN_SWITCH_ONCE_CAS_V1.json` / blob `2fee0496862a00ec95b1e6ba11ea5b91b7b5c6c9`
+Authority record: `research_workers_clean_g1/long_horizon/phase1/BRANCH_AUTHORITY.json`
+Preflight checkpoint/readback: `research_workers_clean_g1/long_horizon/phase1/PREFLIGHT_2026-08-30T1120JST_STALE_CAS_REPLAY_V1.json` / blob `492f324b493148673463807a8094510203b5d956`
+Predecessor LATEST blob: `bf614651a84c7731fa1612161c97a3176d78ed59`
 
-## Frozen authority for this invocation
+## Frozen authority
 - transport_mode: `exact_blob_two_pass`
 - instruction manifest revision/blob: `2` / `b288c95adab1ef949ed1791275176815a67b7d11`
 - lifecycle revision/blob: `1` / `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
@@ -16,36 +16,19 @@ Preflight checkpoint/readback: `research_workers_clean_g1/long_horizon/phase1/PR
 - enabled_desired: `true`
 
 ## Selected single effect chain
-- effect_chain_id: `clean-switch-once-cas-v1`
-- stage completed this invocation: `synthetic_A_to_B_forecast_overrun_switch`
-- exact predecessor/frontier: predecessor required exactly one role-local synthetic `A -> B` plan switch under current-blob CAS; stale replay rejection was explicitly deferred to the following invocation.
-- planned atomic boundary: evaluate the persisted forecast fixture once, select the alternative plan when the threshold fires, commit exactly one `A -> B` transition to this role-local pointer using the predecessor blob as the CAS authority, then exact-read back and return recurring-open.
-
-## Forecast-overrun fixture and switching criterion
-- plan before transition: `A`
-- alternative plan: `B`
-- p90 remaining work forecast: `18s`
-- checkpoint reserve: `8s`
-- remaining fixture budget: `20s`
-- switching rule: `SWITCH iff p90 + reserve > remaining`
-- calculation: `18 + 8 = 26 > 20`
-- decision: `SWITCH`
-- committed transition: `A -> B`
-- switch_generation: `1`
-- switch_count_this_invocation: `1`
-- duplicate switch effects: `0`
-- stale replay attempted this invocation: `false`
-- stale replay candidate retained for the next invocation: predecessor blob `87bc40d90ce4e52787d03d75ae1544adb41dbc9b`
+- effect_chain_id: `clean-stale-cas-replay-v1`
+- atomic action: exactly one attempted replacement of this `LATEST.md` using stale CAS authority blob `87bc40d90ce4e52787d03d75ae1544adb41dbc9b`; no retry.
+- observed result: GitHub Contents API returned HTTP `409` with `LATEST.md does not match 87bc40d90ce4e52787d03d75ae1544adb41dbc9b`.
+- exact post-attempt readback blob: `bf614651a84c7731fa1612161c97a3176d78ed59`, identical to the pre-attempt current blob.
+- committed stale-replay effects: `0`.
 
 ## Bounded result
-The forecast-overrun criterion fired on the exact reserved synthetic fixture and the canonical role-local pointer was switched once from plan A to plan B under current-blob CAS. This is a mechanism-level scheduled-Chat repository-state probe only: it proves the bounded switch commit path for this fixture, not real-task forecast calibration and not stale-writer rejection. No second leaf, retry, wait, poll, richer-mode execution, protected-primary execution, manual-user step, hosted runner, finite-credit compute/storage, or scheduler mutation was used.
-
-Tested scope: one persisted synthetic overrun fixture plus one role-local CAS-guarded `A -> B` plan transition on the canonical long_horizon branch.
+For this exact canonical role-local lineage, a stale continuation carrying the predecessor CAS blob was rejected and did not overwrite the current checkpoint pointer. This is mechanism-level evidence for one stale-writer defense on GitHub Contents API only; it does not establish general distributed-store safety or duplicate-consumption safety.
 
 Residual richer-mode/Work/protected-primary/manual execution dependency: `none introduced`.
-Finite monthly/trial/paid quota dependency: `none introduced`; lightweight repository transport only and no hosted compute/storage allowance is an execution dependency.
+Finite monthly/trial/paid quota dependency: `none introduced`; lightweight repository transport only, with no hosted compute/storage allowance used as execution.
 Incremental monetary cost: `0`.
-Conflict check: role-local namespace and canonical role branch only; no protected-primary, other-worker, downstream, O-derived, legacy, shared-ledger, or scheduler state was read or mutated for semantics.
+Conflict check: role-local namespace and canonical role branch only; no O/downstream/other-worker/legacy/shared-ledger/protected-primary semantic input or scheduler mutation.
 
 ## Lifecycle receipt
 - termination: `bounded_slice_complete_recurring_open`
@@ -58,4 +41,4 @@ Conflict check: role-local namespace and canonical role branch only; no protecte
 - next_invocation_resumes_exact_continuation: `true`
 
 ## Exact continuation
-On the next invocation, bootstrap/freeze the current instruction manifest, RUN_LIFECYCLE, DESIRED_STATE and long_horizon role config exactly as required, then reconstruct this canonical branch and `clean-switch-once-cas-v1` lineage. Perform exactly one stale-continuation defense test against this same `LATEST.md`: issue one update attempt using stale predecessor blob `87bc40d90ce4e52787d03d75ae1544adb41dbc9b` as the CAS authority and a clearly marked stale-replay payload. Expected result is a CAS conflict with no committed mutation. Do not retry the stale write. Exact-read back the then-current `LATEST.md` and persist the bounded result/continuation; leave any duplicate-consumption or rate-limit leaf for a later invocation. If the stale write is unexpectedly accepted, record that as a scoped failure and preserve a nonempty alternative-route child. Never use a second lineage, quarantined evidence, richer-mode/protected/manual execution, finite quota, scheduler mutation, wait/poll/backoff, or optional second leaf.
+Next invocation, after the required manifest/lifecycle/root/role bootstrap and a new preflight checkpoint, execute exactly one duplicate-resume-consumption defense leaf `clean-duplicate-consumption-create-once-v1`. Bind a new role-local immutable claim path to this completed stale-defense lineage and to the then-current `LATEST.md` blob; create it once, issue exactly one duplicate create for the identical path, do not retry on conflict, exact-read the surviving claim, and persist the result plus the following continuation. Keep rate-limit recovery as a later separate leaf. If duplicate create is unexpectedly accepted, record a scoped failure and set the following continuation to a generation-bound/CAS alternative; do not start that alternative in the same invocation. Preserve zero richer-mode/protected/manual dependency, zero finite monthly/trial/paid quota dependency, zero incremental cost, clean isolation, enabled_desired=true, global_completion=false, and phase1_completion_claimed=false.
