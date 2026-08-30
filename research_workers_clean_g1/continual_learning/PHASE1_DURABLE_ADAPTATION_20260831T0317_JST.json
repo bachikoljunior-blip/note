@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "role": "continual_learning",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-continual-learning-durable-adaptation",
+  "bootstrap": {
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "9430aa7ee49a1683e26a65f3997451a3e85de567",
+    "manifest_control_revision": 11,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/continual_learning.json",
+    "role_config_blob": "16232cba3558b13f883f097e11d052016cff20b7",
+    "role_control_revision": 9,
+    "role_config_revision": 6
+  },
+  "slice": {
+    "name": "two_writer_stale_prev_chain_race",
+    "purpose": "Starting from one shared committed chain digest, construct two distinct complete frames, accept writer A, then verify writer B is rejected solely because its prev_chain is stale and that the rejected writer causes no state change.",
+    "mechanism_extension": {
+      "candidate_construction": "Both writers canonicalize their event payload, bind event_payload_digest=SHA256(canonical event), and build a complete newline-terminated candidate frame from the same observed prev_chain.",
+      "commit_rule": "A candidate may mutate state only if its payload digest and commit digest validate and frame.prev_chain equals the current committed chain at the compare-and-append boundary.",
+      "stale_writer_rule": "If frame.prev_chain differs from the current committed chain, reject before applying the event. No implicit rebase, overwrite, or last-writer-wins fallback is allowed."
+    },
+    "fixture": {
+      "prior_state": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C"
+      },
+      "prior_state_digest": "69851dee7d56df24156bfaeb030c805f3af5c747ce7502e96fd0088634a1e859",
+      "shared_prior_chain": "bb7bff2b932870854e139de7ba217c44ad9af849a7e707d42fc7455c8668294d",
+      "writer_a": {
+        "event": {
+          "event_id": "e4a",
+          "op": "patch",
+          "changes": {
+            "delta": "D_A"
+          }
+        },
+        "event_payload_digest": "449efdd6a20730022ae96268b174eb797790bba4ec0da3f1f6cb3b5322f629a1",
+        "candidate_commit_digest": "1f85222b849bbe70399c138e37e02da030515407207b2fa489cf966974c97dfc",
+        "candidate_frame_bytes": 321
+      },
+      "writer_b": {
+        "event": {
+          "event_id": "e4b",
+          "op": "patch",
+          "changes": {
+            "epsilon": "E_B"
+          }
+        },
+        "event_payload_digest": "9f1b2481c467ac787b39c68f3499a1e56a12e0962173b876b7d7ca838f8a9f04",
+        "candidate_commit_digest": "7ea01fba52d5ee842d0424cba5254f6fb130ac2c6b002356cc8f43dbfafe29ef",
+        "candidate_frame_bytes": 323
+      }
+    },
+    "observed": {
+      "writer_a_status": "applied",
+      "writer_a_new_chain": "1f85222b849bbe70399c138e37e02da030515407207b2fa489cf966974c97dfc",
+      "state_after_writer_a": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C",
+        "delta": "D_A"
+      },
+      "state_after_writer_a_digest": "e43e18a068fd286d3bed15a9012cf0694d7ac428756e845725f84ca872fa7353",
+      "writer_b_status": "stale_prev_chain_rejected",
+      "writer_b_candidate_prev_chain": "bb7bff2b932870854e139de7ba217c44ad9af849a7e707d42fc7455c8668294d",
+      "writer_b_observed_current_chain_at_commit": "1f85222b849bbe70399c138e37e02da030515407207b2fa489cf966974c97dfc",
+      "writer_b_payload_digest_valid": true,
+      "writer_b_commit_digest_valid": true,
+      "writer_b_rejected_due_only_to_stale_prev_chain": true,
+      "state_after_writer_b_attempt": {
+        "alpha": "A",
+        "beta": "B2",
+        "gamma": "C",
+        "delta": "D_A"
+      },
+      "state_after_writer_b_attempt_digest": "e43e18a068fd286d3bed15a9012cf0694d7ac428756e845725f84ca872fa7353",
+      "writer_b_effect_applied": false,
+      "writer_a_effect_retained": true,
+      "state_unchanged_by_stale_writer": true
+    },
+    "metrics": {
+      "accepted_writer_apply_rate": 1.0,
+      "stale_prev_chain_rejection": 1.0,
+      "stale_writer_effect_rate": 0.0,
+      "accepted_writer_retention_after_conflict": 1.0,
+      "state_digest_match_before_vs_after_stale_attempt": 1.0
+    },
+    "tested_scope": "Deterministic small text state with two independently constructed complete candidate frames and one serialized compare-and-append decision point. This establishes stale-prev_chain conflict detection and no-effect rejection for the modeled boundary. It does not establish lock-free progress, fairness, arbitrary simultaneous network writes, semantic model-weight adaptation, or indefinite repository availability.",
+    "zero_dependency_assessment": {
+      "residual_richer_mode_or_protected_or_manual_user_execution": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost": 0,
+      "transport_note": "All adaptation/conflict logic in this slice is deterministic Chat-local computation. Repository contents API is lightweight durable transport only; optional hosted runners, Codespaces, artifact/LFS/package storage, cloud credits, external model/API credits, richer-mode execution, protected authority, and manual user execution are not required. A transport rate limit remains a retry-next-invocation condition, not compute."
+    },
+    "conflict_check": "No O/O-derived, downstream, other-worker, shared-ledger, other-role receipt/config, or legacy semantic input was consumed. No protected-primary or scheduler mutation occurred. Only current instruction controls, own role-local state, and deterministic local probe logic were used."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "next_invocation_resumes_exact_continuation": true,
+  "exact_continuation": "Next invocation: extend the same framed hash-chain with stale-writer recovery. Starting from the state and chain after writer A, rebuild writer B against the new current chain, accept it exactly once, then replay the identical rebased writer-B event and verify idempotent duplicate handling causes no second effect. Persist exact rebase-plus-once-only evidence; do not start an unrelated base-work leaf."
+}
