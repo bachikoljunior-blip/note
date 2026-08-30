@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 65,
+  "semantic_parent_revision": 64,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 13,
+    "instruction_manifest_blob": "0d4eed5d464aa69bb0bceb84a842df7a3e4121c4",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_control_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_path": "automation_control/roles/open_source.json",
+    "config_control_revision": 14,
+    "config_revision": 7,
+    "config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "transport_mode": "sha_only_main_ref_h1_h2_stable_authority_frozen",
+    "h1_main_sha": "a89a728acca371be1b75caa897588eafff17b7b4",
+    "h2_main_sha": "a89a728acca371be1b75caa897588eafff17b7b4",
+    "bootstrap_valid": true,
+    "enabled_desired": true
+  },
+  "own_state_input": {
+    "path": "research_workers_clean_g1/open_source/LATEST.json",
+    "blob": "9de1647fa92806ee81af5256910854e7d08a78a3",
+    "worker_revision": 64,
+    "exact_continuation_followed": "Pin rmcp-v3.1.4 model and ServerHandler error surfaces used by tasks/update; map unknown task, stale generation/intent conflict, non-input_required update, and non-outstanding response key without inventing fields or compiling."
+  },
+  "slice": {
+    "kind": "source_qualified_error_surface_mapping",
+    "system": "modelcontextprotocol/rust-sdk rmcp-v3.1.4",
+    "release_tag_ref_object": "2b7ea69be1701fd39de53161055212c4041ebf06",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "release_tag_date": "2026-08-20T03:47:15Z",
+    "sources": [
+      "https://github.com/modelcontextprotocol/rust-sdk/blob/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/model.rs",
+      "https://github.com/modelcontextprotocol/rust-sdk/blob/4a738b9dd99eaca418b614afa433a0cbdaf8d056/crates/rmcp/src/model/task.rs",
+      "https://tasks.extensions.modelcontextprotocol.io/specification/draft/tasks"
+    ],
+    "exact_rmcp_error_surface": {
+      "ErrorCode_INVALID_PARAMS": -32602,
+      "ErrorCode_INTERNAL_ERROR": -32603,
+      "ErrorCode_RESOURCE_NOT_FOUND": -32002,
+      "constructors": [
+        "ErrorData::new(ErrorCode, message, data)",
+        "ErrorData::invalid_params(message, data)",
+        "ErrorData::internal_error(message, data)",
+        "ErrorData::resource_not_found(message, data)"
+      ],
+      "scope_note": "rmcp model.rs documents resource_not_found as -32002 and notes server upgrade to INVALID_PARAMS for 2026-07-28 peers; the Tasks extension itself specifies invalid/nonexistent taskId as -32602, so a custom tasks/update handler should use ErrorData::invalid_params directly rather than rely on resource-not-found upgrading."
+    },
+    "mapping_candidate": [
+      {
+        "case": "unknown_or_invalid_task_id",
+        "mapping": "Err(ErrorData::invalid_params(<informative task-not-found message>, None))",
+        "code": -32602,
+        "confidence": "high",
+        "basis": "Tasks protocol says servers SHOULD return Invalid params for invalid/nonexistent taskId on tasks/update; rmcp exposes the matching constructor."
+      },
+      {
+        "case": "stale_generation_or_intent_conflict_in_application_owned_persistent_handler",
+        "mapping": "Err(ErrorData::invalid_params(<conflict message>, None))",
+        "code": -32602,
+        "confidence": "medium",
+        "basis": "rmcp-v3.1.4 exposes no task-specific stale-generation/intent-conflict ErrorCode. INVALID_PARAMS is the available standard client-visible code for a request inconsistent with current task identity/state. Do not invent structured data fields until the application contract defines them."
+      },
+      {
+        "case": "tasks_update_when_task_is_not_input_required_but_task_exists_and_request_identity_is_valid",
+        "mapping": "no protocol error by default; preserve successful empty TaskAck/no-op semantics",
+        "code": null,
+        "confidence": "medium_high",
+        "basis": "The Tasks extension defines tasks/update as responses to outstanding inputRequests but does not assign an error for a valid existing task lacking outstanding input; the stock behavior from the preceding pinned slice treated unknown/already-answered/superseded response keys as ignorable. Returning INVALID_PARAMS here would be a stricter custom semantic, not source parity."
+      },
+      {
+        "case": "non_outstanding_unknown_already_satisfied_response_key",
+        "mapping": "ignore that key; accept any still-outstanding keys; return successful empty TaskAck",
+        "code": null,
+        "confidence": "high",
+        "basis": "Official Tasks overview explicitly says to ignore responses for unknown or already-satisfied keys. No ErrorData should be invented for this case."
+      }
+    ],
+    "model_shape_check": "Exact rmcp-v3.1.4 task model has DetailedTask { task: Task, payload: TaskPayload }, GetTaskResult::new(DetailedTask) with resultType COMPLETE, and TaskAckResult as the empty complete acknowledgement for tasks/update/tasks/cancel.",
+    "not_claimed": [
+      "No Rust compilation or type-check was performed.",
+      "No claim is made that application-owned generation or intent fields exist in stock UpdateTaskParams.",
+      "No external-effect executor, persistent backend, or exactly-once effect path was tested in this slice."
+    ]
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": "Persistent create-or-get, restart redrive, and external-effect idempotency/fencing remain unresolved architecture children; this mapping slice itself requires no richer-mode execution.",
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "conflict_check": "Role-local/public-source only; no O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, or scheduler semantics consumed."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: pin the exact rmcp-v3.1.4 UpdateTaskParams wire fields and the exact stock TaskManager::update_task control flow at commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056. Verify whether any task-specific error conversion or capability gate changes the mapping above, then persist a compile-risk-reduced custom persistent-handler adapter sketch. Do not compile and do not enter external-effect execution in that slice."
+}
