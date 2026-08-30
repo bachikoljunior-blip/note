@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 56,
+  "semantic_parent_revision": 55,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 7,
+  "lifecycle_control_revision": 1,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_main_ref_h1_h2_stable",
+    "frozen_main_sha": "8b566bd3d56cd24320b6a141e7605543499ce0de",
+    "h1_main_sha": "8b566bd3d56cd24320b6a141e7605543499ce0de",
+    "h2_main_sha": "8b566bd3d56cd24320b6a141e7605543499ce0de",
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "blob": "26b08f75ed25273b05e43ce77e018675c635b37a",
+      "control_revision": 7
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+      "control_revision": 1
+    },
+    "sanitized_root": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+      "control_revision": 26
+    },
+    "own_role_config": {
+      "path": "automation_control/roles/open_source.json",
+      "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+      "control_revision": 14,
+      "config_revision": 7
+    }
+  },
+  "slice": {
+    "kind": "single_bounded_source_audit",
+    "leaf": "Pin the smallest source-qualified Axum/Tower authentication seam that inserts a trusted server Principal into HTTP request extensions before rmcp-v3.1.4 StreamableHttpService splits the request into Parts, and give a fail-closed retrieval shape usable across RequestContext-bearing handlers.",
+    "sources": [
+      {
+        "type": "official_release_source",
+        "repository": "modelcontextprotocol/rust-sdk",
+        "ref": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+        "release": "rmcp-v3.1.4",
+        "path": "crates/rmcp/src/transport/streamable_http_server/tower.rs",
+        "observed_facts": [
+          "StreamableHttpService<S,M> implements tower_service::Service<Request<RequestBody>>.",
+          "The HTTP request is split with request.into_parts(); the resulting http::request::Parts is inserted into the MCP request extensions before OneshotTransport/handler dispatch on the evidenced Streamable HTTP paths.",
+          "The source documentation explicitly states that state added via axum's Extension layer is available inside Parts.extensions and shows RequestContext.extensions -> Parts -> Parts.extensions lookup."
+        ]
+      },
+      {
+        "type": "canonical_public_framework_docs",
+        "project": "axum",
+        "version_observed": "0.8.9",
+        "page": "axum::middleware",
+        "observed_fact": "The official middleware example authenticates before next.run(req), inserts CurrentUser using req.extensions_mut().insert(current_user), and rejects unauthorized requests before the inner route executes."
+      }
+    ],
+    "result": "SOURCE_QUALIFIED_POSITIVE_FOR_EVIDENCED_STREAMABLE_HTTP_PATHS",
+    "finding": "The smallest qualified insertion seam is an outer Axum/Tower authentication middleware layer that wraps the route/service backed by rmcp StreamableHttpService and inserts a server-authenticated Principal into the HTTP Request.extensions before calling next.run(req). rmcp-v3.1.4 later preserves that extension by moving the entire http::request::Parts into MCP request extensions before dispatch. A handler can therefore recover the same Principal with a nested fail-closed lookup RequestContext.extensions.get::<http::request::Parts>() followed by parts.extensions.get::<Principal>(). This avoids trusting client _meta for identity and avoids duplicating identity propagation separately in call_tool/get_task/update_task/cancel_task handlers.",
+    "compile_risk_minimized_shape": {
+      "auth_middleware": "async fn auth(mut req: axum::extract::Request, next: axum::middleware::Next) -> Result<axum::response::Response, http::StatusCode> { let principal = authenticate(req.headers()).await.ok_or(http::StatusCode::UNAUTHORIZED)?; req.extensions_mut().insert(principal); Ok(next.run(req).await) }",
+      "handler_helper": "fn principal_from_ctx(ctx: &rmcp::service::RequestContext<rmcp::RoleServer>) -> Option<&Principal> { ctx.extensions.get::<http::request::Parts>().and_then(|parts| parts.extensions.get::<Principal>()) }",
+      "layer_rule": "Apply middleware::from_fn(auth) as a layer outside the MCP route/service so authentication and Principal insertion happen before StreamableHttpService::call receives the request.",
+      "status": "SOURCE_QUALIFIED_SHAPE_NOT_COMPILED_IN_THIS_RUNTIME"
+    },
+    "fail_closed_conditions": [
+      "No authenticated Principal inserted by trusted middleware -> handler rejects; never fall back to client metadata.",
+      "No http::request::Parts in RequestContext.extensions -> reject as unsupported/non-evidenced transport path.",
+      "Principal absent from Parts.extensions -> reject.",
+      "Do not generalize this proof to non-Streamable-HTTP transports without a transport-specific server-authenticated identity seam."
+    ],
+    "scope_limits": [
+      "This proves only identity propagation ordering for the exact rmcp-v3.1.4 StreamableHttpService paths evidenced by tower.rs plus canonical Axum middleware request-extension semantics.",
+      "It does not prove a concrete authentication backend, TLS/reverse-proxy trust boundary, router layer ordering for a specific rmcp example application, persistent task create-or-get, restart redrive, or effect-side idempotency/fencing.",
+      "The overall Phase-1 route still has an unresolved resident server/executor and persistent-task-runtime child; this slice is not Phase-1 acceptance."
+    ]
+  },
+  "clean_exploration": {
+    "semantic_inputs_used": [
+      "own role-local LATEST.json",
+      "sanitized DESIRED_STATE.json",
+      "own open_source role config",
+      "official public modelcontextprotocol/rust-sdk release source",
+      "official public axum docs"
+    ],
+    "forbidden_semantic_inputs_used": false,
+    "other_worker_or_downstream_semantics_used": false,
+    "shared_ledger_read": false,
+    "scheduler_mutation_by_worker": false
+  },
+  "acceptance_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": "UNRESOLVED_OVERALL_ROUTE: application-owned resident HTTP/task executor and persistent task/redrive infrastructure remain unresolved; the Principal propagation seam itself adds no separate user execution handoff.",
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "quota_scope": "The evidenced identity propagation mechanism is in-process Axum/http extension state and does not inherently consume hosted runner, Codespaces, artifact/LFS/package, cloud, API/model-credit, or other finite monthly quota. Full route acceptance remains blocked by executor/runtime obligations rather than quota evidence.",
+    "incremental_monetary_cost": 0
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: inspect the exact rmcp-v3.1.4 public Axum example/Cargo integration surface that mounts StreamableHttpService, and pin whether Router::layer or route_layer wrapping order gives a compile-risk-minimized concrete composition where auth middleware runs before StreamableHttpService::call. Source-check the exact imports/features and persist either the concrete composition or an exact compile-surface blocker. Do not start persistent-store, OpenHands, or any second optional leaf in that invocation."
+}
