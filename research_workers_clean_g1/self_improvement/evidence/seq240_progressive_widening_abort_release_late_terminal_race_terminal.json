@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "terminal_evidence",
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "family": "ROOTV4-PROGRESSIVE-WIDENING-ABORT-RELEASE-LATE-TERMINAL-RACE-v1",
+  "parent_sequence": 239,
+  "precommit_blob": "09ea5a7a197078b4151057c88f1e8cb54ee531be",
+  "observed_at": "2026-08-30T16:05:05+09:00",
+  "raw_clock_observation_utc": "2026-08-30T07:05:05Z",
+  "bootstrap": {
+    "transport_mode": "exact_sha_ref",
+    "main_sha": "8b566bd3d56cd24320b6a141e7605543499ce0de",
+    "instruction_manifest_revision": 7,
+    "instruction_manifest_blob": "26b08f75ed25273b05e43ce77e018675c635b37a",
+    "run_lifecycle_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "bootstrap_valid": true,
+    "authority_recheck_same_main_sha": true
+  },
+  "public_sources": [
+    {
+      "url": "https://docs.python.org/3.14/library/asyncio-task.html",
+      "semantic_binding": "Task.cancel requests cancellation but does not guarantee the coroutine has stopped; cancellation may be suppressed, so an abort request alone cannot safely authorize reuse against possible late completion."
+    },
+    {
+      "url": "https://kubernetes.io/docs/reference/using-api/api-concepts/",
+      "semantic_binding": "resourceVersion represents persisted object version and conditional updates reject stale client state; this supports a version/fence check before accepting a late effect."
+    }
+  ],
+  "mechanism_reduction": "Treat cancellation as advisory for physical execution and make the role-local abort-generation tombstone authoritative for acceptance. Persist the tombstone and exactly-once reservation release before slot reuse; any later terminal carrying the aborted generation is stale and cannot affect N, reward, credit, release count, admission, or authority.",
+  "fixed_trace_results": [
+    {"step":1,"result":"PASS","state":"N=3 cap=1 active=[A@g7] queue=[B@g1,C@g1] R-A1=pending abort_tombstone=none"},
+    {"step":2,"result":"PASS","state":"abort_tombstone=A@g7 persisted; R-A1=released_once; N=3; active=[]; reward=0; credit=0"},
+    {"step":3,"result":"PASS","state":"cap=1; active=[B@g1]; queue=[C@g1]; exactly one free slot reused"},
+    {"step":4,"result":"PASS","state":"late A@g7 terminal rejected by abort fence; N=3; release_count=1; active=[B@g1]; queue=[C@g1]"},
+    {"step":5,"result":"PASS","state":"duplicate/transport-uncertain A@g7 replay is no-op; no N/release/admission/reward/credit effect"},
+    {"step":6,"result":"PASS","state":"restart reconstructs N=3 cap=1 active=[B@g1] queue=[C@g1] R-A1=released abort_tombstone=A@g7 with no phantom effects"}
+  ],
+  "guard_results": [
+    {"guard":"abort release is durable before slot reuse","result":"PASS"},
+    {"guard":"abort does not increment N","result":"PASS"},
+    {"guard":"reservation release is exactly once","result":"PASS"},
+    {"guard":"abort-generation fence survives restart","result":"PASS"},
+    {"guard":"late aborted-generation terminal cannot increment N or create reward/credit","result":"PASS"},
+    {"guard":"late terminal cannot release reservation twice","result":"PASS"},
+    {"guard":"abort does not increase widening cap","result":"PASS"},
+    {"guard":"post-abort admission is bounded by free capacity and frozen queue order","result":"PASS"}
+  ],
+  "score":"6/6 trace steps PASS; 8/8 guards PASS",
+  "failure_mode_exposed_without_fence":"If slot reuse trusted cancellation alone, a late A@g7 terminal could be mistaken for current work and incorrectly increment N, create reward/credit, or double-release R-A1 after B@g1 was admitted.",
+  "scope_limit":"Constructed role-local controller race only. This does not claim MCTS performance, operating-system cancellation guarantees, production safety, or equivalence to richer execution outside the frozen trace.",
+  "residual_richer_mode_or_protected_or_user_execution_dependency": false,
+  "finite_monthly_trial_paid_quota_dependency": false,
+  "incremental_monetary_cost": 0,
+  "credit_candidate_after_exact_readback": 1,
+  "enabled_desired": true,
+  "phase1_completion_claimed": false,
+  "global_completion": false
+}
