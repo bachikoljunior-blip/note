@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 62,
+  "semantic_parent_revision": 61,
+  "state_epoch": 3,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "status": "bounded_source_surface_progress_recurring_open",
+  "bootstrap": {
+    "bootstrap_valid": true,
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 10,
+    "instruction_manifest_blob": "f33de8209ada96ea0e2e1f3237b21a3cc555a242",
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 1,
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_control_revision": 14,
+    "config_revision": 7,
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "transport_mode": "sha_only_main_ref_h1_h2_stable_authority_frozen",
+    "h1_main_sha": "5c5cef5b7be36a7fc6cbb38e56d46a83d6f088f0",
+    "h2_main_sha": "5c5cef5b7be36a7fc6cbb38e56d46a83d6f088f0"
+  },
+  "source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release": "rmcp-v3.1.4",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": [
+      "crates/rmcp/src/model.rs",
+      "crates/rmcp/src/model/mrtr.rs",
+      "crates/rmcp/src/model/task.rs"
+    ]
+  },
+  "bounded_slice": "Source-pin exact rmcp-v3.1.4 JsonObject/InputRequests/InputResponses wire/container shapes and define one minimal application-owned serializable durable payload row that rejects status/payload mismatch without relying on TaskPayload serde; stop before task transition/redriver work.",
+  "findings": {
+    "json_object": "JsonObject<F=Value> is serde_json::Map<String,F>; default JsonObject is serde_json::Map<String,serde_json::Value>.",
+    "input_request": "InputRequest is a non_exhaustive serde-untagged enum restricted to CreateMessageRequest, ElicitRequest, and ListRootsRequest.",
+    "input_requests": "InputRequests is BTreeMap<String, InputRequest>; keys are server-assigned request identifiers.",
+    "input_responses": "InputResponses is BTreeMap<String, serde_json::Value>; keys correspond to InputRequests and response values are deliberately opaque JSON because heterogeneous ClientResult does not provide the traits needed as a BTreeMap value.",
+    "task_payload_boundary": "rmcp TaskPayload itself is not Serialize/Deserialize; DetailedTask owns custom wire serde via DetailedTaskWire. Its deserializer requires the status-required field but does not provide an application persistence format for TaskPayload.",
+    "durable_row_rule": "Persist an application-owned schema-versioned payload record with explicit kind plus exactly three optional slots: input_requests/result/error. Validate exact field presence for the kind, then separately require DurableTaskRow.status == payload kind's TaskStatus before constructing rmcp TaskPayload. Unknown schema versions, extra fields, missing required fields, nonmatching extra payload fields, and status/payload mismatch fail closed.",
+    "serialization_rule": "Serialize/deserialize the application-owned StoredPayloadV1, not rmcp TaskPayload. JsonObject, InputRequests and InputResponses have exact serde-capable underlying shapes in the pinned release. Reconstruction converts only after validation into TaskPayload and then DetailedTask::new, which re-forces the public Task.status to the payload status.",
+    "input_responses_scope": "InputResponses is source-pinned for the next transition slice but is not part of current TaskPayload/GetTaskResult storage; it belongs tasks/update processing and should be validated separately rather than mixed into the current-state payload union.",
+    "compiler_surface": "No cargo or rustc executable is exposed in this runtime; Rust compile success is not claimed."
+  },
+  "application_owned_candidate": "#[derive(Serialize, Deserialize)]\nstruct StoredPayloadV1 {\n    schema_version: u8,\n    kind: StoredPayloadKind,\n    input_requests: Option<InputRequests>,\n    result: Option<JsonObject>,\n    error: Option<JsonObject>,\n}\n\n#[derive(Serialize, Deserialize, Clone, Copy)]\n#[serde(rename_all = \"snake_case\")]\nenum StoredPayloadKind { Working, InputRequired, Completed, Failed, Cancelled }\n\nfn reconstruct_payload(row_status: TaskStatus, p: StoredPayloadV1) -> Result<TaskPayload, StoreError> {\n    if p.schema_version != 1 { return Err(StoreError::UnsupportedPayloadVersion); }\n    let payload = match (p.kind, p.input_requests, p.result, p.error) {\n        (StoredPayloadKind::Working, None, None, None) => TaskPayload::Working,\n        (StoredPayloadKind::InputRequired, Some(input_requests), None, None) => TaskPayload::InputRequired { input_requests },\n        (StoredPayloadKind::Completed, None, Some(result), None) => TaskPayload::Completed { result },\n        (StoredPayloadKind::Failed, None, None, Some(error)) => TaskPayload::Failed { error },\n        (StoredPayloadKind::Cancelled, None, None, None) => TaskPayload::Cancelled,\n        _ => return Err(StoreError::PayloadShapeMismatch),\n    };\n    if row_status != payload.status() { return Err(StoreError::StatusPayloadMismatch); }\n    Ok(payload)\n}\n// Production form should also deserialize with an exact field-set policy (for example a dedicated strict wire struct/custom Deserialize) so unknown fields fail closed. NOT COMPILED in this runtime.",
+  "source_equivalent_model_test": {
+    "runtime": "local Python JSON model only; not Rust compiler/runtime evidence",
+    "result": "12/12 PASS",
+    "positive_cases": [
+      "working empty payload roundtrip",
+      "cancelled empty payload roundtrip",
+      "input_required with keyed request-map roundtrip",
+      "completed with JSON-object result roundtrip",
+      "failed with JSON-object error roundtrip"
+    ],
+    "negative_cases": [
+      "stored completed status with working payload rejected",
+      "stored working status with completed payload rejected",
+      "completed payload carrying extra error rejected",
+      "failed payload missing error rejected",
+      "input_required payload missing input_requests rejected",
+      "unknown stored field rejected by model exact-field-set policy",
+      "unsupported schema_version rejected"
+    ]
+  },
+  "tested_scope": "Exact released model.rs/mrtr.rs/task.rs type definitions plus a source-equivalent JSON persistence model. No Rust compiler, custom durable store, server restart redriver, tasks/update transition handler, or external effect system was executed.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "residual_dependency_detail": "A production-complete route still needs an application-owned durable store/redriver, exact tasks/update transition validation, restart claim/fencing, and effect-side idempotency/fencing. These remain unresolved children, not accepted handoffs.",
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "Only own role-local state plus public official rust-sdk source was consumed; no O, other-worker, downstream, legacy, shared-ledger or other-role semantic input was used and no scheduler or non-role repository surface was mutated.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: source-pin exact rmcp-v3.1.4 tasks/update handling and define one application-owned durable transition validator for InputResponses that accepts updates only while status=input_required, requires response keys to be a permitted subset/exactly-once set for the currently outstanding InputRequests, and commits the transition under generation/CAS before redrive. Keep external effect execution out of that slice and keep NOT COMPILED if no compiler is exposed. Stop after that one slice."
+}
