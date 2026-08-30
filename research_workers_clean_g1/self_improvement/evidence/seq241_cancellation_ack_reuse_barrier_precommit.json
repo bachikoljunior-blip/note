@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "precommit",
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "family": "ROOTV4-CANCELLATION-ACK-REUSE-BARRIER-v1",
+  "parent_sequence": 240,
+  "parent_latest_blob": "368ae80058d998cd09c282c8bded4b29ce3e6ceb",
+  "parent_state_blob": "59f43686e0066effbee9f8090317c03cb9407381",
+  "parent_terminal_blob_exact_read": "0da5d58854abdf6769a27d545b2ca9f044e2d0b7",
+  "bootstrap": {
+    "transport_mode": "exact_sha_ref",
+    "main_sha": "fda04bbb3429f2a78c63ca7835f181c3c7d600fc",
+    "instruction_manifest_revision": 8,
+    "instruction_manifest_blob": "69d051afef01b81aed99eebbd49cf556f8c2a7e5",
+    "run_lifecycle_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "bootstrap_valid": true,
+    "authority_recheck_same_main_sha": true
+  },
+  "duplicate_audit": {
+    "scope": "mechanical repository search before public semantic read",
+    "query": "cancellation acknowledgement reuse barrier abort observed slot reusable",
+    "result_count": 0,
+    "material_duplicate_found": false,
+    "semantic_content_from_other_roles_consumed": false
+  },
+  "public_semantic_sources_consumed_before_precommit": [],
+  "fixed_state_machine": [
+    "ACTIVE",
+    "ABORT_REQUESTED",
+    "ABORT_OBSERVED",
+    "SLOT_REUSABLE"
+  ],
+  "fixed_trace": [
+    {"step":1,"event":"A@g11 active with reservation R-A2 held","expected":"state=ACTIVE; slot_reusable=false"},
+    {"step":2,"event":"durably record abort request for A@g11","expected":"state=ABORT_REQUESTED; slot_reusable=false; reservation still held"},
+    {"step":3,"event":"receive mismatched/stale abort acknowledgement for A@g10","expected":"reject acknowledgement; remain ABORT_REQUESTED; slot_reusable=false"},
+    {"step":4,"event":"receive matching-generation authoritative abort observation for A@g11 and durably record it","expected":"state=ABORT_OBSERVED; release R-A2 exactly once; then state=SLOT_REUSABLE"},
+    {"step":5,"event":"admit B@g1 into the now-reusable slot, then receive late SUCCESS terminal for A@g11","expected":"late A@g11 terminal is stale and has no reward, credit, N, release, admission or authority effect"},
+    {"step":6,"event":"replay duplicate matching abort acknowledgement for A@g11 after reuse/restart","expected":"no-op; release count remains one; B@g1 remains authoritative occupant"}
+  ],
+  "precommitted_guards": [
+    "abort request alone never makes a slot reusable",
+    "only a matching-generation authoritative abort observation may advance ABORT_REQUESTED to ABORT_OBSERVED",
+    "stale, mismatched or transport-uncertain abort acknowledgement cannot release capacity",
+    "slot reuse occurs only after durable ABORT_OBSERVED and exactly-once reservation release",
+    "late terminal from the aborted generation after slot reuse cannot create reward, credit, widening progress, authority change or second release",
+    "duplicate abort acknowledgement is idempotent across restart",
+    "restart reconstruction preserves abort phase, generation fence and release count",
+    "no residual richer-mode, protected-primary or manual-user execution step is introduced"
+  ],
+  "negative_control": "A controller that treats ABORT_REQUESTED as equivalent to SLOT_REUSABLE fails the fixed trace because B@g1 may be admitted before quiescence/authoritative abort observation while A@g11 can still produce a late terminal.",
+  "scope_limit": "Constructed role-local recurring-Chat switching/recovery trace only; no claim beyond the frozen state machine and guards until minimum public semantics are audited after this precommit.",
+  "residual_richer_mode_or_protected_or_user_execution_dependency": false,
+  "finite_monthly_trial_paid_quota_dependency": false,
+  "incremental_monetary_cost": 0,
+  "new_credit_awarded": 0,
+  "enabled_desired": true,
+  "phase1_completion_claimed": false,
+  "global_completion": false,
+  "frontier_nonempty": true,
+  "exact_next_action": "Fresh-bootstrap current INSTRUCTION_CONTROL_MANIFEST, RUN_LIFECYCLE, sanitized root, role config and own LATEST. Reconstruct this exact precommit before any new family selection; exact-read the precommit, audit only the minimum public cancellation acknowledgement/quiescence and stale-generation semantics needed for the frozen trace, execute steps 1-6 and guards without modification, seal and exact-read terminal evidence, and only then decide whether one role-local credit is warranted. Do not start a second leaf."
+}
