@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "terminal_evidence",
+  "role": "self_improvement",
+  "phase_id": "phase_1_chat_parity",
+  "assignment_task_id": "phase1-clean-self-improvement-optimizer-switching",
+  "family": "ROOTV4-PROGRESSIVE-WIDENING-ABORT-RELEASE-LATE-TERMINAL-RACE-v1",
+  "sequence": 240,
+  "precommit_blob": "09ea5a7a197078b4151057c88f1e8cb54ee531be",
+  "bootstrap": {
+    "instruction_manifest_revision": 6,
+    "instruction_manifest_blob": "42a39c7911e005c05fd2810e617a876eafbbeedc",
+    "run_lifecycle_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_revision": 7,
+    "role_config_blob": "c5d194b341a70356da196cfb88636ab41fc1bc9f",
+    "bootstrap_valid": true
+  },
+  "public_semantics": {
+    "source_family": "Apache Kafka transactional producer epoch fencing",
+    "source_urls": [
+      "https://kafka.apache.org/40/design/protocol/",
+      "https://kafka.apache.org/42/operations/transaction-protocol/"
+    ],
+    "binding": "Kafka checks producer_epoch against the broker current epoch and errors on mismatch; current Kafka transactional protocol bumps producer epoch per transaction. This is used only as public precedent for generation fencing. The role-local controller itself supplies the durable abort tombstone, exactly-once reservation release, width accounting, and frozen queue order.",
+    "scope_limit": "Constructed role-local controller trace only; no claim of Kafka equivalence, production safety, MCTS performance, or richer-mode parity beyond this tested race mechanism."
+  },
+  "trace": [
+    {"step":1,"result":"PASS","state":"N=3 cap=1 active=[A@g7] queue=[B@g1,C@g1] R-A1=pending abort_tombstone=none"},
+    {"step":2,"result":"PASS","state":"persist abort_tombstone=A@g7; release R-A1 once; N=3; active=[]; reward=0; credit=0"},
+    {"step":3,"result":"PASS","state":"cap=1; admit exactly B@g1; active=[B@g1]; queue=[C@g1]"},
+    {"step":4,"result":"PASS","state":"late A@g7 terminal rejected by abort-generation fence; N=3; no reward/credit; no second release"},
+    {"step":5,"result":"PASS","state":"duplicate/transport-uncertain replay is no-op; N=3; no release/admission"},
+    {"step":6,"result":"PASS","state":"restart reconstructs N=3 cap=1 active=[B@g1] queue=[C@g1] R-A1=released abort_tombstone=A@g7"}
+  ],
+  "acceptance_guards": {
+    "abort_release_durable_before_slot_reuse": "PASS",
+    "abort_does_not_increment_N": "PASS",
+    "reservation_release_exactly_once": "PASS",
+    "abort_generation_fence_survives_restart": "PASS",
+    "late_aborted_generation_terminal_no_N_reward_or_credit": "PASS",
+    "late_terminal_no_second_release": "PASS",
+    "abort_does_not_increase_widening_cap": "PASS",
+    "post_abort_admission_bounded_by_capacity_and_frozen_order": "PASS"
+  },
+  "guard_score": "8/8",
+  "trace_score": "6/6",
+  "terminal_result": "PASS",
+  "credit_eligible_after_exact_readback": true,
+  "residual_richer_mode_or_protected_or_user_execution_dependency": false,
+  "finite_monthly_trial_paid_quota_dependency": false,
+  "incremental_monetary_cost": 0,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "next_leaf_continuation": "Fresh-bootstrap current manifest, RUN_LIFECYCLE, sanitized root, role config and own LATEST. Reconstruct sequence 240 and audit own coverage for the highest-value non-conflicting Phase-1 switching/recovery child before any public semantic read. Precommit exactly one bounded leaf before source binding; do not start an optional second leaf in the same invocation."
+}
