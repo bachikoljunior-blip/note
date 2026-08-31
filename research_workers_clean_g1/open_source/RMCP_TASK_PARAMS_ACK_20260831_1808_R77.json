@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 77,
+  "semantic_parent_revision": 76,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_h1_h2_authority_revalidated",
+    "frozen_main_sha": "b23c9c1d1fa2ee380b0e3f6a50b65e69c71997d0",
+    "h1_sha": "b23c9c1d1fa2ee380b0e3f6a50b65e69c71997d0",
+    "h2_sha": "b23c9c1d1fa2ee380b0e3f6a50b65e69c71997d0",
+    "instruction_manifest_control_revision": 21,
+    "lifecycle_control_revision": 1,
+    "desired_state_control_revision": 26,
+    "open_source_control_revision": 14,
+    "open_source_config_revision": 7
+  },
+  "slice": "rmcp-v3.1.4 exact task parameter and acknowledgement dispatch shapes",
+  "upstream": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": [
+      "crates/rmcp/src/model.rs",
+      "crates/rmcp/src/model/task.rs",
+      "crates/rmcp/src/handler/server.rs"
+    ]
+  },
+  "exact_findings": [
+    "GetTaskParams has meta: Option<RequestMetaObject> and task_id: String; GetTaskParams::new(task_id) sets meta=None and stores task_id.",
+    "CancelTaskParams has meta: Option<RequestMetaObject> and task_id: String; CancelTaskParams::new(task_id) sets meta=None and stores task_id.",
+    "UpdateTaskParams has meta: Option<RequestMetaObject>, task_id: String, and input_responses: InputResponses; its constructor accepts task_id plus InputResponses.",
+    "ServerResult contains TaskAckResult after CallToolResult/InputRequiredResult in the untagged union, and ServerResult::task_ack(()) wraps TaskAckResult::new().",
+    "The exact ServerHandler dispatcher validates Tasks capability before tasks/* handlers. tasks/get calls get_task(params, context) and maps GetTaskResult directly; tasks/update and tasks/cancel call update_task/cancel_task and map successful () through ServerResult::task_ack.",
+    "Therefore an application-owned task store can key get/update/cancel lookup directly by the server-stable task_id carried in the typed params while preserving the stock dispatcher acknowledgement wire shape, without requiring those three handlers to return a stock TaskManager-specific type."
+  ],
+  "scope_limits": [
+    "This slice does not prove restart execution/redrive, create-or-get idempotency, effect exactly-once semantics, or authorization of task_id ownership.",
+    "It does not compile a custom persistent ServerHandler implementation.",
+    "It does not prove that stock TaskManager is replaceable internally; it only pins the public ServerHandler parameter/result seam for application-owned implementations.",
+    "Current-main search was used only to locate model.rs; substantive claims above were re-fetched from the exact release commit."
+  ],
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "residual_richer_mode_protected_user_execution_dependency": false,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "unresolved_children": [
+      "persistent create-or-get task creation",
+      "restart redrive/executor liveness",
+      "task ownership/principal authorization",
+      "external-effect idempotency or fencing"
+    ]
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect the exact ServerHandler/RequestContext surface for enforcing task ownership or authenticated-principal binding before application-owned get_task/update_task/cancel_task store access. Pin the smallest source-qualified fail-closed seam; do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
