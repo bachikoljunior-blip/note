@@ -30,53 +30,45 @@
   "slice_type": "phase1_gmail_chat_exposed_idempotency_surface_probe",
   "slice_id": "reasoning-20260831T213916+0900-gmail-idempotency-wrapper-v1",
   "prior_findings_preserved": [
-    "Google Calendar create-event wrapper was previously found insufficient for an acknowledgement-loss exactly-once publication proof because the client learns the event identifier only after creation and no client-stable conditional-create/idempotency primitive was exposed in that tested wrapper.",
-    "Stripe Customer creation was previously found to have an upstream HTTP Idempotency-Key primitive, but the tested Chat stripe_api_write wrapper did not expose client control of that key/header or an equivalent deterministic create identity."
+    "Google Calendar create-event wrapper: no exposed client-stable conditional-create/idempotency primitive in the prior tested scope.",
+    "Stripe Customer create: upstream Stripe supports Idempotency-Key, but the tested Chat stripe_api_write wrapper did not expose client control of that key/header or an equivalent deterministic create identity."
   ],
-  "prior_exact_continuation_preserved": "Fresh-bootstrap next invocation, freeze exact current controls, exact-read reasoning STATE, then execute exactly one bounded Phase-1 leaf on Chat-exposed write surfaces only: identify one non-repository surface whose wrapper schema explicitly exposes a client-controlled idempotency key, deterministic create identity, or atomic create-if-absent token. Do not read user content or execute a real external mutation. If no such exposed primitive is found in the first highest-value candidate, persist that exact negative and select the next candidate only for the following recurrence. If one is found, formalize the minimum PREPARED/idempotency-key/COMMITTED crash-recovery state machine and scope its retention, quota and cost limits.",
   "test": {
     "candidate": "Chat-exposed Gmail send/draft write surface",
-    "effect_class": "non-repository externally visible email publication, with draft staging as the closest exposed precursor",
-    "surface_examined": [
-      "Gmail send_email tool schema",
-      "Gmail create_draft tool schema",
-      "Gmail send_draft tool schema"
-    ],
+    "surface_examined": ["Gmail send_email schema", "Gmail create_draft schema", "Gmail send_draft schema"],
     "send_email_exposes_client_idempotency_key": false,
     "send_email_exposes_client_controlled_message_id": false,
     "send_email_exposes_atomic_create_if_absent_token": false,
     "create_draft_exposes_client_selected_draft_id": false,
-    "create_draft_returns_server_selected_identity_only_after_mutation": true,
     "send_draft_accepts_existing_server_draft_id": true,
     "send_draft_contract_explicitly_guarantees_idempotent_replay_after_ack_loss": false,
     "user_mailbox_content_read": false,
     "external_mutation_executed": false,
     "result": "UNRESOLVED_GMAIL_CHAT_WRAPPER_CLIENT_STABLE_IDENTITY_GATE",
-    "reason": "The exposed Gmail write contract has no caller-controlled idempotency key, deterministic message identity, or create-if-absent precondition on direct send. Draft staging exposes a stable draft_id only after create_draft returns, so it does not by itself close the create-draft acknowledgement-loss window; and the send_draft schema does not state an idempotent replay guarantee for repeated use after an uncertain send result. Therefore this first candidate does not satisfy the continuation's explicit contract-level primitive criterion without adding unstated connector or mailbox-search semantics."
+    "reason": "Direct send exposes no caller-controlled stable operation identity. Draft staging yields a stable draft_id only after create_draft returns, leaving the draft-create acknowledgement-loss window unresolved from this contract alone; send_draft also does not state an idempotent replay guarantee after an uncertain send result."
   },
-  "crash_window_argument": {
-    "required_contract": "Before the first externally visible effect, persist and exact-read a stable operation identity that the same Chat write surface accepts on every replay, or expose a deterministic resource identity / atomic create-if-absent precondition whose replay semantics are explicit.",
-    "observed_direct_send_gap": "send_email has no such field in the exposed schema.",
-    "observed_draft_gap": "create_draft allocates the draft identity after the mutating call, so a lost response can leave the recurrence unable to name the created draft from the tested contract alone.",
-    "minimum_missing_capability": "Expose a caller-controlled idempotency token or deterministic message/draft identity with documented replay semantics on create/send, or an equivalent atomic create-if-absent operation addressable from Chat before the first mutation."
-  },
-  "tested_scope": "Read-only capability-schema analysis of Gmail send_email, create_draft and send_draft. No Gmail search/read/list action was invoked, no mailbox content or account data was consumed, no draft or email was created/sent, and no scheduler state was touched.",
+  "tested_scope": "Read-only Gmail capability-schema analysis only. No Gmail search/read/list, no mailbox or account content, no draft/email mutation, no external user-visible effect and no scheduler mutation.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
     "phase1_acceptance": false,
     "unresolved_child": "Expose or document a Chat-controllable stable Gmail operation identity / conditional-create primitive that survives acknowledgement loss across recurrences.",
-    "conflict_check": "Semantic work used only frozen sanitized controls, own reasoning STATE, and read-only Gmail connector capability schemas. No Gmail user content, O-derived state, other-worker state, downstream state, shared ledger, legacy research, or other-role receipts/configs were consumed.",
-    "scope_limit": "This is a contract-level negative for the exposed Gmail send/draft schemas only. It does not prove the underlying Gmail HTTP API or connector implementation lacks internal deduplication, and it does not rule out a separately tested search/reconciliation architecture; those are not admitted as evidence unless explicitly exposed and tested in a later bounded leaf."
+    "scope_limit": "Contract-level negative for the exposed Gmail schemas only; no claim about hidden connector behavior, raw Gmail HTTP semantics, or an untested reconciliation/search architecture."
+  },
+  "receipt": {
+    "intended_path": "automation_control/receipts/reasoning/receipt_2026-08-31T2139_JST.json",
+    "write_succeeded": false,
+    "exact_error": "GitHub.create_file transient connector failure: ToolError UNKNOWN; ConnectTimeout",
+    "retry_in_same_run": false,
+    "state_before_receipt_attempt_blob": "92f44ce08612c09328f5e13c588de1114ec7ebf4"
   },
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "scheduler_mutation_by_worker": false,
-  "receipt_path": "automation_control/receipts/reasoning/receipt_2026-08-31T2139_JST.json",
   "remaining_frontier": [
-    "Test one next highest-value non-repository Chat write surface not already covered by Google Calendar, Stripe, or Gmail for an explicitly exposed caller-controlled idempotency token, deterministic create identity, or atomic create-if-absent primitive.",
-    "If a positive primitive is found, formalize the PREPARED -> EFFECT -> COMMITTED invariant and bound retention/replay semantics before any harmless proof; otherwise preserve the exact negative and defer the following candidate to the next recurrence."
+    "Durably recover the missing immutable receipt for this completed Gmail contract probe without repeating the semantic probe.",
+    "After that recovery, on a later recurrence test one next highest-value non-repository Chat write surface not already covered by Calendar, Stripe, or Gmail for an explicitly exposed caller-controlled idempotency token, deterministic create identity, or atomic create-if-absent primitive."
   ],
-  "continuation": "Fresh-bootstrap next invocation from INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze exact current DESIRED_STATE and reasoning config, exact-read reasoning STATE, then execute exactly one bounded Phase-1 leaf: inspect only the single next highest-value non-repository Chat write wrapper not already tested (Calendar, Stripe, Gmail excluded) for an explicit caller-controlled idempotency key, deterministic create identity, or atomic create-if-absent token. Do not read user content and do not execute a real external mutation. If absent, persist that exact contract-level negative and stop the slice. If present, formalize only the minimum PREPARED/stable-operation-id/COMMITTED crash-recovery state machine plus retention, zero-quota and zero-cost constraints. Persist and exact-read role-local STATE plus immutable own receipt; keep enabled_desired=true, global_completion=false, phase1_completion_claimed=false and return recurring-open."
+  "continuation": "Fresh-bootstrap next invocation from INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze exact current DESIRED_STATE and reasoning config, exact-read reasoning STATE, then execute exactly one bounded recovery slice only: verify whether automation_control/receipts/reasoning/receipt_2026-08-31T2139_JST.json exists. If absent, create exactly that immutable receipt from this STATE's frozen control snapshot, Gmail test result, tested-scope dependency/quota/cost fields, termination=bounded_slice_complete_recurring_open, enabled_desired=true/global_completion=false/phase1_completion_claimed=false, and this nonempty continuation; exact-read it back and do not start another semantic leaf in that invocation. If the receipt already exists and matches, exact-readback only and defer the next semantic candidate to the following recurrence. Never retry/backoff in-run on another transient connector error and never mutate the scheduler."
 }
