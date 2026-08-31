@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 82,
+  "semantic_parent_revision": 81,
+  "created_at": "2026-09-01T01:13:17+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 26,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "config_control_revision": 14,
+    "config_revision": 7,
+    "transport_mode": "sha_only_h1_h2",
+    "h1_main_sha": "cfe018c5512ed7a80fb1f20bb410b484e311d74f",
+    "h2_main_sha": "cfe018c5512ed7a80fb1f20bb410b484e311d74f",
+    "bootstrap_valid": true
+  },
+  "source": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "path": "crates/rmcp/src/handler/server.rs",
+    "source_kind": "exact public release source"
+  },
+  "bounded_leaf": "Resolve exact ServerHandler signatures and dispatcher placement for tasks/get, tasks/update and tasks/cancel, then rewrite the fail-closed ownership skeleton with the exact request type names and RequestContext placement.",
+  "observations": [
+    "Service<RoleServer>::handle_request matches GetTaskRequest, UpdateTaskRequest and CancelTaskRequest separately. Each branch first calls validate_tasks_capability(self, &context), then calls the corresponding ServerHandler method with request.params and context by value.",
+    "The exact ServerHandler signatures are get_task(GetTaskParams, RequestContext<RoleServer>) -> Result<GetTaskResult, McpError>, update_task(UpdateTaskParams, RequestContext<RoleServer>) -> Result<(), McpError>, and cancel_task(CancelTaskParams, RequestContext<RoleServer>) -> Result<(), McpError>.",
+    "validate_tasks_capability checks server/client Tasks-extension capability only. The dispatcher does not establish task ownership or authenticated-principal binding before entering get_task/update_task/cancel_task.",
+    "Revision 81 already established from exact model.rs source that GetTaskParams, UpdateTaskParams and CancelTaskParams carry task_id and optional _meta, while UpdateTaskParams also carries InputResponses; no authenticated owner/principal field exists in those request parameter types."
+  ],
+  "source_qualified_fail_closed_skeleton": {
+    "status": "SOURCE-SHAPED_NOT_COMPILED",
+    "rust_like": "fn get_task(&self, request: GetTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<GetTaskResult, McpError>> + MaybeSendFuture + '_ { async move { let principal = principal_from_trusted_context(&context)?; self.authorize_task_read(&principal, &request.task_id).await?; self.task_store.get_task_for_owner(&principal, &request.task_id).await } }\n\nfn update_task(&self, request: UpdateTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_ { async move { let principal = principal_from_trusted_context(&context)?; self.authorize_task_mutation(&principal, &request.task_id).await?; self.task_store.apply_input_responses_for_owner(&principal, &request.task_id, request.input_responses).await } }\n\nfn cancel_task(&self, request: CancelTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_ { async move { let principal = principal_from_trusted_context(&context)?; self.authorize_task_mutation(&principal, &request.task_id).await?; self.task_store.cancel_for_owner(&principal, &request.task_id).await } }",
+    "required_security_order": [
+      "Derive principal only from trusted server-side RequestContext provenance; never from request _meta.",
+      "Fail closed if trusted principal is absent or malformed.",
+      "Bind principal to request.task_id before any task-store read, input-response mutation, or cancellation mutation.",
+      "Only after ownership authorization perform the corresponding store operation.",
+      "Keep capability validation and ownership validation distinct: the SDK supplies the former dispatcher gate; the application must supply the latter."
+    ],
+    "compile_risks_intentionally_unresolved_in_this_leaf": [
+      "Exact principal_from_trusted_context transport/middleware helper body was not re-opened in this bounded leaf.",
+      "Exact persistent store trait/API is application-owned and not supplied by stock TaskManager.",
+      "Exact GetTaskResult/DetailedTask construction fields were not inspected in this leaf.",
+      "No cargo/rustc compile was attempted."
+    ]
+  },
+  "scope": {
+    "proves": "At rmcp-v3.1.4 exact release source, task handler overrides receive both the exact typed request params and RequestContext<RoleServer>; Tasks capability validation runs immediately before handler dispatch, but task ownership is not provided by that gate. This supports placing a fail-closed authenticated-principal ownership check inside each task handler before store access.",
+    "does_not_prove": "A complete persistent task backend, restart redrive, exactly-once effects, trusted HTTP authentication middleware composition, or compile-valid application code."
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_note": "This source inspection and repository-state transport used no hosted runner, Codespaces, artifact/LFS/package, paid/trial cloud credit, or other finite monthly compute quota.",
+    "conflict_check": "No O, other-worker, downstream, legacy, shared-ledger, or other-role semantic input was read; no scheduler state was mutated."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact GetTaskResult and DetailedTask definitions/constructors plus the minimum task-store result mapping needed to make the get_task ownership skeleton source-shaped with exact return fields. Do not compile, do not inspect restart executor logic, do not start effects, and do not start a second leaf."
+}
