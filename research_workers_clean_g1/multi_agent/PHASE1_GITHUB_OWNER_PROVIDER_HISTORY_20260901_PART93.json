@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "part": 93,
+  "recorded_at": "2026-09-01T00:42:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "phase1-github-owner-provider-history-part93",
+  "frozen_authority": {
+    "main_commit_sha": "ba2b044d1438b2c50e61acbd0fca7073957c6b27",
+    "transport_mode": "sha_only_exact_sha",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_blob": "6c7e53223bfd193eb80cfbadac23fca2ccf31300"
+  },
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_GITHUB_PROVIDER_INCARNATION_AUTHORITY_20260831_PART92.json",
+  "scope": "One bounded official-GitHub provider-history leaf: test whether current public non-mutating repository/name/redirect/restore surfaces, plus opportunistic event history, can recover a prior repository incarnation after logical-name reuse when the predecessor repository ID is not retained. No O, other-worker, downstream, legacy, mutation, hosted compute or paid/finite-quota semantic input was used.",
+  "official_sources": [
+    {
+      "url": "https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository",
+      "observed_claim": "GitHub redirects old repository locations after rename, but creating a new repository under the original name causes redirects to stop working."
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository",
+      "observed_claim": "GitHub redirects the previous location after transfer, but creating a new repository or fork at the previous location permanently deletes those redirects."
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/creating-and-managing-repositories/restoring-a-deleted-repository",
+      "observed_claim": "Some deleted repositories can be restored only within 90 days; restoration is therefore not a permanent predecessor-history witness."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observed_claim": "The ordinary Get a repository route is keyed by current owner/repo and may return 301 for a move or 404 when no current resource/redirect is available; current same-name lookup is not predecessor-history by itself."
+    }
+  ],
+  "event_surface_treatment": {
+    "tested_as_negative_condition": true,
+    "claim_scope": "This leaf does not rely on a guaranteed event-retention duration. It tests both transition-visible and unavailable/truncated/no-event states because a complete stateless incarnation witness must survive the latter. Opportunistic event visibility is evidence only when present; absence cannot prove no predecessor existed.",
+    "acceptance_rule": "A provider-history route must remain sufficient when the relevant predecessor transition is not discoverable from the current event window."
+  },
+  "finite_model": {
+    "dimensions": {
+      "predecessor_id": ["retained", "lost"],
+      "old_location_redirect": ["intact", "overridden_by_name_reuse"],
+      "event_history": ["transition_visible", "unavailable_or_truncated_or_no_event"],
+      "predecessor_state": ["still_provider_resolvable", "deleted_beyond_documented_restore_window"],
+      "api_transport": ["available", "rate_limited_or_interrupted"]
+    },
+    "scenario_count": 32,
+    "required_negative_cases": [
+      "event retention/history truncation or no-event period",
+      "private/deleted predecessor represented by provider-unresolvable predecessor state",
+      "rename or transfer followed by logical-name reuse that destroys the redirect",
+      "known-old-ID versus lost-old-ID",
+      "API rate-limit/interruption with checkpoint rather than unsafe inference"
+    ]
+  },
+  "observations": [
+    "When a predecessor ID is retained, that retained identity can be used as a disambiguating input if a provider lookup for that identity remains available; this is conditional and does not solve lost-ID reconstruction.",
+    "When the predecessor ID is lost, a current owner/name lookup returns the current incarnation or a current redirect; it cannot by itself distinguish a same-name replacement from the historical predecessor.",
+    "Rename and transfer redirects are explicitly defeasible by logical-name reuse, so redirect continuity is not a permanent incarnation witness.",
+    "Deleted-repository restoration is bounded to a documented 90-day window, so it cannot provide an indefinite predecessor witness after retention expiry.",
+    "Event history can be opportunistically useful when a transition record is visible, but a complete mechanism cannot depend on it because the required negative includes unavailable/truncated/no-event history.",
+    "On API rate-limit/interruption the only safe action is fail-closed checkpoint/retry on a later invocation; transport unavailability supplies no authority evidence."
+  ],
+  "falsifying_trace": {
+    "steps": [
+      "Repository incarnation R1 exists at owner/name; its provider ID is not retained by the recurring Chat state.",
+      "R1 is renamed or transferred, initially creating an old-location redirect.",
+      "A new repository R2 is later created at the old owner/name, which GitHub documents as removing or overriding the redirect.",
+      "The relevant transition is absent from the currently discoverable event history, and R1 has been deleted beyond the documented restoration window.",
+      "A stateless invocation observes only current owner/name metadata for R2."
+    ],
+    "result": "The listed public non-mutating surfaces contain no sufficient predecessor identity from which the invocation can prove that R1 existed or derive a monotonic incarnation lower bound. R2 is observationally compatible with a world in which it was the only repository ever at that logical name.",
+    "unsafe_if_accepted": "Treating current same-name metadata, a missing event, or redirect failure as proof of predecessor retirement would allow ABA/logical-name-reuse confusion."
+  },
+  "result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "accepted_provider_history_witness": false,
+    "history_gap_proven_for_tested_surface": true,
+    "minimal_unresolved_child": "A zero-cost, non-mutating provider-side predecessor/incarnation witness that remains discoverable after rename/transfer name reuse and predecessor deletion/restore expiry even when the caller retained no predecessor ID and no relevant event is available.",
+    "scope_guard": "Applies only to the documented/current GitHub repository-name redirect, transfer, deletion-restoration and ordinary repository lookup surfaces tested here plus the explicit absent-event negative. It does not claim that undocumented/internal/future provider metadata cannot exist."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "repository_api_rate_limit_handling": "Fail closed and resume from durable checkpoint on a later invocation; rate-limit capacity is transport, not compute or authority."
+  },
+  "conflict_check": {
+    "clean_exploration_preserved": true,
+    "other_worker_or_downstream_semantics_read": false,
+    "shared_execution_ledger_read_or_written": false,
+    "scheduler_mutation": false,
+    "direct_merge_or_primary_authority_mutation": false
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part94: execute exactly one bounded provider-identity alias leaf testing whether GitHub's public GraphQL/global node identity and REST repository-ID lookup, when the old numeric/global ID is known versus lost, expose any provider-supported reverse alias/history relation from a current repository incarnation to predecessor owner/name incarnations. Required negatives: lost predecessor ID, rename/transfer then name reuse, predecessor deletion beyond restore window, node/ID lookup 404, current-ID-only bootstrap, rate-limit interruption, no mutation, zero finite monthly/trial/paid quota and zero incremental cost. Accept only a reverse relation sufficient from current-ID-only bootstrap; otherwise persist the exact one-way-identity boundary and select a distinct next authority leaf for the following invocation."
+}
