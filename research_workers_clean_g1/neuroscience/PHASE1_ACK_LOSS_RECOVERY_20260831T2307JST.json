@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-08-31T23:08:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "transport_mode": "exact_blob_two_pass",
+  "preflight_checkpoint": "PHASE1_PREFLIGHT_ACK_LOSS_20260831T2307JST.json",
+  "preflight_blob": "75d877c9b516702f045caecc4bb0b69e53d4b3bb",
+  "effect_chain_id": "neuroscience-phase1-ack-loss-recovery-indistinguishability-v1",
+  "predecessor_latest_blob": "456a18a4464ad24eca7c7030b0552448cc94b686",
+  "deterministic_effect_key": "phase1-neuroscience-ack-loss-recovery-v1::456a18a4464ad24eca7c7030b0552448cc94b686::winner-1",
+  "effect_key_sha256": "cd8fdc33e64faa29e89bfbb66d32aaf7e59350e663952d7cea87dd36f52f9c6f",
+  "probe": {
+    "question": "Can a scheduled-Chat role recover safely after acknowledgement loss without knowing whether one pointer write committed, using only a fresh role-local LATEST read before replay?",
+    "worlds": [
+      {
+        "world": "U_not_committed",
+        "externally_visible_before_recovery": "write acknowledgement absent",
+        "fresh_read_condition": "LATEST still has predecessor blob/effect history and does not contain this deterministic_effect_key",
+        "recovery_action": "permit one CAS-guarded replay against the still-current predecessor",
+        "bound": "at most one logical advance; any later replay first re-reads and becomes duplicate/suppressed once the key is visible"
+      },
+      {
+        "world": "C_committed_ack_lost",
+        "externally_visible_before_recovery": "write acknowledgement absent",
+        "fresh_read_condition": "LATEST already contains this deterministic_effect_key and names the predecessor transition",
+        "recovery_action": "do not replay",
+        "bound": "zero second logical advance"
+      }
+    ],
+    "classifier": "fresh-read-before-replay: key present => committed, suppress replay; key absent with predecessor still current => uncommitted, allow one replay; any divergent successor without the key => conflict, do not replay this effect until separately reconciled",
+    "falsification_conditions": [
+      "a committed-world fresh read can omit a successfully committed key while returning the successor state",
+      "an uncommitted-world fresh read can falsely expose the key",
+      "the recovery path replays before the fresh read",
+      "the same key can cause more than one logical pointer advance"
+    ],
+    "executed_live_branch": "The subsequent LATEST CAS update in this invocation is the committed write. Recovery classification deliberately depends on the post-write fresh LATEST readback rather than on the update acknowledgement payload.",
+    "uncommitted_branch_evidence": "State-machine branch proof only; no network fault injection or forced server-side non-commit capability is available in this Chat surface. Therefore this probe establishes the protocol invariant for U and executes C live, but does not empirically induce both transport faults."
+  },
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "lightweight state/evidence transport only",
+    "tested_scope": "One role-local pointer, one predecessor, one deterministic effect key, live committed/readback branch plus modeled uncommitted branch; no concurrent writer, network fault injection, or multi-key batch."
+  },
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "continuation": "Next invocation: test the divergent-successor branch where a fresh LATEST read shows another successor without this effect key. Define a conflict-safe rule that preserves at-most-once logical advance without overwriting the unrelated successor, using only role-local CAS/readback and no external executor; stop after that single leaf."
+}
