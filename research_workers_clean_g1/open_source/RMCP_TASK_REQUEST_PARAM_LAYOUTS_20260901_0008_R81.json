@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 81,
+  "semantic_parent_revision": 80,
+  "recorded_at": "2026-09-01T00:08:47+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_control_revision": 24,
+    "lifecycle_control_revision": 1,
+    "desired_state_control_revision": 26,
+    "open_source_control_revision": 14,
+    "config_revision": 7,
+    "enabled_desired": true,
+    "transport_mode": "sha_only_h1_h2",
+    "h1_main_sha": "6851608aea35324ea6c1b93a73c46dd4ae093db3",
+    "h2_main_sha": "6851608aea35324ea6c1b93a73c46dd4ae093db3",
+    "bootstrap_valid": true
+  },
+  "slice": "rmcp-v3.1.4 exact task request parameter layouts and ownership-precheck binding",
+  "source": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "model_path": "crates/rmcp/src/model.rs",
+    "model_blob": "6a14098707c3b8685e05f5fa1e4ac6e22c5b3985",
+    "task_path": "crates/rmcp/src/model/task.rs",
+    "task_blob": "bbdd1c99d5282cb0593467c979f79f1e9a7c4688"
+  },
+  "finding": {
+    "compile_risk_correction": "The exact release does not define GetTaskRequestParams, UpdateTaskRequestParams, or CancelTaskRequestParams in task.rs. The request parameter types are GetTaskParams, UpdateTaskParams, and CancelTaskParams in crates/rmcp/src/model.rs; task.rs contains Task/DetailedTask/CreateTaskResult/GetTaskResult/TaskAckResult and related payload/result types.",
+    "request_aliases": {
+      "tasks/get": "GetTaskRequest = Request<GetTaskMethod, GetTaskParams>",
+      "tasks/update": "UpdateTaskRequest = Request<UpdateTaskMethod, UpdateTaskParams>",
+      "tasks/cancel": "CancelTaskRequest = Request<CancelTaskMethod, CancelTaskParams>"
+    },
+    "exact_param_fields": {
+      "GetTaskParams": [
+        "meta: Option<RequestMetaObject> serialized as _meta when present",
+        "task_id: String serialized as taskId"
+      ],
+      "UpdateTaskParams": [
+        "meta: Option<RequestMetaObject> serialized as _meta when present",
+        "task_id: String serialized as taskId",
+        "input_responses: InputResponses serialized as inputResponses"
+      ],
+      "CancelTaskParams": [
+        "meta: Option<RequestMetaObject> serialized as _meta when present",
+        "task_id: String serialized as taskId"
+      ]
+    },
+    "shared_traits_and_constructors": "All three parameter structs implement RequestParamsMeta; each has a constructor taking task_id, and UpdateTaskParams::new additionally requires InputResponses.",
+    "ownership_precheck_binding": "The exact wrappers carry task_id but no authenticated owner/principal field. Therefore the prior fail-closed ownership rule binds cleanly to params.task_id plus a server-authenticated principal obtained from RequestContext/transport extensions. _meta is request metadata and must not be treated as identity authority. For tasks/get, ownership must be checked before any task-store read that could disclose another principal's task. For tasks/update, ownership must be checked before consuming or applying input_responses. For tasks/cancel, ownership must be checked before any cancellation/store mutation. This is an application-level safety requirement, not a stock rmcp ownership guarantee.",
+    "scope_limit": "No exact ServerHandler method signatures were fetched in this slice, no Rust compilation was run, no restart executor path was inspected, and no effect was started. The candidate remains source-qualified but not compile-validated."
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "unresolved_children": [
+      "exact ServerHandler task method signatures using GetTaskParams/UpdateTaskParams/CancelTaskParams",
+      "exact trusted RequestContext principal extraction at those overrides",
+      "persistent application-owned create-or-get/store and restart redrive",
+      "external-effect idempotency or fencing"
+    ]
+  },
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and fetch only the exact ServerHandler signatures/dispatch call sites for get_task, update_task and cancel_task. Rewrite the source-qualified fail-closed ownership skeleton using the exact GetTaskParams, UpdateTaskParams and CancelTaskParams names and exact RequestContext placement. Do not compile, do not inspect restart executor logic, do not start effects, and do not start a second leaf."
+}
