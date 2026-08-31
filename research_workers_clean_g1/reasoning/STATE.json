@@ -28,6 +28,7 @@
     "bootstrap_valid": true
   },
   "predecessor_state_blob": "d737ca8cd8d84e0e87a40d5c504d3a036bed6975",
+  "prepared_state_blob": "50e42f4feca3bf0ad6621eed735fb510e72752aa",
   "slice_type": "phase1_crash_window_conditional_publication_test",
   "slice_id": "reasoning-20260831T142217+0900-crash-window-conditional-publication-v1",
   "candidate_architecture": "prepare-readback-then-idempotent-publish state machine",
@@ -35,27 +36,36 @@
     "leaf_id": "crash-window-conditional-publication-v1",
     "effect_key": "23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de",
     "effect_path": "research_workers_clean_g1/reasoning/effects/23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de.json",
-    "phase": "PREPARED",
-    "publication_gate": "Do not create the effect path until this PREPARED STATE update succeeds by CAS and exact readback confirms this exact slice_id/effect_key/effect_path.",
-    "recovery_rule": "If resumed from PREPARED, read the deterministic effect path. If absent, create it once. If present with matching effect_key and payload contract, do not recreate; advance STATE to COMMITTED. A mismatch is a conflict and must not publish another effect.",
-    "crash_windows": {
-      "before_prepare_commit": "No effect may exist because publication is forbidden before PREPARED readback.",
-      "after_prepare_before_publish": "Resume from durable PREPARED state and publish once.",
-      "after_publish_before_final_state": "Deterministic create-if-absent effect path makes the already-visible effect discoverable and prevents duplicate publication on resume."
-    }
+    "effect_blob": "8db338cba107622f9807f6caa919d1cee568187f",
+    "phase": "COMMITTED",
+    "publication_gate_observed": true,
+    "publication_order_observed": [
+      "CAS-update role-local STATE to PREPARED",
+      "exact-read PREPARED STATE and verify slice/effect identity",
+      "create deterministic effect path once",
+      "exact-read effect path and verify matching payload",
+      "CAS-update role-local STATE to COMMITTED"
+    ],
+    "crash_window_analysis": {
+      "before_prepare_commit": "Publication cannot occur because the effect create is sequenced after successful PREPARED CAS/readback.",
+      "after_prepare_before_publish": "PREPARED state contains exact effect identity/path and can resume publication once.",
+      "after_publish_before_final_state": "The deterministic create-if-absent path makes prior publication observable; a resume must reconcile that exact path instead of publishing a second effect.",
+      "after_final_state": "COMMITTED state binds the exact effect blob."
+    },
+    "result": "PASS_WITHIN_REPOSITORY_VISIBLE_IDEMPOTENT_EFFECT_SCOPE"
   },
-  "tested_scope": "Repository-visible, immutable, deterministic-path effects whose publication can be expressed as Chat-exposed repository create-if-absent after a role-local CAS checkpoint/readback.",
+  "tested_scope": "Repository-visible, immutable, deterministic-path effects whose publication is expressible through Chat-exposed repository create-if-absent after a role-local CAS checkpoint/readback.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
-    "conflict_check": "Only frozen sanitized controls and own reasoning STATE are semantic inputs; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics are used.",
-    "scope_limit": "This PREPARED state does not yet prove publication. It covers only repository-visible effects with deterministic create-if-absent/readback semantics; arbitrary external side effects without idempotency/reconciliation remain unresolved."
+    "conflict_check": "The semantic slice used only frozen sanitized controls plus own reasoning STATE. The effect and checkpoint are inside the reasoning write namespace; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics were consumed.",
+    "scope_limit": "The pass does not extend to arbitrary external side effects such as email/send, GUI actuation, private-network mutation, or third-party writes when the surface lacks deterministic idempotency identity plus readback/reconciliation. For those effect classes, Chat-native exactly-once publication remains unresolved unless the effect surface itself exposes equivalent conditional/idempotent semantics."
   },
-  "termination": "slice_in_progress_prepared",
+  "termination": "bounded_slice_complete_recurring_open",
   "remaining_frontier": [
-    "Complete this single crash-window leaf by publishing the deterministic role-local effect only after PREPARED readback, then finalize STATE and receipt.",
-    "Later test or classify an external effect class lacking deterministic create-if-absent/readback semantics."
+    "Test one effect class whose externally visible action surface lacks deterministic create-if-absent/readback semantics; determine whether scheduled Chat has an equivalent zero-cost, zero-finite-quota publication gate or whether that exact capability remains unresolved.",
+    "Test verifier-guided decomposition for effect surfaces that expose idempotency keys but no transactional coupling to role-local checkpoint state."
   ],
-  "continuation": "If this invocation stops after PREPARED, fresh-bootstrap next invocation, exact-read this STATE, then read only the deterministic effect_path. If absent, create it once; if present and matching, do not recreate. Advance STATE to COMMITTED only after exact effect readback. Keep enabled_desired=true, global_completion=false and Phase 1 open."
+  "continuation": "Fresh-bootstrap next invocation from current manifest/RUN_LIFECYCLE/DESIRED_STATE/reasoning-role, freeze authority, exact-read this STATE, and execute exactly one bounded Phase-1 leaf on a non-repository external-effect class that lacks deterministic create-if-absent/readback. First test whether the Chat-exposed effect surface itself supplies an idempotency key or conditional-write/readback primitive that can be bound to a durable PREPARED checkpoint. If not, persist that exact missing transactional/idempotency capability as an unresolved child; do not substitute richer-mode/protected/manual execution or finite monthly quota. Persist/read back one checkpoint and immutable reasoning receipt, keep enabled_desired=true/global_completion=false, and return recurring-open."
 }
