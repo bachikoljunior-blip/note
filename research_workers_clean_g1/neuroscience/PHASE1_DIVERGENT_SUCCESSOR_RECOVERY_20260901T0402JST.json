@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-01T04:02:30+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-divergent-successor-conflict-safe-recovery-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "PHASE1_PREFLIGHT_DIVERGENT_SUCCESSOR_20260901T0402JST.json",
+  "preflight_blob": "138a0d2731a2dcb60970be27dc13542834e7c233",
+  "predecessor_latest_blob": "1c3688f88edfa1822b812fc6d83b85072c6cd5f7",
+  "pending_stale_effect_key": "phase1-neuroscience-ack-loss-recovery-v1::456a18a4464ad24eca7c7030b0552448cc94b686::winner-1",
+  "probe": {
+    "question": "When a fresh role-local successor has diverged from the stale predecessor and does not contain the pending stale effect key, can recovery avoid blind stale replay while still defining a bounded successor-relative child transition with at-most-once semantics?",
+    "model_type": "deterministic finite-state exhaustive branch model",
+    "synthetic_divergent_successor_fingerprint": "2545fc1ddc25ebd92dcd5f60bf97ea92968f775103c75736952a2bd34bdaa2c5",
+    "successor_relative_child_effect_key": "phase1-neuroscience-divergent-rebase-v1::2545fc1ddc25ebd92dcd5f60bf97ea92968f775103c75736952a2bd34bdaa2c5::35d0bd658610e0f1",
+    "successor_relative_child_effect_key_sha256": "336198dddd41096ebfdf9d563536f5809d4d54e5438c42d880f31e6de53a3e3d",
+    "recovery_rule": [
+      "Fresh-read before replay.",
+      "If pending effect key is present in the fresh successor, classify the effect committed and suppress replay.",
+      "If pending key is absent and current pointer still equals the recorded predecessor, permit one CAS-guarded replay whose key is atomically stored with the effect.",
+      "If pending key is absent and current pointer differs from the recorded predecessor, forbid stale replay. Re-derive intent relative to the fresh successor, bind a child effect key to that successor fingerprint, and permit at most one CAS-guarded child write.",
+      "After ambiguous acknowledgement, fresh-read once on a later recovery step: key present means committed; unchanged pointer plus absent key permits one retry; divergent pointer plus absent key aborts and requires another successor-relative re-derivation. Never poll or retry repeatedly in one invocation."
+    ],
+    "exhaustive_test": {
+      "branches": ["key_present", "unchanged_predecessor_key_absent", "divergent_successor_key_absent"],
+      "binary_factors": ["first_CAS_commits", "first_ack_lost", "intervening_divergence_before_recovery_read", "single_retry_commits"],
+      "scenario_count": 48,
+      "invariants": {
+        "logical_commits_per_effect_key_lte_1": true,
+        "key_present_branch_commits_0": true,
+        "divergent_successor_commits_stale_old_key_0": true,
+        "ambiguous_ack_with_key_present_suppresses_retry": true,
+        "divergence_after_failed_attempt_forces_abort_and_rederive": true
+      },
+      "violations": 0
+    }
+  },
+  "result": {
+    "status": "bounded_model_supports_conflict_safe_successor_relative_rebase",
+    "scope": "Formal deterministic state-machine only. The live repository branch was freshly read and CAS identities are real, but this slice did not inject a concurrent writer, transport fault, or destructive divergent LATEST mutation.",
+    "falsified_failure_mode": "A stale pending effect must not be blindly replayed merely because its key is absent from a divergent successor.",
+    "required_atomicity": "Effect payload and deterministic effect key must be committed in the same CAS-guarded pointer mutation for the at-most-once proof to apply.",
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "lightweight durable state/evidence transport only"
+  },
+  "base_continuation_preserved": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_continuation": "On the next valid invocation, execute one recurrence-sensitive reconstruction probe for a missing or unreadable role-local LATEST pointer: using only own immutable neuroscience artifact/receipt lineage, define the minimum predecessor chain needed to reconstruct the current Phase-1 checkpoint without reading other roles or shared ledgers. Test one deterministic missing-pointer and one stale-pointer branch in a single bounded model, require exact authority provenance and no duplicate logical advance, persist/read back, and stop without a second leaf."
+}
