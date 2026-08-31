@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 78,
+  "semantic_parent_revision": 77,
+  "recorded_at": "2026-08-31T20:06:40+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 21,
+    "instruction_manifest_blob": "5a769b5d12aa818b4f0aa5bbd689032cc54adb03",
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 1,
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "sanitized_root_path": "automation_control/DESIRED_STATE.json",
+    "sanitized_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "sanitized_root_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_config_control_revision": 14,
+    "role_config_revision": 7,
+    "transport_mode": "sha_only_h1_h2_authority_revalidated",
+    "h1_main_sha": "2f12f7cad36577729bbd2ab94baaaff192eebe27",
+    "h2_main_sha": "2f12f7cad36577729bbd2ab94baaaff192eebe27",
+    "bootstrap_valid": true
+  },
+  "public_source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": [
+      "crates/rmcp/src/handler/server.rs",
+      "crates/rmcp/src/service.rs"
+    ]
+  },
+  "bounded_slice": {
+    "leaf": "Pin the smallest exact-source fail-closed seam for authenticated-principal/ownership enforcement before application-owned tasks/get, tasks/update, and tasks/cancel store access.",
+    "observations": [
+      "The exact ServerHandler dispatcher validates only the Tasks extension capability before forwarding GetTaskParams, UpdateTaskParams, or CancelTaskParams together with RequestContext<RoleServer> to the corresponding handler hook.",
+      "The exact RequestContext<RoleServer> surface exposes request id, request meta, public Extensions, and Peer. Its client_capabilities helper returns protocol-declared capabilities and is not an authenticated identity primitive.",
+      "Default get_task/update_task/cancel_task hooks are unimplemented method-not-found stubs; ownership authorization is therefore application responsibility when those hooks are overridden."
+    ],
+    "source_qualified_seam": {
+      "pattern": "Fail closed if no server-authenticated principal is present in trusted RequestContext extensions; when present, make the first application-store operation principal-scoped, e.g. lookup/update/cancel by composite key (principal_id, task_id), rather than globally resolving task_id and authorizing afterward.",
+      "why_minimal": "The SDK already passes RequestContext into every task hook, so no custom dispatcher is required. Principal-scoped keying prevents unauthenticated access before store touch and avoids a global task-id existence oracle. Update/cancel must preserve the same principal-scoped predicate atomically with the state mutation.",
+      "sdk_guarantee_boundary": "rmcp-v3.1.4 supplies the context/extension transport seam and Tasks capability gating, but does not itself authenticate a principal, bind task ownership, guarantee persistent storage, provide caller-stable task creation identity, provide restart redrive, or guarantee exactly-once external effects.",
+      "authenticated_principal_transport_note": "A prior source-qualified role-local finding established that built-in Streamable HTTP metadata is carried through RequestContext extensions as http::request::Parts; trusted HTTP authentication middleware can place Principal in Parts.extensions, after which the task hook can extract it fail-closed. This slice does not re-open or extend that transport finding."
+    },
+    "tested_scope": "Static exact-source interface audit only at rust-sdk commit 4a738b9d...; no compile, runtime server, network effect, task materialization, store mutation, or external effect was executed.",
+    "negative_scope_guard": "Do not claim that RequestContext client capabilities, request id, client-supplied _meta, or random task ids are ownership/authentication evidence. Do not claim the SDK enforces principal-scoped task access automatically.",
+    "result": "A minimal fail-closed ownership seam exists at the public ServerHandler task hooks: derive trusted principal from server-populated RequestContext extensions before access, then make application-owned task storage operations principal-scoped from the first lookup/mutation. Stock rmcp does not supply the ownership policy itself.",
+    "strict_phase1_pass": false
+  },
+  "acceptance_gates": {
+    "residual_richer_mode_protected_or_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_assessment": "The audited interface pattern uses local handler/context semantics plus lightweight repository evidence transport only; it does not require hosted runner, Codespaces, artifact/LFS/package, cloud credit, external API/model credit, or manual user execution. Persistent create-or-get/restart executor/effect fencing remain separate unresolved children and are not accepted by this finding.",
+    "conflict_check": "No O, other-worker, downstream, legacy, shared-ledger, or other-role semantic inputs were consumed; no branch/ref/upstream/scheduler mutation was performed."
+  },
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect the exact Streamable HTTP auth/middleware composition surface that can populate http::Request::extensions with a trusted Principal before rmcp converts the request into RequestContext extensions. Pin one official source-qualified fail-closed composition path and its trust boundary; do not inspect persistent restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
