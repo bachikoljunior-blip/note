@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 89,
+  "created_at": "2026-08-31T20:29:27+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "phase1-github-immutable-release-tag-witness",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_PROVIDER_RETAINED_GIT_OBJECT_WITNESS_20260831_PART88.json",
+  "semantic_config_snapshot": {
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_blob": "5a769b5d12aa818b4f0aa5bbd689032cc54adb03",
+    "transport_mode": "sha_only_exact_sha",
+    "main_commit_sha": "63dd5f7b362c34ab9d85d6c442d0651ecc454277",
+    "bootstrap_valid": true
+  },
+  "tested_scope": "One bounded documentation-level test of GitHub immutable releases and tag/ruleset immutability as a same-principal, repository-local monotonic minimum-generation/incarnation witness. No live release, tag, ruleset, repository deletion or scheduler mutation was performed.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases",
+      "observations": [
+        "Published immutable releases lock the associated Git tag to a specific commit; the tag cannot be changed or deleted while the release exists.",
+        "If the immutable release is deleted, the tag can be deleted, but the same tag name cannot be reused.",
+        "GitHub documents protection against repository resurrection: deleting a repository and creating a new repository with the same name does not permit reuse of tags associated with immutable releases in the original repository.",
+        "Publishing an immutable release creates a release attestation containing the release tag, commit SHA and release assets."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observations": [
+        "GitHub exposes an admin-authorized endpoint to disable immutable releases for a repository.",
+        "Therefore repository-setting permanence cannot itself be treated as an immutable authority witness."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository",
+      "observations": [
+        "Repository admins can edit, disable and delete repository rulesets.",
+        "A tag ruleset alone is therefore not a same-principal monotonic witness against an administrator or rollback of the rule configuration."
+      ]
+    }
+  ],
+  "required_negative_tests": [
+    {
+      "negative": "repository admin disables immutability/rule",
+      "result": "FAILS_SETTING_PERMANENCE_AS_WITNESS",
+      "evidence": "Official REST documentation exposes an admin-only disable-immutable-releases endpoint; rulesets can also be disabled or deleted by admins.",
+      "scope_guard": "This does not prove that already-published immutable-release tag-name reservations are erased by disabling the repository setting. It only means the setting itself cannot be the monotonic witness and new witness minting must fail closed when immutability is not currently enforced."
+    },
+    {
+      "negative": "immutable release deletion and associated tag deletion",
+      "result": "ANTI_REUSE_SURVIVES_BUT_DISCOVERABILITY_NOT_PROVEN",
+      "evidence": "GitHub documents that after deleting an immutable release the tag can be deleted, but the same tag name cannot be reused.",
+      "implication": "Provider-side anti-reuse state is stronger than an ordinary Git ref, but the deleted release/tag no longer supplies an ordinary current-repository object that a rolled-back client can enumerate."
+    },
+    {
+      "negative": "repository delete/recreate and same-name incarnation reuse",
+      "result": "ANTI_RESURRECTION_PASSES_FOR_OLD_IMMUTABLE_TAG_NAMES",
+      "evidence": "GitHub explicitly states that tags associated with immutable releases in the original repository cannot be reused after repository resurrection under the same name.",
+      "implication": "This is a provider-enforced incarnation-sensitive anti-reuse tombstone for those tag names."
+    },
+    {
+      "negative": "force-push or reference mutation outside release path",
+      "result": "PASSES_FOR_THE_ASSOCIATED_TAG_WHILE_RELEASE_EXISTS; AFTER_DELETE_NAME_REUSE_REMAINS_BLOCKED",
+      "evidence": "The immutable-release tag is locked to a specific commit while the release exists; after release deletion the same tag name cannot be reused.",
+      "scope_guard": "This does not make unrelated refs or branch state monotonic."
+    },
+    {
+      "negative": "loss or rollback of the local newest-generation pointer after release/repository deletion",
+      "result": "FAILS_ACCEPTANCE_PROOF",
+      "evidence": "The bounded official documentation found a non-reuse guarantee but no documented non-mutating enumeration/query surface that reconstructs the set or maximum generation of deleted immutable tag-name reservations from only the recreated repository identity.",
+      "reason": "A hidden provider reservation can reject reuse without revealing which deleted generation was newest. A monotonic floor witness requires reconstruction, not merely collision on an already-known name."
+    },
+    {
+      "negative": "API/rate-limit interruption during witness mint/reconcile",
+      "result": "FAIL_CLOSED_REQUIRED_NOT_A_COMPLETION_SIGNAL",
+      "evidence": "Repository APIs are transport only under the Phase-1 root contract; interrupted publication must checkpoint and reconcile in a later invocation rather than retry/backoff in-run.",
+      "scope_guard": "No claim is made that immutable releases remove ordinary GitHub API rate limits."
+    },
+    {
+      "negative": "plan/feature quota or paid-support dependency",
+      "result": "ZERO_FINITE_QUOTA_ACCEPTANCE_NOT_PROVEN_IN_THIS_BOUNDED_LEAF",
+      "evidence": "The bounded official pages establish immutable-release semantics but did not establish a universal zero-plan/zero-finite-quota entitlement guarantee for every accepted deployment context.",
+      "implication": "Fail closed under the root zero-finite-quota gate rather than infer acceptance from feature semantics alone."
+    }
+  ],
+  "result": {
+    "new_positive_evidence": "GitHub immutable releases provide a stronger provider-enforced anti-rollback primitive than ordinary refs: old immutable tag names remain non-reusable even after release deletion and repository resurrection under the same repository name.",
+    "new_falsification": "That anti-reuse tombstone is not, from the bounded official documentation, a reconstructible monotonic minimum-generation witness after both the local newest pointer and original release/repository objects are lost. Provider rejection of an already-known old name is insufficient to recover the unknown maximum retired generation.",
+    "accepted_zero_dependency_candidate_found": false,
+    "minimal_unresolved_child": "A non-mutating provider surface that lets a stateless same-principal client enumerate or query the maximum immutable-release/tag anti-reuse generation across repository delete/recreate, or an equivalent provider-enforced monotonic floor that is independently discoverable after local-state rollback."
+  },
+  "claim_idempotency_implication": "Immutable release tag-name reservation can fence reuse of a known generation/incarnation token, but without reconstructible maximum-generation discovery it cannot by itself fence a stateless worker whose local authority pointer rolled back to an older generation.",
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "note": "No quota-bearing feature was consumed. Acceptance remains false because entitlement/finite-quota independence and reconstructible newest-generation discovery were not established."
+  },
+  "scope_guard": "Documentation-level mechanism classification only. No universal impossibility claim; no assertion that disabling immutable releases erases prior immutable tag reservations; no assertion that deleted reservations are immediately garbage-collected; no assertion about undocumented provider internals.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part90: execute exactly one bounded official-GitHub resurrection-discoverability leaf. Test whether any non-mutating REST/GraphQL/release-attestation/current-repository surface exposes deleted immutable-release tag-name reservations or a maximum immutable generation after repository delete/recreate and loss of role-local newest-version state. Required negatives: old tag name known versus unknown, deleted release absent from ordinary listing, recreated repository with same name, immutable-release setting disabled/re-enabled, API/rate-limit interruption, no mutative probe that creates future witness names, zero finite monthly/trial/paid quota, zero incremental cost. Accept only a provider-enforced discoverable monotonic floor; otherwise persist the exact discoverability gap and select the next non-conflicting provider-side authority leaf for the following invocation."
+}
