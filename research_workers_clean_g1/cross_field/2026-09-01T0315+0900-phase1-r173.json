@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 173,
+  "updated_at": "2026-09-01T03:15:17+09:00",
+  "authority": {
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+  "predecessor_latest_blob_sha": "47e264b24f7be83d199590137f76d0726383eac1",
+  "predecessor_logical_revision": 172,
+  "slice": {
+    "leaf": "deterministic orphan-retention model for checkpoint-first/pointer-last CAS persistence",
+    "question": "Can orphan accumulation be reduced without deleting any checkpoint still reachable from current or immediately previous LATEST, under interruption and stale-writer traces?",
+    "model": {
+      "objects": "immutable role-local checkpoints plus a CAS-updated LATEST pointer; failed/interrupted candidate writes may leave unreachable orphan checkpoints",
+      "reachability": "a checkpoint is protected when reachable from the current LATEST target or the immediately previous confirmed LATEST target; predecessor links, when present, are included transitively",
+      "confirmed_generation": "increments only after a successful LATEST CAS and exact readback; failed candidate writes do not advance it"
+    },
+    "candidates": {
+      "A_never_delete": "Append-only retention; never delete any checkpoint.",
+      "B_age_only": "Delete checkpoints after an age threshold without consulting current/previous LATEST reachability.",
+      "C_reachability_two_confirmations": "A checkpoint is cleanup-eligible only after it is unreachable from both current and immediately previous LATEST and has remained unreachable across two successful confirmed pointer generations; no automatic orphan adoption."
+    },
+    "deterministic_traces": [
+      {
+        "trace": "interruption_before_pointer_CAS",
+        "steps": ["LATEST->c0", "write orphan o1 as candidate child of c0", "crash before pointer CAS", "later successfully commit c1 then c2"],
+        "A": "safe but o1 retained indefinitely",
+        "B": "not falsified by this trace alone; behavior depends only on elapsed age and ignores authority",
+        "C": "safe; o1 remains protected from cleanup until two successful pointer generations have observed it unreachable, then becomes eligible"
+      },
+      {
+        "trace": "stale_writer_rejected_after_valid_advance",
+        "steps": ["LATEST advances c0->c1", "stale writer based on c0 writes s1", "stale LATEST CAS is rejected", "later successfully commit c2 then c3"],
+        "A": "safe but s1 retained indefinitely",
+        "B": "cannot distinguish s1 from an old still-authoritative checkpoint by age alone",
+        "C": "safe within model; rejected s1 never becomes reachable and is eligible only after two later confirmed generations"
+      },
+      {
+        "trace": "pointer_stuck_no_confirmed_progress",
+        "steps": ["LATEST remains ->c0", "candidate writes may occur but no LATEST CAS succeeds", "wall-clock age threshold elapses"],
+        "A": "safe; orphan count can grow without bound",
+        "B": "FALSIFIED: an age-only sweeper can delete c0 while current LATEST still points to c0, creating a dangling authoritative pointer",
+        "C": "safe; no successful pointer generation means no cleanup eligibility matures, so canonical state is preserved; orphan count can still grow without bound"
+      },
+      {
+        "trace": "two_confirmed_generations_after_orphan",
+        "steps": ["orphan o1 is unreachable at confirmed generation g", "successful LATEST updates establish g+1 and g+2", "o1 remains unreachable from current and previous LATEST at both confirmations"],
+        "A": "safe but retains o1",
+        "B": "unnecessary authority risk",
+        "C": "o1 may be deleted after g+2 without deleting any checkpoint reachable from current or immediately previous LATEST"
+      }
+    ],
+    "results": {
+      "A_never_delete": {
+        "safety": "PASS in tested traces",
+        "bounded_orphan_storage": "FAIL without an external bound on failed writes",
+        "integration_cost": "low",
+        "conflict_duplication_risk": "low for deletion, high storage growth",
+        "expected_completion_time": "immediate but does not solve retention growth",
+        "quota_fragility": "none beyond lightweight repository transport",
+        "incremental_monetary_cost": 0
+      },
+      "B_age_only": {
+        "safety": "FAIL",
+        "falsifier": "pointer_stuck_no_confirmed_progress can delete the checkpoint still named by current LATEST",
+        "integration_cost": "low",
+        "conflict_duplication_risk": "high because time is not authority",
+        "expected_completion_time": "fast but unsafe",
+        "quota_fragility": "none beyond lightweight repository transport",
+        "incremental_monetary_cost": 0
+      },
+      "C_reachability_two_confirmations": {
+        "safety": "PASS in all tested interruption/stale-writer traces",
+        "bounded_orphan_storage": "PARTIAL: bounds cleanup eligibility by successful pointer generations, but cannot provide an absolute orphan-count bound when confirmed pointer progress is zero",
+        "integration_cost": "medium; requires reachability bookkeeping and two confirmed pointer-generation observations",
+        "conflict_duplication_risk": "low in tested model because authority is pointer/reachability-based, not wall-clock-based",
+        "expected_completion_time": "two successful pointer generations before an unreachable checkpoint becomes cleanup-eligible",
+        "quota_fragility": "none beyond lightweight repository transport",
+        "incremental_monetary_cost": 0
+      }
+    },
+    "candidate_revision": "Use reachability-plus-two-confirmed-generation retention as the only cleanup candidate from this slice; keep never-delete as the fail-safe fallback. Reject age-only deletion. Do not claim absolute orphan boundedness: with zero confirmed pointer progress, safe cleanup intentionally stops.",
+    "tested_scope": "Deterministic role-local model of immutable checkpoint files and one CAS-updated LATEST pointer, including interruption before pointer CAS, stale-writer CAS rejection, zero confirmed progress, and two later successful pointer generations. No live deletion was performed; no claim is made for multi-file atomicity, branch deletion semantics, transports other than this checkpoint/pointer model, or storage bounds during indefinite pointer stagnation.",
+    "negative_result": "No retention rule based only on wall-clock/file age is safe in this model because authority can remain on an old checkpoint indefinitely. Reachability-based cleanup is safe in tested traces but cannot by itself cap orphan creation while LATEST never advances.",
+    "phase1_constraints": {
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost": 0,
+      "quota_note": "This slice used only deterministic reasoning over role-local repository-state semantics; no hosted runner, Codespaces, artifact/LFS/package, external model/API credit, or paid compute is required."
+    },
+    "conflict_check": "No O/O-derived, other-worker, downstream, legacy, aggregate-ledger, other-role receipt/config, or unrelated semantic input was used. No scheduler or protected-primary state was read or mutated."
+  },
+  "frontier": [
+    "Bound orphan creation rather than relying on deletion: test a deterministic per-parent attempt key/path derived from current LATEST blob SHA plus intended next logical revision, with normalized deterministic payload and create/CAS collision semantics, so repeated failed attempts from the same parent cannot create an unbounded sequence of distinct orphans.",
+    "After that, test interruption/rate-limit recovery without same-run retry, preserving checkpoint-first/pointer-last authority and exact-content duplicate idempotence."
+  ],
+  "exact_continuation": "Next invocation, after manifest/RUN_LIFECYCLE-first bootstrap and exact authority freeze, read LATEST and this r173 checkpoint only as needed, then execute exactly one bounded deterministic idempotency-key model leaf. Compare unique-per-attempt orphan paths against a deterministic path keyed by {parent LATEST blob SHA, intended logical revision}; require that repeated attempts from the same frozen parent either exact-match the existing candidate or stop diagnostically, never auto-adopt mismatched content, never spawn a second orphan path, and never overwrite a reachable checkpoint. Falsify the design if an interruption/stale-writer trace can create more than one distinct orphan for the same parent or can mutate current authority.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true
+}
