@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 87,
+  "semantic_parent_revision": 86,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 31,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "transport_mode": "sha_only_head_changed_then_exact_control_refetch",
+  "frozen_main_sha": "21d517b04399ddc81134dd032c4066b6bdff0361",
+  "status": "bounded_rmcp_cancel_ack_semantics_checkpoint_recurring_open",
+  "finding": "At modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, TaskAckResult is the empty tasks/update and tasks/cancel acknowledgement: it serializes resultType=complete with optional _meta omitted by default, and ServerResult::task_ack(()) constructs TaskAckResult::new(). In the stock TaskManager cancel_task path, the manager first resolves the task, sets cancel_requested=true, sends the cooperative cancel signal, clears pending input requests for nonterminal tasks, touches the task and recomputes its status; only then does cancel_task return Ok(()). The source explicitly says this records cancellation intent and acknowledges immediately: after the request the task leaves input_required and reports working until the operation settles. Combining this slice with parent revision86's exact handler/server.rs evidence that successful ServerHandler::cancel_task is mapped to ServerResult::task_ack, a successful wire acknowledgement proves receipt/materialization of cancellation intent, not terminal cancellation or cessation of the underlying effect. An authenticated-owner gate therefore must run before application cancellation; a post-ack client must use tasks/get to observe eventual terminal state, and external-effect duplicate/late-completion safety remains a separate unresolved obligation.",
+  "source_scope": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "paths_read_this_slice": [
+      "crates/rmcp/src/model/task.rs",
+      "crates/rmcp/src/task_manager.rs"
+    ],
+    "parent_exact_source_carried_forward": [
+      "crates/rmcp/src/handler/server.rs"
+    ]
+  },
+  "scope_limits": [
+    "This is exact stock rmcp-v3.1.4 in-memory TaskManager and wire-model behavior only; it is not proof of persistent restart-safe cancellation.",
+    "The acknowledgement is not an authorization proof, owner proof, durable cancellation receipt, exactly-once guarantee, or terminal-status proof.",
+    "No compile/runtime experiment was run in this slice; conclusions are source-level plus parent source-qualified handler evidence.",
+    "No claim is made that an external side effect has stopped merely because cancel_task returned or TaskAckResult was emitted."
+  ],
+  "conflict_check": "Instruction manifest31 and RUN_LIFECYCLE1 were read first. DESIRED_STATE control26 and open_source control14/config7 were then read. SHA-only H1 was 139a3f354b2421540ce116eda3f4a14dcca5343b; pre-semantic SHA-only H2 changed to 21d517b04399ddc81134dd032c4066b6bdff0361, so the exact root/config were refetched at H2. Their parsed revisions and blobs remained DESIRED_STATE control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and open_source control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d. The H2 tuple was frozen before own-state/public semantic work. Own LATEST revision86/blobdefc9a8f8ddb4c4ed6901966f68ef3bee912dcb6 was then read; no forbidden semantic input was consumed.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the existing exact TaskManager cancellation tests around cooperative cancellation to pin the observable tasks/get state immediately after cancel_task returns and the allowed later terminal outcomes (cancelled versus completed/failed). Use that to define the minimum persistent application cancellation-record/fencing contract; do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
