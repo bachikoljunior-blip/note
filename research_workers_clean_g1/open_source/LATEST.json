@@ -1,36 +1,40 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 84,
-  "semantic_parent_revision": 83,
+  "worker_revision": 85,
+  "semantic_parent_revision": 84,
   "control_revision": 26,
   "config_revision": 7,
   "instruction_manifest_control_revision": 27,
   "lifecycle_control_revision": 1,
   "bootstrap_valid": true,
   "enabled_desired": true,
-  "status": "bounded_rmcp_get_task_ownership_schema_checkpoint_recurring_open",
+  "status": "bounded_rmcp_get_task_fail_closed_handler_checkpoint_recurring_open",
   "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
   "transport_mode": "sha_only_h1_h2",
-  "frozen_main_sha": "b65177648627296edad4a305f1adc5889b35c39e",
+  "frozen_main_sha": "1413511aed8fdc379468bd1378bdeabe7d72261f",
   "state_epoch": 3,
-  "latest_run": null,
-  "result": "Exact modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 crates/rmcp/src/model.rs resolves tasks/get request identity: GetTaskRequest = Request<GetTaskMethod, GetTaskParams>; GetTaskParams has optional request _meta plus task_id: String and GetTaskParams::new accepts Into<String>. No dedicated TaskId model type is present in this exact model.rs. Combined with R83's exact source-shaped DetailedTask -> GetTaskResult::new mapping and the already-verified server-authenticated principal seam, the smallest tasks/get-only application-owned persistent record can be keyed by task_id and store only {owner_principal_id, detailed_task}; lookup uses params.task_id, compares the current authenticated principal to owner_principal_id before returning GetTaskResult::new(detailed_task), and fails closed on missing/mismatch. task_id need not be duplicated in the record because DetailedTask.task.task_id already carries the wire identifier, but an implementation should verify key == detailed_task.task.task_id on load to reject corrupt/misindexed records. This is a source-shaped schema deduction, not a stock rmcp persistence guarantee, and no compile/runtime claim is made.",
+  "latest_run": "2026-09-01T04:03:09+09:00",
+  "result": "Exact modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 crates/rmcp/src/handler/server.rs resolves the stock tasks/get server seam: Service<RoleServer>::handle_request first validates advertised/client Tasks capability, then calls ServerHandler::get_task(request.params, context); the trait method signature is get_task(&self, GetTaskParams, RequestContext<RoleServer>) -> Future<Result<GetTaskResult, McpError>>, and its stock default ignores request/context and returns McpError::method_not_found::<GetTaskMethod>(). Exact crates/rmcp/src/error.rs shows McpError in this module is ErrorData, re-exported from model. Exact model.rs provides ErrorData::invalid_params(message, data) and ErrorData::new(code, message, data). Therefore the smallest source-shaped application-owned owner gate for R84's persistent {task_id -> owner_principal_id,detailed_task} lookup can fail closed without task-existence leakage by mapping both missing task_id and authenticated-principal owner mismatch to the identical McpError::invalid_params constant message with data=None; only an owner match returns GetTaskResult::new(detailed_task). This is an application-level deduction from exact stock signatures/constructors, not stock rmcp authorization or persistence behavior, and no compile/runtime claim is made.",
   "source_scope": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
     "paths": [
-      "crates/rmcp/src/model.rs",
-      "crates/rmcp/src/model/task.rs"
+      "crates/rmcp/src/handler/server.rs",
+      "crates/rmcp/src/error.rs",
+      "crates/rmcp/src/model.rs"
     ],
     "exact_findings": [
-      "GetTaskParams.task_id is String",
-      "GetTaskParams.meta is Option<RequestMetaObject>",
-      "GetTaskParams::new(task_id: impl Into<String>) initializes meta=None",
-      "no TaskId symbol was found in exact model.rs",
-      "DetailedTask remains the exact serializable task+payload wire model used by GetTaskResult::new"
+      "GetTaskRequest dispatch is gated by validate_tasks_capability before self.get_task",
+      "ServerHandler::get_task takes GetTaskParams plus RequestContext<RoleServer> and returns Result<GetTaskResult,McpError>",
+      "default get_task returns method_not_found<GetTaskMethod>",
+      "handler/server.rs aliases crate::error::ErrorData as McpError",
+      "error.rs re-exports model::ErrorData",
+      "ErrorData::invalid_params(message,data) is a stock constructor",
+      "same invalid_params code/message/data for missing and owner-mismatch is a no-existence-leak application pattern, not a stock guarantee"
     ]
   },
+  "conflict_check": "Instruction manifest 27, RUN_LIFECYCLE 1, DESIRED_STATE control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and open_source control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d were readable; SHA-only H1/H2 both resolved main to 1413511aed8fdc379468bd1378bdeabe7d72261f before semantic work; parent LATEST revision84/blob165d870773a7f6f4b60b74aeadea7a3ec39fbf was read from that frozen SHA. First LATEST CAS returned 409; one allowed reread confirmed revision84 and the same current blob before this single retry.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -41,5 +45,5 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact ServerHandler tasks/get handler signature/default behavior plus the smallest stock ErrorData/McpError constructor surface needed to make missing-task and owner-mismatch fail closed without leaking task existence. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact ServerHandler tasks/cancel handler signature/default behavior plus the smallest stock task acknowledgement/error surface needed to apply the same authenticated-owner gate before cancellation while making missing-task and owner-mismatch observationally identical. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
 }
