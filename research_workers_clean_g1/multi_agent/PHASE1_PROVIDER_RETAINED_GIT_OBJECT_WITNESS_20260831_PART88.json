@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "recorded_at": "2026-08-31T19:27:10+09:00",
+  "part": 88,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "phase1-provider-retained-git-object-witness",
+  "semantic_config_snapshot": {
+    "control_revision": 26,
+    "root_manifest_path": "automation_control/DESIRED_STATE.json",
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_blob": "5a769b5d12aa818b4f0aa5bbd689032cc54adb03",
+    "transport_mode": "main_ref_exact_sha",
+    "main_commit_sha_at_freeze": "1f1fe0a6b124fc7096e88fc371ef2e045df14e7e"
+  },
+  "predecessor": {
+    "latest_blob": "6af2c6efc578175deb7d27d6a6ddd647af08c15b",
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_PUBLIC_FORK_WITNESS_AUTHORITY_20260831_PART87.json",
+    "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_SEPARATE_REPOSITORY_WITNESS_AUTHORITY_20260831_PART86.json"
+  },
+  "tested_scope": "Bounded documentation-level test of whether a content-addressed Git commit/tree/blob inside a GitHub public fork network can serve as a provider-retained minimum-generation/incarnation witness after branch rewind or one repository/fork deletion, without an independently administered repository or richer-mode/protected/manual execution.",
+  "public_sources": [
+    {
+      "title": "GitHub Docs — Deleting a repository",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/repositories/creating-and-managing-repositories/deleting-a-repository",
+      "observation": "GitHub documents that deleting a public repository does not delete its public forks; deleted repositories may be restorable only within a bounded window, and some fork-network restoration can require GitHub Support on a paid plan."
+    },
+    {
+      "title": "GitHub Docs — Forks",
+      "url": "https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-permissions-and-visibility-of-forks",
+      "observation": "GitHub documents that when a public upstream is deleted an active public fork can become the new upstream, and that commits from a deleted fork can remain accessible in the repository network. This is network-survival behavior, not an indefinite retention guarantee for every unreachable object after the network becomes empty."
+    },
+    {
+      "title": "GitHub Docs — Troubleshooting commits",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/pull-requests/how-tos/commit-changes/troubleshooting-commits",
+      "observation": "GitHub documents that a commit may still be visible on GitHub after its branch was deleted or force-pushed, but recovery guidance relies on a collaborator who still has the commit locally pushing a new branch. The documentation does not promise indefinite provider retention or discoverability of an unreachable commit solely from its SHA."
+    },
+    {
+      "title": "GitHub Docs — Git database REST API",
+      "url": "https://docs.github.com/en/rest/git",
+      "observation": "The API exposes get-by-SHA operations for Git objects that exist in a repository Git database, but the endpoint documentation does not establish an anti-garbage-collection or permanent-retention contract for objects that become unreachable from all repository refs/networks."
+    },
+    {
+      "title": "GitHub Docs — About protected branches",
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+      "observation": "GitHub documents that force pushes can remove commits from branch history and can delete or repoint branches when allowed; a known commit SHA therefore is not itself a monotonic branch-authority witness."
+    }
+  ],
+  "bounded_case_matrix": [
+    {
+      "case": "one_public_upstream_deleted_while_an_active_public_fork_remains",
+      "result": "survival_documented",
+      "authority_effect": "A network copy can survive one repository deletion, but this only moves the live upstream inside the same fork network."
+    },
+    {
+      "case": "branch_force_push_or_ref_delete_with_known_commit_sha",
+      "result": "object_may_remain_visible_but_retention_not_guaranteed",
+      "authority_effect": "The SHA can identify an old object if GitHub still retains/exposes it, but current official documentation does not make that continued availability a durable monotonicity contract."
+    },
+    {
+      "case": "all_repositories_in_fork_network_deleted_or_network_becomes_empty",
+      "result": "required_retention_not_documented",
+      "authority_effect": "No official guarantee found that an unreachable commit/tree/blob remains indefinitely addressable after the entire live network is gone; deleted-repository restoration is bounded and can involve a paid-support path."
+    },
+    {
+      "case": "own_state_rollback_loses_commit_sha_discoverability",
+      "result": "not_self_reconstructing",
+      "authority_effect": "Content addressing proves identity only after the SHA is known; the tested provider documentation does not supply a zero-dependency monotonic index that reconstructs the newest witness SHA after both repository refs and role-local state roll back."
+    },
+    {
+      "case": "upstream_delete_then_same_name_recreate",
+      "result": "incarnation_binding_gap",
+      "authority_effect": "A repository name is reusable while a Git object SHA names content, not the new repository incarnation; no tested provider primitive automatically rejects a newly created same-name repository as an older authority generation."
+    },
+    {
+      "case": "repository_api_or_rate_limit_interruption",
+      "result": "fail_closed_checkpoint",
+      "authority_effect": "Lightweight repository API access can transport evidence, but temporary unavailability cannot be treated as proof that the witness is absent or current."
+    }
+  ],
+  "observation_vs_inference": {
+    "observed_from_official_docs": [
+      "A public repository deletion does not delete public forks.",
+      "An active public fork can become the new upstream after public-upstream deletion.",
+      "Commits can remain accessible in a repository network after a fork is deleted.",
+      "Force-push or branch deletion can remove a commit from branch history while the commit may still be visible on GitHub.",
+      "Deleted-repository restoration is bounded rather than a stated permanent object-retention service."
+    ],
+    "inference_limited_to_tested_scope": "Because no official source in this bounded probe guarantees indefinite retention plus deterministic discoverability of an unreachable Git object after the entire fork network disappears, a bare content-addressed commit/tree/blob cannot be accepted as a provider-enforced minimum-generation/incarnation witness for rollback safety. This is a documentation-scope falsification, not a claim that GitHub immediately garbage-collects such objects or that no undocumented retention exists."
+  },
+  "phase1_result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "new_falsification": "Content addressing supplies immutable identity but not a documented provider-level liveness/discoverability guarantee. Fork-network survival covers one-repository deletion only while another live network member remains; it does not establish the required witness after network-empty deletion, own-state rollback that loses the SHA, or delete/recreate incarnation change.",
+    "minimal_unresolved_child": "A provider-enforced repository-local monotonic witness whose newest version is reconstructible after refs plus role-local state roll back, survives same-principal repository deletion/recreation or otherwise rejects the new incarnation, and requires no second administrator/principal, protected/manual setup, finite paid quota, or incremental cost.",
+    "global_phase1_closure_claimed": false
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "candidate_acceptance_blocker": "documented provider retention/discoverability and incarnation-binding guarantees are insufficient",
+    "paid_support_dependency_rejected": true
+  },
+  "conflict_check": "Role-local Part88 only; no other worker state, downstream state, O state, shared execution ledger, other-role receipt/config, or protected authority read or modified.",
+  "frontier": [
+    "Provider-enforced immutable release/tag policy as a possible repository-local monotonic witness.",
+    "Provider event/audit surfaces are only relevant if retention, zero-quota availability and same-principal anti-rollback are sufficient; otherwise remain unresolved.",
+    "Any candidate must reconstruct the newest witness after local-state rollback rather than merely authenticate a caller-supplied old SHA."
+  ],
+  "exact_continuation": "Part89: execute exactly one bounded GitHub immutable-release/tag witness leaf using official GitHub documentation plus own clean state only. Test whether immutable releases or provider-enforced tag immutability can supply a repository-local monotonic minimum-generation/incarnation witness without an independent administrator. Required negatives: repository admin disabling the rule, release/tag deletion, repository delete/recreate, same-name incarnation reuse, force-push/reference mutation outside the release path, loss of local newest-version pointer, API/rate-limit interruption, any plan/feature quota or paid-support dependency. Accept only if the newest witness remains provider-enforced, reconstructible and rollback-resistant under the same principal with zero optional monthly/trial/paid quota and zero incremental cost; otherwise persist the exact authority or discoverability gap.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false
+}
