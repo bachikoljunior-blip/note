@@ -1,16 +1,15 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "exploration_state_id": "research_workers_clean_g1",
-  "timestamp": "2026-08-31T14:22:17+09:00",
+  "timestamp": "2026-08-31T15:29:39+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
     "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
-    "manifest_blob": "c3def7875026c6a9ddd3d1b401670aa379cd6c57",
-    "manifest_revision": 19,
+    "manifest_blob": "bf8cff1c59401834679b89a151178c3729a50723",
+    "manifest_revision": 20,
     "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
     "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
     "run_lifecycle_revision": 1,
@@ -27,45 +26,36 @@
     "task_id": "phase1-clean-reasoning-direct-architecture",
     "bootstrap_valid": true
   },
-  "predecessor_state_blob": "d737ca8cd8d84e0e87a40d5c504d3a036bed6975",
-  "prepared_state_blob": "50e42f4feca3bf0ad6621eed735fb510e72752aa",
-  "slice_type": "phase1_crash_window_conditional_publication_test",
-  "slice_id": "reasoning-20260831T142217+0900-crash-window-conditional-publication-v1",
-  "candidate_architecture": "prepare-readback-then-idempotent-publish state machine",
+  "predecessor_state_blob": "2feb8a12cce1fb11eb7059a99dfeedee2e4814ea",
+  "slice_type": "phase1_external_effect_idempotency_capability_probe",
+  "slice_id": "reasoning-20260831T152939+0900-external-effect-contract-v1",
+  "prior_result_preserved": "Repository-visible immutable deterministic-path publication passed in the predecessor state within its tested scope.",
   "test": {
-    "leaf_id": "crash-window-conditional-publication-v1",
-    "effect_key": "23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de",
-    "effect_path": "research_workers_clean_g1/reasoning/effects/23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de.json",
-    "effect_blob": "8db338cba107622f9807f6caa919d1cee568187f",
-    "phase": "COMMITTED",
-    "publication_gate_observed": true,
-    "publication_order_observed": [
-      "CAS-update role-local STATE to PREPARED",
-      "exact-read PREPARED STATE and verify slice/effect identity",
-      "create deterministic effect path once",
-      "exact-read effect path and verify matching payload",
-      "CAS-update role-local STATE to COMMITTED"
-    ],
-    "crash_window_analysis": {
-      "before_prepare_commit": "Publication cannot occur because the effect create is sequenced after successful PREPARED CAS/readback.",
-      "after_prepare_before_publish": "PREPARED state contains exact effect identity/path and can resume publication once.",
-      "after_publish_before_final_state": "The deterministic create-if-absent path makes prior publication observable; a resume must reconcile that exact path instead of publishing a second effect.",
-      "after_final_state": "COMMITTED state binds the exact effect blob."
-    },
-    "result": "PASS_WITHIN_REPOSITORY_VISIBLE_IDEMPOTENT_EFFECT_SCOPE"
+    "effect_class": "non-repository externally visible Gmail write",
+    "surface_examined": ["Gmail direct-write schema", "Gmail draft-write schema", "Gmail search/readback schema"],
+    "client_stable_idempotency_key_exposed": false,
+    "conditional_write_token_exposed": false,
+    "client_chosen_remote_identity_exposed": false,
+    "post_write_search_readback_exposed": true,
+    "atomic_checkpoint_to_remote_write_coupling_exposed": false,
+    "external_mutation_executed": false,
+    "result": "UNRESOLVED_EXACTLY_ONCE_EXTERNAL_EFFECT_GATE",
+    "reason": "The exposed write contract lacks a client-stable idempotency or conditional-write primitive. Readback/search can support reconciliation but does not establish atomic exactly-once publication across an acknowledgement-loss crash window."
   },
-  "tested_scope": "Repository-visible, immutable, deterministic-path effects whose publication is expressible through Chat-exposed repository create-if-absent after a role-local CAS checkpoint/readback.",
+  "tested_scope": "Read-only capability-schema analysis of the currently exposed Gmail external-write and search/readback tools; no mailbox content was read and no external write was executed.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
-    "conflict_check": "The semantic slice used only frozen sanitized controls plus own reasoning STATE. The effect and checkpoint are inside the reasoning write namespace; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics were consumed.",
-    "scope_limit": "The pass does not extend to arbitrary external side effects such as email/send, GUI actuation, private-network mutation, or third-party writes when the surface lacks deterministic idempotency identity plus readback/reconciliation. For those effect classes, Chat-native exactly-once publication remains unresolved unless the effect surface itself exposes equivalent conditional/idempotent semantics."
+    "phase1_acceptance": false,
+    "unresolved_child": "Exactly-once scheduled-Chat publication for an external effect surface without a client-stable idempotency/conditional-write primitive.",
+    "conflict_check": "Used only frozen sanitized controls, own reasoning STATE and read-only connector capability schemas; no private mailbox data or forbidden role semantics were consumed.",
+    "scope_limit": "This is a negative result only for the exposed Chat connector contract, not for lower-level service APIs or other effect surfaces."
   },
   "termination": "bounded_slice_complete_recurring_open",
   "remaining_frontier": [
-    "Test one effect class whose externally visible action surface lacks deterministic create-if-absent/readback semantics; determine whether scheduled Chat has an equivalent zero-cost, zero-finite-quota publication gate or whether that exact capability remains unresolved.",
-    "Test verifier-guided decomposition for effect surfaces that expose idempotency keys but no transactional coupling to role-local checkpoint state."
+    "Test one Chat-exposed external effect surface that does expose a stable client-controlled resource or idempotency identity.",
+    "Compare its crash-window contract against this negative to isolate the minimum connector primitive for conditional publication."
   ],
-  "continuation": "Fresh-bootstrap next invocation from current manifest/RUN_LIFECYCLE/DESIRED_STATE/reasoning-role, freeze authority, exact-read this STATE, and execute exactly one bounded Phase-1 leaf on a non-repository external-effect class that lacks deterministic create-if-absent/readback. First test whether the Chat-exposed effect surface itself supplies an idempotency key or conditional-write/readback primitive that can be bound to a durable PREPARED checkpoint. If not, persist that exact missing transactional/idempotency capability as an unresolved child; do not substitute richer-mode/protected/manual execution or finite monthly quota. Persist/read back one checkpoint and immutable reasoning receipt, keep enabled_desired=true/global_completion=false, and return recurring-open."
+  "continuation": "Fresh-bootstrap next invocation, freeze the exact current controls, exact-read this STATE, then execute exactly one bounded Phase-1 leaf on Google Calendar create-event capability discovery only. Determine whether its Chat-exposed create/update/read contract exposes a client-controlled stable event identity or conditional/idempotent write primitive that can be bound to a durable PREPARED checkpoint and reconciled after acknowledgement loss. If absent, persist the exact missing primitive as an unresolved child; if present, formalize one bounded crash-window state machine without creating a real event unless separately user-authorized. Persist and exact-read back role-local evidence plus an immutable reasoning receipt, keep enabled_desired=true/global_completion=false, and return recurring-open."
 }
