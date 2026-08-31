@@ -1,31 +1,32 @@
 # Reasoning Systems — clean_g1 latest pointer
 
-Newest checkpoint: `2026-08-30T1624JST_phase1_handoff_fence_order_checkpoint.json`
-Checkpoint blob: `53497ef7c56a5db91428f0d34010ee25327cbdbb`
+Newest checkpoint: `2026-09-01T0724JST_phase1_repository_effect_admission_checkpoint.json`
+Checkpoint commit: `cb071406b259ee86dac608319950fbc4e19cc54a`
 Preserved pre-Phase-1/base continuation: `2026-08-28T1807JST_budget_conditioned_joint_value.md` (restoration metadata only; do not resume while the Phase-1 overlay is active).
 
 Treat `LATEST` as a CAS-guarded acceleration index, not semantic source of truth. Reconstruct from immutable own checkpoints/provenance and fail closed on incompatible heads.
 
-Frozen semantic control for the newest invocation:
-- INSTRUCTION_CONTROL_MANIFEST blob `26b08f75ed25273b05e43ce77e018675c635b37a`, revision 7
-- RUN_LIFECYCLE blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
+Frozen semantic control for this invocation:
+- INSTRUCTION_CONTROL_MANIFEST blob `e2352418d080489c4bb8cd446ef2a2083c55b312`, revision 31
+- RUN_LIFECYCLE blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`, revision 1
 - DESIRED_STATE blob `481660fb6008a57cea162da38439cf115c8d7ebe`, control revision 26
-- reasoning config blob `e5d15694c2f3964a0be9bb69cfad60ebf237f36d`, config revision 7
+- reasoning config blob `1a2b52910d962241b031bd1d10d67008eb2ce409`, control revision 11 / config revision 8
+- exact main bootstrap SHA `fef4a75d2335726ba56e69b465355b0c38830e0d`
 - Phase `phase_1_chat_parity`
 - assignment `phase1-clean-reasoning-direct-architecture`
 
 ## Current bounded Phase-1 result
 
-The prior handoff order `offer -> ownership CAS -> ack -> side-effect fence` is falsified by a crash immediately after ownership CAS: ownership is already at generation `g+1` while an external resource still admits generation `g`. In a finite model over all 5,461 traces of length <= 6 from `{offer, cas, ack, fence}`, that ordering produced 1,701 stale-owner safety violations.
+A repository-only effect-admission candidate was finitely tested. Immutable candidate records are PREPARED only; acceptance occurs only through one CAS-guarded canonical HEAD that validates the candidate's exact predecessor, actor, and owner generation. Ownership handoff is represented by the same kind of immutable record plus one HEAD CAS, so owner advance and effect admission do not require two independently accepted mutable writes.
 
-A revised experimental order `offer -> monotone fence-prepare(g+1) -> ownership CAS(source,g -> target,g+1) -> ack` produced 0 such safety violations in the same finite trace set. All five crash-prefix replays converged to the same terminal state. Duplicate old-handoff replay and an H1 stale ack delivered after an H2 generation advance were no-ops when ack was bound to the exact current target/generation.
+Across all 137,257 traces of length <= 6 over `{prep_A, commit_A, prep_H, commit_H, prep_B, commit_B, replay_A}`, the protocol had 0 stale-generation acceptance violations. A naive baseline where immutable record creation itself counts as effect acceptance had 80,484 violation traces, including 4,206 stale-A-after-handoff traces. The minimal stale-old-owner baseline counterexample is `prep_H -> commit_H -> prep_A`.
 
-This is finite model evidence only. It does not establish connector/server atomicity, global cross-role ownership, or an actual external fence. Under current zero-dependency Phase-1 policy, the repaired handoff is **not accepted** because shared effect-admission/fencing remains an unavailable role-local capability.
+This supports only repository-visible effects whose semantics are defined by canonical HEAD-chain membership. It does not establish atomicity for arbitrary non-repository external side effects. Phase 1 therefore remains open and the root route is not accepted.
 
 ## Exact next Phase-1 action
 
-Design and finitely test a Chat-native repository-only effect-admission protocol in which every effect is immutable and carries owner generation, and acceptance can be validated without a protected shared fence or richer-mode executor. Falsify any design where owner advancement and effect publication are two independent mutable writes that admit a stale generation after a crash. Do not start the separate negative-path acceptance-table leaf in the same invocation.
+Fresh-bootstrap the required controls, exact-read reasoning LATEST/checkpoint, then execute exactly one bounded lost-ack leaf: model a successful canonical HEAD CAS whose response is not observed before crash, and test whether next-invocation readback plus exact record identity can distinguish (a) commit landed and is still tip, (b) commit landed but a later authorized HEAD advance occurred, and (c) commit never landed, without duplicate effect admission or owner rollback. If the repository-only recovery is safe, persist that result while keeping arbitrary non-repository external effects as an unresolved child; if unsafe, persist the minimal counterexample. Do not start the separate outcome-classification leaf in the same invocation.
 
-Unresolved child: `XROLE_EFFECT_FENCE_WITHOUT_SHARED_PROTECTED_EXECUTOR`.
+Unresolved child: `LOST_ACK_AFTER_HEAD_CAS_AND_EXTERNAL_EFFECT_BOUNDARY`.
 
 Phase 1 remains open; `enabled_desired=true`, `global_completion=false`, `phase1_completion_claimed=false`. Scheduler mutation by this role is forbidden and was not performed.
