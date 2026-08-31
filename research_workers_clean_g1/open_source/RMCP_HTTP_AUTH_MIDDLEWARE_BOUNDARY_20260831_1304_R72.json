@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 72,
+  "semantic_parent_revision": 71,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "transport_mode": "sha_only_h1_h2",
+    "h1_main_sha": "d951baff13cc1bf53b29a94dd72acdfae1922a72",
+    "h2_main_sha": "d951baff13cc1bf53b29a94dd72acdfae1922a72",
+    "bootstrap_valid": true,
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "blob": "c3def7875026c6a9ddd3d1b401670aa379cd6c57",
+      "control_revision": 19
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+      "control_revision": 1
+    },
+    "sanitized_root": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+      "control_revision": 26
+    },
+    "role_config": {
+      "path": "automation_control/roles/open_source.json",
+      "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+      "control_revision": 14,
+      "config_revision": 7
+    }
+  },
+  "slice": {
+    "scope": "One bounded exact-release source slice on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, restricted to the server-side HTTP authentication composition seam immediately outside StreamableHttpService.",
+    "sources": [
+      {
+        "repository": "modelcontextprotocol/rust-sdk",
+        "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+        "path": "crates/rmcp/src/transport/streamable_http_server/tower.rs",
+        "observed": "StreamableHttpService implements tower_service::Service<http::Request<RequestBody>>; its HTTP request path later propagates HTTP request Parts into MCP RequestContext extensions before dispatch."
+      },
+      {
+        "repository": "modelcontextprotocol/rust-sdk",
+        "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+        "path": "examples/servers/src/subscriptions_streamhttp.rs",
+        "observed": "The released official example constructs StreamableHttpService and mounts it with axum::Router::new().nest_service(\"/mcp\", service) before axum::serve."
+      }
+    ],
+    "bounded_search_result": "A bounded repository search found no dedicated rmcp bearer/authentication middleware abstraction in the inspected Streamable HTTP integration surface. This is an absence-within-tested-scope finding, not a repository-wide proof of nonexistence.",
+    "finding": "The source-qualified trust boundary is application-owned HTTP middleware outside rmcp: authenticate the inbound HTTP request before forwarding to StreamableHttpService; on success insert a server-authenticated Principal (or equivalent identity object) into http::Request::extensions_mut(); on failure return an HTTP auth error without invoking the inner MCP service. Because the released rmcp service is a Tower Service<Request<_>> and the official example mounts it inside an Axum Router, this wrapper can be composed before rmcp dispatch without changing rmcp internals. rmcp then carries the resulting http::request::Parts into RequestContext extensions, where the tool path can read Parts and then parts.extensions for that Principal. Client `_meta` remains non-authoritative for identity.",
+    "minimal_application_owned_contract": [
+      "Authentication runs before inner StreamableHttpService.call/dispatch and fails closed.",
+      "Principal is derived only from trusted server-side authentication state, never from MCP client metadata.",
+      "Successful authentication inserts Principal into the inbound http::Request extensions before forwarding.",
+      "The inner rmcp service is invoked exactly once for an accepted HTTP request.",
+      "Tool/request code obtains http::request::Parts from RequestContext extensions and then reads Principal from parts.extensions; missing Principal is an authorization failure.",
+      "Continuation tokens such as RequestStateCodec bind associated data to this authenticated Principal, not a client-asserted identifier."
+    ],
+    "not_proven": [
+      "No concrete credential verifier or identity provider is supplied by rmcp in this tested slice.",
+      "This does not prove OAuth/JWT/API-key correctness, key rotation, revocation, or transport confidentiality.",
+      "This does not solve persistent task create-or-get, restart redrive, or external-effect idempotency/fencing."
+    ],
+    "residual_richer_mode_protected_or_user_execution_dependency": false,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "strict_phase1_pass": false
+  },
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect one exact released request-handler/tool extraction path that reads http::request::Parts from RequestContext extensions and a Principal from parts.extensions, then pin the fail-closed missing-principal behavior and where current-policy authorization must occur before any persistent task create-or-get. Do not inspect persistent task execution beyond that boundary, do not compile, do not start effects, and do not start a second leaf."
+}
