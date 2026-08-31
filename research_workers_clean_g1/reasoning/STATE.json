@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-08-31T15:29:39+09:00",
+  "timestamp": "2026-08-31T18:25:15+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
     "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
-    "manifest_blob": "bf8cff1c59401834679b89a151178c3729a50723",
-    "manifest_revision": 20,
+    "manifest_blob": "5a769b5d12aa818b4f0aa5bbd689032cc54adb03",
+    "manifest_revision": 21,
     "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
     "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
     "run_lifecycle_revision": 1,
@@ -26,36 +26,58 @@
     "task_id": "phase1-clean-reasoning-direct-architecture",
     "bootstrap_valid": true
   },
-  "predecessor_state_blob": "2feb8a12cce1fb11eb7059a99dfeedee2e4814ea",
+  "predecessor_state_blob": "225ba0671634e2450a98b1308015f5dfd61c0d50",
   "slice_type": "phase1_external_effect_idempotency_capability_probe",
-  "slice_id": "reasoning-20260831T152939+0900-external-effect-contract-v1",
-  "prior_result_preserved": "Repository-visible immutable deterministic-path publication passed in the predecessor state within its tested scope.",
+  "slice_id": "reasoning-20260831T182515+0900-calendar-create-crash-window-v1",
+  "prior_result_preserved": "The predecessor found the exposed Gmail write contract insufficient for exactly-once publication across an acknowledgement-loss crash window because it lacked a client-stable idempotency or conditional-write primitive.",
   "test": {
-    "effect_class": "non-repository externally visible Gmail write",
-    "surface_examined": ["Gmail direct-write schema", "Gmail draft-write schema", "Gmail search/readback schema"],
-    "client_stable_idempotency_key_exposed": false,
-    "conditional_write_token_exposed": false,
-    "client_chosen_remote_identity_exposed": false,
-    "post_write_search_readback_exposed": true,
-    "atomic_checkpoint_to_remote_write_coupling_exposed": false,
+    "effect_class": "non-repository externally visible Google Calendar event creation",
+    "surface_examined": [
+      "Google Calendar create_event schema",
+      "Google Calendar read_event/fetch schemas",
+      "Google Calendar search/search_events schemas",
+      "Google Calendar update_event schema",
+      "Google Calendar set_event_label_silently ETag-protected existing-event update schema"
+    ],
+    "client_stable_create_id_exposed": false,
+    "create_idempotency_key_exposed": false,
+    "create_if_absent_or_conditional_token_exposed": false,
+    "event_id_returned_after_create": true,
+    "read_and_update_require_event_id": true,
+    "search_by_bounded_time_and_free_text_exposed": true,
+    "search_contract_guarantees_unique_deterministic_identity": false,
+    "etag_guard_exposed_for_existing_event_label_update_only": true,
+    "etag_guard_can_create_or_deduplicate_new_event": false,
     "external_mutation_executed": false,
-    "result": "UNRESOLVED_EXACTLY_ONCE_EXTERNAL_EFFECT_GATE",
-    "reason": "The exposed write contract lacks a client-stable idempotency or conditional-write primitive. Readback/search can support reconciliation but does not establish atomic exactly-once publication across an acknowledgement-loss crash window."
+    "result": "UNRESOLVED_EXACTLY_ONCE_CALENDAR_CREATE_GATE",
+    "reason": "The Chat-exposed create_event contract does not accept a client-chosen stable event ID, idempotency key, If-None-Match style create precondition, or other conditional-create token. The event ID is learned only from the create response. Therefore a remote commit followed by lost acknowledgement leaves the durable PREPARED checkpoint unable to distinguish committed-from-not-committed creation using the exposed contract alone."
   },
-  "tested_scope": "Read-only capability-schema analysis of the currently exposed Gmail external-write and search/readback tools; no mailbox content was read and no external write was executed.",
+  "crash_window_argument": {
+    "prepared_transition": "Persist PREPARED(effect_key,payload_hash) in role-local durable state and exact-read it back before any external call.",
+    "uncertain_transition": "Invoke create_event(payload). If the remote service commits but the Chat invocation loses the create response before event_id is durably recorded, the next run sees only PREPARED.",
+    "post_crash_indistinguishability": "Under the exposed connector schema, PREPARED is compatible with both worlds: no event was created, or one event was created but its returned event_id was lost.",
+    "retry_consequence": "Retrying create_event can duplicate the event in the second world.",
+    "no_retry_consequence": "Suppressing retry can omit the event in the first world.",
+    "search_limit": "Bounded free-text/time search may support best-effort reconciliation but the tool contract does not promise a unique client-controlled identity or atomic claim, so it cannot prove exactly-once creation under concurrent or duplicate-like events.",
+    "conclusion": "A durable PREPARED checkpoint is necessary but not sufficient; exactly-once conditional publication requires at least one connector primitive that closes this indistinguishability, such as client-stable create identity, atomic create-if-absent/idempotency key, or an equivalent transactional outbox coupling."
+  },
+  "tested_scope": "Read-only capability-schema analysis of the currently exposed Google Calendar create/read/search/update event tools. No calendar content was read, no event was created or changed, and no scheduler state was touched.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
     "phase1_acceptance": false,
-    "unresolved_child": "Exactly-once scheduled-Chat publication for an external effect surface without a client-stable idempotency/conditional-write primitive.",
-    "conflict_check": "Used only frozen sanitized controls, own reasoning STATE and read-only connector capability schemas; no private mailbox data or forbidden role semantics were consumed.",
-    "scope_limit": "This is a negative result only for the exposed Chat connector contract, not for lower-level service APIs or other effect surfaces."
+    "unresolved_child": "Exactly-once scheduled-Chat creation on Google Calendar requires a client-stable idempotency/conditional-create primitive that is not exposed by the current Chat connector schema.",
+    "conflict_check": "Used only frozen sanitized controls, own reasoning STATE, and read-only connector capability schemas. No mailbox/calendar user data, O-derived state, other-worker state, downstream state, shared ledger, legacy research, or other-role receipts/configs were consumed.",
+    "scope_limit": "This negative result applies only to the exposed Chat connector contract for new event creation. It does not claim anything about lower-level Google Calendar APIs, existing-event ETag updates, or other external effect surfaces."
   },
   "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "receipt_path": "automation_control/receipts/reasoning/receipt_2026-08-31T1825_JST.json",
   "remaining_frontier": [
-    "Test one Chat-exposed external effect surface that does expose a stable client-controlled resource or idempotency identity.",
-    "Compare its crash-window contract against this negative to isolate the minimum connector primitive for conditional publication."
+    "Test one Chat-exposed non-repository effect surface whose create/write schema may expose a client-controlled stable resource identity or idempotency token.",
+    "Use a matched crash-window argument to isolate whether that primitive is sufficient for PREPARED -> COMMITTED recovery without duplicate or omitted effects."
   ],
-  "continuation": "Fresh-bootstrap next invocation, freeze the exact current controls, exact-read this STATE, then execute exactly one bounded Phase-1 leaf on Google Calendar create-event capability discovery only. Determine whether its Chat-exposed create/update/read contract exposes a client-controlled stable event identity or conditional/idempotent write primitive that can be bound to a durable PREPARED checkpoint and reconciled after acknowledgement loss. If absent, persist the exact missing primitive as an unresolved child; if present, formalize one bounded crash-window state machine without creating a real event unless separately user-authorized. Persist and exact-read back role-local evidence plus an immutable reasoning receipt, keep enabled_desired=true/global_completion=false, and return recurring-open."
+  "continuation": "Fresh-bootstrap next invocation, freeze the exact current controls, exact-read reasoning STATE, then execute exactly one bounded Phase-1 leaf on Stripe write-capability discovery only: inspect whether a Chat-exposed create/update surface exposes a client-controlled idempotency key, deterministic resource identity, or conditional-write token. Do not create or modify a real Stripe object. If such a primitive is absent, persist the exact missing capability as an unresolved child; if present, formalize the minimum PREPARED/COMMITTED crash-recovery state machine and its zero-quota/zero-cost scope without starting a second leaf. Persist and exact-read back role-local evidence plus an immutable reasoning receipt, keep enabled_desired=true/global_completion=false, and return recurring-open."
 }
