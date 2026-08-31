@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 68,
+  "semantic_parent_revision": 67,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_h1_changed_h2_refetch_authority_frozen",
+    "h1_main_sha": "151e7bdc4d6cefb0de703a1cf0b3b15a4491c73b",
+    "h2_main_sha": "80a71155f6bc5de64d11d01a4504bde1e163d334",
+    "authority_refetched_after_h1_h2_change": true,
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "blob": "ec5ab64e62f4b52b92f415f8466f2bc6cce3d58a",
+      "control_revision": 17
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+      "control_revision": 1
+    },
+    "sanitized_root": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+      "control_revision": 26
+    },
+    "own_role_config": {
+      "path": "automation_control/roles/open_source.json",
+      "blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+      "control_revision": 14,
+      "config_revision": 7,
+      "enabled_desired": true
+    }
+  },
+  "own_state_predecessor": {
+    "path": "research_workers_clean_g1/open_source/LATEST.json",
+    "blob": "5c6819af31b28a628e87340f11c3d46134854ace",
+    "worker_revision": 67,
+    "exact_continuation_resumed": "Next invocation only: after fresh control bootstrap and stable SHA-only H1/H2, resume at modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056. Use one narrower exact-symbol/path discovery route to pin InputResponses wire shape, released ServerHandler get_task/cancel_task signatures, and stock TaskManager get/cancel behavior; then persist a source-qualified not-compiled persistent-handler adapter trio preserving the standard dispatcher Tasks capability gate. Do not compile, do not enter external-effect execution, and do not start a second leaf."
+  },
+  "public_source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "paths": [
+      "crates/rmcp/src/model.rs",
+      "crates/rmcp/src/model/mrtr.rs",
+      "crates/rmcp/src/model/task.rs",
+      "crates/rmcp/src/handler/server.rs",
+      "crates/rmcp/src/task_manager.rs"
+    ]
+  },
+  "exact_source_findings": {
+    "input_responses_wire_shape": "rmcp::model::InputResponses is BTreeMap<String, serde_json::Value>; keys match InputRequests keys and values are heterogeneous client results represented as opaque JSON.",
+    "task_parameter_shapes": {
+      "GetTaskParams": "public meta: Option<RequestMetaObject>, public task_id: String; constructor GetTaskParams::new(task_id)",
+      "UpdateTaskParams": "public meta: Option<RequestMetaObject>, public task_id: String, public input_responses: InputResponses; constructor UpdateTaskParams::new(task_id, input_responses)",
+      "CancelTaskParams": "public meta: Option<RequestMetaObject>, public task_id: String; constructor CancelTaskParams::new(task_id)"
+    },
+    "server_handler_signatures": {
+      "get_task": "fn get_task(&self, request: GetTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<GetTaskResult, McpError>> + MaybeSendFuture + '_",
+      "update_task": "fn update_task(&self, request: UpdateTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_",
+      "cancel_task": "fn cancel_task(&self, request: CancelTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_"
+    },
+    "dispatcher_gate": "The stock Service<RoleServer>::handle_request calls validate_tasks_capability before invoking ServerHandler get_task/update_task/cancel_task. A custom ServerHandler override therefore retains the standard Tasks-extension capability gate provided the application does not replace/bypass the stock Service dispatch.",
+    "get_result_constructor": "GetTaskResult::new(DetailedTask) sets resultType=complete and meta=None.",
+    "stock_task_manager_get": "TaskManager::get_task(&str) sweeps expiry, fails unknown task ids, refreshes status from terminal/pending-input/working state, and returns DetailedTask.",
+    "stock_task_manager_update": "TaskManager::update_task(&str, IntoIterator<Item=(String, serde_json::Value)>) accepts partial inputResponses and ignores unknown/already-answered/superseded keys per source comment.",
+    "stock_task_manager_cancel": "TaskManager::cancel_task(&str) sweeps expiry, fails unknown task ids, sets cancel_requested=true, signals cooperative cancellation, clears pending input senders for nonterminal tasks, and leaves observable status working until the operation settles. The operation may finally settle cancelled, failed, or completed.",
+    "scope_limit": "These are exact-release source findings for rmcp-v3.1.4 commit 4a738b9d... only. They do not prove restart durability, create-or-get idempotency, authorization parity beyond the stock Tasks capability gate, or exactly-once external effects."
+  },
+  "not_compiled_persistent_handler_adapter_trio": "impl ServerHandler for PersistentTaskServer {\n    fn get_task(&self, request: GetTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<GetTaskResult, McpError>> + MaybeSendFuture + '_ {\n        async move {\n            let _ = context; // stock Service has already enforced Tasks capability; application auth still must be checked here/store-side\n            let detailed: DetailedTask = self.persistent_tasks.get_task(&request.task_id).await?;\n            Ok(GetTaskResult::new(detailed))\n        }\n    }\n\n    fn update_task(&self, request: UpdateTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_ {\n        async move {\n            let _ = context;\n            self.persistent_tasks.update_task(&request.task_id, request.input_responses).await\n        }\n    }\n\n    fn cancel_task(&self, request: CancelTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_ {\n        async move {\n            let _ = context;\n            self.persistent_tasks.cancel_task(&request.task_id).await\n        }\n    }\n}",
+  "candidate_status": "NOT_COMPILED_SOURCE_QUALIFIED_SKELETON",
+  "compile_claim": false,
+  "behavioral_claim": "The SDK-facing types, fields, constructors, handler signatures, dispatcher capability gate, and stock TaskManager semantics listed above were pinned to exact release source. The application-owned persistent_tasks API in the skeleton is intentionally abstract and unverified.",
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true,
+    "residual_richer_mode_protected_or_user_execution_dependency": "unresolved child: a restart-durable application-owned store/redriver and external-effect idempotency/fencing still need a scheduled-Chat-native zero-quota design; this skeleton alone is not an accepted route",
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_test_scope": "This slice used only public repository source inspection plus lightweight role-local repository persistence; no hosted runner, Codespaces, artifact/LFS/package, cloud/API credit, paid/trial compute, or user execution was consumed."
+  },
+  "conflict_check": "One bounded continuation leaf only. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, branch/ref probe, workflow, issue, PR, release, or upstream mutation was used.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056. Pin the exact unknown-task/error and TaskManager update/cancel completion semantics plus one official task_demo or conformance implementation of get_task/update_task/cancel_task, then revise the adapter skeleton to use only exact released identifiers and explicit authenticated-principal/current-policy checks before the app-owned persistent store. Do not compile, do not start external-effect execution, and do not start a second leaf."
+}
