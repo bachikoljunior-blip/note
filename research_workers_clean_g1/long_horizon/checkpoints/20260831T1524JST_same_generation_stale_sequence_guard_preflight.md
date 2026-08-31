@@ -1,0 +1,25 @@
+# Long Horizon Phase-1 preflight — same-generation stale-sequence guard
+
+- frozen manifest: `automation_control/INSTRUCTION_CONTROL_MANIFEST.json` control_revision=20, blob=`bf8cff1c59401834679b89a151178c3729a50723`
+- frozen RUN_LIFECYCLE: control_revision=1, blob=`8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
+- frozen root: `automation_control/DESIRED_STATE.json` control_revision=26, blob=`481660fb6008a57cea162da38439cf115c8d7ebe`
+- frozen role: `automation_control/roles/long_horizon.json` control_revision=17, config_revision=8, blob=`d790db45343bec399d00c6e9410432963726d72c`
+- transport_mode: `exact_blob_two_pass`
+- bootstrap_valid: true
+- enabled_desired: true
+- phase_id: `phase_1_chat_parity`
+- root_problem_id: `o-chat-parity-root-v4-zero-work-dependency-zero-quota`
+- task_id: `phase1-clean-long-horizon-overrun-recovery`
+- effect_chain_id: `clean-rate-limit-same-generation-stale-sequence-guard-v1`
+- exact predecessor pointer blob: `82bfc8b8c20c7537f3486c4aa6c555e10f08b3e0`
+- reconstructed current state blob: `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`
+- current state: sequence=6, plan_generation=3, current_plan=`defer_no_retry_plan`, retry_attempt=3/max_attempts=3
+- planned atomic boundary: construct one test-only incoming continuation with plan_generation=3 but predecessor state_sequence=5 and current_plan=`compact_plan`; with current repository CAS authority assumed, evaluate sequence freshness before any LIVE write. Required decision: `incoming.state_sequence < current.state_sequence => REJECT_STALE_SEQUENCE`; no attempt 4 and no plan/body regression.
+- forecast: one local predicate evaluation plus one bounded persistence/readback chain; if authority/CAS mismatch or connector failure appears, do not retry in-run and persist only the exact diagnostic continuation.
+- switch threshold: any mismatch in frozen authority, current state identity, or expected sequence/generation aborts the leaf before semantic mutation.
+- richer-mode/protected/manual dependency: none
+- finite monthly/trial/paid quota dependency: none
+- incremental monetary cost: 0
+- scheduler mutation by worker: forbidden/none
+- global_completion: false
+- phase1_completion_claimed: false
