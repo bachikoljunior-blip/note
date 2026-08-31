@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 69,
+  "semantic_parent_revision": 68,
+  "state_epoch": 3,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 17,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "transport_mode": "sha_only_h1_h2_stable_authority_frozen",
+  "frozen_main_sha": "647f036aa3375b265ef51ca5eb618cd38c523299",
+  "source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "task_manager_path": "crates/rmcp/src/task_manager.rs",
+    "task_manager_blob": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc",
+    "task_demo_path": "examples/servers/src/common/task_demo.rs",
+    "task_demo_blob": "4d8d53acfac99a32f53d519caca1e989b8f792ae"
+  },
+  "bounded_slice": "Pin exact released unknown-task, update and cancel semantics plus one official ServerHandler implementation, then tighten the application-owned persistent adapter trio to exact released identifiers with authorization before store access.",
+  "findings": [
+    "TaskManager::get_task, update_task and cancel_task all call the same unknown_task(task_id) helper after the TTL sweep. unknown_task returns McpError::invalid_params(format!(\"unknown task: {task_id}\"), None).",
+    "TaskManager::update_task returns Result<(), McpError>; it ignores unknown/already-answered/superseded input-response keys by only removing keys still present in pending_inputs, touches the task, recomputes current status, and returns Ok(()).",
+    "TaskManager::cancel_task returns Result<(), McpError>; it records cancel_requested=true and signals the cooperative cancellation watch. For a nonterminal task it clears pending input senders, touches the task, and reports current status. The acknowledgement is immediate; terminal cancelled/failed/completed status is decided later by the running operation.",
+    "The official TaskDemo ServerHandler uses GetTaskParams -> Result<GetTaskResult, McpError> with GetTaskResult::new(self.tasks.get_task(&request.task_id)?), UpdateTaskParams -> Result<(), McpError>, and CancelTaskParams -> Result<(), McpError>. This fixes the released handler result shapes for a custom persistent implementation.",
+    "TaskDemo advertises ServerCapabilities::builder().enable_tools().enable_tasks().build(). Its task path still uses stock in-memory TaskManager; the example is wire/handler-shape evidence, not restart-durability evidence."
+  ],
+  "adapter_revision": {
+    "status": "source_qualified_not_compiled",
+    "design": [
+      "get_task(request: GetTaskParams, context: RequestContext<RoleServer>) -> Result<GetTaskResult, McpError>: first derive a server-authenticated principal from trusted RequestContext transport metadata and run the current tasks/get authorization check; only then read the application-owned persistent store; map absent task to McpError::invalid_params(format!(\"unknown task: {}\", request.task_id), None); return GetTaskResult::new(detailed_task).",
+      "update_task(request: UpdateTaskParams, context: RequestContext<RoleServer>) -> Result<(), McpError>: authenticate and re-authorize current tasks/update policy before persistent-store access; require ownership/intent binding for request.task_id; atomically consume only still-pending input-response keys and ignore already-consumed keys, matching stock TaskManager semantics; map absent task to the same invalid_params unknown-task error.",
+      "cancel_task(request: CancelTaskParams, context: RequestContext<RoleServer>) -> Result<(), McpError>: authenticate and re-authorize current tasks/cancel policy before persistent-store access; atomically record cancellation intent and signal/mark the claimed attempt without pretending cancellation is terminal; return Ok(()) on acknowledgement and let the fenced executor commit the eventual completed/cancelled/failed terminal state.",
+      "All store, claim-generation, restart-redrive and effect-fencing helpers remain application-owned abstractions. No stock rmcp identifier is asserted for those missing primitives."
+    ]
+  },
+  "scope_limits": [
+    "No compilation or runtime execution was performed in this slice.",
+    "The stock TaskManager remains process-local and is not evidence for server-restart durability or caller-stable create-or-get idempotency.",
+    "Authorization helper names and persistent-store operations above are application-defined placeholders, intentionally not attributed to rmcp-v3.1.4.",
+    "Exact end-to-end authenticated principal injection, persistent create-or-get, restart redrive and external-effect duplicate safety remain unresolved children."
+  ],
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "residual_dependency_reason": "End-to-end execution still requires a persistent store/redriver and effect-side idempotency or fencing not yet shown to be scheduled-Chat-native with zero optional quota.",
+  "finite_monthly_quota_credit_dependency": false,
+  "quota_assessment": "This evidence slice used only public repository reads plus role-local lightweight repository persistence; it did not consume hosted runners, Codespaces, artifacts, LFS, packages, cloud credits or external paid API/model quotas.",
+  "incremental_monetary_cost": 0,
+  "conflict_check": "No O, other-worker, downstream, legacy, shared-ledger, other-role config/receipt or scheduler semantics were read or used. No upstream/public repository mutation was performed.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056. Pin the exact released transport/middleware path that places trusted HTTP authentication metadata into RequestContext extensions and the exact extractor/read pattern used by an official example; then tighten require_authenticated_principal(context) to released identifiers and fail closed when the trusted principal is absent. Do not inspect persistent-store execution, do not compile, do not start external effects, and do not start a second leaf."
+}
