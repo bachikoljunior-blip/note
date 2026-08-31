@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 73,
+  "semantic_parent_revision": 72,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "transport_mode": "sha_only_h1_h2_authority_revalidated",
+    "h1_main_sha": "4b2af8824315c3a4cd130432831268d80d7b5712",
+    "h2_main_sha": "26df618932d5205196617dce93e6e2dbfbe8be5e",
+    "head_changed_but_authority_blobs_and_revisions_unchanged": true,
+    "bootstrap_valid": true,
+    "instruction_manifest": {"path":"automation_control/INSTRUCTION_CONTROL_MANIFEST.json","blob":"c3def7875026c6a9ddd3d1b401670aa379cd6c57","control_revision":19},
+    "run_lifecycle": {"path":"automation_control/RUN_LIFECYCLE.json","blob":"8fe5d79365dcd943984d69f4767b2ed0c03fc3ac","control_revision":1},
+    "sanitized_root": {"path":"automation_control/DESIRED_STATE.json","blob":"481660fb6008a57cea162da38439cf115c8d7ebe","control_revision":26},
+    "role_config": {"path":"automation_control/roles/open_source.json","blob":"5a60eefd9ba1740088eb50e8df589aa7e6df590d","control_revision":14,"config_revision":7}
+  },
+  "slice": {
+    "scope": "One bounded exact-release source slice on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, restricted to RequestContext HTTP Parts extraction and the fail-closed authenticated-principal/current-policy guard immediately before any persistent task create-or-get.",
+    "source": {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "path": "examples/servers/src/common/counter.rs",
+      "blob": "c6602770f3b57fbf34edbed28318a672415156f0",
+      "observed": [
+        "The released #[tool] get_session_id handler accepts RequestContext<RoleServer> and reads ctx.extensions.get::<axum::http::request::Parts>().",
+        "The same released file demonstrates typed tool argument extraction with Parameters<StructRequest> in sum(), and RequestContext plus Parameters together are supported in handler-style signatures elsewhere in the file.",
+        "The released get_session_id example treats missing HTTP Parts as a normal no-session result; that permissive behavior is suitable for diagnostics only and must not be copied for an authenticated task-materialization path."
+      ]
+    },
+    "finding": "For an authenticated persistent-task tool, the minimal application-owned guard belongs at the beginning of the registered tool handler, after rmcp has delivered RequestContext/typed arguments but before any task-store lookup that can create or mutate an operation. Read http::request::Parts from RequestContext.extensions, then read Principal from parts.extensions. If either Parts or Principal is absent, return an authentication/authorization error immediately and perform zero persistent create-or-get work. With Principal present, evaluate current policy against the authenticated principal, tool identity and validated arguments; denial also returns before create-or-get. Only after those checks may a stable operation identity be bound and an atomic persistent create-or-get be attempted. Client `_meta` is not identity authority.",
+    "fail_closed_contract": [
+      "Missing RequestContext HTTP Parts => reject before task-store access.",
+      "Missing server-authenticated Principal in parts.extensions => reject before task-store access.",
+      "Current-policy denial or revocation => reject before task create-or-get even when a continuation token is otherwise valid.",
+      "Policy input is authenticated Principal plus current tool/validated arguments; client metadata cannot substitute for Principal.",
+      "The first persistent task mutation is strictly after principal extraction and current-policy authorization."
+    ],
+    "source_scope_limits": [
+      "The exact released rmcp example proves RequestContext-to-HTTP-Parts extraction, not an rmcp-provided Principal type or authentication policy engine.",
+      "Principal insertion/extraction and the fail-closed auth error are application-owned composition; this slice did not compile a concrete Principal type or select a specific McpError constructor.",
+      "This slice does not inspect persistent task execution, restart redrive, external-effect idempotency/fencing, credential verification, revocation transport, or confidentiality."
+    ],
+    "residual_richer_mode_protected_or_user_execution_dependency": false,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "strict_phase1_pass": false
+  },
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect exactly one released ToolRouter/tool-macro extraction path to pin whether RequestContext<RoleServer> and Parameters<P> are both constructed before registered tool body entry, and identify one exact released McpError/ErrorData constructor suitable for fail-closed unauthenticated/unauthorized rejection without task materialization. Do not inspect persistent execution, do not compile, do not start effects, and do not start a second leaf."
+}
