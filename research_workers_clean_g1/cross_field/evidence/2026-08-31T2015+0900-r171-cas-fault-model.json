@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "role": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 171,
+  "authority": {
+    "desired_rev": 26,
+    "desired_sha": "481660ba4c45fd45f86d2f745f5577425a92457d",
+    "role_rev": 17,
+    "config_version": 8,
+    "role_sha": "fd9b019a24d138f1623e0ef34f1d7d0df7520d77",
+    "enabled_desired": true,
+    "global_completion": false
+  },
+  "leaf": "checkpoint_first_cas_pointer_last_fault_model",
+  "scope": {
+    "semantic_inputs": ["own LATEST pointer chronology at logical revision 170", "deterministic local state-machine model"],
+    "excluded": ["O", "O-derived state", "other workers", "downstream/Comparator/Integrator", "legacy semantics", "oracle snapshots", "sibling summaries"],
+    "public_sources_used": false
+  },
+  "protocol_under_test": {
+    "update_rule": [
+      "Create the new immutable role-local checkpoint first.",
+      "Update LATEST only with the exact pointer blob SHA observed at invocation bootstrap/own-state read.",
+      "Require the new logical revision to be no smaller than the currently referenced revision.",
+      "On stale-SHA conflict, do not refetch and blind-overwrite LATEST in the same invocation.",
+      "An exact duplicate checkpoint create may be treated as idempotent only when path and content match; any content mismatch is a conflict.",
+      "Never auto-adopt an orphan checkpoint merely because it exists."
+    ],
+    "insertion_point": "role-local persistence finalization: immutable checkpoint write before mutable LATEST pointer write"
+  },
+  "model": {
+    "state": ["immutable checkpoint map", "LATEST=(checkpoint, logical_revision)", "mutable pointer version token"],
+    "operations": ["create_checkpoint(path, revision, blob)", "cas_pointer(expected_token, path, revision)"],
+    "invariants": [
+      "LATEST always references an existing checkpoint",
+      "LATEST revision matches the referenced checkpoint revision",
+      "LATEST logical revision never regresses from the initial revision"
+    ]
+  },
+  "execution_evidence": {
+    "two_writer_legal_interleavings": 6,
+    "two_writer_interleavings_passing_all_invariants": 6,
+    "required_fault_traces": {
+      "success": "pass",
+      "interruption_after_checkpoint_before_pointer": "pass; LATEST remains old and new checkpoint is an orphan",
+      "duplicate_retry_after_success": "pass; duplicate checkpoint is content-idempotent and stale pointer CAS is rejected",
+      "stale_pointer_writer": "pass; stale CAS is rejected and winning pointer remains current",
+      "interruption_after_pointer_success": "pass; LATEST already references durable new checkpoint",
+      "explicit_revision_regression_attempt": "pass; rejected by monotonic-revision guard"
+    },
+    "counterexamples_found": 0
+  },
+  "observable_predictions": [
+    "Under a target-file stale-SHA CAS, two writers that observed the same old LATEST SHA cannot both commit different LATEST contents.",
+    "A crash between checkpoint creation and pointer update can create an orphan but cannot create a dangling LATEST reference.",
+    "A duplicate retry after a successful pointer update cannot move LATEST again when it reuses the stale observed SHA.",
+    "If a client refetches after conflict and then blindly overwrites, the model guarantee no longer applies."
+  ],
+  "advantages": [
+    "Referential integrity is preserved across interruption because the immutable checkpoint exists before it can be referenced.",
+    "Optimistic conflict detection prevents stale writers from silently regressing the mutable pointer when the no-blind-overwrite rule is respected.",
+    "Duplicate effects are bounded to an idempotent checkpoint observation or an orphan; committed pointer state is not duplicated."
+  ],
+  "tradeoffs_and_negative_evidence": [
+    "The protocol is not multi-file atomic; interruption may leave orphan checkpoints.",
+    "The state-machine result is conditional on the repository transport enforcing stale target-file SHA conflicts; this leaf does not independently re-test GitHub's live API semantics.",
+    "The target-file SHA is not a branch-head transaction token, so unrelated repository writes may interleave; the claim is only about this single mutable pointer path.",
+    "Automatic orphan adoption is intentionally excluded because it can reintroduce stale or out-of-order state."
+  ],
+  "failure_penalty": "A violation of the stale-SHA assumption or a blind overwrite after conflict can cause pointer regression or overwrite a newer continuation; interruption before pointer update costs only orphan storage under the modeled protocol.",
+  "contamination_risk": "low: no prohibited semantic source was read; model used only own latest chronology and local deterministic transitions",
+  "candidate_status": "strengthened persistence candidate; model-verified under explicit CAS assumptions, not yet transport-fault-injection verified",
+  "phase1_completion_claimed": false,
+  "termination": "phase1_slice_complete_recurring_open",
+  "continuation": "Next invocation, after required bootstrap and own-state read, execute exactly one bounded role-local disposable CAS probe: create a probe pointer under research_workers_clean_g1/cross_field/probes/, obtain its blob SHA, perform one valid SHA update and then one intentionally stale-SHA update, exact-read back the probe, and verify that the stale update is rejected without changing current content. Record the transport result and do not touch production LATEST during the probe."
+}
