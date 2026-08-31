@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "control_revision": 11,
-  "updated_at": "2026-08-29T22:44:00+09:00",
+  "control_revision": 12,
+  "updated_at": "2026-08-31T14:58:30+09:00",
   "role": "multi_agent",
   "enabled_desired": true,
-  "config_revision": 8,
+  "config_revision": 9,
   "class": "clean_exploration",
   "state_namespace": "research_workers_clean_g1/multi_agent/",
   "feedback": "research_feedback_clean_g1/multi_agent/FEEDBACK.json",
@@ -16,9 +16,9 @@
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-multi-agent-concurrency-claims",
     "objective": "Audit multi-agent claim/idempotency mechanisms for a full recurring-Chat pool that avoids duplicate/conflicting effects without external hosted coordination, richer-mode arbitration, finite monthly/trial/paid quota, or incremental monetary cost.",
-    "method": "Use own clean state and public sources only. Test claim, conflict, retry, rate-limit interruption and quota-zero behavior. When one leaf is blocked or a preferred transport surface is unavailable, preserve that blocker as an unresolved child and immediately select another role-safe non-conflicting Phase-1 leaf instead of declaring the recurring objective blocked or complete.",
+    "method": "Use own clean state and public sources only. Test claim, conflict, retry, rate-limit interruption and quota-zero behavior. When one leaf is blocked or a preferred transport surface is unavailable, preserve that blocker as an unresolved child and select the next role-safe non-conflicting Phase-1 leaf as the exact next-invocation continuation instead of declaring the recurring objective blocked or complete.",
     "expected_output": "Source-qualified coordination evidence or exact unresolved blocker with exact tested scope, zero-cost/zero-finite-quota assessment, durable checkpoint, nonempty frontier and exact continuation.",
-    "completion_reassignment": "Checkpoint and select the next highest-value non-conflicting Phase-1 multi-agent leaf; never resume unrelated base work during Phase 1."
+    "completion_reassignment": "Checkpoint and select the next highest-value non-conflicting Phase-1 multi-agent leaf as the next-invocation continuation; never resume unrelated base work during Phase 1."
   },
   "policy": {
     "semantic_inputs": ["own role-local clean state", "public sources", "own sanitized feedback only", "sanitized root manifest", "this role config"],
@@ -26,7 +26,7 @@
     "feedback_use": "mechanical self-local QC only; never infer novelty/relevance/acceptance/ranking/preferred mechanism",
     "own_state_resolution": "LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology; minimum predecessor chain; quarantine accidental stale/cross-role observability reads",
     "scope_guard": "never broaden evidence beyond tested scope",
-    "continuation": "open-ended; checkpoints/findings/blockers are never global completion; maintain nonempty Phase-1 frontier and exact next action until hard runtime/tool termination",
+    "continuation": "open-ended across scheduled invocations; checkpoints/findings/blockers are never global completion. Each invocation executes at most one highest-value bounded Phase-1 leaf/effect chain, persists a nonempty Phase-1 frontier and exact next-invocation action, then returns normally before the RUN_LIFECYCLE boundary. Never intentionally continue until hard runtime/tool termination.",
     "receipt_rule": "write immutable own receipt only; never read aggregate ledger or other-role receipts",
     "control_freshness": {
       "preferred": "Use a SHA-only main-ref lookup when exposed, then read sanitized DESIRED_STATE and this role config at that exact SHA.",
@@ -36,8 +36,8 @@
     },
     "semantic_freeze_barrier": "The first role-local state, feedback, or public-source semantic read freezes exactly one semantic control tuple {root_blob, control_revision, config_revision, role_config_blob} for the physical invocation. Never adopt a second semantic tuple after the barrier. If a newer control is detected before the barrier, restart pre-semantic bootstrap; if detected after, checkpoint under the frozen tuple and adopt the newer control next invocation.",
     "phase1_nonterminal_blocker_reallocation": {
-      "rule": "A blocker on the current leaf, missing preferred ref surface, no-result probe, completed subtask, duplicate/occupied scope, or low-value leaf does not make the Phase-1 recurring objective fully blocked or complete while any allowed role-safe Phase-1 leaf remains executable.",
-      "same_invocation_action": "Checkpoint the exact blocker/evidence, preserve completed effects, then attempt the next highest-value non-conflicting executable multi-agent Phase-1 leaf or a role-local/public verification leaf. Never manufacture work or cross CLEAN boundaries.",
+      "rule": "A blocker on the current leaf, missing preferred ref surface, no-result probe, completed subtask, duplicate/occupied scope, or low-value leaf does not make the Phase-1 recurring objective fully blocked or complete while any allowed role-safe Phase-1 leaf remains executable in a future invocation.",
+      "same_invocation_action": "Checkpoint the exact blocker/evidence and preserve completed effects. Select and persist the next highest-value non-conflicting executable multi-agent Phase-1 leaf or role-local/public verification leaf as the exact next-invocation continuation; do not execute an optional second leaf in the same invocation and never manufacture work or cross CLEAN boundaries.",
       "true_hard_stop": "Only a platform/safety/tool hard termination that prevents every allowed role-safe action may end the invocation as hard blocked; before exit persist exact continuation when safely writable. The recurring automation remains logically enabled_desired=true.",
       "scheduler_mutation": "This worker never enables/disables/pauses/deletes or otherwise mutates automation scheduler state."
     },
@@ -47,21 +47,32 @@
       "write": "Persist one immutable own receipt in automation_control/receipts/multi_agent/ and exact-readback it before continuing.",
       "required_fields": ["root_blob", "role_config_blob", "control_revision", "config_revision", "transport_mode", "bootstrap_valid", "recurring_objective_open", "global_completion", "scheduler_mutation", "selected_fallback_leaf_id", "exact_continuation"],
       "required_values": {"recurring_objective_open": true, "global_completion": false, "scheduler_mutation": false},
-      "failure_rule": "If this witness cannot be durably written, record the exact write/readback blocker if any allowed surface remains, then attempt another CLEAN-safe non-conflicting Phase-1 leaf. Failure to write the witness alone is not global completion and is not authority to mutate the scheduler."
+      "failure_rule": "If this witness cannot be durably written, record the exact write/readback blocker if any allowed surface remains, select and persist another CLEAN-safe non-conflicting Phase-1 leaf as the next-invocation continuation, and return recurring-open without same-run retry or optional second-leaf execution. Failure to write the witness alone is not global completion and is not authority to mutate the scheduler."
     },
     "phase1_scheduler_persistence_probe": {
       "leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-      "selection": "May be selected when the current semantic leaf is blocked, duplicate, occupied, completed, or low-value and another higher-value CLEAN-safe leaf is not executable.",
-      "substantive_work": "Perform a bounded self-local control/state consistency or replay check plus one bounded public-source alternative-route check when public-source access is available; otherwise execute a non-duplicative role-local zero-cost fixture/replay that tests a still-open Phase-1 claim/idempotency property.",
+      "selection": "May be selected as the next-invocation leaf when the current semantic leaf is blocked, duplicate, occupied, completed, or low-value and another higher-value CLEAN-safe leaf is not executable.",
+      "substantive_work": "Perform one bounded self-local control/state consistency or replay check plus, only when it is part of the same selected bounded leaf/effect chain, one bounded public-source alternative-route check when public-source access is available; otherwise execute one non-duplicative role-local zero-cost fixture/replay that tests a still-open Phase-1 claim/idempotency property.",
       "output": "Persist exact tested scope, observation versus inference, zero-cost/zero-finite-quota assessment, unresolved child if any, nonempty frontier and exact continuation in own state/receipt namespace.",
       "anti_keepalive": "Do not fabricate findings, emit empty keepalive receipts, or repeat a completed fixture solely to keep the task alive. The probe must produce new role-valid evidence, a falsification, a narrowed blocker, or a replay-validity result."
     },
     "termination_witness": {
       "rule": "When tooling still permits a durable own-receipt write at invocation end, emit an immutable boundary receipt and exact-readback it.",
       "termination_classes": ["scheduled_invocation_boundary_with_open_frontier", "hard_tool_termination"],
-      "normal_boundary": "Use scheduled_invocation_boundary_with_open_frontier with fully_blocked=false, global_completion=false and nonempty exact continuation whenever any allowed role-safe leaf was executable or attempted.",
+      "normal_boundary": "Use scheduled_invocation_boundary_with_open_frontier with fully_blocked=false, global_completion=false and nonempty exact next-invocation continuation whenever the bounded selected leaf was executed, completed, blocked, or narrowed and the recurring Phase-1 frontier remains open.",
       "hard_boundary": "Use hard_tool_termination only when a platform/safety/tool stop prevents every allowed role-safe action; retain the exact missing capability as an unresolved child and global_completion=false.",
       "scheduler_mutation": false
+    },
+    "run_lifecycle_alignment": {
+      "authority": "automation_control/RUN_LIFECYCLE.json",
+      "one_bounded_leaf_only": true,
+      "same_run_optional_second_leaf_forbidden": true,
+      "same_run_wait_poll_backoff_retry_forbidden": true,
+      "continue_until_hard_stop_forbidden": true,
+      "checkpoint_readback_required": true,
+      "nonempty_exact_next_invocation_continuation_required": true,
+      "normal_recurring_open_return_required": true,
+      "presemantic_witness_fastpath_consumes_the_single_slice_when_run_lifecycle_requires_lifecycle_only_diagnosis": true
     },
     "scheduler_persistence": "While enabled_desired=true, invocation end, checkpoint, no-result run, missing ref lookup, blocker or hard runtime/tool stop does not change the recurring enabled state.",
     "zero_dependency_zero_quota": "Residual richer-mode/protected/manual execution or finite monthly/trial/paid quota remains an unresolved child; incremental monetary cost must be zero.",
@@ -74,9 +85,9 @@
     "auto_restore_during_phase1": false
   },
   "migration": {
-    "from_config_revision": 7,
-    "reason": "Config7 had a scheduled physical invocation after installation but the task was then found disabled and no config7 durable own receipt existed. Config8 preserves config7 semantics and adds pre-semantic and termination-boundary witnesses plus a substantive CLEAN-safe fallback probe to localize whether failure occurs before repository execution, during semantic work, or after a valid open-frontier termination.",
-    "evidence_scope": "Lifecycle localization canary only. Absence of a config7 receipt proves durable config7 execution was not witnessed; it does not by itself identify the platform actor or exact disable cause.",
-    "rollback_condition": "Only proven authority/CLEAN-isolation failure or a demonstrated useful-output/slot-coverage regression caused by the added witness/probe method. Never roll back the root-mandated noncompletion, zero-dependency, zero-quota, zero-cost or scheduler-persistence invariants."
+    "from_config_revision": 8,
+    "reason": "Config8 was followed by a second observed physical stop after authorized same-task re-enable while its role control still instructed same-invocation chained leaf reassignment and continuation until hard runtime/tool termination. Config9 preserves the substantive multi-agent/CLEAN/coordination assignment, checkpoint/recovery and anti-stop semantics across recurring invocations but removes the lifecycle contradiction with RUN_LIFECYCLE: exactly one highest-value bounded leaf/effect chain per invocation, no optional second leaf or same-run retry/wait/poll/backoff, durable exact next-invocation continuation, and normal recurring-open return.",
+    "evidence_scope": "Lifecycle-method repair for a repeated physical stop plus a directly observed control contradiction. The stop alone does not identify the platform actor or prove that unbounded chaining caused disablement; config9 is justified independently because the prior same-invocation/hard-termination instruction violated current RUN_LIFECYCLE authority.",
+    "rollback_condition": "If config9 causes a proven substantive multi-agent/CLEAN evidence-quality or continuation regression, restore the latest same-role substantive semantics while retaining RUN_LIFECYCLE-compatible bounded invocation behavior. Never roll back to same-run optional second-leaf chaining, intentional continue-until-hard-stop behavior, or any weakening of root-mandated noncompletion, zero-dependency, zero-quota, zero-cost or scheduler-persistence invariants."
   }
 }
