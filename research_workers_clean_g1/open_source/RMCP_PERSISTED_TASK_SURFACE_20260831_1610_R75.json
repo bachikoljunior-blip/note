@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 75,
+  "semantic_parent_revision": 74,
+  "recorded_at": "2026-08-31T16:10:16+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "slice": "rmcp_v3_1_4_application_owned_persisted_task_serving_surface",
+  "frozen_authority": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_blob": "bf8cff1c59401834679b89a151178c3729a50723",
+    "instruction_manifest_control_revision": 20,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "run_lifecycle_control_revision": 1,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_state_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_control_revision": 14,
+    "role_config_revision": 7,
+    "transport_mode": "sha_only_h1_h2_authority_revalidated",
+    "h1_main_sha": "2972f8319225339c805dec70e1fb30d86ced485d",
+    "h2_main_sha": "2972f8319225339c805dec70e1fb30d86ced485d",
+    "bootstrap_valid": true
+  },
+  "public_source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "server_handler_path": "crates/rmcp/src/handler/server.rs",
+    "server_handler_blob": "6dc7883edbe8bca7f4b90d87834c311870c50496",
+    "task_model_path": "crates/rmcp/src/model/task.rs",
+    "task_model_blob": "bbdd1c99d5282cb0593467c979f79f1e9a7c4688"
+  },
+  "finding": {
+    "observed": [
+      "The released Service<RoleServer> dispatcher capability-gates GetTaskRequest, UpdateTaskRequest, and CancelTaskRequest, then calls the corresponding ServerHandler methods.",
+      "The released ServerHandler get_task method accepts GetTaskParams plus RequestContext<RoleServer> and returns Result<GetTaskResult, McpError>; its default is method-not-found. The released cancel_task method likewise accepts CancelTaskParams plus RequestContext<RoleServer> and returns Result<(), McpError>; its default is method-not-found.",
+      "Those public handler signatures do not contain TaskManager or TaskContext, so an application can override them and read/update its own persisted task records without routing those requests through stock TaskManager memory.",
+      "The exact task model exposes Task::new(task_id,status,created_at,last_updated_at), DetailedTask::new(task,payload), and GetTaskResult::new(detailed_task). TaskAckResult::new() is the released complete-result acknowledgement model for tasks/update and tasks/cancel; the server dispatcher maps the handler's unit result to a task acknowledgement.",
+      "DetailedTask forces base task status to match TaskPayload, and deserialization fails when status-specific payload such as inputRequests/result/error is missing, giving a useful fail-closed serialization boundary for a persisted store adapter."
+    ],
+    "inference": "Within the exact rmcp-v3.1.4 released server trait/model surface, serving already-persisted task state through tasks/get and accepting cooperative tasks/cancel does not require stock TaskManager. An application-owned durable store can implement the public ServerHandler methods and construct the released result models directly.",
+    "scope_limit": "This proves only the public serving/acknowledgement seam. It does not prove caller-stable task creation, atomic create-or-get, durable scheduling, restart redrive, task-result exactly-once behavior, or external-effect idempotency/fencing. It also does not yet pin the exact released field/constructor definitions of GetTaskParams, CancelTaskParams, or UpdateTaskParams.",
+    "strict_phase1_pass": false
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_user_execution_dependency": false,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_assessment": "The audited mechanism is a library trait/model seam plus lightweight repository state transport; no hosted runner, Codespaces, artifact/LFS/package service, cloud credit, external API/model credit, or paid execution feature was used or required for this finding.",
+    "unresolved_children_remain": true
+  },
+  "conflict_check": "Role-local continuation only; no O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, branch/ref, PR, issue, release, workflow, or upstream mutation was used.",
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact released model definitions for GetTaskParams, CancelTaskParams, UpdateTaskParams, plus the ServerResult::task_ack conversion needed to make an application-owned persisted-task handler skeleton compile-shaped. Pin exact field names/constructors and whether task-id lookup can be expressed without TaskManager. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
