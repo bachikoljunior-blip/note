@@ -1,40 +1,25 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 85,
-  "semantic_parent_revision": 84,
+  "worker_revision": 86,
+  "semantic_parent_revision": 85,
   "control_revision": 26,
   "config_revision": 7,
-  "instruction_manifest_control_revision": 27,
+  "instruction_manifest_control_revision": 31,
   "lifecycle_control_revision": 1,
   "bootstrap_valid": true,
   "enabled_desired": true,
-  "status": "bounded_rmcp_get_task_fail_closed_handler_checkpoint_recurring_open",
+  "status": "bounded_rmcp_cancel_owner_gate_checkpoint_recurring_open",
   "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
   "transport_mode": "sha_only_h1_h2",
-  "frozen_main_sha": "1413511aed8fdc379468bd1378bdeabe7d72261f",
-  "state_epoch": 3,
-  "latest_run": "2026-09-01T04:03:09+09:00",
-  "result": "Exact modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 crates/rmcp/src/handler/server.rs resolves the stock tasks/get server seam: Service<RoleServer>::handle_request first validates advertised/client Tasks capability, then calls ServerHandler::get_task(request.params, context); the trait method signature is get_task(&self, GetTaskParams, RequestContext<RoleServer>) -> Future<Result<GetTaskResult, McpError>>, and its stock default ignores request/context and returns McpError::method_not_found::<GetTaskMethod>(). Exact crates/rmcp/src/error.rs shows McpError in this module is ErrorData, re-exported from model. Exact model.rs provides ErrorData::invalid_params(message, data) and ErrorData::new(code, message, data). Therefore the smallest source-shaped application-owned owner gate for R84's persistent {task_id -> owner_principal_id,detailed_task} lookup can fail closed without task-existence leakage by mapping both missing task_id and authenticated-principal owner mismatch to the identical McpError::invalid_params constant message with data=None; only an owner match returns GetTaskResult::new(detailed_task). This is an application-level deduction from exact stock signatures/constructors, not stock rmcp authorization or persistence behavior, and no compile/runtime claim is made.",
+  "frozen_main_sha": "87b5cad2b329f59dae6ec4a1d58fa49769b12b0b",
+  "result": "Exact modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 crates/rmcp/src/handler/server.rs resolves tasks/cancel: dispatch validates Tasks capability before self.cancel_task, then maps success through ServerResult::task_ack. ServerHandler::cancel_task takes CancelTaskParams plus RequestContext<RoleServer> and returns Result<(),McpError>; its stock default returns method_not_found<CancelTaskMethod>. The exact source comment says cancellation is cooperative, returns an empty acknowledgement, and observable task status may lag. Therefore the application-owned authenticated-owner gate from revision85 can be applied before cancellation: missing task and owner mismatch should use the same invalid_params response, while only an owner match reaches the application cancellation operation. This is an application-level pattern, not stock rmcp authorization/persistence/durable-cancel evidence. The exact task_ack serialization and TaskManager cancellation sequencing remain uninspected in this bounded slice.",
   "source_scope": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
-    "paths": [
-      "crates/rmcp/src/handler/server.rs",
-      "crates/rmcp/src/error.rs",
-      "crates/rmcp/src/model.rs"
-    ],
-    "exact_findings": [
-      "GetTaskRequest dispatch is gated by validate_tasks_capability before self.get_task",
-      "ServerHandler::get_task takes GetTaskParams plus RequestContext<RoleServer> and returns Result<GetTaskResult,McpError>",
-      "default get_task returns method_not_found<GetTaskMethod>",
-      "handler/server.rs aliases crate::error::ErrorData as McpError",
-      "error.rs re-exports model::ErrorData",
-      "ErrorData::invalid_params(message,data) is a stock constructor",
-      "same invalid_params code/message/data for missing and owner-mismatch is a no-existence-leak application pattern, not a stock guarantee"
-    ]
+    "paths": ["crates/rmcp/src/handler/server.rs"]
   },
-  "conflict_check": "Instruction manifest 27, RUN_LIFECYCLE 1, DESIRED_STATE control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and open_source control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d were readable; SHA-only H1/H2 both resolved main to 1413511aed8fdc379468bd1378bdeabe7d72261f before semantic work; parent LATEST revision84/blob165d870773a7f6f4b60b74aeadea7a3ec39fbf was read from that frozen SHA. First LATEST CAS returned 409; one allowed reread confirmed revision84 and the same current blob before this single retry.",
+  "conflict_check": "Instruction manifest31 and RUN_LIFECYCLE1 were read first; DESIRED_STATE control26 and open_source control14/config7 matched manifest-authorized blobs. SHA-only H1/H2 both resolved main to 87b5cad2b329f59dae6ec4a1d58fa49769b12b0b before own-state/public semantic work. Parent LATEST revision85/blob8e42056cca879dcbb76580e657d296961838121e was read from the frozen SHA.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -45,5 +30,5 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact ServerHandler tasks/cancel handler signature/default behavior plus the smallest stock task acknowledgement/error surface needed to apply the same authenticated-owner gate before cancellation while making missing-task and owner-mismatch observationally identical. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact ServerResult::task_ack definition/model serialization plus the stock TaskManager cancel-task path needed to determine whether acknowledgement is emitted before, during, or after the cooperative cancellation signal/state transition. Preserve the authenticated-owner fail-closed gate; do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
 }
