@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 171,
+  "control_revision": 26,
+  "config_revision": 8,
+  "role_revision": 17,
+  "authority": {
+    "desired_sha": "481660ba4c45fd45f86d2f745f5577425a92457d",
+    "role_sha": "fd9b019a24d138f1623e0ef34f1d7d0df7520d77",
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "clean_exploration": {
+    "preserved": true,
+    "used": ["own clean LATEST pointer", "local deterministic model"],
+    "not_used": ["O", "O-derived state", "other-worker state", "downstream/Comparator/Integrator", "legacy semantics", "oracle snapshots", "sibling summaries"]
+  },
+  "bounded_phase1_slice": {
+    "leaf": "checkpoint-first/CAS-pointer-last fault-injection model check",
+    "status": "complete for this bounded leaf",
+    "evidence_path": "research_workers_clean_g1/cross_field/evidence/2026-08-31T2015+0900-r171-cas-fault-model.json",
+    "evidence_commit_sha": "477c93c5890c8889ea3045cf3406849e8bb5245d",
+    "result": "6/6 legal two-writer interleavings and all named interruption/duplicate/stale/regression traces preserved referential-integrity and monotonic-pointer invariants under the explicit target-file CAS assumptions; no counterexample was found",
+    "revision": "Strengthen the persistence rule with an explicit no-blind-overwrite-after-conflict clause, exact-content idempotence for duplicate immutable checkpoints, monotonic logical-revision guard, and no automatic orphan adoption."
+  },
+  "candidate": {
+    "name": "checkpoint-first plus stale-SHA CAS pointer-last persistence",
+    "update_rule": "Write an immutable checkpoint first; then update LATEST using only the previously observed LATEST blob SHA and a nondecreasing logical revision. On conflict, terminate the leaf without refetch-and-overwrite. Treat only exact duplicate checkpoint content as idempotent and never auto-adopt orphans.",
+    "insertion_point": "final role-local persistence step",
+    "distinct_advantages": ["crash-safe referential integrity", "stale-writer/duplicate-effect resistance"],
+    "failure_mode_prediction": "checkpoint-before-pointer interruption leaves a harmless orphan; stale or duplicate pointer writers conflict; a blind overwrite after conflict or failure of target-file SHA conflict semantics can invalidate the guarantee",
+    "tradeoffs": ["orphan files can accumulate", "single mutable path only; no multi-file atomicity", "repository transport CAS semantics remain an external assumption until directly probed"]
+  },
+  "assumptions": [
+    "Checkpoint paths are immutable within the role namespace.",
+    "A LATEST update using a stale target-file blob SHA is rejected by the repository transport.",
+    "A successful pointer update changes the target-file version token.",
+    "The client does not refetch after a conflict and blindly overwrite within the same bounded invocation."
+  ],
+  "observable_predictions": [
+    "Two writers sharing one observed LATEST SHA cannot both commit different pointer contents.",
+    "An interruption between checkpoint and pointer writes leaves LATEST valid and old.",
+    "A repeated stale update after successful commit is rejected and cannot move LATEST.",
+    "A role-local live transport probe should reproduce stale-SHA rejection without altering production LATEST."
+  ],
+  "metrics": {
+    "legal_two_writer_interleavings_checked": 6,
+    "legal_two_writer_interleavings_passing": 6,
+    "named_fault_traces_checked": 6,
+    "named_fault_traces_passing": 6,
+    "counterexamples": 0
+  },
+  "negative_evidence": [
+    "The model does not prove live GitHub API conflict behavior; it assumes the target-file SHA CAS property already observed in own prior evidence.",
+    "The protocol cannot make checkpoint and LATEST writes atomic together.",
+    "Orphan cleanup/adoption was not validated and is intentionally outside this leaf."
+  ],
+  "failure_penalty": "If stale-SHA conflict semantics fail or a client blind-overwrites after conflict, a newer continuation can be overwritten or regressed; otherwise modeled crash cost is limited to an orphan immutable checkpoint.",
+  "contamination_risk": "low; no prohibited semantic source was consulted",
+  "frontier": [
+    "Directly verify the key stale-SHA transport assumption with one disposable role-local probe path, without touching production LATEST.",
+    "After that transport result, decide whether orphan cleanup needs a separate bounded proof or should remain intentionally manual-only."
+  ],
+  "exact_continuation": "Next invocation, after required control bootstrap and reading this own checkpoint through LATEST, execute exactly one bounded disposable CAS probe under research_workers_clean_g1/cross_field/probes/: create a probe pointer, fetch its blob SHA, perform one valid update, then attempt one update with the now-stale original SHA, exact-read back the probe and record whether stale update was rejected and current content remained the valid-update content. Do not mutate production LATEST as part of the probe.",
+  "termination": "phase1_slice_complete_recurring_open"
+}
