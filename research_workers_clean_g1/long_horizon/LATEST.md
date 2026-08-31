@@ -1,14 +1,40 @@
-# Long Horizon clean_g1 — bounded Phase-1 checkpoint
+# Long Horizon clean_g1 — LATEST
 
-Authority frozen via current instruction-control bootstrap: manifest control_revision=20/blob `bf8cff1c59401834679b89a151178c3729a50723`; RUN_LIFECYCLE control_revision=1/blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`; root control_revision=26/blob `481660fb6008a57cea162da38439cf115c8d7ebe`; role control_revision=17/config_revision=8/blob `d790db45343bec399d00c6e9410432963726d72c`; transport_mode=`exact_blob_two_pass`; `bootstrap_valid=true`; `enabled_desired=true`.
+- phase_id: `phase_1_chat_parity`
+- root_problem_id: `o-chat-parity-root-v4-zero-work-dependency-zero-quota`
+- task_id: `phase1-clean-long-horizon-overrun-recovery`
+- role: `long_horizon`
+- enabled_desired: `true`
+- bootstrap_valid: `true`
+- transport_mode: `exact_blob_two_pass`
+- termination: `bounded_slice_complete_recurring_open`
+- global_completion: `false`
+- phase1_completion_claimed: `false`
+- scheduler_mutation_by_worker: `false`
 
-Completed exactly one bounded leaf: `clean-rate-limit-same-sequence-same-generation-body-fingerprint-guard-v1`. Checkpoint: `research_workers_clean_g1/long_horizon/checkpoints/20260831T1627JST_same_sequence_body_fingerprint_guard.md`. Preflight: `research_workers_clean_g1/long_horizon/preflight/20260831T1627JST_body_fingerprint_guard_preflight.json`, blob `338ab97940f8bbea1149f328815d7c9d67b72775`.
+## Frozen control
+- instruction manifest: revision `21`, blob `5a769b5d12aa818b4f0aa5bbd689032cc54adb03`
+- RUN_LIFECYCLE: revision `1`, blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
+- DESIRED_STATE: revision `26`, blob `481660fb6008a57cea162da38439cf115c8d7ebe`
+- role config: control_revision `17`, config_revision `8`, blob `d790db45343bec399d00c6e9410432963726d72c`
 
-Reconstructed predecessor from prior LATEST: canonical-state blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`, sequence=6, generation=3, plan=`defer_no_retry_plan`. A test-only stale continuation copied sequence=6 and generation=3 but substituted plan=`compact_plan`. Counter freshness alone admitted the equal-counter payload. Deterministic semantic-body SHA-256 rejected it: canonical `e384e44edad5e0f7b4a7d1718700df976ab4ffa6fc918c77738c529b0dd967d2` vs stale `27e5a2764c75608085f03784a91219ef3f83131adbfe36e6b1030666fa95019c`. Untouched canonical tuple remained admissible. No LIVE write or retry occurred.
+## Completed bounded leaf
+Effect chain: `clean-rate-limit-full-continuation-envelope-fingerprint-guard-v1`.
 
-Tested scope is intentionally narrow: the digest covered only `{state_sequence, plan_generation, current_plan}`. Minimum learned binding for this scope is `(state_sequence, plan_generation, semantic_body_version, expected_semantic_body_sha256)` with repository CAS/blob identity kept separate as transport authority. Full decision-bearing continuation coverage remains open.
+Checkpoint: `research_workers_clean_g1/long_horizon/checkpoints/20260831T1723JST_full_continuation_envelope_guard.md`
+Checkpoint blob after exact readback: `ba1e7d3664463e7e273f8352f74eb5a41ef75b6c`
+Preflight: `research_workers_clean_g1/long_horizon/preflight/20260831T1723JST_full_continuation_envelope_guard_preflight.json`
+Preflight blob: `f474232c700a93c0829be378b8c8b45fa5879d92`
 
-## EXACT CONTINUATION
-Next invocation execute exactly one leaf `clean-rate-limit-full-continuation-envelope-fingerprint-guard-v1`: freshly bootstrap/freeze required controls; exact-read this LATEST and the canonical LIVE rate-limit state referenced by it; enumerate only the role-local decision-bearing continuation fields; define a versioned/domain-separated deterministic semantic-envelope hash over the full continuation body while keeping repository blob/CAS identity separate; run one substitution control that preserves sequence, generation and current_plan but changes one other decision-bearing field, requiring rejection before any LIVE write while the untouched envelope remains admissible. Persist/read back one bounded result and a nonempty continuation only. Do not combine another leaf, wait/poll/backoff, retry external work, mutate scheduler, use richer mode/protected primary/manual execution, or consume finite paid/trial/monthly quota.
+Canonical state resolved to `research_workers_clean_g1/long_horizon/phase1/LIVE_RATE_LIMIT_STATE.json`, blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`, sequence `6`, generation `3`, plan `defer_no_retry_plan`.
 
-Scope remains open: `termination=bounded_slice_complete_recurring_open`, `global_completion=false`, `phase1_completion_claimed=false`, `enabled_desired=true`, `scheduler_mutation_by_worker=false`, `continuation_nonempty=true`, `hard_runtime_boundary_reached=false`, `next_invocation_resumes_exact_continuation=true`, incremental monetary cost=`0`.
+A versioned/domain-separated SHA-256 semantic envelope was defined over the structured decision-bearing continuation body while repository blob/CAS identity stayed separate. Canonical digest: `94439588c4affad23c613ea8406d2fdf29d3be63f8d1c0acec3c156e9030be4b`.
+
+One substitution preserved `state_sequence=6`, `plan_generation=3`, and `current_plan=defer_no_retry_plan` but changed decision-bearing `max_attempts:3->4`. Its digest became `8dcc1f4d28c06b53fd3955feddbfd675689b082da5e954037a06351e7502820b`; full-envelope guard rejected it before any LIVE write. Untouched canonical body recomputed to the expected digest and admitted. No LIVE state mutation occurred.
+
+Scope: deterministic role-local continuation-integrity mechanism test only. The expected digest itself was trusted in this leaf, so body+expected-digest joint substitution remains open. No residual richer-mode/Work/protected-primary/manual execution dependency, finite monthly/trial/paid quota, hosted compute/storage allowance, or incremental monetary cost was introduced.
+
+## Exact nonempty continuation
+Next effect_chain_id: `clean-rate-limit-envelope-authority-binding-v1`.
+
+Freshly bootstrap/freeze `INSTRUCTION_CONTROL_MANIFEST.json`, `RUN_LIFECYCLE.json`, `DESIRED_STATE.json`, and `automation_control/roles/long_horizon.json`; reconstruct this exact checkpoint from this `LATEST.md`; exact-read canonical `LIVE_RATE_LIMIT_STATE.json` plus expected semantic-envelope digest `94439588c4affad23c613ea8406d2fdf29d3be63f8d1c0acec3c156e9030be4b`. Define one durable authority tuple binding `predecessor LATEST blob + canonical LIVE blob + semantic-envelope version + expected digest`. In exactly one bounded in-memory control, preserve `state_sequence`, `plan_generation`, and `current_plan`, change `max_attempts`, and recompute a self-consistent substituted expected digest; require rejection because that substituted digest is not bound to the frozen predecessor-authority tuple. Untouched tuple must admit. Do not mutate LIVE state, start a second leaf, wait/poll/backoff/retry, mutate scheduler, use richer/protected/manual execution, or consume any finite-quota feature. Persist and exact-read back one preflight, result/checkpoint, this LATEST pointer, and one immutable own receipt, carrying a further nonempty continuation.
