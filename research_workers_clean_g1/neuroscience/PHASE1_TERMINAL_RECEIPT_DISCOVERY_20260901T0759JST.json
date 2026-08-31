@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-terminal-receipt-discovery-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "PHASE1_PREFLIGHT_TERMINAL_RECEIPT_DISCOVERY_20260901T0758JST.json",
+  "preflight_blob": "6b386d32466e0e563aad1ebf9707e89a4880ac30",
+  "predecessor_latest_blob": "17e991d9de6e701edbb0e538fc2d019fb2e70bfe",
+  "base_continuation_preserved": true,
+  "probe": {
+    "question": "Can a deterministic newest-valid terminal receipt be discovered from an arbitrarily truncated, order-ambiguous own receipt listing using only visible receipt/artifact metadata plus visible ancestry?",
+    "formal_chain": [
+      {"receipt":"r1","predecessor_latest":"L0","artifact":"A1","resulting_latest":"L1","effect_key":"k1","next_effect_key":"k2"},
+      {"receipt":"r2","predecessor_latest":"L1","artifact":"A2","resulting_latest":"L2","effect_key":"k2","next_effect_key":"k3"},
+      {"receipt":"r3","predecessor_latest":"L2","artifact":"A3","resulting_latest":"L3","effect_key":"k3","next_effect_key":"k4"},
+      {"receipt":"r4","predecessor_latest":"L3","artifact":"A4","resulting_latest":"L4","effect_key":"k4","next_effect_key":"k5"}
+    ],
+    "ordering_ambiguity_control": {
+      "visible_set": "all four valid receipts",
+      "permutations_tested": 24,
+      "correct_newest_by_ancestry": 24,
+      "result": "Ordering ambiguity alone is solvable when the valid candidate set is complete: select the unique ancestry-maximal resulting LATEST; use a deterministic receipt key only for an integrity-valid incomparable fork."
+    },
+    "truncation_counterexample": {
+      "observed_visible_receipts": ["r1","r2"],
+      "world_a": "The visible set is complete; newest valid is r2/L2.",
+      "world_b": "The same visible set is a truncated view of a committed chain containing hidden r3/L3; newest valid is r3/L3.",
+      "observation_equivalence": "Visible receipt fields, visible artifact bindings and visible ancestry are identical in both worlds.",
+      "result": "No deterministic selector over only the truncated visible set can be correct in both worlds. Arbitrary receipt-list truncation therefore makes guaranteed newest-valid discovery information-theoretically impossible without an additional completeness/discovery certificate."
+    },
+    "revision": {
+      "name": "successor-addressed terminal receipt chain",
+      "rule": "Do not discover successors by listing. Each committed checkpoint carries a deterministic next_effect_key. The only admissible successor terminal receipt has a direct immutable path derived from that key and must bind predecessor LATEST blob, self-contained artifact blob, resulting LATEST blob, its effect_key and the next_effect_key. Recovery from a stale predecessor performs one direct exact-path lookup for the expected successor, validates all bindings, and advances the canonical pointer at most once without replaying the completed logical effect. If no successor is visible, preserve ambiguity until the current LATEST CAS/readback boundary confirms no already-advanced canonical state; never infer completion from list exhaustion.",
+      "bounded_recovery_property": "A checkpoint that is n committed successors stale can advance by at most one validated committed successor per recurring invocation, preserving the lifecycle budget and avoiding unbounded list scans.",
+      "why_it_handles_this_probe": "Receipt-list order and truncation become irrelevant because discovery is direct-addressed from the reconstructed predecessor rather than selected from a partial collection."
+    }
+  },
+  "scope_and_acceptance": {
+    "positive_scope": "Formal deterministic single-writer linear-chain model with immutable self-contained artifacts and exact-path repository reads.",
+    "falsified_scope": "Any claim that arbitrary truncated unordered receipt listings alone suffice to guarantee newest-valid terminal receipt discovery.",
+    "not_tested": [
+      "concurrent fork/CAS loser",
+      "transient exact-path 404 or delayed visibility",
+      "malformed successor receipt after partial write",
+      "multiple committed successors recovered in one invocation"
+    ],
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "One bounded direct exact-path read plus CAS/readback state transport; no hosted compute and no receipt-list scan as compute."
+  },
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next valid invocation, test the successor-addressed receipt chain under one self-local concurrent-writer/CAS-loser case and one transient exact-path-not-visible case. Require zero duplicate logical effects, never convert ambiguous 404 into completion, persist the smallest diagnostic/recovery rule, exact-read back, and stop without a second leaf."
+}
