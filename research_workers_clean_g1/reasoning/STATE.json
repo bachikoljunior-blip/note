@@ -2,15 +2,15 @@
   "schema_version": 1,
   "role": "reasoning",
   "exploration_state_id": "research_workers_clean_g1",
-  "timestamp": "2026-08-31T05:24:00+09:00",
+  "timestamp": "2026-08-31T14:22:17+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
     "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
-    "manifest_blob": "0d4eed5d464aa69bb0bceb84a842df7a3e4121c4",
-    "manifest_revision": 13,
+    "manifest_blob": "c3def7875026c6a9ddd3d1b401670aa379cd6c57",
+    "manifest_revision": 19,
     "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
     "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
     "run_lifecycle_revision": 1,
@@ -18,52 +18,44 @@
     "desired_state_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
     "desired_state_revision": 26,
     "reasoning_role_path": "automation_control/roles/reasoning.json",
-    "reasoning_role_blob": "e5d15694c2f3964a0be9bb69cfad60ebf237f36d",
-    "reasoning_role_revision": 10,
+    "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
+    "reasoning_role_revision": 11,
+    "reasoning_config_revision": 8,
     "transport_mode": "exact_blob_two_pass",
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture",
     "bootstrap_valid": true
   },
-  "predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
-  "slice_type": "phase1_duplicate_resume_idempotency_test",
-  "slice_id": "reasoning-20260831T052400+0900-duplicate-resume-idempotency-v1",
-  "candidate_architecture": "CAS-checkpointed Chat-native state transducer",
+  "predecessor_state_blob": "d737ca8cd8d84e0e87a40d5c504d3a036bed6975",
+  "slice_type": "phase1_crash_window_conditional_publication_test",
+  "slice_id": "reasoning-20260831T142217+0900-crash-window-conditional-publication-v1",
+  "candidate_architecture": "prepare-readback-then-idempotent-publish state machine",
   "test": {
-    "leaf_id": "duplicate-resume-idempotency-v1",
-    "effect_key_formula": "sha256(task_id + '|' + predecessor_state_blob + '|' + leaf_id)",
-    "effect_key": "a472dd2645f1087c539d2aba6bdd57cedac93cdf94ba2da944d4f7201e2c0dcb",
-    "admission_rule": "admit only if candidate.predecessor_state_blob == current_state_blob AND effect_key not in committed_effect_keys",
-    "initial_case": {
-      "current_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
-      "candidate_predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
-      "committed_effect_keys": [],
-      "dry_run_verdict": "admissible_once"
-    },
-    "simulated_post_commit_state_blob": "0a2a2d5c26ba6a25e8e5c9b9c8caeb70efcc2b106ee5fcc3facf8e762ea20d48",
-    "stale_replay_case": {
-      "current_state_blob": "0a2a2d5c26ba6a25e8e5c9b9c8caeb70efcc2b106ee5fcc3facf8e762ea20d48",
-      "candidate_predecessor_state_blob": "28966f8dce2168d7e741f69e9c1409035481bd43",
-      "committed_effect_keys": ["a472dd2645f1087c539d2aba6bdd57cedac93cdf94ba2da944d4f7201e2c0dcb"],
-      "dry_run_verdict": "reject",
-      "reasons": ["stale_predecessor", "duplicate_effect_key"]
-    },
-    "second_semantic_commit_attempted": false,
-    "result": "PASS_WITHIN_SYNTHETIC_STATE_TRANSITION_SCOPE"
+    "leaf_id": "crash-window-conditional-publication-v1",
+    "effect_key": "23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de",
+    "effect_path": "research_workers_clean_g1/reasoning/effects/23705528989fb83a615144cbbfd27033ad4b0adc6ebd8d994f1ef3167db142de.json",
+    "phase": "PREPARED",
+    "publication_gate": "Do not create the effect path until this PREPARED STATE update succeeds by CAS and exact readback confirms this exact slice_id/effect_key/effect_path.",
+    "recovery_rule": "If resumed from PREPARED, read the deterministic effect path. If absent, create it once. If present with matching effect_key and payload contract, do not recreate; advance STATE to COMMITTED. A mismatch is a conflict and must not publish another effect.",
+    "crash_windows": {
+      "before_prepare_commit": "No effect may exist because publication is forbidden before PREPARED readback.",
+      "after_prepare_before_publish": "Resume from durable PREPARED state and publish once.",
+      "after_publish_before_final_state": "Deterministic create-if-absent effect path makes the already-visible effect discoverable and prevents duplicate publication on resume."
+    }
   },
-  "tested_scope": "Synthetic duplicate-resume handling for repository-text/state reasoning effects whose admission can be guarded by predecessor blob identity plus deterministic effect-key deduplication.",
+  "tested_scope": "Repository-visible, immutable, deterministic-path effects whose publication can be expressed as Chat-exposed repository create-if-absent after a role-local CAS checkpoint/readback.",
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
     "incremental_monetary_cost_within_tested_scope": 0,
-    "conflict_check": "Only frozen sanitized controls and own reasoning STATE were used; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics were used.",
-    "scope_limit": "This dry-run establishes the admission invariant only. It does not prove atomicity for external side effects, arbitrary code execution, GUI effects, private-network effects or any action outside Chat-visible repository/state mutation. Those remain unresolved Phase-1 children."
+    "conflict_check": "Only frozen sanitized controls and own reasoning STATE are semantic inputs; no O, downstream, other-worker, legacy, shared-ledger or other-role receipt semantics are used.",
+    "scope_limit": "This PREPARED state does not yet prove publication. It covers only repository-visible effects with deterministic create-if-absent/readback semantics; arbitrary external side effects without idempotency/reconciliation remain unresolved."
   },
-  "termination": "bounded_slice_complete_recurring_open",
+  "termination": "slice_in_progress_prepared",
   "remaining_frontier": [
-    "Find and test one separate Chat-native architecture for an effect class not representable as repository text/state mutation, rejecting any richer-mode/protected/user or finite-quota executor.",
-    "Test crash-window semantics where an external effect could occur before role-local checkpoint commit; require a zero-dependency Chat-native prevention or classify the effect class unresolved."
+    "Complete this single crash-window leaf by publishing the deterministic role-local effect only after PREPARED readback, then finalize STATE and receipt.",
+    "Later test or classify an external effect class lacking deterministic create-if-absent/readback semantics."
   ],
-  "continuation": "On the next invocation, after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/reasoning-role bootstrap and exact two-pass authority freeze, exact-read this STATE. Execute exactly one bounded Phase-1 leaf: test the crash-window child for effects whose action could become externally visible before the role-local checkpoint is durably committed. First try a Chat-native design that makes effect publication conditional on successful CAS/readback; if the effect surface cannot provide that ordering without richer-mode/protected/user execution or finite monthly quota, record the exact unresolved capability instead of treating a handoff as a solution. Persist and exact-read back one role-local checkpoint plus nonempty continuation, keep enabled_desired=true, and return recurring-open."
+  "continuation": "If this invocation stops after PREPARED, fresh-bootstrap next invocation, exact-read this STATE, then read only the deterministic effect_path. If absent, create it once; if present and matching, do not recreate. Advance STATE to COMMITTED only after exact effect readback. Keep enabled_desired=true, global_completion=false and Phase 1 open."
 }
