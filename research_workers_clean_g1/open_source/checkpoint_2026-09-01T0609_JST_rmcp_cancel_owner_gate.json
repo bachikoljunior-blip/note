@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 86,
+  "semantic_parent_revision": 85,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 30,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "status": "bounded_rmcp_cancel_fail_closed_owner_gate_checkpoint_recurring_open",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "transport_mode": "sha_only_h1_h2",
+  "frozen_main_sha": "afd1c2afdc64a8f93eda1fa02a981a2800670ed7",
+  "observed_at": "2026-09-01T06:09:01+09:00",
+  "leaf": "rmcp-v3.1.4 tasks/cancel authenticated-owner gate and stock acknowledgement surface",
+  "result": "Exact modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 resolves the stock tasks/cancel seam. Service<RoleServer>::handle_request first calls validate_tasks_capability::<CancelTaskMethod,_>, then invokes ServerHandler::cancel_task(request.params, context), and maps successful Result<(),McpError> through ServerResult::task_ack. The trait method is cancel_task(&self, CancelTaskParams, RequestContext<RoleServer>) -> Future<Result<(),McpError>>; its stock default ignores request/context and returns McpError::method_not_found::<CancelTaskMethod>(). CancelTaskParams is non_exhaustive and contains meta: Option<RequestMetaObject> plus public task_id: String, with new(task_id) setting meta=None. ServerResult::task_ack converts () into TaskAckResult::new(), i.e. the standard empty tasks/update/tasks/cancel acknowledgement carrying the SEP-2322 resultType=complete discriminator. Therefore the smallest application-owned fail-closed cancellation owner gate can extract request.task_id, derive the authenticated principal from trusted RequestContext transport metadata as already established in this role's source chain, look up application-owned persistent {task_id -> owner_principal_id,...}, map both missing task_id and owner mismatch to the identical McpError::invalid_params constant message/data=None before invoking any cancellation mutation, and return Ok(()) only after an owner-authorized cooperative cancellation request is accepted. This prevents task-existence leakage across those two cases at the handler error surface, but is an application-level deduction, not stock rmcp authorization/persistence behavior; it does not prove cancellation completion, because the exact handler comment states observable task status may lag after the empty acknowledgement.",
+  "source_scope": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "release_scope": "rmcp-v3.1.4 exact release commit",
+    "paths": [
+      "crates/rmcp/src/handler/server.rs",
+      "crates/rmcp/src/model.rs (including re-exported task model content exposed by exact source response)"
+    ],
+    "exact_findings": [
+      "CancelTaskRequest dispatch is gated by validate_tasks_capability before self.cancel_task",
+      "ServerHandler::cancel_task takes CancelTaskParams plus RequestContext<RoleServer> and returns Result<(),McpError>",
+      "default cancel_task returns method_not_found<CancelTaskMethod>",
+      "CancelTaskParams has public task_id:String and optional _meta",
+      "successful cancel_task is mapped through ServerResult::task_ack",
+      "task_ack(()) returns TaskAckResult::new() and is the empty tasks/update/tasks/cancel acknowledgement",
+      "stock handler documentation says cancellation is cooperative and observable task status may lag",
+      "identical invalid_params for missing versus owner mismatch is an application owner-gate pattern, not a stock SDK guarantee"
+    ]
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "reason": "This bounded leaf only closes the source-level authorization/error-shape seam for cancellation. Application-owned persistent task storage, restart redrive and external-effect idempotency/fencing remain unresolved children; no hosted runner, Codespaces, artifact/LFS/package, cloud credit or paid API was used by this evidence slice."
+  },
+  "conflict_check": "INSTRUCTION_CONTROL_MANIFEST control30, RUN_LIFECYCLE control1, DESIRED_STATE control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and open_source control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d were readable. SHA-only H1 and H2 both resolved note main to afd1c2afdc64a8f93eda1fa02a981a2800670ed7 before substantive public-source inspection. Semantic inputs were limited to own LATEST, sanitized root/config/lifecycle controls and public exact-release source; no O, other-worker, downstream, legacy or shared-ledger semantics were read.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh INSTRUCTION_CONTROL_MANIFEST/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact ServerHandler tasks/update signature/default behavior plus UpdateTaskParams and the minimum stock acknowledgement/error surface needed to apply the same authenticated-owner fail-closed gate before any application-owned task update mutation. Preserve observational identity between missing task_id and owner mismatch; do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
