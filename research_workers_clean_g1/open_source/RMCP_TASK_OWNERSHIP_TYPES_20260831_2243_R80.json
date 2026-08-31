@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 80,
+  "semantic_parent_revision": 79,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_h1_h2",
+    "frozen_main_sha": "8551135ea12425b77054586fedbcb8774fbe9bfb",
+    "h1_sha": "8551135ea12425b77054586fedbcb8774fbe9bfb",
+    "h2_sha": "8551135ea12425b77054586fedbcb8774fbe9bfb",
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_blob": "45c78146fcd182ec374a41a3f2e21366e37d90fa",
+    "instruction_manifest_control_revision": 23,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_control_revision": 14,
+    "role_config_revision": 7
+  },
+  "source_pin": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": [
+      "crates/rmcp/src/model/task.rs",
+      "crates/rmcp/src/handler/server.rs"
+    ]
+  },
+  "bounded_leaf": "Exact public task model and ServerHandler ownership seam for principal-scoped tasks/get, tasks/update and tasks/cancel.",
+  "observations": [
+    "Exact task.rs defines DetailedTask as { task: Task, payload: TaskPayload }; Task carries the server-generated stable task_id plus status/timestamps/TTL/poll interval, and DetailedTask::new forces Task.status to agree with the payload.",
+    "Exact GetTaskResult is the tasks/get response wrapper: result_type defaults to COMPLETE, optional _meta, and flattened DetailedTask. GetTaskResult::new(task) constructs the COMPLETE result.",
+    "Exact TaskAckResult is the empty COMPLETE acknowledgement used for tasks/update and tasks/cancel; the source explicitly says state changes are observed through the next tasks/get rather than through the acknowledgement.",
+    "Exact server dispatcher calls validate_tasks_capability before get_task, update_task and cancel_task, then forwards request.params plus RequestContext<RoleServer> into the corresponding ServerHandler override.",
+    "That dispatcher gate checks only whether server/client negotiated the Tasks extension. It does not enforce authenticated-principal ownership of task_id. Therefore a principal-scoped persistent implementation must fail closed inside each get/update/cancel override before any task-store read, state transition or cancellation side effect.",
+    "The exact field layout/constructors of GetTaskRequestParams, UpdateTaskRequestParams and CancelTaskRequestParams were not recovered within this bounded source-read slice because the connector response truncated the later portion of task.rs. No field names are inferred or invented here."
+  ],
+  "compile_risk_reduction": {
+    "confirmed_public_types": [
+      "Task",
+      "TaskStatus",
+      "TaskPayload",
+      "DetailedTask",
+      "GetTaskResult",
+      "TaskAckResult",
+      "RequestContext<RoleServer>"
+    ],
+    "confirmed_dispatch_methods": [
+      "get_task(request.params, context)",
+      "update_task(request.params, context)",
+      "cancel_task(request.params, context)"
+    ],
+    "ownership_rule": "Extract only a server-authenticated principal from trusted RequestContext transport metadata, then atomically resolve task_id within that principal's namespace; return a fail-closed authorization/not-found error before exposing DetailedTask or applying update/cancel. Do not trust client _meta as identity authority.",
+    "remaining_exact_type_child": "Recover the pinned-release definitions of GetTaskRequestParams, UpdateTaskRequestParams and CancelTaskRequestParams, including exact fields and constructors, then bind the ownership precheck to those exact names without compiling or entering restart-executor/effect logic."
+  },
+  "scope_limits": [
+    "No claim that stock rmcp provides authentication, task ownership enforcement, persistent task storage, restart redrive or exactly-once effects.",
+    "No compile/runtime claim; source inspection only.",
+    "No restart executor inspection, effect execution, hosted runner, Codespaces, artifact/LFS/package, cloud-credit or user execution used in this slice."
+  ],
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "One bounded continuation leaf from worker revision 79 only; no O, other-worker, downstream, legacy or shared-ledger semantics read; no scheduler mutation; no second leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and recover the exact pinned-release definitions and field layouts of GetTaskRequestParams, UpdateTaskRequestParams and CancelTaskRequestParams from crates/rmcp/src/model/task.rs. Bind the fail-closed authenticated-principal ownership precheck to those exact wrappers and record one compile-risk-reduction checkpoint. Do not compile, do not inspect restart executor logic, do not start effects, and do not start a second leaf."
+}
