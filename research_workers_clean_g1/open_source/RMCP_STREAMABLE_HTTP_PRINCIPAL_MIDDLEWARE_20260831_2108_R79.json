@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 79,
+  "semantic_parent_revision": 78,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 21,
+  "lifecycle_control_revision": 1,
+  "enabled_desired": true,
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "sha_only_h1_h2_authority_revalidated_after_main_drift",
+    "h1_main_sha": "a01453c0ff0caa80df15f1c50d2a6a7517beb729",
+    "h2_main_sha": "dbdeb5cc362936488213ddf53c8c33d064b5fade",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "config_path": "automation_control/roles/open_source.json",
+    "config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "config_control_revision": 14,
+    "config_revision": 7,
+    "authority_note": "main moved between H1 and H2, but exact root/config blobs and parsed revisions were unchanged at H2, so substantive authority was frozen on the H2 tuple"
+  },
+  "slice": {
+    "subject": "modelcontextprotocol/rust-sdk rmcp-v3.1.4 Streamable HTTP trusted-principal middleware seam",
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "source_path": "crates/rmcp/src/transport/streamable_http_server/tower.rs",
+    "source_findings": [
+      "StreamableHttpService implements tower_service::Service<http::Request<RequestBody>>, so an outer Tower/Axum middleware layer can run before rmcp's service consumes the request.",
+      "The exact release documentation says the service consumes the body but injects the remaining http::request::Parts into rmcp Extensions, accessible through RequestContext.",
+      "The same exact source explicitly documents that custom Axum/Tower extension state is available inside Parts.extensions and shows RequestContext -> Parts -> typed AppState lookup.",
+      "The stateless direct-dispatch path inserts the http::request::Parts into the MCP request extensions before serving the request."
+    ],
+    "source_qualified_composition": {
+      "pattern": "Place trusted authentication middleware outside StreamableHttpService. The middleware validates client credentials, mints a server-authenticated Principal, inserts that Principal into http::Request::extensions_mut(), and only then calls the inner rmcp service. Tool/task handlers recover http::request::Parts from RequestContext extensions, recover Principal from Parts.extensions, and fail closed before any task-store lookup or mutation if Principal is absent or invalid.",
+      "trust_boundary": "Only the server-side authentication middleware may mint Principal. Client-controlled MCP _meta, raw HTTP headers, task_id, or request arguments are inputs to validation and must never themselves be treated as the authenticated identity.",
+      "ownership_binding": "The first application-owned task-store access remains principal-scoped, e.g. (principal_id, task_id), so merely propagating Parts does not grant task ownership.",
+      "stock_scope_limit": "rmcp provides the Tower service surface and extension propagation seam, not authentication, Principal semantics, task ownership enforcement, persistent create-or-get, restart redrive, or exactly-once external effects."
+    },
+    "falsification_and_scope": {
+      "positive_scope": "Source-level composition seam only; no compile, runtime server, credential validation, or effect execution was performed.",
+      "negative_guard": "A handler that reads a raw Authorization header or client _meta directly as identity fails the trust-boundary requirement even though those values are visible through Parts/request data.",
+      "residual_richer_mode_protected_or_user_execution_dependency": true,
+      "residual_dependency_detail": "Turning this source seam into an operational route still requires a resident HTTP server/auth middleware runtime outside scheduled Chat unless an already-Chat-exposed connector supplies the same authenticated-principal propagation. Therefore this finding is not Phase-1 acceptance.",
+      "finite_monthly_quota_credit_dependency": false,
+      "quota_note": "The source mechanism itself is not tied to a monthly/trial/paid hosted quota, but an accepted Chat-native route still must avoid external hosted compute entirely.",
+      "incremental_monetary_cost": 0
+    }
+  },
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "frontier_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only authority freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect the exact public model/ServerHandler types needed for principal-scoped tasks/get, tasks/update, and tasks/cancel (including GetTaskResult/DetailedTask and exact parameter/result wrappers). Produce one compile-risk-reduction checkpoint that binds fail-closed ownership to those exact types; do not compile, do not inspect restart executor logic, do not start effects, and do not start a second leaf."
+}
