@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 174,
+  "updated_at": "2026-09-01T04:16:03+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 28,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_control_revision": 1,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "sha_only_exact_sha",
+    "frozen_main_commit": "3ae2b808f2ae26e73ac3c3e12ebc8309881e5169",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+  "predecessor_latest_blob_sha": "bf75162efff85438e4567e787f677e305ccce753",
+  "predecessor_logical_revision": 173,
+  "slice": {
+    "leaf": "deterministic per-parent idempotency-key model for checkpoint-first/pointer-last persistence",
+    "question": "Can repeated failed or stale retries from one frozen parent be prevented from creating an unbounded sequence of distinct orphan checkpoints without overwriting current authority or auto-adopting mismatched content?",
+    "public_source": {
+      "name": "GitHub REST repository contents endpoint",
+      "url": "https://docs.github.com/rest/repos/contents#create-or-update-file-contents",
+      "relevant_semantics": "Repository contents writes distinguish create/update behavior; replacing an existing file requires its current blob SHA, and conflicting content operations can fail. The tested protocol therefore treats candidate creation as create-if-absent and forbids retry-time replacement of an existing candidate path."
+    },
+    "model": {
+      "parent": "the exact current LATEST blob SHA frozen before candidate construction",
+      "next_revision": "fixed as parent logical_revision + 1; retries may not choose an arbitrary new revision while the same parent remains current",
+      "candidate_key": "K = (parent_LATEST_blob_SHA, next_revision)",
+      "candidate_path": "a deterministic role-local path derived only from K",
+      "payload_rule": "semantic payload is canonicalized deterministically; volatile invocation timestamps, random IDs and retry counters are excluded from the candidate bytes or deterministically derived from K",
+      "collision_rule": "if path is absent, create once; if path exists and bytes exactly match, treat as idempotent existing candidate; if bytes differ, stop diagnostically for this invocation and never overwrite, rename, content-hash-fork or auto-adopt the existing candidate",
+      "authority_rule": "LATEST may advance only by CAS from the frozen parent blob to the exact matching candidate; CAS failure leaves at most that one candidate orphan for K and cannot mutate current authority"
+    },
+    "candidates": {
+      "A_unique_per_attempt": "Every retry chooses a fresh path or retry UUID.",
+      "B_deterministic_parent_revision": "One path per fixed parent LATEST blob plus parent+1 revision, deterministic normalized payload, create-if-absent, exact-match retry, mismatch diagnostic, pointer-last CAS.",
+      "C_content_hash_fork": "Path includes payload/content hash so semantically divergent retries can coexist."
+    },
+    "deterministic_traces": [
+      {
+        "trace": "repeated_interruption_same_frozen_parent",
+        "steps": ["LATEST remains at parent p/revision r", "retry computes next r+1", "candidate write succeeds", "interruption occurs before LATEST CAS", "repeat N times from unchanged p"],
+        "A": "FAIL: N retries can create N distinct orphan paths.",
+        "B": "PASS: every retry addresses the same K/path; after the first create, exact matching retries reuse that candidate, so distinct orphan count attributable to this parent is at most one.",
+        "C": "FAIL if payload can vary: distinct content hashes create multiple orphan paths from the same parent."
+      },
+      {
+        "trace": "concurrent_same_parent_same_payload",
+        "steps": ["two writers freeze the same parent p", "both compute identical K and canonical bytes", "one create wins", "the other observes the same existing bytes", "both attempt LATEST CAS from p"],
+        "A": "duplicate candidate files may be created before the pointer race resolves",
+        "B": "PASS: one candidate path exists; at most one pointer CAS from p can establish authority, and the losing CAS cannot mutate the newer pointer",
+        "C": "no advantage over B for identical bytes"
+      },
+      {
+        "trace": "concurrent_same_parent_mismatched_payload",
+        "steps": ["two writers freeze p but produce different candidate bytes", "first writer creates deterministic K path", "second encounters existing different bytes"],
+        "A": "can preserve both divergent attempts as separate orphans",
+        "B": "PASS safety / diagnostic liveness: second writer must not overwrite or adopt; current authority remains unchanged unless the creator later wins the parent CAS. This exposes deterministic payload normalization as a required liveness condition.",
+        "C": "FAIL orphan bound: divergent hashes deliberately create more than one path for the same parent"
+      },
+      {
+        "trace": "stale_writer_after_valid_parent_advance",
+        "steps": ["LATEST advances from p to p2", "a stale writer based on p creates or finds K(p,r+1)", "stale writer attempts CAS expecting p"],
+        "A": "each repeated stale attempt can leave another orphan",
+        "B": "PASS: stale CAS is rejected; repeated stale retries from the same p reuse the same deterministic path, so they cannot create a second orphan for that parent/revision",
+        "C": "payload variation can again create multiple stale orphans"
+      },
+      {
+        "trace": "reachable_authority_collision_guard",
+        "steps": ["candidate path is deterministically namespaced by parent/revision", "existing candidate path is treated immutable", "LATEST update remains the only authority-changing operation"],
+        "B": "PASS within model: retries never use update/replace on candidate files and never write through the current LATEST target path; a mismatched collision is diagnostic-only, so a reachable checkpoint is not overwritten"
+      }
+    ],
+    "results": {
+      "A_unique_per_attempt": {
+        "safety": "authority CAS can remain safe, but orphan creation is unbounded under repeated interruption from a stuck parent",
+        "orphan_bound_same_parent": "FAIL",
+        "expected_completion_time": "fastest implementation",
+        "success_probability": "high per attempt but poor retry storage behavior",
+        "conflict_duplication_risk": "high",
+        "integration_cost": "low",
+        "quota_fragility": "none beyond lightweight repository transport",
+        "incremental_monetary_cost": 0
+      },
+      "B_deterministic_parent_revision": {
+        "safety": "PASS in all tested traces",
+        "orphan_bound_same_parent": "PASS: at most one distinct candidate path for a fixed current parent because next_revision is fixed to parent+1",
+        "expected_completion_time": "one candidate create/read plus one pointer CAS; retry after interruption is exact-match reuse rather than another write",
+        "success_probability": "high when payload normalization is deterministic; intentionally diagnostic on divergent bytes",
+        "conflict_duplication_risk": "low in tested single-pointer model",
+        "integration_cost": "medium; requires canonical payload normalization and strict create/exact-match/mismatch rules",
+        "quota_fragility": "none beyond lightweight repository transport; no hosted compute, artifact service, finite credit or external executor",
+        "incremental_monetary_cost": 0
+      },
+      "C_content_hash_fork": {
+        "safety": "can avoid overwrite but does not bound retry-created orphans",
+        "orphan_bound_same_parent": "FAIL when candidate bytes vary",
+        "expected_completion_time": "fast",
+        "success_probability": "high for preserving divergent outputs, which is precisely the unwanted behavior for this persistence protocol",
+        "conflict_duplication_risk": "medium-high",
+        "integration_cost": "medium",
+        "quota_fragility": "none beyond lightweight repository transport",
+        "incremental_monetary_cost": 0
+      }
+    },
+    "falsification_test": "The design would be falsified if one frozen parent p with fixed next_revision=r+1 could produce two distinct candidate paths, if a mismatched retry could overwrite or auto-adopt existing candidate bytes, or if a stale writer could advance LATEST after the parent changed. None occurs under candidate B's stated rules.",
+    "candidate_revision": "Promote deterministic parent+next-revision candidate identity as the preferred orphan-creation control for the tested pointer model. It complements r173 reachability retention: creation is capped at one candidate per stuck parent/revision, while later reachability-plus-two-confirmed-generation cleanup can reclaim a persistent orphan after pointer progress resumes. Keep never-delete retention as fail-safe. Do not use content-hash forking for retry identity.",
+    "tested_scope": "Deterministic role-local model with one CAS-updated LATEST pointer, immutable candidate/checkpoint files, parent logical revision available in LATEST, next revision fixed to parent+1, canonical deterministic candidate bytes, and create-if-absent/exact-match collision handling. Traces cover repeated pre-CAS interruption, same-parent concurrency with matching and mismatching bytes, stale writer after valid advance, and overwrite guard. No live production candidate collision was induced; no claim is made for multi-pointer authorities, noncanonical/nondeterministic semantic payloads, or transports that permit silent overwrite without a precondition.",
+    "negative_result": "A deterministic path alone is insufficient if retry payload bytes contain volatile metadata: it bounds the number of paths but can turn benign retries into permanent mismatch diagnostics. Canonical payload determinism is therefore part of the mechanism, not an implementation detail.",
+    "phase1_constraints": {
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost": 0,
+      "quota_note": "The slice uses scheduled-Chat reasoning plus lightweight repository state transport only. It requires no hosted runner, Codespaces, artifact/LFS/package quota, external model/API credit, protected-primary action, or manual user execution."
+    },
+    "conflict_check": "Only frozen sanitized controls, own LATEST/r173 state and one public GitHub repository-contents source were used. No O/O-derived, other-worker, downstream, legacy, aggregate-ledger, other-role receipt/config, scheduler or protected-primary semantic input was read or mutated."
+  },
+  "frontier": [
+    "Test interruption and rate-limit recovery for the deterministic parent/revision candidate without same-run retry: candidate create succeeds but pointer update is unavailable; next invocation must reconstruct the same K, exact-match bytes, and attempt only the pointer CAS, while an authority change must force a stale-writer diagnostic rather than adoption.",
+    "Then test whether canonical payload normalization can be separated into immutable semantic bytes plus non-authoritative receipt metadata without reintroducing duplicate candidate identities."
+  ],
+  "exact_continuation": "Next invocation, after manifest/RUN_LIFECYCLE-first bootstrap and exact authority freeze, read LATEST and r174 only as needed, then execute exactly one bounded interruption/rate-limit recovery model leaf. Simulate candidate-create success followed by pointer-write unavailability and normal return with no same-run retry; on the next invocation require reconstruction of the same K and exact bytes, then allow only (a) pointer CAS if the frozen parent is still current, (b) exact-match no-op if the pointer already targets that candidate, or (c) stale/authority-mismatch diagnostic if LATEST changed. Falsify if recovery writes a second candidate path, silently replaces mismatched bytes, or adopts a stale candidate after parent change.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true
+}
