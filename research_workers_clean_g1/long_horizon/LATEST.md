@@ -6,19 +6,23 @@
 - role: `long_horizon`
 - enabled_desired: `true`
 - bootstrap_valid: `true`
-- transport_mode: `exact_blob_two_pass`
+- transport_mode: `sha_pinned_main`
 - termination: `bounded_slice_complete_recurring_open`
 - global_completion: `false`
 - phase1_completion_claimed: `false`
 - scheduler_mutation_by_worker: `false`
 
-Frozen controls: manifest rev25/blob `6c7e53223bfd193eb80cfbadac23fca2ccf31300`; RUN_LIFECYCLE rev1/blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`; DESIRED_STATE rev26/blob `481660fb6008a57cea162da38439cf115c8d7ebe`; role control17/config8/blob `d790db45343bec399d00c6e9410432963726d72c`.
+Frozen controls: main SHA `09038e6e7a8c2132e728f1b402d3d80396a9afa0`; manifest rev27; RUN_LIFECYCLE rev1/blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`; DESIRED_STATE rev26/blob `481660fb6008a57cea162da38439cf115c8d7ebe`; role control17/config8/blob `d790db45343bec399d00c6e9410432963726d72c`.
 
-Preflight persisted and exact-read at `research_workers_clean_g1/long_horizon/preflight/20260901T0024JST_envelope_authority_replay_after_latest_advance_preflight.json`, blob `384a0c5b97e91a8d15012efd8860ef7dbfac3dcb`.
+Predecessor LATEST blob consumed: `dddaacf5148c79e083ff65c300ed4dfa0f0177a8`.
+Preflight: `research_workers_clean_g1/long_horizon/preflight/20260901T0223JST_stale_predecessor_authority_replay_preflight.json`, blob `21fd9352e59b46d086f7128e4466abd7fd1f84a9`.
+Authoritative current checkpoint: `research_workers_clean_g1/long_horizon/checkpoints/20260901T0224JST_stale_predecessor_authority_replay.md`, blob `3e1d860167aa7ec673d5a85f785adfca9816dc58`.
 
-Bounded leaf blocker: the first exact role-local read of `research_workers_clean_g1/long_horizon/LIVE_RATE_LIMIT_STATE.json` returned HTTP 404. No alternate path was guessed and no retry, polling, waiting, LIVE-state mutation, second leaf, richer/protected/manual execution, finite-quota feature, or scheduler mutation was performed. A fuller checkpoint write was blocked by the write safety layer, so no completed semantic replay is claimed.
+Bounded leaf result: canonical LIVE rate-limit state exact-read at unchanged blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a` (`state_sequence=6`, `plan_generation=3`). Replaying the old authority tuple bound to predecessor LATEST blob `1ca604313274d16b2fa66bdba91866fba28d6015` was rejected as `REJECT_STALE_PREDECESSOR`; the freshly rebound tuple using predecessor blob `dddaacf5148c79e083ff65c300ed4dfa0f0177a8` admitted. Old/fresh authority fingerprints were `4d9dbe376a8772ae317933566c517c5cd3000fbdbeaca4b61161df69e4289e59` and `a08dc3a2f23ed450c22feacd5bd91068f847fb3d12cf9a751acf613d4b10cfb5`. LIVE state was not mutated.
+
+No wait/poll/backoff/retry, second leaf, scheduler mutation, richer-mode/Work, protected-primary/manual execution, hosted compute, finite quota, or incremental monetary cost was introduced.
 
 ## Exact nonempty continuation
-Next effect_chain_id: `clean-rate-limit-live-state-path-resolution-then-authority-replay-v1`.
+Next effect_chain_id: `clean-rate-limit-stale-generation-replay-v1`.
 
-Freshly bootstrap/freeze the four required controls; reconstruct this pointer; exact-read only `research_workers_clean_g1/long_horizon/checkpoints/20260831T2135JST_envelope_authority_binding.md` to recover the canonical LIVE-rate-limit-state path and expected blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`. Do not guess alternate paths. If it names an authorized role-local path, exact-read that path and run one stale-predecessor replay control: the old predecessor-bound tuple must reject for stale predecessor LATEST identity while a freshly rebound tuple admits, with LIVE state unchanged. If that checkpoint is missing/unreadable or does not identify an authorized path, persist that exact blocker and return recurring-open without retry or a second leaf.
+Freshly bootstrap/freeze the four required controls; reconstruct this pointer; exact-read canonical `research_workers_clean_g1/long_horizon/phase1/LIVE_RATE_LIMIT_STATE.json`. In exactly one bounded in-memory control, replay a continuation authorized by stale predecessor generation `2` / prior state blob `5217ac80d20baad6afd158bd5e39c4b39e9200ff` against canonical generation `3` / current LIVE blob and require rejection with no LIVE mutation; compare one freshly bound generation-3 continuation as positive control. Persist/read back preflight, result/checkpoint, LATEST and one immutable own receipt. Preserve `enabled_desired=true`, `global_completion=false`, `phase1_completion_claimed=false`; never mutate scheduler or start a second leaf.
