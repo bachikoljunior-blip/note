@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "created_at": "2026-09-01T05:34:00+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "part95-repository-local-lineage-witness",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 29,
+    "instruction_manifest_blob": "0f54cb6b6fb4bc2a52af66851032d3b1e2bc98f7",
+    "frozen_main_sha": "5dc6f751e5ec0130ce8c97ebf550657881a74330",
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "presemantic_liveness_receipt": "automation_control/receipts/multi_agent/20260901T0532JST-presemantic-liveness-witness.json",
+  "predecessor_checkpoint": "research_workers_clean_g1/multi_agent/PHASE1_GITHUB_GLOBAL_NODE_ID_REVERSE_ALIAS_20260901_PART94.json",
+  "objective": "Test whether one repository CAS lineage record keyed by a stable logical resource key can replace provider reverse-history reconstruction while fencing stale/current-incarnation confusion, ambiguous retry, takeover, and quota-zero/rate-limit interruption.",
+  "candidate_record": {
+    "key": "stable_logical_resource_key",
+    "fields": ["incarnation_epoch", "current_provider_id", "predecessor_id_digest_or_tombstone", "applied_transition_id"],
+    "candidate_protocol": [
+      "Read the current repository record and require a current-blob CAS for every lineage transition.",
+      "Before any authoritative effect, compare the effect target's currently observed opaque provider ID with current_provider_id; mismatch fails closed until a lineage CAS installs the new incarnation.",
+      "Use applied_transition_id as a durable read-before-retry identity after an ambiguous CAS response or coordinator takeover.",
+      "Never require a reverse predecessor lookup for normal reconciliation once predecessor_id_digest_or_tombstone is present.",
+      "On repository read/rate-limit interruption, perform no authoritative effect and checkpoint for a later invocation."
+    ]
+  },
+  "public_source_observations": [
+    {
+      "source": "GitHub Docs: Using global node IDs",
+      "url": "https://docs.github.com/en/graphql/guides/using-global-node-ids",
+      "retrieved": "2026-09-01",
+      "observation": "GitHub documents REST node_id / GraphQL id as an opaque object reference usable for direct node lookup and recommends persisting global node IDs for integrations."
+    },
+    {
+      "source": "GitHub Docs: Transferring a repository",
+      "url": "https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository",
+      "retrieved": "2026-09-01",
+      "observation": "GitHub documents repository transfer and optional rename, including cases where an OWNER/REPOSITORY-NAME combination can be permanently retired. The checked page does not state a monotonic lineage epoch or anti-rollback witness for integrations."
+    }
+  ],
+  "model": {
+    "scenario_count": 192,
+    "weighting": "Equal-weight finite mechanism lattice; counts are counterexample/mechanism counts, not production probabilities.",
+    "dimensions": {
+      "identity_event": ["none", "rename_or_transfer_same_provider_object", "logical_name_reuse_new_provider_object"],
+      "provider_change_without_lineage_cas": [false, true],
+      "repository_witness_force_rewind_after_newer_epoch": [false, true],
+      "cas_response": ["observed", "applied_but_response_lost"],
+      "coordinator_takeover": [false, true],
+      "predecessor_provider_lookup": ["available", "lost"],
+      "repository_transport": ["available", "rate_limit_or_read_interrupted"]
+    },
+    "scope_note": "rename/transfer_same_provider_object is an adversarial same-provider-ID ABA control, not a claim that GitHub documentation guarantees node-ID preservation on every transfer. The model asks whether provider-ID equality alone can detect a repository epoch rollback if the same object remains the effect target."
+  },
+  "protocol_results": {
+    "reverse_history_baseline": {
+      "all_192": {"safe_terminal": 56, "blocked": 128, "unsafe_stale": 8, "duplicate_authoritative_effect": 2},
+      "lost_predecessor_lookup_event_slice_32": {"blocked": 32},
+      "interpretation": "Reverse-history dependence fails the Part94 lost-predecessor objective and still does not solve same-provider-ID witness rollback."
+    },
+    "cas_record_only_no_current_target_check": {
+      "all_192": {"safe_terminal": 56, "blocked_on_transport": 96, "unsafe_stale": 40, "duplicate_authoritative_effect": 8},
+      "unmediated_name_reuse_transport_available_16": {"unsafe_stale": 16, "duplicate_authoritative_effect": 2},
+      "interpretation": "A CAS lineage file by itself is not authority when the provider incarnation can change outside that CAS domain."
+    },
+    "cas_plus_current_provider_id_plus_applied_transition_id": {
+      "all_192": {"safe_terminal": 56, "blocked": 120, "unsafe_stale": 16, "duplicate_authoritative_effect": 4},
+      "transport_available_96": {"safe_terminal": 56, "blocked": 24, "unsafe_stale": 16, "duplicate_authoritative_effect": 4},
+      "no_repository_rollback_transport_available_48": {"safe_terminal": 40, "blocked_on_current_provider_mismatch": 8, "unsafe_stale": 0, "duplicate_authoritative_effect": 0},
+      "unmediated_name_reuse_transport_available_16": {"blocked_fail_closed": 16, "unsafe_stale": 0},
+      "ambiguous_response_plus_takeover_no_rollback_transport_available_12": {"safe_terminal": 10, "blocked": 2, "duplicate_authoritative_effect": 0},
+      "same_provider_transfer_plus_witness_rollback_transport_available_16": {"unsafe_stale": 16, "duplicate_authoritative_effect": 4},
+      "lost_predecessor_lookup_event_slice_transport_available_32": {"safe_terminal_without_reverse_lookup": 12, "blocked": 12, "unsafe_stale": 8, "duplicate_authoritative_effect": 2},
+      "rate_limit_or_repository_read_interrupted_96": {"blocked_fail_closed": 96, "unsafe_stale": 0, "duplicate_authoritative_effect": 0},
+      "interpretation": "The repository lineage witness removes reverse-history dependence for the tested non-rollback cases and safely detects new-provider-ID reuse via current-target comparison. applied_transition_id resolves ambiguous retry/takeover only while the witness itself has not been rewound."
+    },
+    "hypothetical_external_monotonic_epoch_positive_control": {
+      "all_192": {"safe_terminal": 56, "blocked": 136, "unsafe_stale": 0, "duplicate_authoritative_effect": 0},
+      "acceptance": "not accepted",
+      "reason": "It assumes an anti-rollback epoch outside the repository rollback domain, which is exactly the residual coordination capability under test and cannot be imported as a zero-dependency solution."
+    }
+  },
+  "finding": {
+    "accepted_zero_dependency_candidate_found": false,
+    "positive_narrow_scope": "Within the tested scope where the repository lineage record is not force-rewound, CAS + current-target provider-ID comparison + applied_transition_id had 0 unsafe stale effects and 0 duplicate authoritative effects across 48 transport-available scenarios; eight current-provider mismatches failed closed. It also does not require predecessor reverse lookup for those reconciliations.",
+    "falsification": "Under force-rewind/restore of the same repository authority domain, a same-provider-object rename/transfer ABA can restore an older incarnation_epoch/applied_transition_id while current provider-ID equality still passes. All 16 such transport-available scenarios were stale-authority counterexamples; the four ambiguous-response+takeover combinations duplicated an authoritative effect.",
+    "minimal_unresolved_child": "A zero-cost, zero-finite-quota anti-ABA/fencing mechanism for same-provider-ID lineage transitions whose monotonic evidence survives repository authority force-rewind/restore without richer-mode, protected-primary, manual-user execution, or an external hosted coordinator. Alternatively, prove a narrower effect class has sink-native durable idempotency/current-state preconditions strong enough that witness rollback cannot cause a duplicate or stale authoritative effect."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "repository_transport_role": "Lightweight state/evidence transport only; rate-limit/read interruption is fail-closed and not treated as compute."
+  },
+  "scope_guard": "This result is limited to the stated 192-scenario abstract identity/effect model and the two cited public GitHub documentation pages. It does not claim a production failure rate, does not claim undocumented node-ID behavior on transfer, and does not prove safety against repository rollback beyond the modeled controls.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part96: execute exactly one bounded anti-ABA substitute leaf for the same-provider-ID rollback counterexample. Compare (A) repository witness only, (B) target/sink current-state CAS precondition keyed by stable applied_transition_id, and (C) hypothetical independent monotonic floor as a non-accepted positive control. Use one small finite lattice covering witness force-rewind, sink state advance then rollback/no-rollback, ambiguous effect response, takeover/retry, same-provider rename/transfer ABA, repository rate-limit interruption, and sink idempotency retention loss. Accept a repository/target-native route only if stale authority and duplicate authoritative effects remain zero without any richer-mode/protected/manual step, finite monthly/trial/paid quota, external hosted coordinator, or incremental monetary cost; otherwise preserve the exact sink-atomicity/anti-rollback residual child and choose a distinct next authority leaf for the following invocation."
+}
