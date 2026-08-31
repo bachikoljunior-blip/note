@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "failure_evidence",
+  "evidence_id": "FE-496",
+  "status": "verified_source_witness_same_transactional_id_fencing_single_test_process",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-failure-evidence-parity-counterexamples",
+  "effect_chain_id": "FE-496-open-kafka-candidate-and-test-two-producer-fencing-witness",
+  "frozen_authority": {
+    "instruction_manifest_blob_sha": "5a769b5d12aa818b4f0aa5bbd689032cc54adb03",
+    "run_lifecycle_blob_sha": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_blob_sha": "e0d3c7e9f251b45bc1d3a7997811ee128818b6ea",
+    "role_control_revision": 10,
+    "role_config_revision": 7,
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "preflight_path": "research_workers_clean_g1/failure_evidence/2026-08-31T1907+0900-fe496-preflight.json",
+  "preflight_blob_sha": "1677992e0dc5d31c7fb2469e8bcc08a41fbe2e67",
+  "predecessor_evidence": "FE-495",
+  "source": {
+    "repository": "apache/kafka",
+    "commit": "f5e01c7b0a07878e79d310a021a7881c6ee52717",
+    "path": "storage/src/test/java/org/apache/kafka/tiered/storage/integration/TransactionsTestHelper.java",
+    "url": "https://raw.githubusercontent.com/apache/kafka/f5e01c7b0a07878e79d310a021a7881c6ee52717/storage/src/test/java/org/apache/kafka/tiered/storage/integration/TransactionsTestHelper.java"
+  },
+  "finding": {
+    "candidate_disposition": "accepted_as_narrow_source_witness",
+    "mechanism": "The integration helper contains a fencing test that opens producer1 and producer2 with the same transactional.id string \"transactional-producer\". producer1 initializes, begins a transaction, writes records marked uncommitted and flushes. producer2 then initializes transactions under the same transactional.id, begins its own transaction and writes replacement committed records. The test asserts producer1.commitTransaction throws ProducerFencedException, then commits producer2 and verifies exactly two read-committed records across the two topics.",
+    "falsifying_trace": "Older producer instance retains local in-flight work, but a newer producer instance initialized under the same server-recognized transactional.id takes authority; the old instance is rejected at commit rather than being allowed to publish a stale terminal effect. The read-committed verification after producer2 commit supplies an independent committed-state observation for this test path.",
+    "why_it_matters_for_frontier": "This is a concrete resource-enforced fencing witness stronger than a process-local lock: authority is associated with Kafka transactional producer identity/epoch semantics, and the stale producer is rejected at the broker-facing commit boundary after newer-instance takeover.",
+    "exact_tested_scope": "Apache Kafka TransactionsTestHelper at pinned commit f5e01c7b0a07878e79d310a021a7881c6ee52717, same JVM integration-test helper, two Producer client instances sharing one transactional.id against a test cluster, stale producer commit after newer producer initTransactions. It does not by itself prove multi-host behavior, network-partition behavior, arbitrary external side effects, or all Kafka versions/configurations.",
+    "scope_guard": "Do not generalize this witness to generic locks, leases, cross-host partitions, or non-transactional resources. It establishes only the tested Kafka transactional producer fencing/committed-read path at the pinned source revision."
+  },
+  "evidence_gathering_constraints": {
+    "residual_richer_mode_or_manual_dependency": false,
+    "finite_monthly_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_bearing_feature_consumed": false,
+    "hosted_executor_used": false
+  },
+  "conflict_check": "One bounded source file opened from the exact FE-495 candidate; no second search or leaf started; CLEAN inputs remained own state plus public source only.",
+  "frontier_nonempty": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "exact_next_effect_chain_id": "FE-497-cross-process-or-multi-host-stale-producer-fencing-witness",
+  "exact_next_action": "Fresh-bootstrap next invocation, persist/read back mandatory preflight, then perform exactly one bounded public-source search for an Apache Kafka integration/system test or maintainer-confirmed reproduction that places the old and new same-transactional.id producer instances in distinct processes or hosts, or explicitly simulates a network partition/restart while proving the old producer cannot commit after newer epoch takeover and authoritative committed state remains protected. Persist one exact source-qualified witness or a precise no-match/rejection; do not start a second leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "recorded_at": "2026-08-31T19:07:00+09:00"
+}
