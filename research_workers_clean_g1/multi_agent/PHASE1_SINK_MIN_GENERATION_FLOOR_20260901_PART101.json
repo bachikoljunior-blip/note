@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 101,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "frozen_authority": {
+    "main_sha": "87bc271d2c7c5c7c3a330d89a463779dde92cfaf",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "transport_mode": "sha_only_exact_sha",
+    "bootstrap_valid": true
+  },
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_INCARCERATION_IDENTITY_FENCE_20260901_PART100.json",
+  "selected_leaf_id": "phase1-multi-agent-sink-min-generation-floor-part101",
+  "question": "Can a stale proposal carrying {repository_node_id,generation,effect_id} be rejected after repository delete/recreate or rollback by a Chat-native authoritative sink that needs no protected/admin setup, richer-mode/manual execution, external hosted coordination, finite monthly/trial/paid quota, or incremental monetary cost?",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents",
+      "observation": "GitHub documents per-file update preconditioning with the blob sha of the file being replaced and a 409 Conflict response; this is current-file CAS, not a documented monotonic generation floor outside repository rollback state."
+    },
+    {
+      "url": "https://docs.github.com/en/graphql/guides/using-global-node-ids",
+      "observation": "GitHub documents node_id/id as a global identifier for objects addressable across REST/GraphQL. In the inspected page, no monotonic freshness ordering or rollback-independent minimum-generation guarantee is specified."
+    }
+  ],
+  "constructed_model": {
+    "scope": "13 deterministic histories over authoritative generation g2, proposal node/generation identity, repository-visible node/generation and repository effect marker, sink minimum-generation floor, and sink effect-id history. No destructive repository action was executed.",
+    "safety_rule": "Apply only when proposal generation is the true current generation and effect_id has not already been authoritatively applied.",
+    "mechanisms": {
+      "repository_only_current_identity_and_effect_marker": "Require proposal node/generation to equal repository-visible current node/generation and require repository-local effect marker absent.",
+      "co_rollback_sink_floor_strict": "Additionally require a sink-local floor to exist, proposal generation >= that floor, and sink-local effect_id absent; floor/effect history are allowed to roll back or disappear with the same failure domain.",
+      "ideal_rollback_independent_sink_floor_plus_single_use_effect_id": "Atomically require proposal generation >= rollback-independent durable minimum equal to the true authoritative generation and effect_id not already consumed, while retaining the repository current-identity check. This is an abstract capability test, not an identified deployable Chat-native mechanism."
+    },
+    "histories": [
+      "fresh_current",
+      "delete_recreate_stale_old_node",
+      "same_incarnation_stale_generation",
+      "full_repo_rollback_sink_floor_preserved",
+      "full_repo_rollback_sink_floor_rolled_back",
+      "full_repo_rollback_sink_floor_missing",
+      "ambiguous_retry_repo_and_sink_seen",
+      "ambiguous_retry_repo_marker_lost_sink_seen",
+      "ambiguous_retry_all_seen_lost",
+      "stale_unique_effect_id_sink_dedupe_only",
+      "fresh_after_recreate_old_proposal",
+      "fresh_same_node_old_generation",
+      "current_after_sink_floor_loss"
+    ],
+    "results": {
+      "repository_only_current_identity_and_effect_marker": {
+        "unsafe": 6,
+        "false_block": 0,
+        "unsafe_stale_generation": 4,
+        "unsafe_duplicate_effect": 2
+      },
+      "co_rollback_sink_floor_strict": {
+        "unsafe": 2,
+        "false_block": 1,
+        "unsafe_stale_generation": 1,
+        "unsafe_duplicate_effect": 1,
+        "interpretation": "Failing closed on a missing floor blocks one valid current proposal, but a floor that itself rolls back below the true generation still admits stale authority; loss of sink effect-id history still admits duplicate retry."
+      },
+      "ideal_rollback_independent_sink_floor_plus_single_use_effect_id": {
+        "unsafe": 0,
+        "false_block": 0,
+        "unsafe_stale_generation": 0,
+        "unsafe_duplicate_effect": 0,
+        "interpretation": "Within this finite model, both a rollback-independent monotonic generation floor and rollback-independent single-use effect identity are sufficient together. Either property alone is insufficient for both stale-authority and ambiguous-retry safety."
+      }
+    }
+  },
+  "new_evidence": {
+    "positive_mechanism_property": "A sink-side atomic guard {generation >= durable_min_generation AND effect_id not previously consumed} is sufficient in the tested histories even when repository-visible identity and repository-local markers are rolled back.",
+    "falsification": "Repository-only current-node/generation CAS is not rollback-independent: after the repository-visible state rolls back to the stale proposal's node/generation, the stale proposal becomes observationally current again. A sink floor co-located in the same rollback domain reduces failures but does not solve floor rollback or lost idempotency history.",
+    "availability_result": "No accepted concrete Chat-native authoritative sink was identified in this bounded leaf. The inspected GitHub repository primitives provide current-object identity and per-file CAS, but this leaf found no documented rollback-domain-independent monotonic floor plus durable single-use effect-id gate that is usable without protected/admin setup or external hosted coordination.",
+    "accepted_zero_dependency_candidate_found": false
+  },
+  "observation_vs_inference": {
+    "observed": "Official GitHub documentation exposes per-file sha preconditioning/409 conflict and global object node IDs.",
+    "inferred_from_constructed_histories": "Any authority state that can co-rollback to the stale world's state cannot distinguish that history from a world in which the stale generation was never superseded; therefore it cannot by itself prove freshness after full co-rollback.",
+    "not_claimed": "No claim is made that GitHub repository deletion/restoration necessarily reuses or changes a particular node_id, or that every possible Chat connector lacks a suitable sink capability. The negative availability claim is limited to the role-permitted mechanism surfaces inspected in this bounded leaf."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "unresolved_child": "Identify or rule out a rollback-domain-independent, role-permitted Chat-native authoritative sink that atomically enforces a monotonic minimum generation and durable single-use effect_id without protected/admin setup, richer-mode/manual execution, external hosted coordination, or finite monthly/trial/paid quota."
+  },
+  "scope_guard": "Only the two inspected GitHub documentation surfaces and 13 constructed histories. No destructive repository operation, no external sink mutation, and no generalization to arbitrary connectors or undocumented GitHub restore semantics.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "continuation": "Part102: execute exactly one bounded rollback-independent-sink availability leaf. Inspect only public official documentation for role-permitted GitHub-native candidate surfaces that could hold a monotonic minimum-generation witness outside ordinary repository-content rollback (for example ruleset/protection metadata, append-only object surfaces, or server-enforced immutable identity), and test each against three gates: no protected/admin/manual setup, no finite monthly/trial/paid quota or incremental cost, and atomic rejection of {generation below floor OR repeated effect_id}. If every candidate either shares the rollback domain, is mutable/deletable, lacks atomic generation+effect-id enforcement, or requires protected/admin/external coordination, persist that exact capability gap and select the next non-conflicting claim/idempotency leaf without declaring Phase 1 complete."
+}
