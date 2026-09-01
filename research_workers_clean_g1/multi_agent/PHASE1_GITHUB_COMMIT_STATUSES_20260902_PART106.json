@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 106,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "phase1-multi-agent-github-commit-status-monotonic-witness-audit",
+  "observed_at": "2026-09-02T07:28:25+09:00",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_GITHUB_SERVICE_IDS_TOMBSTONES_20260902_PART105.json",
+  "semantic_config_snapshot": {
+    "main_sha_at_freeze": "f57ef924022776f63ba697ff78914741620458ab",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 46,
+    "instruction_manifest_blob": "6a2108e5dd79c36f85a3c57aca8e84713d1ea1d4",
+    "transport_mode": "sha_only_exact_sha",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_witness": {
+    "path": "automation_control/receipts/multi_agent/receipt_2026-09-02T072825+0900_presemantic_liveness.json",
+    "blob": "67713438920e44957693bbd451de337870182afd",
+    "status": "durable_exact_readback"
+  },
+  "tested_scope": {
+    "candidate": "GitHub REST commit-status objects as a default service-side monotonic/rollback witness coupled to repository Contents-API CAS publication",
+    "questions": [
+      "Whether status records expose create/update/delete semantics compatible with append-only witnessing",
+      "Whether IDs or list order are documented as monotonic generation authority",
+      "Whether status discovery survives branch/history rewrite when the target commit becomes unreferenced",
+      "Exact documented read/write permissions",
+      "Dual-write ambiguity between Contents-API CAS publication and status creation"
+    ],
+    "excluded": [
+      "No commit status was created in the repository",
+      "No protected settings, branch protection, Actions, hosted runner, Codespaces, packages, artifacts, cloud credit or richer execution mode was used",
+      "GitHub.com retention of unreachable commit/status metadata was not experimentally forced or generalized from Enterprise Server GC documentation"
+    ]
+  },
+  "public_sources": [
+    {
+      "source": "GitHub Docs - REST API endpoints for commit statuses",
+      "url": "https://docs.github.com/en/rest/commits/statuses",
+      "observations": [
+        "The documented commit-status surface consists of get-combined, list-statuses and create-status operations; no status update/delete endpoint is documented on that resource page.",
+        "List commit statuses accepts a SHA, branch or tag reference and returns statuses in reverse chronological order with the latest first.",
+        "Create commit status requires push access; fine-grained tokens require Commit statuses: write. Listing requires pull access; fine-grained tokens require Commit statuses: read, and public resources can be read without authentication.",
+        "Create status is limited to 1000 statuses per sha/context, so repeated creation is explicitly possible rather than a single CAS slot."
+      ]
+    },
+    {
+      "source": "GitHub Docs - removing sensitive data / unreachable Git objects (Enterprise Server public documentation)",
+      "url": "https://docs.github.com/en/enterprise-server@3.21/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository",
+      "observations": [
+        "Official documentation describes unreachable commits being eligible for garbage collection after references are removed.",
+        "This is evidence against assuming a commit-SHA-addressed status remains durably discoverable after arbitrary history rewrite; it is not a GitHub.com retention SLA and therefore supports fail-closed classification rather than a universal deletion claim."
+      ]
+    },
+    {
+      "source": "GitHub Docs - REST API endpoints for Git commit objects",
+      "url": "https://docs.github.com/en/rest/git/commits",
+      "observations": [
+        "Commit lookup is by commit SHA and can return 404; no retrieved documentation guarantees indefinite lookup after a commit is unreferenced."
+      ]
+    }
+  ],
+  "bounded_trace_model": {
+    "publication": "C = repository Contents-API CAS publication",
+    "witness": "S = create commit status on the resulting commit SHA",
+    "traces": [
+      {"trace":"C succeeds; S succeeds; both responses observed","result":"aligned once, but status ID monotonicity/retention is still undocumented, so not an accepted monotonic witness"},
+      {"trace":"C succeeds; S fails or is not attempted","result":"authoritative content exists without the proposed witness"},
+      {"trace":"S succeeds; C fails/CAS-conflicts","result":"status can exist for a transition that never became authoritative content"},
+      {"trace":"C succeeds; S succeeds; S response is lost; caller retries S","result":"create-status has no documented expected-previous-status CAS or idempotency token; duplicate status records are possible up to the documented per-sha/context limit"},
+      {"trace":"C succeeds but response is lost before S","result":"content can be reconciled by reading current repository state, but a missing status must then be created separately; the witness was not atomic with publication"},
+      {"trace":"S succeeds but response is lost before C","result":"caller cannot infer authoritative publication from status existence alone; an orphan witness remains possible"},
+      {"trace":"both succeed; branch/history later force-rewrites away from target commit","result":"status lookup remains commit/ref-addressed; long-term discoverability after the commit becomes unreachable is not proven"},
+      {"trace":"status list is read after multiple same-context creates","result":"reverse-chronological order identifies latest-by-creation response order, not a documented globally monotonic generation/fencing epoch"
+      }
+    ],
+    "result": "The candidate fails as a default service-side monotonic rollback witness. Stable transition IDs embedded in both content and status could improve reconciliation of some response-loss cases, but cannot make the two writes atomic, cannot make status IDs a documented monotonic fence, and cannot prove post-rewrite retention/discoverability."
+  },
+  "finding": {
+    "accepted_zero_dependency_candidate_found": false,
+    "new_falsification": "GitHub commit-status objects are create-only at the documented REST status resource, but create-only is not sufficient for monotonic authority. Statuses are attached to a commit SHA/ref, allow repeated creation, expose no documented expected-previous-status CAS/idempotency token, and have no retrieved guarantee that their numeric IDs or survival/discoverability after the target commit becomes unreachable provide a monotonic anti-rollback witness. Separate Contents CAS and status creation therefore retain a dual-write gap.",
+    "minimal_unresolved_child": "A GitHub-native service-side object whose authority is independently retained/discoverable across branch/history rollback, whose incarnation/order has documented monotonic freshness semantics rather than mere opaque uniqueness/creation order, and whose creation can be atomically coupled to repository publication or deterministically reconciled without duplicate authoritative generations."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "note": "This bounded leaf used public documentation and lightweight repository state transport only. Commit statuses were audited, not adopted as coordination authority."
+  },
+  "conflict_check": {
+    "clean_boundary_preserved": true,
+    "forbidden_semantic_inputs_read": false,
+    "other_worker_state_read": false,
+    "downstream_or_O_state_read": false,
+    "scheduler_mutation_by_worker": false
+  },
+  "frontier": [
+    "Audit GitHub pull-request hidden refs / pull-request object identity and retention as the next service-side witness class, focusing on whether ordinary repository authority can erase or rebind the witness and whether a PR ref remains addressable after source-branch force rewrite.",
+    "If PR refs are not a durable monotonic witness, test a separate GitHub-native class with documented service-side retention and stable freshness semantics; do not infer append-only behavior from missing delete endpoints alone.",
+    "Continue preserving a fail-closed repository-local CAS fallback; unavailable or non-monotonic service-side witnesses remain unresolved children rather than acceptance."
+  ],
+  "continuation": "Part107: execute one bounded public-source leaf on GitHub pull-request hidden refs and pull-request object identity as the next service-side witness class. Audit creation/read/delete/rebind authority, whether refs/pull/* or equivalent service-side commit reachability survives source-branch force rewrite and PR close, discoverability after head commit becomes otherwise unreachable, ID/incarnation freshness semantics, and dual-write ambiguity between repository Contents CAS publication and PR/witness creation. Accept only documented zero-cost, zero-finite-quota, no-richer-mode semantics that prevent stale generation acceptance; otherwise persist the next candidate class without executing it in the same invocation.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false
+}
