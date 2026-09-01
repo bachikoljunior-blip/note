@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-canonical-json-identity-v1",
+  "probe_type": "canonical_serialization_ambiguity",
+  "candidate": "schema-versioned deterministic canonical JSON text as the exact payload identity material for restart claims",
+  "canonicalization_profile": {
+    "profile_id": "ns-json-canon-v1-fixed-subset",
+    "scope": "JSON objects composed only of strings, integers, nested objects, booleans and null; arrays, floating-point numbers and duplicate object keys are outside this tested profile",
+    "rules": [
+      "parse as JSON and reject duplicate object keys",
+      "recursively order object member names lexicographically by Unicode code point",
+      "emit no insignificant whitespace",
+      "emit integers in base-10 with no leading zero except zero itself",
+      "emit strings with standard JSON escaping and no optional escaping changes",
+      "retain payload_schema_version in the canonical object and also bind it in the claim domain"
+    ]
+  },
+  "test_vectors": {
+    "equivalent_form_a": "{\"payload_schema_version\":1,\"op\":\"state_write\",\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":2}}",
+    "equivalent_form_b": "{ \"value\" : { \"y\" : 2, \"x\" : 1 }, \"target\" : \"LATEST\", \"op\" : \"state_write\", \"payload_schema_version\" : 1 }",
+    "semantic_control_c": "{\"payload_schema_version\":1,\"op\":\"state_write\",\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":3}}"
+  },
+  "normalization_results": {
+    "canonical_a": "{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":2}}",
+    "canonical_b": "{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":2}}",
+    "canonical_c": "{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":3}}",
+    "a_equals_b": true,
+    "a_equals_c": false
+  },
+  "claim_material": {
+    "claim_domain_prefix": "nsclaim-json:v1:neuroscience:phase1-clean-neuroscience-state-reconstruction-mechanisms:state_write:schema=1:",
+    "claim_a": "nsclaim-json:v1:neuroscience:phase1-clean-neuroscience-state-reconstruction-mechanisms:state_write:schema=1:{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":2}}",
+    "claim_b": "nsclaim-json:v1:neuroscience:phase1-clean-neuroscience-state-reconstruction-mechanisms:state_write:schema=1:{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":2}}",
+    "claim_c": "nsclaim-json:v1:neuroscience:phase1-clean-neuroscience-state-reconstruction-mechanisms:state_write:schema=1:{\"op\":\"state_write\",\"payload_schema_version\":1,\"target\":\"LATEST\",\"value\":{\"x\":1,\"y\":3}}",
+    "a_equals_b": true,
+    "a_equals_c": false
+  },
+  "restart_replay_probe": {
+    "first_form_a": "create_once",
+    "restart_form_b": "reuse_no_write",
+    "distinct_control_c": "create_once_distinct_claim",
+    "duplicate_effect_records_required_for_equivalent_restart": 0,
+    "result": "pass_for_whitespace_and_object-member-order_ambiguity_in_the_explicit_fixed_subset"
+  },
+  "falsification": {
+    "would_fail_if": [
+      "equivalent_form_a and equivalent_form_b produced different canonical text or claim material",
+      "semantic_control_c produced the same canonical text or claim material as a/b",
+      "restart replay of form_b required a second effect record after form_a"
+    ],
+    "observed_failure": false
+  },
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded exact-path role-local create/read transport only; no hosted compute",
+    "accepted_scope": "byte-different JSON caused only by object-member order and insignificant whitespace, with integer/string/nested-object values under explicit payload_schema_version=1",
+    "not_proven": [
+      "floating-point canonicalization",
+      "Unicode normalization equivalence",
+      "arrays",
+      "duplicate-key recovery semantics beyond fail-closed rejection",
+      "cross-schema migration equivalence",
+      "concurrent racing writers",
+      "compact cryptographic digest collision resistance"
+    ]
+  },
+  "revision": "Separate semantic payload identity from source bytes. For the tested profile, normalize first, then derive the restart claim from explicit schema/domain plus canonical payload text. Reordered or whitespace-varied equivalent JSON reuses the existing claim without a duplicate effect; a semantic value change remains distinct.",
+  "exact_next_action": "On the next valid invocation, test exactly one schema-evolution domain-separation probe: represent the same logical state_write payload under payload_schema_version=1 and a deliberately changed version=2 field layout, require claims to remain distinct by default, then add one explicit migration-map certificate and verify that only the certified v1<->v2 pair may share a logical replay identity while an uncertified near-match stays distinct. Preserve zero richer-mode, finite-quota, user-execution and scheduler dependency."
+}
