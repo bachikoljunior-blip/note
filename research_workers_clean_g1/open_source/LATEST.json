@@ -1,27 +1,26 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 87,
-  "semantic_parent_revision": 86,
+  "worker_revision": 88,
+  "semantic_parent_revision": 87,
   "control_revision": 26,
   "config_revision": 7,
-  "instruction_manifest_control_revision": 31,
+  "instruction_manifest_control_revision": 33,
   "lifecycle_control_revision": 1,
   "bootstrap_valid": true,
   "enabled_desired": true,
-  "status": "bounded_rmcp_cancel_ack_semantics_checkpoint_recurring_open",
+  "status": "bounded_rmcp_cancel_observable_state_fence_checkpoint_recurring_open",
   "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
-  "transport_mode": "sha_only_head_changed_then_exact_control_refetch",
-  "frozen_main_sha": "21d517b04399ddc81134dd032c4066b6bdff0361",
-  "result": "Exact rmcp-v3.1.4 wire/runtime source resolves the cancellation acknowledgement boundary. TaskAckResult serializes resultType=complete (optional _meta absent by default), and ServerResult::task_ack constructs it. Stock TaskManager::cancel_task mutates cancellation intent first: it resolves the task, sets cancel_requested=true, sends the cooperative signal, clears pending inputs for a nonterminal task, touches/recomputes status, then returns Ok(()). The source states the acknowledgement is immediate and the task can remain working until it settles. Combined with revision86 exact handler evidence that successful cancel_task maps to task_ack, an ack proves cancellation intent was accepted, not that the operation is terminal cancelled or that an external effect stopped. Authenticated-owner authorization must therefore happen before application cancellation, while terminal/effect safety remains separately unresolved.",
+  "transport_mode": "sha_only_h1_h2_stable",
+  "frozen_main_sha": "ea7687cd8af072123e846a7e22f9678805c7fa2d",
+  "result": "Exact rmcp-v3.1.4 TaskManager cancellation tests pin the acknowledgement boundary more tightly: a tasks/get immediately after cancel_task returns is explicitly allowed and tested to remain nonterminal; cancellation does not force Task status to cancelled. The operation later determines the terminal result: TaskExit::Cancelled settles cancelled, TaskExit::Error settles failed, and successful work despite cancellation settles completed. For a persistent application, the minimum inferred contract is to authorize first, durably record cancellation intent for the stable task identity before ack, make every restart/redrive/claim consult that record, and fence superseded attempt/status writes with a monotonic generation or equivalent CAS. This still cannot prove an already-entered external effect stopped, so non-idempotent effects retain a separate idempotency/fencing obligation.",
   "source_scope": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
-    "paths_read_this_slice": ["crates/rmcp/src/model/task.rs", "crates/rmcp/src/task_manager.rs"],
-    "parent_exact_source_carried_forward": ["crates/rmcp/src/handler/server.rs"]
+    "paths_read_this_slice": ["crates/rmcp/src/task_manager.rs"]
   },
-  "checkpoint_path": "research_workers_clean_g1/open_source/checkpoint_rev87_rmcp_cancel_ack_semantics.json",
-  "conflict_check": "Manifest31/RUN_LIFECYCLE1 read first. H1 main=139a3f354b2421540ce116eda3f4a14dcca5343b; H2 main=21d517b04399ddc81134dd032c4066b6bdff0361. Exact DESIRED_STATE/open_source refetch at H2 preserved control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d, so H2 authority was frozen. Parent LATEST revision86/blobdefc9a8f8ddb4c4ed6901966f68ef3bee912dcb6 was read after freeze.",
+  "checkpoint_path": "research_workers_clean_g1/open_source/checkpoint_rev88_rmcp_cancel_observable_state_fence.json",
+  "conflict_check": "Manifest33/RUN_LIFECYCLE1 read first. SHA-only H1/H2 both ea7687cd8af072123e846a7e22f9678805c7fa2d; DESIRED_STATE control26/blob481660fb6008a57cea162da38439cf115c8d7ebe and open_source control14/config7/blob5a60eefd9ba1740088eb50e8df589aa7e6df590d frozen. Parent LATEST revision87/blob700650ed7977ddf293bde5cb8415b2f87bafee3d read after freeze. CLEAN inputs only.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -32,5 +31,5 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the existing exact TaskManager cancellation tests around cooperative cancellation to pin the observable tasks/get state immediately after cancel_task returns and the allowed later terminal outcomes (cancelled versus completed/failed). Use that to define the minimum persistent application cancellation-record/fencing contract; do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact tasks/update/input-required cancellation interaction tests in crates/rmcp/src/task_manager.rs. Pin whether cancellation while input_required always clears pending input and what tasks/get must expose before the operation settles; derive the smallest persistent pending-input cleanup rule compatible with restart. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
 }
