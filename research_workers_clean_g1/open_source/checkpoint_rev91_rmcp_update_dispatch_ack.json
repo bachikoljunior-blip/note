@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 91,
+  "semantic_parent_revision": 90,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 33,
+  "lifecycle_control_revision": 1,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "transport_mode": "sha_only_refreeze_after_presemantic_head_drift",
+  "bootstrap": {
+    "initial_h1_main_sha": "42828d991179c2ac36f0070316499bf18cf68859",
+    "presemantic_h2_main_sha": "6d97c1e7c42139250de33bd6d858614dfbb3d2fa",
+    "stable_refreeze_h2_main_sha": "6d97c1e7c42139250de33bd6d858614dfbb3d2fa",
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_blob": "835fc67ea8942346ab04fdc6b04251a5af29bd35",
+    "instruction_manifest_revision": 33,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "run_lifecycle_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_config_revision": 7,
+    "authority_note": "Main moved before semantic reads. DESIRED_STATE and open_source config were refetched at the new head; their exact blobs/revisions matched the previously read authority. A second SHA-only lookup then remained stable at 6d97c1e7c42139250de33bd6d858614dfbb3d2fa before own-state/public semantic reads."
+  },
+  "parent_latest": {
+    "path": "research_workers_clean_g1/open_source/LATEST.json",
+    "worker_revision": 90,
+    "blob": "915d36c95d1963c40ff4549ee34d77cc16010e3a"
+  },
+  "bounded_slice": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "question": "Does the exact rmcp-v3.1.4 server wire dispatch add tasks/update validation or terminal-task rejection beyond TaskManager::update_task, and what acknowledgement is returned?",
+    "source_files": [
+      {
+        "path": "crates/rmcp/src/handler/server.rs",
+        "blob": "6dc7883edbe8bca7f4b90d87834c311870c50496"
+      },
+      {
+        "path": "examples/servers/src/common/task_demo.rs",
+        "blob": "4d8d53acfac99a32f53d519caca1e989b8f792ae"
+      },
+      {
+        "path": "crates/rmcp/src/task_manager.rs",
+        "blob": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc"
+      },
+      {
+        "path": "crates/rmcp/src/model.rs",
+        "blob": null,
+        "note": "Exact release commit fetched; task_ack definition located in the exact response resource, but this bounded slice did not spend another read solely to recover the blob metadata."
+      }
+    ],
+    "observations": [
+      "Generic server dispatch handles ClientRequest::UpdateTaskRequest by first calling validate_tasks_capability<UpdateTaskMethod>, then delegates request.params to ServerHandler::update_task, and on Ok(()) maps the result with ServerResult::task_ack.",
+      "The capability guard checks only that the server advertises Tasks and that the client declared Tasks. It does not inspect task status, task existence, input-response keys, or whether a response was consumed.",
+      "The bundled exact-release TaskDemo ServerHandler::update_task delegates directly to TaskManager::update_task(&request.task_id, request.input_responses) with no additional validation.",
+      "TaskManager::update_task first sweeps expired entries, requires that task_id still resolves, then removes only currently pending keys and sends their values. Unknown/already-answered/superseded keys on a known retained task are ignored. Completion clears pending_inputs, so a retained terminal task has no pending inputs; tasks/update therefore becomes a successful no-op for arbitrary keys while that terminal entry remains retained. The method still touches last_updated_at, while retention is governed by terminal_at.",
+      "An unknown or already-evicted task_id is rejected by TaskManager through unknown_task(...), so generic dispatch returns that handler error instead of an acknowledgement.",
+      "ServerResult::task_ack converts successful unit return to TaskAckResult::new(); its exact-release model comment defines this as the empty tasks/update/tasks/cancel acknowledgement carrying SEP-2322 resultType=complete. The generic post-processing can strip that discriminator for pre-2026-07-28 negotiated peers.",
+      "Therefore a successful tasks/update wire acknowledgement is evidence only that the capability gate passed and the handler accepted the update. It is not evidence that any input key was pending, that a running operation consumed a value, or that the task was non-terminal."
+    ],
+    "terminal_task_scope": "Known retained terminal TaskManager entry only. After TTL retention eviction, the same taskId becomes unknown and is rejected. This finding does not claim behavior for custom ServerHandler implementations that add stricter checks.",
+    "phase1_implication": "A restart-safe application-owned persistent Tasks adapter must not treat tasks/update TaskAckResult as an effect/progress receipt. If terminal-update rejection or accepted-input durability is required, that must be enforced in the persistent handler/store itself with the prior per-key lifecycle/tombstone rules; the stock wire dispatcher does not supply that fence."
+  },
+  "conflict_check": "CLEAN inputs only: own LATEST rev90 plus public modelcontextprotocol/rust-sdk exact release source. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config semantics were read. No scheduler mutation or non-role-local repository mutation was performed.",
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056. Inspect only crates/rmcp/src/service/client.rs update_task plus the narrow tasks/update tests in crates/rmcp/tests/test_task.rs to pin client-visible acknowledgement handling and whether the released client/test surface adds retry, duplicate-response, or terminal-task semantics beyond the server result established in revision91. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
