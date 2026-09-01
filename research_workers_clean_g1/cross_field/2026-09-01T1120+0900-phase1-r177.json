@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 177,
+  "control_revision": 26,
+  "config_revision": 8,
+  "role_revision": 17,
+  "authority": {
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+  "predecessor_latest_blob_sha": "5b427c8720cd1a8cc60e94ffeb470b9cc5c7f7f6",
+  "predecessor_logical_revision": 176,
+  "slice": {
+    "name": "ambiguous_candidate_create_read_before_retry",
+    "objective": "Test deterministic recovery after a candidate create returns an ambiguous client result, requiring read-at-K exact-byte reconciliation before any second create or pointer CAS.",
+    "model": "Finite deterministic state machine over an immutable deterministic candidate key K and exact canonical bytes B. The initial create has one of three client outcomes: confirmed success, confirmed failure-before-commit, or ambiguous failure-after-possible-commit. The ambiguous branch must read K before any further mutation.",
+    "protocol": [
+      "confirmed success: candidate may be adopted; pointer-last CAS is allowed only if the frozen parent LATEST is still current",
+      "confirmed failure-before-commit: one retry create is safe because non-commit is known; no further retry occurs in-run if that retry is not confirmed",
+      "ambiguous result: read deterministic K first",
+      "if K contains exact B: adopt existing candidate and do not create again",
+      "if K is absent: issue at most one create; if that create is not confirmed, checkpoint the ambiguity and stop this invocation",
+      "if K contains non-B bytes: diagnostic stop; never overwrite",
+      "before pointer update in every adoption path: require CAS from the frozen parent; stale parent means diagnostic stop and no pointer mutation"
+    ],
+    "tested_cases": {
+      "confirmed_success_parent_current": {"initial_create_attempts": 1, "second_create": false, "pointer_cas": true},
+      "confirmed_failure_before_commit_parent_current": {"initial_plus_safe_retry_attempts": 2, "pointer_cas_after_confirmed_retry": true},
+      "ambiguous_exact_B_parent_current": {"read_before_mutation": true, "second_create": false, "pointer_cas": true},
+      "ambiguous_absent_parent_current": {"read_before_mutation": true, "create_after_absence_only": true, "total_create_attempts": 2, "pointer_cas_after_confirmed_create": true},
+      "ambiguous_mismatch_parent_current": {"read_before_mutation": true, "overwrite": false, "pointer_cas": false, "termination": "diagnostic_stop"},
+      "ambiguous_exact_B_parent_stale": {"second_create": false, "pointer_cas": false, "termination": "stale_parent_diagnostic_stop"},
+      "ambiguous_absent_parent_stale": {"create_after_absence_only": true, "pointer_cas": false, "termination": "stale_parent_diagnostic_stop"}
+    },
+    "invariants": {
+      "ambiguous_exact_never_second_creates": true,
+      "ambiguous_absent_reads_before_create": true,
+      "mismatched_bytes_never_overwritten": true,
+      "stale_parent_never_advanced": true,
+      "ambiguous_retry_loop_in_same_invocation": false,
+      "pointer_update_is_last_and_parent_guarded": true
+    },
+    "negative_controls": {
+      "blind_retry_after_ambiguous_exact": "FAIL: attempts a second create despite K already containing B, creating duplicate/conflict risk.",
+      "overwrite_on_K_mismatch": "FAIL: destroys immutable-key collision evidence and can adopt bytes not derived from the frozen semantic payload.",
+      "unconditional_pointer_write_after_parent_change": "FAIL: can advance LATEST from a stale parent and adopt an orphaned revision."
+    },
+    "verdict": "PASS in the tested finite deterministic model. Read-at-K exact-byte reconciliation makes the ambiguous create path idempotent with respect to candidate identity: exact B is adopted without another create, absence permits one create, mismatch stops without overwrite, and pointer-last CAS prevents stale-parent adoption.",
+    "comparison": {
+      "candidate_A": "read-at-K exact-byte reconciliation plus parent-guarded pointer-last CAS",
+      "candidate_B": "blind retry after ambiguous client failure",
+      "expected_completion_time": "A adds one read on the ambiguous branch but avoids duplicate-create recovery; B can create conflict/recovery work when the first create actually committed.",
+      "success_probability": "A satisfied all seven deterministic cases and six invariants; B fails the committed-but-ambiguous case by construction.",
+      "conflict_duplication_risk": "A low in tested model; B high on ambiguous-after-commit, mismatch, or stale-parent conditions.",
+      "integration_cost": "A needs deterministic K, exact byte comparison and one parent CAS; no new executor or paid quota.",
+      "monetary_cost": 0,
+      "quota_fragility": "No finite monthly trial paid quota or richer-mode dependency."
+    }
+  },
+  "tested_scope": "Seven finite deterministic state-machine cases around one immutable candidate key K and canonical bytes B, including exact/absent/mismatch reads and current/stale parent states; three explicit negative controls. Not tested: live connector ambiguity, silent-overwrite transports, concurrent third-party writes between read-at-K and create, noncanonical semantic serialization, or production collision rates.",
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0
+  },
+  "conflict_check": "Used only frozen sanitized controls, own cross_field r176/LATEST state, and a local deterministic state machine. No O/O-derived state, other-worker state/config/receipts, downstream state, legacy research, shared aggregate ledger, scheduler, or protected-primary semantic input was used or mutated.",
+  "candidate_revision": "After any ambiguous candidate-create result, reconcile deterministic K before retry: exact canonical bytes mean adopt without another create; absent means create at most once; mismatch means diagnostic stop without overwrite; pointer update is last and only via CAS from the frozen parent. A second ambiguous create result is checkpointed rather than retried in-run.",
+  "frontier": [
+    "Test noncanonical semantic serialization defenses so logically identical semantic objects cannot acquire different candidate keys.",
+    "Then test concurrent write interleavings between read-at-K absence and create, including create-conflict reconciliation without in-run retry loops."
+  ],
+  "exact_continuation": "Next invocation, bootstrap and freeze authority, read own LATEST r177 only as needed, then execute exactly one bounded noncanonical-semantic-serialization leaf. Build logically identical candidate objects with reordered keys, Unicode normalization variants, numeric edge encodings and omitted/default-field variants; require one canonical byte string/key or an explicit rejection rule, and preserve concurrent read/create interleaving as the following leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "updated_at": "2026-09-01T11:20:20+09:00"
+}
