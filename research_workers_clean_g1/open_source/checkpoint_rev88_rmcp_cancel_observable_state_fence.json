@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 88,
+  "semantic_parent_revision": 87,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 33,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "slice": "rmcp-v3.1.4 cooperative cancellation observable-state and persistent-cancel-fence contract",
+  "authority": {
+    "transport_mode": "sha_only_h1_h2_stable",
+    "frozen_main_sha": "ea7687cd8af072123e846a7e22f9678805c7fa2d",
+    "desired_state_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d"
+  },
+  "public_source": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "path": "crates/rmcp/src/task_manager.rs"
+  },
+  "finding": {
+    "observation": "Exact rmcp-v3.1.4 cancellation tests and implementation make tasks/cancel acknowledgement non-terminal. TaskManager::cancel_task records cancel_requested and signals the operation, then returns immediately. A tasks/get immediately after the acknowledgement is explicitly tested to remain nonterminal; cancellation does not force the Task status to cancelled. The operation later determines the terminal outcome: TaskExit::Cancelled -> cancelled, TaskExit::Error -> failed, and successful completion despite the request -> completed.",
+    "scope": "Stock rmcp TaskManager cooperative-cancellation semantics at release commit 4a738b9d; not a claim about custom persistent handlers or external side-effect cancellation.",
+    "minimum_persistent_application_contract_inference": [
+      "Authorize the task owner/principal before accepting cancellation.",
+      "Persist cancellation intent for the stable task identity before returning the cancellation acknowledgement; an in-memory flag alone is insufficient across server restart.",
+      "Every restart/redrive/claim path must consult the persisted cancellation record before starting or taking over further work for that task.",
+      "Use a monotonic attempt/generation fence (or equivalent CAS) so completion/status writes from a superseded attempt cannot overwrite the post-cancel state.",
+      "Do not treat the cancellation acknowledgement as proof that an already-entered external effect stopped. Non-idempotent external effects still require their own idempotency/fencing contract because a cooperative task may complete or fail after cancellation was requested."
+    ],
+    "observable_state_boundary": "Immediately after cancel_task returns, tasks/get may still report a nonterminal state. Later terminal state is allowed to be cancelled, failed, or completed depending on operation behavior."
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "conflict_check": "CLEAN inputs only: sanitized root, own config, own LATEST, and exact public release source. No O, other-worker, downstream, legacy, shared-ledger, or other-role semantics read."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, stay on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact tasks/update/input-required cancellation interaction tests in crates/rmcp/src/task_manager.rs. Pin whether cancellation while input_required always clears pending input and what tasks/get must expose before the operation settles; derive the smallest persistent pending-input cleanup rule compatible with restart. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
