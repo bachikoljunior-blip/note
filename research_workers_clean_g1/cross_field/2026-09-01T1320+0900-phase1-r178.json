@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 178,
+  "control_revision": 26,
+  "config_revision": 8,
+  "role_revision": 17,
+  "authority": {
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+  "predecessor_latest_blob_sha": "b15083b0bb27a7afb11788b75bc20bec722eddfe",
+  "slice": {
+    "leaf": "noncanonical_semantic_serialization_defense",
+    "question": "Can logically identical candidate objects be forced to one canonical byte string/key, or explicitly rejected, across key order, Unicode normalization, numeric lexical encodings, and omitted/default fields?",
+    "candidate": "Schema-aware semantic canonicalization before immutable-key creation: reject duplicate raw keys and post-NFC key collisions; normalize strings/keys to NFC; materialize schema defaults; parse numeric JSON tokens into an exact decimal domain and emit a unique decimal spelling; sort object keys; emit whitespace-free UTF-8 JSON; derive the immutable candidate key from the canonical bytes.",
+    "public_basis": [
+      {
+        "source": "RFC 8785 JSON Canonicalization Scheme",
+        "url": "https://www.rfc-editor.org/rfc/rfc8785.html",
+        "evidence": "Provides deterministic JSON serialization rules but explicitly preserves Unicode strings as-is and does not perform Unicode normalization; bare JCS is therefore insufficient when NFC/NFD are intended to be semantically identical."
+      },
+      {
+        "source": "Unicode Standard Annex #15, Unicode Normalization Forms",
+        "url": "https://www.unicode.org/reports/tr15/",
+        "evidence": "NFC maps canonically equivalent strings to a unique normalized representation suitable for binary equality."
+      }
+    ],
+    "deterministic_test": {
+      "harness": "local finite state-free canonicalizer using exact Decimal parsing, NFC normalization, schema default insertion, sorted minimal JSON emission, and SHA-256 only as a diagnostic key",
+      "canonical_bytes_utf8": "{\"mode\":\"safe\",\"name\":\"café\",\"retry\":0,\"x\":1}",
+      "diagnostic_sha256": "711b1528ab24c94421f87ae8bf5092e29b99c3b07bbd102d3fd58808efc7740c",
+      "equivalence_cases": [
+        "object key order swapped",
+        "Unicode NFC café vs NFD cafe+U+0301",
+        "numeric 1 vs 1.0 vs 1e0",
+        "defaults mode=safe,retry=0 omitted vs explicitly present"
+      ],
+      "equivalence_result": "PASS: all tested logically equivalent variants emitted the exact same canonical bytes and diagnostic key.",
+      "negative_controls": [
+        {
+          "case": "two distinct raw keys collapse to same NFC key",
+          "result": "REJECT post-normalization key collision"
+        },
+        {
+          "case": "raw duplicate JSON key",
+          "result": "REJECT duplicate key"
+        },
+        {
+          "case": "NaN numeric token",
+          "result": "REJECT non-finite number"
+        },
+        {
+          "case": "string \"1\" versus numeric 1",
+          "result": "ACCEPT as semantically distinct types with different canonical bytes/key"
+        }
+      ]
+    },
+    "revision": "Do not use bare JCS as the semantic-dedup key when Unicode canonical equivalence is intended. Use a schema-aware pre-canonicalization layer or a strict reject-only canonical-input profile before deterministic immutable-key creation.",
+    "scope": "Finite deterministic JSON-object cases only. Arbitrary Unicode, arbitrary-precision numeric schema semantics, arrays/large nested objects, and live repository race interleavings are not proven. SHA-256 was diagnostic in the test, not established as a required zero-dependency runtime primitive.",
+    "alternatives_preserved": [
+      "Strict reject-only profile: accept only already-NFC, schema-complete, canonical-number inputs and reject all noncanonical variants instead of transforming them.",
+      "Concurrent create-conflict reconciliation after deterministic-key absence remains the next independent leaf."
+    ]
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "qualification": "This slice tests the serialization rule itself; operational correctness of arbitrary Unicode/decimal normalization inside scheduled Chat remains outside tested scope and is not claimed."
+  },
+  "conflict_check": "Frozen sanitized DESIRED_STATE control26/config8, own r177 LATEST, public RFC/Unicode sources, and a local deterministic test only; no O/O-derived, other-worker, downstream, legacy, shared-ledger or scheduler semantics consumed.",
+  "frontier": [
+    "Test concurrent write interleavings between read-at-K absence and create, including create-conflict reconciliation without in-run retry loops.",
+    "Later test whether a strict reject-only canonical-input profile is easier to make end-to-end zero-dependency than transform-and-normalize for arbitrary Unicode/decimal domains."
+  ],
+  "exact_continuation": "Next invocation, bootstrap and freeze authority, then execute exactly one concurrent-write-interleaving leaf: model two writers that both read deterministic K absent, require at most one create attempt per writer, treat create conflict/ambiguous result as a bounded stop with next-invocation read-at-K reconciliation, and prove no overwrite plus stale-parent pointer CAS rejection. Preserve the strict reject-only canonical-input alternative for a later leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "updated_at": "2026-09-01T13:20:44+09:00"
+}
