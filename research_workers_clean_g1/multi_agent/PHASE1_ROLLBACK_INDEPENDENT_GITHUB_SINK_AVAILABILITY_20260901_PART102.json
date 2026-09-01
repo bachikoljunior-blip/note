@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "created_at": "2026-09-01T22:31:25+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "PART102-rollback-independent-github-sink-availability",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_SINK_MIN_GENERATION_FLOOR_20260901_PART101.json",
+  "semantic_config_snapshot": {
+    "main_sha": "6b2082021de5b23c04200929bfd553a738335f59",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 39,
+    "transport_mode": "sha_only_manifest_declared_exact_blobs"
+  },
+  "tested_scope": {
+    "public_sources": [
+      {
+        "surface": "Git refs update",
+        "official_url": "https://docs.github.com/en/rest/git/refs",
+        "observed_contract": "Update-ref accepts target SHA plus force flag. force=false requires fast-forward behavior; force=true permits non-fast-forward movement. The endpoint documents conflict/validation outcomes but no caller-supplied generation-floor predicate or effect-id uniqueness predicate."
+      },
+      {
+        "surface": "Commit statuses",
+        "official_url": "https://docs.github.com/en/rest/commits/statuses",
+        "observed_contract": "Create-status is append-style for a SHA/context and permits up to 1000 statuses per SHA/context. Request fields are state, target_url, description and context; the documented endpoint has no conditional generation-floor compare or effect-id uniqueness predicate."
+      },
+      {
+        "surface": "Rulesets / protected branches",
+        "official_url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets",
+        "observed_contract": "Rulesets can restrict updates/deletions and block force pushes, but creating/editing/deleting repository rulesets requires repository admin access or a custom role with edit-repository-rules permission. Protected-branch restrictions can also have bypass actors/admin behavior."
+      }
+    ],
+    "current_chat_connector_capability_check": {
+      "git_ref_update_exposed": true,
+      "commit_status_write_exposed": false,
+      "ruleset_write_exposed": false,
+      "ordinary_repository_contents_write_exposed": true
+    },
+    "constructed_probe_count": 7,
+    "destructive_remote_mutations": 0
+  },
+  "acceptance_gates": {
+    "G1_role_permitted_no_protected_admin_manual_setup": true,
+    "G2_zero_finite_monthly_trial_paid_quota_and_zero_incremental_cost": true,
+    "G3_atomic_reject_if_generation_below_floor_or_effect_id_already_consumed": true
+  },
+  "candidate_matrix": [
+    {
+      "candidate": "ordinary Git ref with update_ref(force=false)",
+      "G1": "pass for the exposed ref-write primitive itself",
+      "G2": "pass only as lightweight repository transport; ordinary API rate limits remain a checkpoint/fail-closed transport concern rather than accepted compute",
+      "G3": "fail",
+      "reason": "Fast-forward checking constrains one ref transition but does not atomically compare an application generation floor and a single-use effect_id. The same GitHub contract exposes force=true, so the ref is not rollback-independent under an authority domain that permits forced rewind; delete/recreate is likewise not represented by a durable sink-local minimum-generation witness."
+    },
+    {
+      "candidate": "commit status stream attached to immutable commit SHA",
+      "G1": "fail in the current Chat connector because status creation is not exposed; public API would additionally require commit-status write permission",
+      "G2": "fail the strict zero-exhaustible-limit test as a universal witness because GitHub documents a finite 1000-status-per-SHA/context limit",
+      "G3": "fail",
+      "reason": "Multiple statuses for one SHA/context are explicitly allowed up to the limit, so repeated logical effect markers are not rejected by uniqueness. Status creation has no documented generation-floor conditional predicate. Attachment to a commit SHA can survive a branch rewind as historical metadata, but that alone is not atomic anti-rollback plus dedupe authority."
+    },
+    {
+      "candidate": "ruleset/protected-ref enforced anti-force-push barrier",
+      "G1": "fail",
+      "G2": "not reached for acceptance",
+      "G3": "fail as a complete sink protocol",
+      "reason": "Creating/editing repository rulesets requires admin or edit-repository-rules authority, which violates this CLEAN leaf's no protected/admin/manual setup gate. Even a protected ref prevents a class of ref rewrites rather than atomically consuming an application effect_id together with generation-floor validation."
+    }
+  ],
+  "constructed_probes": [
+    {"id":"P1","history":"current g4 ref advances fast-forward with force=false","result":"ref transition may succeed; this is only ref ancestry, not application floor+dedupe"},
+    {"id":"P2","history":"old g3 writer attempts non-fast-forward rewind with force=false","result":"ref primitive can reject the rewind"},
+    {"id":"P3","history":"authority permits force=true for the same ref","result":"the prior anti-rewind property is bypassed; no rollback-independent witness remains"},
+    {"id":"P4","history":"same logical effect posts a second status for identical SHA/context","result":"documented status model permits another status until the finite per-SHA/context limit; no single-use consume"},
+    {"id":"P5","history":"old generation posts a status on its own historical commit SHA","result":"no documented global minimum-generation predicate rejects it"},
+    {"id":"P6","history":"protect ref with repository ruleset blocking force pushes/deletions","result":"anti-rewind strengthens, but setup requires admin/edit-rules authority and still lacks atomic effect-id consume"},
+    {"id":"P7","history":"require one surface to satisfy all G1+G2+G3 simultaneously","result":"0 of 3 inspected GitHub-native alternatives pass all gates"}
+  ],
+  "observations_vs_inference": {
+    "observations": [
+      "GitHub's ref API documents force=false fast-forward protection and an explicit force=true mode.",
+      "GitHub's commit-status API documents up to 1000 statuses per SHA/context and does not expose generation-floor/effect-id conditional fields.",
+      "GitHub's ruleset documentation says repository rulesets require admin access or a custom role with edit-repository-rules permission to create/edit/delete.",
+      "The current Chat GitHub connector exposes update_ref but not commit-status creation or ruleset mutation."
+    ],
+    "inferences": [
+      "No inspected GitHub-native alternative is a concrete rollback-domain-independent authoritative sink that atomically enforces {generation >= durable minimum AND effect_id unused} under the current CLEAN role gates.",
+      "This is a bounded capability-gap result, not a proof that every possible GitHub feature or every non-GitHub mechanism is impossible."
+    ]
+  },
+  "phase1_leaf_result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "passes_all_three_gates": 0,
+    "candidates_checked": 3,
+    "minimal_unresolved_child": "A role-permitted Chat-native authority outside the ordinary repository rollback domain that durably and atomically rejects both stale generation (generation < minimum) and repeated logical effect_id without protected/admin/manual setup, finite monthly/trial/paid quota, or incremental monetary cost.",
+    "narrowed_finding": "Git ref CAS/fast-forward is useful as a local concurrency fence but is not the missing rollback-independent generation+effect sink. Commit statuses and rulesets also fail at least one hard gate in current scope."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false
+  },
+  "scope_guard": "Only the three named official GitHub surfaces, current connector action inventory, and seven constructed probes were evaluated. No claim is made about undocumented semantics, enterprise-only controls not inspected, arbitrary connectors, or every external sink.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part103: execute exactly one bounded co-rollback indistinguishability leaf. Model two histories that produce identical observable repository plus role-local state at invocation start: H0 never advanced beyond generation g3; H1 advanced to g4, emitted/authorized a g4 effect, then every repository-visible authority, marker, ref and role-local witness in the same rollback domain was restored to the exact H0 image. For deterministic repository-only protocols, test the safety/availability tradeoff: accepting g3 in H0 versus rejecting stale g3 in H1. Determine the narrowest theorem scope, then test whether content-addressed effect naming or append-only non-authoritative evidence changes the result without introducing a rollback-independent authority. Persist the exact counterexample or scope-limited escape hatch and a nonempty next-invocation continuation; do not generalize beyond the finite observation model."
+}
