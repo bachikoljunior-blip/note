@@ -1,27 +1,27 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 89,
-  "semantic_parent_revision": 88,
+  "worker_revision": 90,
+  "semantic_parent_revision": 89,
   "control_revision": 26,
   "config_revision": 7,
   "instruction_manifest_control_revision": 33,
   "lifecycle_control_revision": 1,
   "bootstrap_valid": true,
   "enabled_desired": true,
-  "status": "bounded_rmcp_cancel_input_required_cleanup_checkpoint_recurring_open",
+  "status": "bounded_rmcp_input_key_lifecycle_checkpoint_recurring_open",
   "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
-  "transport_mode": "sha_only_h1_h2_drift_authority_refetched_and_frozen",
-  "frozen_main_sha": "1025d9f39e025a1463c89a81c3f179dd524ee347",
-  "result": "Exact rmcp-v3.1.4 cancellation/input-required interaction pins an additional durable fence: cancel_task on a nonterminal task records cancel intent, signals cancellation, clears pending_inputs and recomputes status before acknowledgement. Therefore the old input_required payload is superseded at ack; a pre-terminal tasks/get may show Working or race directly to a terminal state, but must not keep the cleared input request authoritative. Clearing drops parked request_input senders, causing TaskExit::Cancelled; late tasks/update responses for cleared keys are ignored. A persistent restart design must durably bind cancel_requested plus input invalidation before ack, retain anti-reuse state, and generation/CAS-fence stale attempts from re-publishing superseded input. Cooperative terminal semantics remain operation-defined.",
+  "transport_mode": "sha_only_h1_h2_stable",
+  "frozen_main_sha": "3aedb5416a727cfea20ad5aca70b3f8eada6b4ea",
+  "result": "Exact rmcp-v3.1.4 TaskManager pins per-task input-key uniqueness in used_input_keys and accepts partial tasks/update sets by removing only currently pending keys; absent duplicate/already-answered/superseded keys on a known task are ignored, while unknown taskId is INVALID_PARAMS. The smallest restart-safe persistence rule is a never-reused per-key tombstone with monotonic PENDING->ANSWERED(response)->APPLIED and PENDING->INVALIDATED transitions. ANSWERED must retain the response payload until durable operation progress proves application, otherwise a crash after protocol acceptance but before consumption loses accepted input. Cancellation invalidates still-PENDING keys before ack; restart must never reopen ANSWERED/APPLIED/INVALIDATED as PENDING and may redeliver ANSWERED only to the authoritative attempt/generation.",
   "source_scope": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
     "path": "crates/rmcp/src/task_manager.rs",
     "blob": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc"
   },
-  "checkpoint_path": "research_workers_clean_g1/open_source/checkpoint_rev89_rmcp_cancel_input_required_cleanup.json",
-  "conflict_check": "Manifest33/RUN_LIFECYCLE1 read first. SHA-only H1 moved from 76869b3c75debff56f21a5af1e6893bf3563c426 to H2 1025d9f39e025a1463c89a81c3f179dd524ee347 before semantic work; all four required authority files were refetched at H2 and retained the expected manifest33/lifecycle1/root26/open_source control14 config7 blobs, then frozen. Parent LATEST revision88/blob fbb264aa835ecbe9085fdefe035d96358f778420 read after freeze. CLEAN inputs only.",
+  "checkpoint_path": "research_workers_clean_g1/open_source/checkpoint_rev90_rmcp_input_key_lifecycle.json",
+  "conflict_check": "Manifest33/RUN_LIFECYCLE1 read first. SHA-only H1/H2 both 3aedb5416a727cfea20ad5aca70b3f8eada6b4ea; exact manifest33/lifecycle1/root26/open_source control14 config7 blobs frozen before semantic reads. Parent LATEST revision89/blob 9a9935702810a8fcf5fd77ccc6cd2b09ba3b61b6. CLEAN inputs only.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -32,5 +32,5 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact TaskManager tests/implementation for duplicate, partial, unknown, and already-answered tasks/update inputResponses keys. Pin the smallest durable anti-replay/input-key lifecycle rule that survives cancellation plus restart without making old responses authoritative. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056. Inspect only the exact server dispatch/model path that maps tasks/update inputResponses into TaskManager::update_task and returns the wire acknowledgement, including behavior for a known terminal task. Pin whether the wire layer adds any validation or terminal-task rejection beyond TaskManager's no-op-per-absent-key behavior. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
 }
