@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "recorded_at": "2026-09-01T14:31:00+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "part99-immutable-tag-hidden-reservation-read-indistinguishability",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_DELETION_VISIBLE_ANTI_ROLLBACK_FLOOR_20260901_PART98.json",
+  "semantic_config_snapshot": {
+    "main_sha": "c10c6f7d05082f6ee155cc7e2587bb18e6ab033f",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 35,
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-01T142810+0900_config9_presemantic_liveness.json",
+  "tested_scope": {
+    "question": "Can a public read-only GitHub endpoint distinguish history A (candidate tag name never used) from history B (same tag name previously backed an immutable release, then the immutable release and tag were deleted), without creating/updating a ref or release?",
+    "history_A": "Current repository has no current tag ref t and no current published release for t; t has never backed an immutable release.",
+    "history_B": "t previously backed an immutable release; that immutable release was deleted; its tag was then deleted; current repository has no current tag ref t and no current published release for t. The repository-resurrection variant is included only to the extent explicitly documented by GitHub's immutable-release anti-reuse statement.",
+    "documented_read_surfaces_checked": [
+      "GET Git reference for refs/tags/t",
+      "GET published release by tag t",
+      "immutable-releases documentation for any documented per-tag read-visible reservation/floor surface"
+    ],
+    "excluded": [
+      "mutating create/update/delete probes",
+      "protected/admin configuration as an outcome dependency",
+      "undocumented/private service internals",
+      "external coordinator or hosted compute",
+      "finite monthly/trial/paid quota mechanisms"
+    ]
+  },
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases",
+      "observation": "GitHub documents that after deleting an immutable release, its tag can be deleted but the same tag name cannot be reused; the protection also survives repository delete/recreate with the same name. This proves a service-side historical anti-reuse rule exists, not that it is exposed by a read endpoint."
+    },
+    {
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/git/refs",
+      "observation": "Get a reference returns 404 when the requested ref does not currently exist. Therefore after tag deletion, this endpoint has the same documented result for A and B."
+    },
+    {
+      "url": "https://docs.github.com/rest/releases/releases",
+      "observation": "Get a release by tag name returns 404 Resource not found when no current published release is found. Therefore after release deletion, this endpoint has the same documented result for A and B."
+    }
+  ],
+  "finite_model": {
+    "paired_histories": 4,
+    "dimensions": [
+      "same current repository versus documented repository-resurrection variant",
+      "current ref read",
+      "current release-by-tag read"
+    ],
+    "documented_read_vector_A": ["git_ref=404_absent", "release_by_tag=404_absent"],
+    "documented_read_vector_B": ["git_ref=404_absent", "release_by_tag=404_absent"],
+    "distinguishing_read_only_endpoint_found": false,
+    "write_time_hidden_difference": "B is documented as unable to reuse the historical immutable-release tag name, while A is not known to carry that historical reservation. Observing this difference requires a write-time attempt or another currently undocumented read surface."
+  },
+  "result": {
+    "new_falsification": "Within the bounded documented surfaces checked, immutable-release tag-name anti-reuse is not a stateless read-visible freshness floor. The two histories are read-indistinguishable after deletion on current ref and current release-by-tag GETs.",
+    "new_positive_evidence": "The hidden service-side anti-reuse state is still useful as a write-time duplicate-name fence because GitHub explicitly documents that a used immutable-release tag name cannot be reused even after release/tag deletion and repository resurrection.",
+    "accepted_zero_dependency_candidate_found": false,
+    "minimal_unresolved_child": "A repository/target-native non-mutating read surface or sink-side enforcement rule that exposes or enforces a monotonic minimum generation across deletion/recreation and cannot be bypassed by a distinct previously-unused stale transition identifier."
+  },
+  "observation_inference_split": {
+    "observed_documented": [
+      "absent current ref -> GET ref 404",
+      "missing current published release -> release-by-tag 404",
+      "immutable-release historical tag name cannot be reused after deletion and repository resurrection"
+    ],
+    "inference": "No read-visible per-tag reservation endpoint was found in this bounded documentation pass; this is not evidence that undocumented/internal state is absent."
+  },
+  "phase1_acceptance": {
+    "accepted_zero_dependency_candidate_found": false,
+    "global_phase1_closure_claimed": false,
+    "scope_guard": "Applies only to the documented GitHub read surfaces listed above and the explicit immutable-release anti-reuse semantics. It does not generalize to arbitrary external sinks or undocumented APIs."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "continuation": "Part100: execute exactly one bounded finite-model leaf separating duplicate-effect idempotency from freshness for immutable-release tag anti-reuse. Compare deterministic stable transition IDs (same logical effect retry reuses one tag name) against stale distinct transition IDs (older generation uses a previously-unused tag name). Use public GitHub docs only to determine whether documented write-time anti-reuse can prevent duplicate same-ID replay while leaving distinct stale-ID publication unfenced. Do not perform any mutating GitHub probe. Persist exact scope, zero-cost/quota-zero assessment, unresolved sink-side minimum-generation child, and the next nonempty continuation."
+}
