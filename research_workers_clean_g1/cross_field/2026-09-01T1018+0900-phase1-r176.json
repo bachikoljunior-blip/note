@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 176,
+  "control_revision": 26,
+  "config_revision": 8,
+  "role_revision": 17,
+  "authority": {
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_path": "research_workers_clean_g1/cross_field/LATEST.json",
+  "predecessor_latest_blob_sha": "403bb30a4c236110b91f2c32f4dde668fc93f20b",
+  "predecessor_logical_revision": 175,
+  "slice": {
+    "name": "canonical_payload_receipt_separation",
+    "objective": "Test whether deterministic immutable candidate identity survives cross-invocation retry when per-invocation timestamps, connector metadata and transient diagnostics differ.",
+    "model": "Finite deterministic role-local candidate builder. Candidate semantic bytes use canonical JSON over stable semantic fields only; volatile invocation metadata is stored only in a separate immutable receipt. Candidate key K = SHA256(parent_latest_blob || NUL || next_revision || NUL || canonical_semantic_bytes).",
+    "synthetic_invocations": [
+      {
+        "id": "synthetic-A",
+        "volatile_metadata": {
+          "observed_at": "2026-09-01T10:18:01+09:00",
+          "connector_request_id": "req-A",
+          "latency_ms": 81,
+          "transient_diagnostic": "none"
+        }
+      },
+      {
+        "id": "synthetic-B",
+        "volatile_metadata": {
+          "observed_at": "2026-09-01T10:18:39+09:00",
+          "connector_request_id": "req-B",
+          "latency_ms": 143,
+          "transient_diagnostic": "client-side timeout after response"
+        }
+      }
+    ],
+    "stable_semantic_fields": [
+      "schema_version",
+      "worker",
+      "generation",
+      "logical_revision",
+      "phase_id",
+      "root_problem_id",
+      "task_id",
+      "predecessor_latest_blob_sha",
+      "leaf",
+      "claim",
+      "phase1_constraints"
+    ],
+    "volatile_fields_excluded_from_candidate_bytes": [
+      "observed_at",
+      "invocation_id",
+      "connector_response_metadata",
+      "transient_diagnostics"
+    ],
+    "results": {
+      "canonical_semantic_bytes_equal_across_invocations": true,
+      "canonical_semantic_sha256": "9c2100da8fe7e421a4ecc3c0c6a6c2220b49999ee0fde3a4b587b94a8bc830d5",
+      "deterministic_candidate_key_equal_across_invocations": true,
+      "deterministic_candidate_key": "a81d62cdd142851c0564677128311adcfc9dc88b35fd019e99e6eedcd037baf2",
+      "separate_receipt_envelopes_differ": true,
+      "negative_control_including_receipt_changes_candidate_bytes": true,
+      "negative_control_including_receipt_changes_candidate_key": true,
+      "negative_control_key_A": "50ec6dbe169454ddbf1fd115e3b3631324b52ed4da9f3745fc4ffa0b30f0876a",
+      "negative_control_key_B": "db36090e06b4566a0de472b31cb53c2d7055fbbd2b709dfff64dbcbf29195cc7"
+    },
+    "verdict": "PASS in the tested finite deterministic model. Separating canonical semantic candidate bytes from volatile per-invocation receipt metadata preserves identical candidate bytes and the same deterministic key across retries; the negative control that embeds receipt metadata produces different keys and would create a duplicate candidate path.",
+    "comparison": {
+      "candidate_A": "canonical semantic payload + separate immutable receipt",
+      "candidate_B": "single payload that embeds volatile receipt metadata",
+      "expected_completion_time": "A is one deterministic create/CAS path on retry; B can fork retry identity and add recovery work.",
+      "success_probability": "A preserved identity for both tested invocations; B failed the identity invariant by construction.",
+      "conflict_duplication_risk": "A low in tested model; B high because volatile metadata changes K.",
+      "integration_cost": "A requires two record types but no extra executor; B appears simpler but breaks retry determinism.",
+      "monetary_cost": 0,
+      "quota_fragility": "Neither design requires hosted compute; only lightweight repository transport is assumed, and retry identity does not depend on transport metadata."
+    }
+  },
+  "tested_scope": "Two synthetic invocations with identical stable semantics and deliberately different timestamps, invocation IDs, connector response metadata and transient diagnostics. Tested canonical JSON byte equality and deterministic SHA-256 key equality, plus a negative control embedding receipt metadata. Not tested: ambiguous create outcome where K:B may already have committed, noncanonical semantic serialization, silent-overwrite transports, multi-pointer authority or a live production collision.",
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0
+  },
+  "conflict_check": "Used frozen sanitized DESIRED_STATE control26/blob 481660fb6008a57cea162da38439cf115c8d7ebe, own cross_field config8/blob fd9bcd6e7ffe06fe5b854e08af6158279c80fffc, own LATEST r175/blob 403bb30a4c236110b91f2c32f4dde668fc93f20b and a local deterministic model only. No O/O-derived state, other-worker state/config/receipts, downstream state, legacy research, shared ledger, scheduler or protected-primary semantic input was used or mutated.",
+  "candidate_revision": "Make canonical candidate semantic bytes a stable, metadata-free object and place timestamps, connector response metadata and transient diagnostics only in a separate immutable receipt. Deterministic retry identity is then a function of frozen parent, next logical revision and canonical semantic bytes only.",
+  "frontier": [
+    "Test ambiguous candidate-create result recovery where K:B may have committed before a transient client failure; require read-at-K exact-byte reconciliation before any second create or pointer CAS.",
+    "Then test noncanonical semantic serialization defenses so logically identical semantic objects cannot acquire different candidate keys."
+  ],
+  "exact_continuation": "Next invocation, after manifest/RUN_LIFECYCLE-first bootstrap and exact two-pass authority freeze, read own LATEST r176 only as needed and execute exactly one bounded ambiguous-create-result recovery leaf. Model three post-create client outcomes: confirmed success, confirmed failure-before-commit and ambiguous failure-after-possible-commit. On the ambiguous branch, read deterministic K first; if exact canonical B exists, adopt it and proceed to pointer-last CAS only if the frozen parent is still current; if K is absent, create once; if bytes mismatch, stop with diagnostic and never overwrite. Falsify on duplicate create path, stale-parent adoption or mismatched-byte overwrite. Preserve noncanonical-serialization defense as the following leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "updated_at": "2026-09-01T10:18:45+09:00"
+}
