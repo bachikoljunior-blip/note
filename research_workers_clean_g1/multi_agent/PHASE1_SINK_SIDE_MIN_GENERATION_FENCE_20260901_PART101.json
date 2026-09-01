@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 101,
+  "leaf_id": "phase1-sink-side-minimum-generation-fence",
+  "recorded_at": "2026-09-01T17:29:42+09:00",
+  "semantic_config_snapshot": {
+    "main_sha": "0490f437e1c8ed30ad2df2c20a891bcce00eb0d8",
+    "instruction_manifest_revision": 37,
+    "instruction_manifest_blob": "c294ff499b893f58da2ca70e269217ac21e71c7b",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "transport_mode": "sha_only_main_ref_exact_sha",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-01T1729+0900_presemantic_liveness.json",
+  "predecessor": {
+    "latest_blob": "b1926c80ffcd812d377c300181ca206a36af5a2a",
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_INCARCERATION_IDENTITY_FENCE_20260901_PART100.json",
+    "continuation_consumed": "Part101 sink-side minimum-generation leaf"
+  },
+  "tested_scope": "One bounded eight-history logical model of a stale proposal carrying {repository_node_id, generation, effect_id}. Compared (A) current repository-node plus visible-generation CAS with repository-local effect record, (B) an abstract rollback-domain-independent sink that atomically checks current incarnation + minimum generation + durable effect_id, and (C) a sink floor/effect record that is missing or rolled back with repository-visible state. No external sink was mutated and no additional public source was read in this leaf.",
+  "authority_observation": {
+    "role_authorized_write_surfaces": [
+      "research_workers_clean_g1/multi_agent/",
+      "automation_control/receipts/multi_agent/"
+    ],
+    "observation": "Both authorized write surfaces are paths in the same GitHub repository rollback/delete domain being analyzed. The frozen role control authorizes no rollback-domain-independent sink write and forbids scheduler mutation and protected-primary authority mutation.",
+    "source": "frozen automation_control/roles/multi_agent.json config_revision 9"
+  },
+  "model": {
+    "historical_required_floor": 4,
+    "current_incarnation": "I2",
+    "trace_count": 8,
+    "traces": [
+      {"id":"T1","condition":"old incarnation I1, proposal g3, current I2 visible g4, effect unseen"},
+      {"id":"T2","condition":"current incarnation I2, proposal g3, visible g4, effect unseen"},
+      {"id":"T3","condition":"I2 proposal g3 after repository-visible rollback to g3 although historical g4 existed, effect unseen"},
+      {"id":"T4","condition":"same as T3 but effect_id was already applied before rollback and repository-local record is lost"},
+      {"id":"T5","condition":"I2 current proposal g4, effect unseen"},
+      {"id":"T6","condition":"I2 current proposal g4, effect already applied and both repository-local and durable-sink records visible"},
+      {"id":"T7","condition":"I2 current proposal g4, effect already applied but repository-local effect record is lost while durable-sink record survives"},
+      {"id":"T8","condition":"old incarnation I1 proposal g4 against current I2 visible g4"}
+    ],
+    "candidate_A_repository_only": {
+      "rule": "Require proposal repository_node_id == current node_id, proposal generation == repository-visible generation, and use only repository-local effect_id state for dedupe.",
+      "safe": 5,
+      "unsafe": 3,
+      "stale_generation_applies": 2,
+      "duplicate_effect_applies": 2,
+      "unsafe_trace_ids": ["T3", "T4", "T7"],
+      "interpretation": "Current-node/CAS checks fence known cross-incarnation or visible-generation mismatch, but do not survive rollback that removes the higher-generation/effect witness from the same repository domain."
+    },
+    "candidate_B_abstract_durable_sink_floor": {
+      "rule": "At the authoritative sink, atomically require proposal incarnation == durable current incarnation I2, generation >= durable minimum_generation 4, and consume/dedupe effect_id in the same rollback-domain-independent state transition.",
+      "safe": 8,
+      "unsafe": 0,
+      "stale_generation_applies": 0,
+      "duplicate_effect_applies": 0,
+      "interpretation": "The combined incarnation floor + monotonic generation floor + durable effect-id consumption is sufficient for these eight histories only. This is a mechanism requirement, not evidence that an allowed Chat-native sink implementing it currently exists."
+    },
+    "candidate_C_missing_or_rolled_back_floor": {
+      "rule": "Use current-node/visible-generation checks but allow the sink generation floor and effect-id record to be absent or rolled back with visible repository state.",
+      "safe": 4,
+      "unsafe": 4,
+      "stale_generation_applies": 2,
+      "duplicate_effect_applies": 3,
+      "unsafe_trace_ids": ["T3", "T4", "T6", "T7"],
+      "interpretation": "A floor that shares the rollback domain or loses its effect-id memory is not a freshness/idempotency fence."
+    }
+  },
+  "result": {
+    "new_positive_evidence": "Within the bounded model, sink-time atomic validation of {current incarnation, minimum generation, effect_id} is sufficient to reject both stale-generation replay and duplicate retry even when repository-visible state is rolled back.",
+    "new_falsification": "Repository-only CAS/current-node checks plus repository-local idempotency state are insufficient when the higher generation or prior effect record can be rolled back/deleted with the repository. A sink floor that is missing or shares that rollback domain fails for the same reason.",
+    "accepted_zero_dependency_candidate_found": false,
+    "classification": "mechanism_requirement_identified_but_not_instantiable_on_current_role_authorized_surfaces",
+    "minimal_unresolved_child": "Find a Chat-native authoritative sink or in-band authority primitive that can durably and atomically enforce current incarnation + monotonic minimum generation + effect-id dedupe outside the repository rollback domain, while requiring no protected/admin/manual setup, no richer-mode execution, no external hosted coordination, no finite monthly/trial/paid quota and zero incremental cost. If every such surface violates one of those constraints, preserve the impossibility boundary rather than accepting repository-local state."
+  },
+  "observation_vs_inference": {
+    "observed": "Frozen role config restricts this worker's writes to two repository-local namespaces; Part100 established only a narrow current repository-incarnation discriminator and did not establish rollback-proof freshness.",
+    "inferred_from_model": "An atomic rollback-independent sink floor would close the modeled stale/duplicate histories, but no such allowed surface was demonstrated in this invocation."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "repository_transport_rate_limit_dependency": "bounded GitHub state transport only; no API volume used as compute",
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false
+  },
+  "scope_guard": "Do not generalize the 8/8 ideal-sink result beyond this finite model or treat it as evidence that GitHub, another connector, or any arbitrary sink exposes the required atomic primitive. Do not treat absence of an authorized non-repository write surface in this role config as a global proof that no Chat-native product surface exists.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "continuation": "Part102: execute exactly one bounded public-source candidate-surface audit for an in-band Chat/GitHub-native anti-rollback primitive. Test one concrete candidate family (repository ruleset/branch-protection or another GitHub-native authority surface) for all four requirements at once: prevents stale generation publication across force-rewind/delete-recreate, preserves effect-id idempotency, requires no protected/admin/manual setup, and remains usable with every optional finite monthly/trial/paid quota at zero and zero incremental cost. Do not mutate protected state. If the candidate needs admin/protected configuration or disappears with repository deletion, record that as a narrowed unresolved child and preserve the next candidate family for a later invocation."
+}
