@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "created_at": "2026-09-02T08:00:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-schema-migration-nontransitive-cert-v1",
+  "probe_kind": "deterministic recurrence-sensitive replay-identity ambiguity probe",
+  "mechanism": {
+    "name": "direct-edge migration certificate with non-transitive replay aliasing",
+    "rule": [
+      "Schema version remains a replay-identity domain separator by default.",
+      "A cross-schema alias is authorized only by one certificate that names the exact source canonical endpoint and exact target canonical endpoint for the same role, task and operation.",
+      "An alias produced by a certificate is not promoted into a new native canonical claim and cannot be used as the source of another certificate lookup; certificate paths are never transitively closed.",
+      "A different payload, endpoint or schema pair remains a new claim unless a separate direct end-to-end certificate names that exact pair."
+    ]
+  },
+  "canonical_endpoints": {
+    "v1_exact": "neuroscience|phase1-clean-neuroscience-state-reconstruction-mechanisms|checkpoint_write|schema=v1|subject=alpha|value=7",
+    "v2_exact": "neuroscience|phase1-clean-neuroscience-state-reconstruction-mechanisms|checkpoint_write|schema=v2|topic=alpha|value=7|meta=null",
+    "v3_exact": "neuroscience|phase1-clean-neuroscience-state-reconstruction-mechanisms|checkpoint_write|schema=v3|topic=alpha|value=7|meta=source:migrated",
+    "v3_near_match": "neuroscience|phase1-clean-neuroscience-state-reconstruction-mechanisms|checkpoint_write|schema=v3|topic=alpha|value=8|meta=source:migrated"
+  },
+  "certificates": {
+    "cert_v1_v2": {
+      "source": "v1_exact",
+      "target": "v2_exact",
+      "scope": "exact endpoint pair only"
+    },
+    "cert_v2_v3": {
+      "source": "v2_exact",
+      "target": "v3_exact",
+      "scope": "exact endpoint pair only"
+    },
+    "cert_v1_v3_positive_control": {
+      "source": "v1_exact",
+      "target": "v3_exact",
+      "scope": "exact endpoint pair only",
+      "used_only_in_positive_control": true
+    }
+  },
+  "cases": [
+    {
+      "id": "direct_v1_to_v2",
+      "native_record": "v1_exact",
+      "restart_target": "v2_exact",
+      "available_certificates": ["cert_v1_v2"],
+      "resolved_as_existing_claim": true,
+      "new_claim_records": 0,
+      "duplicate_effect_records": 0,
+      "pass": true
+    },
+    {
+      "id": "direct_v2_to_v3",
+      "native_record": "v2_exact",
+      "restart_target": "v3_exact",
+      "available_certificates": ["cert_v2_v3"],
+      "resolved_as_existing_claim": true,
+      "new_claim_records": 0,
+      "duplicate_effect_records": 0,
+      "pass": true
+    },
+    {
+      "id": "uncertified_transitive_near_match",
+      "native_record": "v1_exact",
+      "restart_target": "v3_near_match",
+      "available_certificates": ["cert_v1_v2", "cert_v2_v3"],
+      "transitive_certificate_path_exists": true,
+      "direct_exact_certificate_exists": false,
+      "resolved_as_existing_claim": false,
+      "new_claim_records": 1,
+      "duplicate_effect_records": 0,
+      "pass": true
+    },
+    {
+      "id": "explicit_end_to_end_positive_control",
+      "native_record": "v1_exact",
+      "restart_target": "v3_exact",
+      "available_certificates": ["cert_v1_v2", "cert_v2_v3", "cert_v1_v3_positive_control"],
+      "direct_exact_certificate_exists": true,
+      "resolved_as_existing_claim": true,
+      "new_claim_records": 0,
+      "duplicate_effect_records": 0,
+      "pass": true
+    }
+  ],
+  "measurements": {
+    "direct_certified_edges_tested": 2,
+    "direct_certified_edges_duplicate_free": 2,
+    "direct_certified_edge_duplicate_effect_records_total": 0,
+    "uncertified_transitive_near_matches_tested": 1,
+    "uncertified_transitive_near_matches_kept_distinct": 1,
+    "explicit_end_to_end_positive_controls_tested": 1,
+    "explicit_end_to_end_positive_controls_duplicate_free": 1
+  },
+  "result": "pass within tested symbolic replay-identity scope: certified direct schema edges reconstruct without duplicate effect records, while a v1->v2->v3 certificate chain does not collapse an uncertified v3 near-match; a separate exact v1<->v3 certificate restores duplicate-free aliasing for the exact endpoint pair.",
+  "revision": "Migration certificates must be treated as scoped authorization edges, not equivalence relations. Never take transitive closure across schema migrations, and never allow an alias-derived endpoint to become evidence for another migration edge without a separately persisted native claim or an explicit exact end-to-end certificate.",
+  "tested_scope": "One role/task/operation, exact endpoints for schemas v1/v2/v3, two direct certificates, one transitive near-match negative control, and one exact end-to-end positive control. No concurrent writers, certificate revocation, cyclic certificates, certificate expiry, ABA, floating-point canonicalization, Unicode normalization, array ordering, digest collision, transitive chains longer than two edges, or malformed certificate handling were tested.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local exact-path persistence/readback only; no hosted compute",
+    "accepted_scope": "the exact deterministic cases enumerated in this artifact only"
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized root/own neuroscience config and own neuroscience LATEST. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, hosted-compute, finite-credit, paid, manual-user, or scheduler semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next valid invocation, test exactly one certificate-revocation recurrence probe: start from a directly certified v1<->v2 alias, revoke that exact certificate between runs, and require a later v2 restart to fail closed as a new claim without mutating the prior native effect record or resurrecting the revoked alias from cached/alias-derived state. Include a stale-revocation-token negative control and an exact current-revocation-token control; preserve zero richer-mode, finite-quota, user-execution and scheduler dependency."
+}
