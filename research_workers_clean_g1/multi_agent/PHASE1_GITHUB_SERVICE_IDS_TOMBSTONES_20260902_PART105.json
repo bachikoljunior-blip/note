@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 105,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 44,
+    "instruction_manifest_blob": "3202a080710898ed32620b0eaec10068370b467e",
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/presemantic_2026-09-02T052751+0900.json",
+  "leaf_id": "phase1-multi-agent-github-service-ids-tombstones-part105",
+  "tested_scope": "One bounded public-source audit of default GitHub service-side object IDs/tombstones as a rollback-independent generation witness, focusing on global node IDs, issue-comment IDs and repository IDs. Issue/release deletion persistence was not positively established in this bounded batch and is not generalized.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/graphql/guides/migrating-graphql-global-node-ids",
+      "observation": "GitHub documents GraphQL/global node IDs as unique references and instructs clients to treat them as opaque strings."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/issues/comments",
+      "observation": "GitHub documents comment_id as the unique identifier, lists issue comments in ascending ID order, and exposes a Delete an issue comment endpoint requiring Issues or Pull requests write permission."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observation": "GitHub exposes a Delete a repository endpoint; deletion requires repository Administration write permission."
+    }
+  ],
+  "current_chat_connector_surface_observation": "The available repository contents update primitive accepts repository_full_name, path, replacement content, current file blob sha and optional branch; it exposes no expected repository/global-node ID precondition. This is capability-surface evidence only, not a claim about every GitHub API.",
+  "falsifying_traces": [
+    {
+      "name": "opaque_unique_is_not_monotonic",
+      "trace": [
+        "Create/read a GitHub global node ID.",
+        "The documented value is unique but opaque.",
+        "No ordering or generation comparison can be derived from the opaque ID alone."
+      ],
+      "result": "Fails as a monotonic generation counter without an independently durable prior witness."
+    },
+    {
+      "name": "comment_marker_is_deletable_and_dual_write",
+      "trace": [
+        "Use an issue comment ID as a per-generation marker.",
+        "Repository authority publication and comment creation are separate writes.",
+        "Either write can succeed while the other fails or becomes ambiguous.",
+        "GitHub also documents deletion of issue comments by a writer with the required repository permission."
+      ],
+      "result": "Fails permanent-marker and atomic-coupling requirements for the tested comment surface."
+    },
+    {
+      "name": "repository_id_does_not_detect_same_repository_history_rollback",
+      "trace": [
+        "Read the current repository object ID.",
+        "Force-rewind or otherwise restore repository content/history within the same repository object.",
+        "The repository object identity need not change, so its ID does not witness content generation advance.",
+        "For delete/recreate incarnation changes an ID can distinguish objects only if a prior ID is preserved outside the rolled-back repository state; the tested contents write has no expected-repository-ID compare."
+      ],
+      "result": "At most an incarnation discriminator; not a repository-content monotonic witness or atomic CAS fence in the tested Chat surface."
+    }
+  ],
+  "issue_and_release_id_scope_guard": "Global node IDs cover many GitHub objects including issues, but this bounded batch did not obtain official deletion-retention/non-reuse guarantees for issue or release objects. They therefore remain unproven rather than negatively generalized.",
+  "result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "new_falsification": "Default GitHub object IDs do not by themselves supply the needed rollback-independent monotonic generation witness: global IDs are unique opaque references rather than documented ordered generations; tested comment markers are deletable and separately committed; repository IDs identify repository incarnation but do not change on same-repository history rollback and cannot be supplied as an expected precondition to the tested contents CAS write.",
+    "minimal_unresolved_child": "A default GitHub service-side append-only-looking object that needs no repository/org feature enablement, remains discoverable after branch/history rollback, cannot be erased by the same ordinary authority domain, and can be atomically coupled to or safely reconciled with repository-local CAS publication."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "residual_richer_mode_protected_manual_execution_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "incremental_monetary_cost": 0,
+    "accepted_external_hosted_coordination": false,
+    "quota_zero_acceptance_proven": false,
+    "note": "Lightweight GitHub repository/API transport is treated only as allowed state/evidence transport under control26; no quota-bearing compute/storage feature was used or proposed. The candidate fails semantic witness requirements independently of quota/cost."
+  },
+  "observation_vs_inference": {
+    "observed": [
+      "Global node IDs are documented unique and opaque.",
+      "Issue comments have unique IDs, ascending-ID listing, and a documented delete endpoint.",
+      "Repositories have a documented delete endpoint.",
+      "The current Chat-exposed contents update primitive has file-blob SHA CAS but no repository-ID precondition."
+    ],
+    "inferred_with_scope": [
+      "Uniqueness without documented ordering is insufficient for a monotonic generation comparison.",
+      "A separately written deletable marker cannot alone close the atomic publication/rollback witness gap.",
+      "Repository object identity can help detect delete/recreate incarnation changes but not same-object content ABA."
+    ]
+  },
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "continuation": "Part106: execute one bounded public-source leaf on GitHub commit-status objects as the next default service-side witness class. Audit whether status records are append-only/non-deletable under ordinary repository authority, their ID/order and retention semantics after ref/history rewrite, discoverability when the target commit is no longer referenced, and the exact write/read permissions. Test the dual-write ambiguity between contents CAS publication and status creation; accept only if a recovery rule can prove one logical generation without a richer-mode/protected/manual step, finite monthly/trial/paid quota or extra cost. If commit statuses fail, persist the next service-side append-only candidate class without executing it in the same invocation."
+}
