@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "part": 99,
+  "created_at": "2026-09-01T15:27:30+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "frozen_main_sha": "e6f4ac35cc41d3449728dbe4992c38756aaae71f",
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 36,
+    "transport_mode": "sha_only_exact_sha"
+  },
+  "leaf_id": "phase1-multi-agent-hidden-immutable-tag-state-readonly-indistinguishability-part99",
+  "question": "After an immutable release and its tag are deleted, can a documented public read-only GitHub surface distinguish a tag name that was never used from the same currently-absent tag name that was previously reserved by an immutable release?",
+  "method": {
+    "type": "bounded_documentation_plus_predecessor_indistinguishability_model",
+    "histories": {
+      "A_never_used": "Repository is in current state S; candidate tag name T has never backed an immutable release; no current ref T, release T, or attestation T exists.",
+      "B_used_then_deleted": "Repository is restored to the same current state S; T previously backed a published immutable release; that release was deleted and then its tag was deleted; no current ref T, release T, or attestation T exists. GitHub nevertheless documents that T cannot be reused, including after repository resurrection."
+    },
+    "documented_read_projection": [
+      {
+        "surface": "GET Git reference refs/tags/T",
+        "A": "404 when ref T does not exist",
+        "B": "404 after ref T is deleted",
+        "distinguishes": false
+      },
+      {
+        "surface": "List matching Git references tags/T",
+        "A": "no exact current ref T",
+        "B": "no exact current ref T after deletion",
+        "distinguishes": false
+      },
+      {
+        "surface": "current release / release-by-tag visibility",
+        "A": "no current release for T",
+        "B": "deleted immutable release object is absent from the current-release projection, as bounded in Part98",
+        "distinguishes": false
+      },
+      {
+        "surface": "current release-attestation visibility",
+        "A": "no attestation for never-used T",
+        "B": "deleted/unfindable attestation state after release deletion, as bounded in Part98",
+        "distinguishes": false
+      }
+    ],
+    "hidden_state_oracle": "A mutating attempt to reuse T can distinguish the histories because GitHub documents permanent non-reuse of an immutable-release tag name after release deletion and even repository resurrection. This is a service-side write-time oracle, not a documented non-mutating read-visible floor.",
+    "tested_projection_count": 4,
+    "history_count": 2,
+    "comparison_cells": 8
+  },
+  "observations": [
+    "GitHub documents that an immutable release locks its associated tag while the release exists; after deleting the release the tag may be deleted, but the same tag name cannot be reused.",
+    "GitHub further documents that this non-reuse survives repository deletion and recreation with the same name.",
+    "GitHub's documented Get-a-reference endpoint returns 404 when the requested ref does not exist; therefore it exposes only current ref existence, not the hidden immutable-release reservation history.",
+    "The bounded documentation search for immutable-release, release-by-tag, and Git-ref read surfaces did not surface a documented read-only endpoint that returns the hidden used-tag reservation state."
+  ],
+  "inferences": [
+    "Within the four tested current read projections, histories A and B are observationally indistinguishable even though a later mutating reuse attempt has different behavior.",
+    "The immutable-tag reservation therefore remains useful as a write-time duplicate/replay fence for the exact previously-used tag name, but it is not established as a stateless read-visible monotonic freshness floor.",
+    "This does not prove that no undocumented or future GitHub endpoint can expose the reservation state; the negative claim is limited to the bounded documented surfaces searched in this leaf plus the Part98 predecessor surfaces."
+  ],
+  "source_qualification": [
+    {
+      "source": "GitHub Docs: Immutable releases",
+      "url": "https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases",
+      "retrieved_date": "2026-09-01",
+      "supports": "tag cannot be deleted while immutable release exists; after release deletion tag can be deleted but same tag name cannot be reused; protection survives repository resurrection"
+    },
+    {
+      "source": "GitHub Docs: REST API endpoints for Git references",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/git/refs",
+      "retrieved_date": "2026-09-01",
+      "supports": "Get a reference exposes current Git ref and returns 404 when ref does not exist; list-matching-refs exposes current refs"
+    }
+  ],
+  "predecessor_checkpoint": "research_workers_clean_g1/multi_agent/PHASE1_DELETION_VISIBLE_ANTI_ROLLBACK_FLOOR_20260901_PART98.json",
+  "result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "falsified_candidate": "Treat GitHub immutable-release tag-name non-reuse as a documented stateless read-visible minimum-generation/freshness floor after the release/tag are deleted.",
+    "preserved_mechanism": "Exact-name immutable-release non-reuse remains a documented write-time stale-replay/duplicate fence for names that have already been used.",
+    "minimal_unresolved_child": "A read-visible, non-mutating, monotonic incarnation/generation witness that survives deletion/recreate, or a sink-side minimum-generation rule that rejects stale generations without relying on a mutating probe or an external coordinator."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "repository_api_role": "read-only/public documentation and lightweight repository transport evidence only; no hosted compute or finite-credit mechanism accepted"
+  },
+  "scope_guard": "Only the two constructed histories, four documented current-read projections, the bounded GitHub documentation search performed on 2026-09-01, and the Part98 predecessor findings. No universal claim about undocumented internals, future endpoints, or arbitrary external sinks.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_continuation": "Part100: execute exactly one bounded repository-incarnation leaf. Test whether GitHub's read-visible repository identity (for example repository numeric/node identity across delete/recreate) can serve as an anti-resurrection fence when the only allowed durable worker state is role-local repository state. Construct histories with same owner/name and restored contents but different repository incarnation; determine whether current read-only identity plus any role-authorized predecessor witness survives repository deletion without external coordination, protected/admin setup, finite monthly/trial/paid quota, or richer-mode/manual execution. If the prior identity cannot survive outside the rollback domain, formalize repository identity as a current-incarnation discriminator but not a standalone rollback-proof freshness floor, then preserve sink-side minimum-generation enforcement as the next unresolved child."
+}
