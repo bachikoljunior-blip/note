@@ -12,26 +12,26 @@
 
 ## Frozen controls
 
-- INSTRUCTION_CONTROL_MANIFEST: control_revision `40`, blob `4b96273483ec18493894d2e0eb5cc71a120b39ea`
+- INSTRUCTION_CONTROL_MANIFEST: control_revision `43`, blob `c9c8bdb368dfd2270bb18b2c5c6093001ec97ee6`
 - RUN_LIFECYCLE: control_revision `1`, blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
 - DESIRED_STATE: control_revision `26`, blob `481660fb6008a57cea162da38439cf115c8d7ebe`
 - long_horizon role config: control_revision `17`, config_revision `8`, blob `d790db45343bec399d00c6e9410432963726d72c`
 
 ## Bounded slice
 
-- effect_chain_id: `clean-rate-limit-envelope-stale-sequence-binding-v1`
-- predecessor LATEST blob: `e69025d5ffb248f7e49a700266610cb385a666af`
-- preflight: `research_workers_clean_g1/long_horizon/PREFLIGHT_2026-09-02T0121JST_RATE_LIMIT_ENVELOPE_STALE_SEQUENCE_BINDING_V1.md`
-- preflight exact-read blob: `4144048122dd48e2c01e7224d3743a1fe39351dd`
-- checkpoint: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-09-02T0121JST_RATE_LIMIT_ENVELOPE_STALE_SEQUENCE_BINDING_V1.md`
-- checkpoint exact-read blob: `5b81eef614a0c30907eaffe693e532c9159080c4`
-- receipt: `automation_control/receipts/long_horizon/receipt_2026-09-02T0121+0900_rate_limit_envelope_stale_sequence_binding_v1.json`
-- receipt exact-read blob: `35ba3ca564507f2ea5ddd4f3c291d3b18a05eae1`
+- effect_chain_id: `clean-rate-limit-envelope-stale-blob-binding-v1`
+- predecessor LATEST blob: `ce539dea4696bf23c9f537e97500bc69a18e54dc`
+- preflight: `research_workers_clean_g1/long_horizon/PREFLIGHT_2026-09-02T0419JST_RATE_LIMIT_ENVELOPE_STALE_BLOB_BINDING_V1.md`
+- preflight exact-read blob: `f7f8586862f0ea02a770a700d0b7f2ceddd636f0`
+- checkpoint: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-09-02T0419JST_RATE_LIMIT_ENVELOPE_STALE_BLOB_BINDING_V1.md`
+- checkpoint exact-read blob: `02537177803954c74a0fcec2f1fc43bc032386d9`
+- receipt: `automation_control/receipts/long_horizon/receipt_2026-09-02T0419+0900_rate_limit_envelope_stale_blob_binding_v1.json`
+- receipt exact-read blob: `56ada4d57c36ef0503f25bbd9fbe8c72deee1f74`
 - LIVE path: `research_workers_clean_g1/long_horizon/phase1/LIVE_RATE_LIMIT_STATE.json`
 - LIVE required/observed blob: `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`
 - current LIVE sequence/generation: `6/3`
-- injected stale sequence/blob coordinate: `5 / 5217ac80d20baad6afd158bd5e39c4b39e9200ff`
-- result: `REJECT_STALE_SEQUENCE_BINDING`
+- injected stale blob coordinate: `5217ac80d20baad6afd158bd5e39c4b39e9200ff`
+- result: `REJECT_STALE_BLOB_BINDING`
 - LIVE mutation issued: `false`
 - retry/backoff resampled: `false`
 - prior plan reactivated: `false`
@@ -44,6 +44,6 @@
 
 ## Exact continuation
 
-Next effect_chain_id: `clean-rate-limit-envelope-stale-blob-binding-v1`.
+Next effect_chain_id: `clean-rate-limit-envelope-current-valid-binding-v1`.
 
-Freshly bootstrap/freeze the four required controls, reconstruct this canonical role branch from the then-current LATEST CAS successor, and persist/exact-read the required preflight before semantic reads. Re-read LIVE only if the continuation still names its exact current sequence, plan_generation and blob. Hold authority branch, current LATEST identity, `state_sequence=6`, and `plan_generation=3` fixed while substituting predecessor LIVE blob `5217ac80d20baad6afd158bd5e39c4b39e9200ff` as the only negative coordinate. Require `REJECT_STALE_BLOB_BINDING` with zero LIVE mutation, no retry/backoff resampling, no prior-plan reactivation, no scheduler mutation and no second leaf. Persist exact result and a nonempty continuation; Phase 1 remains open.
+Freshly bootstrap/freeze the four required controls, reconstruct this canonical role branch from the then-current LATEST CAS successor, and persist/exact-read the required preflight before the leaf. Re-read LIVE only if the continuation still names exact current `state_sequence=6`, `plan_generation=3`, and LIVE blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`. Use those exact current coordinates as the positive control and require `ACCEPT_CURRENT_BINDING` without mutating LIVE, retry/backoff state, plan generation, scheduler, or starting a second leaf. If any coordinate has advanced, persist the exact mismatch and rebind the positive-control child on the next invocation. Phase 1 remains open.
