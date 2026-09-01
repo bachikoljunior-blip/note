@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 89,
+  "semantic_parent_revision": 88,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 33,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "transport_mode": "sha_only_h1_h2_drift_authority_refetched_and_frozen",
+  "frozen_main_sha": "1025d9f39e025a1463c89a81c3f179dd524ee347",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 33,
+    "manifest_blob": "835fc67ea8942346ab04fdc6b04251a5af29bd35",
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 1,
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 26,
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_control_revision": 14,
+    "role_config_revision": 7,
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d"
+  },
+  "parent_latest": {
+    "worker_revision": 88,
+    "blob": "fbb264aa835ecbe9085fdefe035d96358f778420"
+  },
+  "source_scope": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "path": "crates/rmcp/src/task_manager.rs",
+    "blob": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc",
+    "bounded_lines_read": [300, 980]
+  },
+  "slice": "Exact tasks/update/input_required cancellation interaction only.",
+  "finding": {
+    "observation": "In rmcp-v3.1.4 TaskManager::cancel_task, cancellation of a nonterminal task sets cancel_requested=true, signals cancel_signal, clears pending_inputs, touches the task and recomputes status before returning. Because current_status is InputRequired only while pending_inputs is nonempty, cancellation removes the old input_required exposure immediately; before terminal settlement the observable status is Working. Dropping the pending oneshot senders makes parked TaskContext::request_input awaits resolve with TaskExit::Cancelled. The exact cancel_wakes_parked_input_requests test waits for InputRequired, cancels, verifies the parked await is woken, and then observes Cancelled after the operation propagates that error. update_task removes only currently pending keys, so responses for cleared/superseded keys are ignored while the task still exists.",
+    "scope_limit": "The test does not guarantee that an immediate tasks/get after cancel must visibly return Working because the operation may race to a terminal state. What is source-guaranteed for a nonterminal entry at cancel_task return is that the old pending input set has been cleared; therefore the pre-cancel InputRequired payload cannot remain authoritative. Cancellation remains cooperative: an operation may catch the cancellation-derived error and later complete or fail instead of settling Cancelled.",
+    "persistent_restart_rule": "For an application-owned persistent task store, acknowledge cancellation only after durably recording cancel_requested for the stable task identity and atomically invalidating/clearing the currently pending input set (while retaining lifetime-used input keys or an equivalent anti-reuse fence). Every restart claim/redrive and tasks/get must consult that durable cancellation/input state; stale tasks/update responses for invalidated keys must not revive or satisfy old waits. A generation/CAS fence should prevent a pre-cancel attempt from re-publishing superseded pending input after the acknowledgement. Do not force terminal Cancelled merely from the acknowledgement; preserve operation-defined cooperative settlement semantics.",
+    "why_it_matters": "This closes the pending-input cleanup subproblem left by revision 88: cancellation acknowledgement is not only a cancel-intent fence, it also establishes an input-supersession boundary that persistent restart logic must preserve. It does not solve external-effect exactly-once safety or stock TaskManager restart durability."
+  },
+  "acceptance_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_note": "The source audit and repository state transport use no hosted runner, Codespaces, artifact/LFS/package, paid/trial credit, or cloud compute allowance. A complete persistent executor/effect route remains unresolved and therefore is not accepted.",
+    "conflict_check": "CLEAN role-local state plus exact public release source only; no O, other-worker, downstream, legacy, shared-ledger or other-role semantic inputs were read. Scheduler was not mutated."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only freshness freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 and inspect only the exact TaskManager tests/implementation for duplicate, partial, unknown, and already-answered tasks/update inputResponses keys. Pin the smallest durable anti-replay/input-key lifecycle rule that survives cancellation plus restart without making old responses authoritative. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
