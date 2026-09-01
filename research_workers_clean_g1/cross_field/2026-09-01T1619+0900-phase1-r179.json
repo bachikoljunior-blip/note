@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 179,
+  "updated_at": "2026-09-01T16:19:30+09:00",
+  "authority": {
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "desired_revision": 26,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "c294ff499b893f58da2ca70e269217ac21e71c7b",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "frozen_main_commit": "e1febac4d02d8bc747b4f49e091ec9fa0d6dbdef",
+    "transport_mode": "sha_only_exact_sha",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "e09658ddbbf2e011fb93c2d691b48442e67a873c",
+  "slice": "concurrent_immutable_create_and_stale_pointer_cas",
+  "source_evidence": [
+    {
+      "source": "GitHub REST repository contents documentation",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "retrieved_at": "2026-09-01",
+      "claims_used": [
+        "The create-or-update contents endpoint requires the current file sha when updating an existing file.",
+        "The endpoint documents 409 Conflict and 422 validation-failure responses.",
+        "GitHub warns that concurrent content mutations can conflict and should be serialized where applicable."
+      ]
+    }
+  ],
+  "candidate_comparison": [
+    {
+      "candidate": "deterministic immutable key + create-only effect + CAS pointer + next-invocation reconciliation",
+      "expected_completion_time": "short bounded repository round-trip per effect",
+      "success_probability": "high under documented contents semantics; live simultaneous race not proven here",
+      "conflict_duplication_risk": "low if immutable key payload is deterministic and pointer update uses observed sha",
+      "integration_cost": "low",
+      "incremental_monetary_cost": 0,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+      "status": "selected_for_falsifiable_probe"
+    },
+    {
+      "candidate": "blind mutable single-path overwrite",
+      "expected_completion_time": "short",
+      "success_probability": "not sufficient under concurrency",
+      "conflict_duplication_risk": "high: stale writers can clobber semantic progress if overwrite is allowed",
+      "integration_cost": "low",
+      "incremental_monetary_cost": 0,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+      "status": "rejected"
+    },
+    {
+      "candidate": "external lock service / hosted transaction coordinator",
+      "expected_completion_time": "potentially short",
+      "success_probability": "not evaluated because Phase-1 acceptance already fails",
+      "conflict_duplication_risk": "potentially low",
+      "integration_cost": "higher",
+      "incremental_monetary_cost": "not guaranteed zero",
+      "finite_monthly_trial_paid_quota_dependency": true,
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency": true,
+      "status": "disqualified_by_phase1_constraints"
+    }
+  ],
+  "finite_interleaving_model": {
+    "immutable_key_protocol": [
+      "Both writers may read deterministic key K absent.",
+      "Each writer is allowed at most one create-without-sha attempt for K in an invocation; the protocol never calls update on K.",
+      "Because sha is required for an update, a later request without sha is not an authorized replacement of an existing K under the documented API contract.",
+      "A conflict, validation error, or ambiguous transport result is a bounded stop; the next invocation reads K before any further create attempt.",
+      "If K exists and payload matches the deterministic canonical payload, reconcile as already-applied; if it differs, flag an integrity/canonicalization child problem and never overwrite."
+    ],
+    "pointer_protocol": [
+      "A mutable pointer P may be updated only with the exact blob sha observed when P was read.",
+      "If another writer has already changed P, the old sha is stale; the stale update must be treated as a conflict and never retried blindly in-run.",
+      "Next invocation rereads P and either accepts the already-linked immutable child or computes a new child from the fresh parent."
+    ],
+    "proof_obligations": {
+      "no_immutable_overwrite": "Protocol-level: K is create-only; documented API requires sha to update an existing file. A divergent existing K therefore cannot be intentionally replaced by this protocol.",
+      "duplicate_reconciliation": "For equal deterministic payloads, at most one stored K is needed; all later writers converge by read-and-compare after conflict or ambiguity.",
+      "stale_parent_rejection": "Conditional on GitHub's documented sha-checked update semantics, an update carrying a superseded pointer blob sha is not a valid current-file update and is handled as conflict/reconciliation, not overwrite.",
+      "ambiguous_result_safety": "No same-invocation retry occurs; next-run read-at-K converts unknown request outcome into present/equal, present/divergent, or absent before another create."
+    }
+  },
+  "live_probe_precommit": {
+    "path": "research_workers_clean_g1/cross_field/2026-09-01T1619+0900-phase1-r179.json",
+    "test": "After this checkpoint is created, issue exactly one second create_file call to the same existing path with divergent sentinel content and no update sha. PASS only if the duplicate create is rejected and exact readback shows this original checkpoint unchanged. Do not retry the failed create in-run.",
+    "expected_outcome": "conflict_or_validation_failure_without_overwrite"
+  },
+  "tested_scope": "One documented GitHub-contents create/update contract, one same-path duplicate-create live probe on this role-local checkpoint, and a finite two-writer interleaving model. No live simultaneous requests, arbitrary repository backends, hash-collision resistance, or arbitrary canonicalization domains are proven.",
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "qualification": "Lightweight repository API is used only as state/evidence transport; the mechanism does not rely on hosted runners, Codespaces, artifacts/LFS/packages, cloud compute, external model/API credits, or manual user execution."
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized DESIRED_STATE control26/config8, own r178 LATEST, and public GitHub documentation. No O/O-derived state, other-worker state/config/output, downstream state, legacy research, shared execution ledger, other-role receipt, scheduler semantics, or unrelated commit semantics were consumed.",
+  "frontier": [
+    "If the duplicate-create probe rejects and readback is unchanged, separately test stale-pointer CAS rejection in a later invocation without exceeding the one-leaf lifecycle budget.",
+    "Later test whether a strict reject-only canonical-input profile is easier to make end-to-end zero-dependency than transform-and-normalize for arbitrary Unicode/decimal domains."
+  ],
+  "exact_continuation": "Next invocation, bootstrap/freeze authority and reconstruct r179. If r179's duplicate-create result and exact readback are PASS, execute exactly one stale-pointer CAS leaf: create or reuse a role-local test pointer, capture its blob sha, advance it once, then attempt one update with the stale sha and require rejection plus unchanged readback; bound conflicts/ambiguity to next-invocation reconciliation. Preserve the strict reject-only canonical-input alternative for a later leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true
+}
