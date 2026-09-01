@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 90,
+  "semantic_parent_revision": 89,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 33,
+  "lifecycle_control_revision": 1,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap_valid": true,
+  "transport_mode": "sha_only_h1_h2_stable",
+  "frozen_main_sha": "3aedb5416a727cfea20ad5aca70b3f8eada6b4ea",
+  "frozen_authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "835fc67ea8942346ab04fdc6b04251a5af29bd35",
+    "manifest_control_revision": 33,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_control_revision": 14,
+    "role_config_revision": 7
+  },
+  "source_scope": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release": "rmcp-v3.1.4",
+    "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "path": "crates/rmcp/src/task_manager.rs",
+    "blob": "0e8339c0a15c2b2ed32f267728fb4830e37efcdc"
+  },
+  "bounded_leaf": "Inspect only exact TaskManager implementation/tests for duplicate, partial, unknown and already-answered tasks/update inputResponses key behavior; derive the smallest restart-safe anti-replay/input-key lifecycle rule compatible with the prior cancellation finding.",
+  "observations": [
+    "TaskContext::request_input inserts each key into used_input_keys before inserting it into pending_inputs; reusing any key during the in-memory task lifetime is an error.",
+    "TaskManager::update_task sweeps expiry, requires a known task id, then independently removes each supplied key from pending_inputs. Only a removed pending key is delivered to its oneshot sender; absent keys are ignored. Therefore partial response sets are accepted, and duplicate/already-answered/unknown-or-superseded keys on a known task are no-ops.",
+    "An unknown task id is an INVALID_PARAMS error; the exact unit test unknown_task_is_invalid_params covers get/cancel/update. The exact input_required_roundtrip test covers one pending key becoming answered and the task completing.",
+    "The exact test suite in this file does not contain dedicated duplicate-key, partial-update, or already-answered update tests; those three semantics are pinned by the update_task implementation and its source contract, not by dedicated tests. This scope distinction is preserved.",
+    "Because stock pending_inputs contains process-local oneshot senders and used_input_keys is process memory, neither answered-key tombstones nor pending response delivery survive a server restart in stock TaskManager."
+  ],
+  "derived_minimal_durable_rule": {
+    "rule": "Persist a per-task, never-reused input-key record with monotonic states PENDING -> ANSWERED -> APPLIED, plus PENDING -> INVALIDATED for cancellation/supersession. A key record is a lifetime tombstone: request_input must reject every previously created key regardless of terminal substate. tasks/update may atomically change only PENDING to ANSWERED and retain the response payload durably; updates for ANSWERED, APPLIED, INVALIDATED or absent keys on a known task are no-ops. Partial maps apply each key independently. Cancellation must durably change still-PENDING keys to INVALIDATED before acknowledging cancel. Restart may redeliver a durable ANSWERED payload only to the authoritative task attempt/generation; it must never reopen ANSWERED/APPLIED/INVALIDATED as PENDING. APPLIED is recorded only with or after durable operation progress that proves the response no longer needs redelivery.",
+    "why_answered_retains_payload": "A single PENDING->consumed tombstone without the response value loses an accepted response if the process crashes after accepting tasks/update but before the operation durably consumes it. Keeping ANSWERED(response) separates protocol acceptance from operation application and permits restart redelivery without accepting the same client response twice.",
+    "cancellation_ordering_scope": "This preserves the prior exact finding for still-pending inputs: cancel invalidates them before ack so late old responses cannot regain authority. If an update wins the atomic transition first, the key is already ANSWERED and is historical accepted input; later cancellation remains cooperative and must be resolved by the task attempt/generation fence rather than by reopening the key.",
+    "not_proven": [
+      "Stock rmcp does not implement this persistent state machine or restart redelivery.",
+      "This rule alone does not provide persistent task creation, restart execution liveness, or exactly-once external effects.",
+      "No compile/runtime experiment was executed in this slice."
+    ]
+  },
+  "phase1_assessment": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "quota_zero_scope": "This source audit and role-local repository persistence use lightweight read/write transport only; no hosted runner, Codespaces, artifact/LFS/package service, cloud credit, external paid API/model, or finite monthly execution quota is part of the candidate rule. A resident persistent executor/store remains an unresolved dependency for the larger route.",
+    "conflict_check": "CLEAN inputs only: frozen sanitized root, own role config, own LATEST and public exact-release source. No O, other-worker, downstream, legacy, shared-ledger or other-role semantic inputs were read. Scheduler was not mutated."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation only: after fresh manifest/RUN_LIFECYCLE/DESIRED_STATE/open_source bootstrap and SHA-only H1/H2 freeze, remain on modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056. Inspect only the exact server dispatch/model path that maps tasks/update inputResponses into TaskManager::update_task and returns the wire acknowledgement, including behavior for a known terminal task. Pin whether the wire layer adds any validation or terminal-task rejection beyond TaskManager's no-op-per-absent-key behavior. Do not inspect restart executor logic, do not compile, do not start effects, and do not start a second leaf."
+}
