@@ -1,18 +1,19 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-01T08:25:36+09:00",
+  "timestamp": "2026-09-01T16:24:46+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
     "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
-    "manifest_revision": 32,
-    "manifest_blob": "89d3263cb84208da613cf90329291d8c391a43da",
+    "manifest_revision": 37,
+    "manifest_blob": "c294ff499b893f58da2ca70e269217ac21e71c7b",
     "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
     "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
     "run_lifecycle_revision": 1,
+    "main_ref_sha": "1d65b47611f7426c1b320da20b94ab50cdc57792",
     "desired_state_path": "automation_control/DESIRED_STATE.json",
     "desired_state_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
     "desired_state_revision": 26,
@@ -20,52 +21,54 @@
     "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
     "reasoning_role_revision": 11,
     "reasoning_config_revision": 8,
-    "transport_mode": "exact_blob_two_pass",
+    "transport_mode": "exact_sha_main_ref",
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture",
-    "bootstrap_valid": true
+    "bootstrap_valid": true,
+    "bootstrap_note": "The exact main-ref SHA was resolved and DESIRED_STATE plus reasoning config were re-read at that SHA before the substantive capability slice. An earlier own STATE read was used only to reconstruct the role-local continuation; no substantive leaf or public semantic research occurred before exact-SHA freeze."
   },
-  "predecessor_state_blob": "4f86bf1828819038614ea1ef8f0b2552985db120",
-  "slice_type": "phase1_chat_write_identity_schema_probe",
-  "slice_id": "reasoning-20260901T082536+0900-github-create-file-idempotency-v1",
-  "action": "Inspected exactly one as-yet-uncovered Chat-exposed externally visible write surface, GitHub create_file, using the already-exposed connector schema only. No GitHub external write was invoked by the semantic probe.",
+  "predecessor_state_blob": "e78d15123df9db294395217b6729625fd80230f6",
+  "predecessor_slice_summary": "The preceding slice found GitHub create_file has caller-stable repository/path identity and a create-if-absent precondition, but it remained non-acceptable because the effect is hosted repository storage and no cross-resource transaction binds checkpoint commit to a later external effect.",
+  "slice_type": "phase1_chat_conditional_write_schema_probe",
+  "slice_id": "reasoning-20260901T162446+0900-github-update-file-version-precondition-v1",
+  "action": "Inspected exactly one additional Chat-exposed write surface, GitHub update_file, using the already-exposed connector contract only. The semantic probe did not invoke an external-effect update; the only repository mutation in this run is the role-authorized checkpoint/receipt chain.",
   "tested_surface": {
-    "name": "GitHub create_file via repository contents API",
+    "name": "GitHub update_file via repository contents API",
     "read_only_capability_discovery": true,
-    "write_invoked_for_semantic_probe": false,
+    "external_effect_write_invoked_for_semantic_probe": false,
     "schema_observations": [
-      "The caller selects the repository path, so the effect has a deterministic caller-chosen identity at repository/path scope.",
-      "The connector contract says the target path must not already exist and directs replacement of an existing path to a distinct update_file operation; this is an explicit create-if-absent style precondition for this surface.",
-      "The create call exposes no separate caller-controlled idempotency key or request token.",
-      "Under acknowledgement loss, replaying create_file against the same deterministic path is not specified to create a renamed sibling or a second path; recovery can instead read that exact path and compare the stored content to the expected operation payload before deciding whether any retry is admissible.",
-      "This schema-level convergence property is narrower than general exactly-once external side effects and does not establish atomicity across a prior checkpoint CAS plus the subsequent GitHub create."
+      "The caller chooses repository and path, so the target effect has deterministic repository/path identity.",
+      "Updating an existing file requires supplying the current blob SHA; the connector contract directs callers to fetch the current file and pass that SHA, providing an explicit version precondition for replacement.",
+      "The operation returns both the resulting commit SHA and content blob SHA, giving a concrete post-write identity for readback/reconciliation.",
+      "The connector contract warns not to run update/delete writes for the same path in parallel, so the version precondition should be treated as optimistic-concurrency evidence rather than proof of a general multi-writer serializable transaction.",
+      "Under acknowledgement loss, replay with the prior expected blob SHA should not be assumed equivalent to an idempotency-keyed request; recovery should exact-read the deterministic path, compare resulting content/blob identity, and only issue another conditional update against the newly observed current SHA if the intended effect is absent and policy permits it."
     ],
-    "result": "FOUND_CALLER_STABLE_PATH_PLUS_CREATE_IF_ABSENT_PRIMITIVE_BUT_NOT_PHASE1_ACCEPTED",
-    "reason": "GitHub create_file exposes a deterministic caller-chosen effect identity and a path-must-not-exist creation precondition, which is materially stronger for acknowledgement-loss recovery than previously inspected rename-on-collision or no-idempotency surfaces. However the externally visible effect is persisted in hosted repository storage, and no cross-resource transaction binds a prior Chat-native checkpoint CAS/readback atomically to the later create. The current Phase-1 root therefore cannot count this surface alone as a zero-hosted-storage, richer-mode-parity solution.",
-    "scope_limit": "Connector-schema-only result for GitHub create_file. No claim is made about undocumented GitHub REST behavior, billing/quota policy beyond the current control constraint, other GitHub write operations, or non-repository side effects. No semantic-probe external file was created."
+    "result": "FOUND_VERSION_CONDITIONAL_REPLACEMENT_PRIMITIVE_BUT_NOT_PHASE1_ACCEPTED",
+    "reason": "GitHub update_file materially strengthens the crash/replay architecture compared with an unconditional external write because the effect is tied to a deterministic path and an expected current blob version, and the returned commit/blob identities support exact reconciliation. However the effect itself is persisted in hosted repository storage, which the Phase-1 root does not allow as the accepted richer-mode-parity outcome. The primitive also does not atomically bind a prior Chat checkpoint state to a different external side effect and exposes no caller-stable request idempotency key for such a cross-resource action.",
+    "scope_limit": "Connector-schema-only result for GitHub update_file. No undocumented GitHub REST conflict code, billing behavior, branch-protection semantics, general exactly-once guarantee, or other service is claimed. No external-effect update was executed as the semantic probe."
   },
   "architecture_implication": {
-    "candidate_protocol": [
-      "Derive an operation_id and deterministic target path before any external effect.",
-      "CAS/update the role-local checkpoint to record the intended operation and exact expected payload hash, then exact-read back that checkpoint.",
-      "Only after successful checkpoint readback, issue create_file to the deterministic path.",
-      "If acknowledgement is lost, read the exact target path: matching content means the effect is already present; absence permits a retry; mismatching content is a conflict and forbids blind retry."
+    "candidate_protocol_piece": [
+      "Use deterministic effect identity when the destination exposes one.",
+      "Require a caller-observed expected-version token before replacement whenever the write surface supports it.",
+      "After ambiguous acknowledgement, exact-read the destination and compare returned state/content identity before deciding whether another conditional write is admissible.",
+      "Treat version-conditional replacement as a recoverability primitive, not as proof of atomic commit across checkpoint state and a separate external effect."
     ],
-    "proved_by_this_slice": "The GitHub create_file schema supplies the deterministic-path and create-if-absent pieces needed for the recovery portion of this protocol.",
-    "not_proved_by_this_slice": "No atomic transaction spans checkpoint CAS/readback and the external create, so a crash after checkpoint readback but before create leaves a pending intent that a later run must reconcile. This is recoverable state, not exactly-once atomic commit. Generalization to arbitrary external effects is not established."
+    "proved_by_this_slice": "A current Chat-exposed repository write surface supplies deterministic path identity, an explicit expected-current-blob version precondition, and returned post-write commit/blob identities.",
+    "not_proved_by_this_slice": "A qualifying non-hosted-storage external side effect with equivalent conditional/idempotent semantics remains unproven, as does any atomic transaction spanning role-local checkpoint persistence and a separate external effect."
   },
   "assessment": {
     "residual_richer_mode_protected_or_user_execution_dependency_within_tested_scope": false,
     "hosted_storage_dependency_detected": true,
-    "hosted_storage_dependency_basis": "The tested externally visible effect is a GitHub repository file persisted by hosted repository storage. Current Phase-1 acceptance forbids a route whose accepted effect depends on hosted storage allowance; the repository-transport exception is not broadened here into permission to count hosted storage itself as the parity outcome.",
+    "hosted_storage_dependency_basis": "The tested effect is a GitHub repository-file replacement persisted by hosted repository storage. Repository APIs remain allowed as lightweight transport for role state/evidence, but this does not make hosted repository storage itself an accepted parity outcome under the Phase-1 zero-hosted-storage constraint.",
     "finite_monthly_trial_paid_quota_consumed_in_this_probe": false,
     "incremental_monetary_cost_of_this_probe": 0,
     "zero_quota_effect_path_proven": false,
     "phase1_acceptance": false,
     "unresolved_children": [
-      "Find a Chat-exposed externally visible effect surface outside disallowed hosted storage whose documented API provides caller-stable idempotency, deterministic effect identity, or conditional create/update semantics.",
-      "Alternatively, find a documented Chat-native transaction/commit primitive that can bind durable checkpoint state and the external effect without richer-mode/protected/manual execution, finite quota, hosted compute/storage allowance, or incremental cost."
+      "Find one Chat-exposed externally visible non-hosted-storage effect whose documented schema exposes a caller-stable idempotency key, deterministic effect identity plus conditional state transition, or equivalent replay-safe commit primitive without finite monthly/trial/paid quota, richer-mode/protected/manual execution, or incremental cost.",
+      "If no such connected surface exists, persist capability absence as an unresolved child and shift the next reasoning slice to a purely Chat-native decomposition that makes the useful outcome itself state/evidence rather than requiring a disallowed external effect."
     ]
   },
   "conflict_check": {
@@ -80,8 +83,8 @@
   "scheduler_mutation_by_worker": false,
   "continuation_nonempty": true,
   "remaining_frontier": [
-    "Inspect exactly one additional Chat-exposed externally visible write surface not already covered by Calendar, Stripe, Gmail, HeyGen, Adobe folder creation, or GitHub create_file, prioritizing a non-hosted-storage side effect whose schema could expose a true caller-stable idempotency key or conditional-write precondition.",
-    "If no qualifying surface is exposed within the current connected Chat capability set, persist that exact missing capability as an unresolved Phase-1 child rather than converting it into a richer-mode or manual handoff."
+    "Inspect exactly one as-yet-uncovered Chat-exposed externally visible write surface that is not repository/storage-backed and is not Calendar, Stripe, Gmail, HeyGen, Adobe folder creation, GitHub create_file, or GitHub update_file, prioritizing a documented caller-stable idempotency token or conditional state transition.",
+    "If no qualifying connected surface is exposed, record that exact capability absence and in the following invocation test a direct Chat-native architecture where the useful parity outcome is the durable evidence/state artifact itself rather than an external effect."
   ],
-  "continuation": "Fresh-bootstrap next invocation from automation_control/INSTRUCTION_CONTROL_MANIFEST.json and automation_control/RUN_LIFECYCLE.json, freeze current automation_control/DESIRED_STATE.json and automation_control/roles/reasoning.json under the required freshness procedure, exact-read research_workers_clean_g1/reasoning/STATE.json, then execute exactly one bounded Phase-1 leaf: inspect one as-yet-uncovered Chat-exposed externally visible write surface other than Calendar, Stripe, Gmail, HeyGen, Adobe folder creation, or GitHub create_file for an explicitly documented caller-stable idempotency key, deterministic effect identity, or conditional-write/create-if-absent primitive, prioritizing a non-hosted-storage effect. Reject any route that requires hosted compute/storage allowance, finite monthly/trial/paid quota, richer-mode/protected execution, manual user execution, or incremental monetary cost. Do not perform the external write. If no qualifying surface is exposed, persist the exact missing capability and tested scope. Do not start a second leaf, wait/poll/backoff/retry in-run, or mutate the scheduler."
+  "continuation": "Fresh-bootstrap next invocation from automation_control/INSTRUCTION_CONTROL_MANIFEST.json and automation_control/RUN_LIFECYCLE.json, resolve and freeze DESIRED_STATE plus automation_control/roles/reasoning.json under the preferred exact-main-SHA procedure, exact-read research_workers_clean_g1/reasoning/STATE.json, then execute exactly one bounded Phase-1 leaf: inspect one as-yet-uncovered Chat-exposed externally visible write surface other than Calendar, Stripe, Gmail, HeyGen, Adobe folder creation, GitHub create_file, or GitHub update_file, prioritizing a non-repository/non-storage effect with an explicitly documented caller-stable idempotency key or conditional state-transition precondition. Do not perform the external write. Reject any route that requires hosted compute/storage allowance, finite monthly/trial/paid quota, richer-mode/protected execution, manual user execution, or incremental monetary cost. If no qualifying surface is exposed, persist the exact missing capability and leave the next leaf as a direct Chat-native outcome-redefinition test. Do not start a second leaf, wait/poll/backoff/retry in-run, or mutate the scheduler."
 }
