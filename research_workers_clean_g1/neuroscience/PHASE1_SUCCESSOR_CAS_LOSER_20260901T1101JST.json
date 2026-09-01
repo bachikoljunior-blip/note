@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/PHASE1_PREFLIGHT_CAS_LOSER_20260901T1100JST.json",
+  "preflight_blob": "c13e520082deae1187502a43a97316dcf3c27c48",
+  "predecessor_latest_blob": "28a816cff12810097f1088911200402a20a020ad",
+  "effect_chain_id": "neuroscience-phase1-successor-cas-loser-v1",
+  "probe_type": "deterministic adversarial two-writer state-machine counterexample",
+  "tested_scope": {
+    "writers": 2,
+    "shared_predecessor": true,
+    "single_logical_effect": true,
+    "successor_key_derivation": "deterministic from predecessor next_effect_key",
+    "transport": "immutable exact-path repository state transport",
+    "external_side_effects_executed": false,
+    "transient_visibility_failure_tested": false,
+    "winner_crash_after_claim_tested": false
+  },
+  "candidate_under_test": "Execute effect first, then let both writers CAS/create the same successor receipt; CAS loser reads winner and avoids replay on later reconstruction.",
+  "adversarial_trace": [
+    "A and B both reconstruct predecessor P and derive the same logical effect id E and successor path S(E).",
+    "A executes logical effect E before S(E) exists.",
+    "B also executes logical effect E before S(E) exists.",
+    "A creates S(E) successfully.",
+    "B loses the create/CAS race, reads A's valid S(E), and stops.",
+    "Final repository state has one canonical successor but the logical effect executed twice."
+  ],
+  "result": "falsified",
+  "falsification": "Final-successor CAS performed after effect execution is too late to guarantee zero duplicate logical effects. A unique canonical receipt does not imply unique execution.",
+  "revision": {
+    "name": "deterministic pre-effect claim barrier",
+    "effect_id": "H(predecessor_blob || next_effect_key || assignment_task_id)",
+    "claim_path": "role-local immutable exact path derived solely from effect_id",
+    "protocol": [
+      "Each writer reconstructs P and derives the same effect_id and claim_path.",
+      "Before executing the logical effect, each writer attempts create-if-absent of claim_path.",
+      "Exactly one successful creator becomes the only writer authorized to execute the effect.",
+      "A create/CAS loser reads the existing claim, validates predecessor_blob/effect_id/task binding, and returns without executing or replaying the effect.",
+      "The winner executes once, writes the artifact and successor terminal receipt bound to the claim, then advances LATEST by guarded update."
+    ],
+    "zero_duplicate_property_in_tested_model": true,
+    "reason": "All executions are dominated by a single create-if-absent claim event; the losing writer is excluded before the effect boundary rather than after it."
+  },
+  "ordering_checks": {
+    "A_claims_first": "one authorized executor A; B performs zero effect executions",
+    "B_claims_first": "one authorized executor B; A performs zero effect executions",
+    "post_effect_final_CAS_candidate": "two executions possible before one canonical successor is selected"
+  },
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded exact-path claim/state/evidence transport only; no hosted compute",
+    "phase1_acceptance_status": "open_not_yet_accepted",
+    "open_reason": "Crash-after-claim and transient exact-path visibility have not yet been shown to recover without duplicate execution or false completion."
+  },
+  "base_continuation_preserved": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "exact_next_action": "On the next valid invocation, test one winner-crash-after-claim interleaving for the deterministic pre-effect claim barrier. Require no second executor to run without a role-local recovery certificate, no ambiguous missing-path read to count as completion, and preserve the still-untested transient exact-path-not-visible case as the following continuation. Persist/read back one bounded result and stop."
+}
