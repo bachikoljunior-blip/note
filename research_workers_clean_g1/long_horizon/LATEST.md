@@ -12,25 +12,25 @@
 
 ## Frozen controls
 
-- INSTRUCTION_CONTROL_MANIFEST: control_revision `33`, blob `835fc67ea8942346ab04fdc6b04251a5af29bd35`
+- INSTRUCTION_CONTROL_MANIFEST: control_revision `34`, blob `b0491590a7bc4c33a44931427d53632032143efa`
 - RUN_LIFECYCLE: control_revision `1`, blob `8fe5d79365dcd943984d69f4767b2ed0c03fc3ac`
 - DESIRED_STATE: control_revision `26`, blob `481660fb6008a57cea162da38439cf115c8d7ebe`
 - long_horizon role config: control_revision `17`, config_revision `8`, blob `d790db45343bec399d00c6e9410432963726d72c`
 
 ## Current bounded slice
 
-- effect_chain_id: `clean-rate-limit-envelope-live-blob-binding-v1`
-- predecessor LATEST blob consumed: `bddaab342a7a3c27dabd2d71caa9d46cecba7e42`
-- preflight: `research_workers_clean_g1/long_horizon/preflight/20260901T1220JST_live_blob_binding_preflight.json`
-- preflight blob: `e44bbf67b660cec8280f22b93daf03367cca7a97`
-- checkpoint: `research_workers_clean_g1/long_horizon/checkpoints/20260901T1221JST_live_blob_binding_result.json`
-- checkpoint blob: `e1294feaf89f9915c4ab7d6a91a4f7137437653d`
+- effect_chain_id: `clean-rate-limit-envelope-canonical-branch-binding-v1`
+- predecessor LATEST blob consumed: `09868d87b17c3d963abf4af8cc7be2b34921558a`
+- preflight: `research_workers_clean_g1/long_horizon/preflight/20260901T1320JST_canonical_branch_binding_preflight.json`
+- preflight blob: `1f2b56dd9063476fea5758ad66d65490b47b7cd6`
+- checkpoint: `research_workers_clean_g1/long_horizon/checkpoints/20260901T1321JST_canonical_branch_binding_result.json`
+- checkpoint blob: `817a9e890aa64aabd67ce43c616caf9152ac8cf1`
 - canonical branch: `clean-long-horizon-phase1-active`
 - authority-file blob: `dd9eb6a591f643e8653c61e5469a0805be54f3fe`
 - plan_generation: `3`
 - LIVE blob before/after: `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`
-- stale predecessor LIVE blob tested: `5217ac80d20baad6afd158bd5e39c4b39e9200ff`
-- result: stale LIVE identity -> `REJECT_STALE_LIVE_BLOB`; exact current LIVE identity -> `ADMIT_CURRENT_CONTINUATION`
+- synthetic noncanonical branch tested: `clean-long-horizon-phase1-shadow`
+- result: noncanonical branch -> `REJECT_NONCANONICAL_BRANCH`; exact canonical branch -> `ADMIT_CURRENT_CONTINUATION`
 - durable LIVE mutated: `false`
 - same-run wait/poll: `false`
 - same-run retry: `false`
@@ -40,6 +40,6 @@
 
 ## Exact continuation
 
-Next effect_chain_id: `clean-rate-limit-envelope-canonical-branch-binding-v1`.
+Next effect_chain_id: `clean-rate-limit-envelope-authority-blob-binding-v1`.
 
-Freshly bootstrap/freeze the four required controls; reconstruct the canonical role branch authority, then-current LATEST pointer and unchanged generation-3 LIVE state. In exactly one bounded in-memory envelope control, hold authority-file blob, plan_generation=3, current LIVE blob and current LATEST blob fixed; supply an otherwise-current envelope carrying a synthetic noncanonical branch identity and require `REJECT_NONCANONICAL_BRANCH`, while the exact canonical branch `clean-long-horizon-phase1-active` is admitted. Verify LIVE unchanged; persist/read back and return recurring-open. Do not read another worker or archival substantive state, wait, poll, retry, mutate scheduler, or start a second leaf.
+Freshly bootstrap/freeze the four required controls; reconstruct the canonical role branch authority, then-current LATEST pointer and unchanged generation-3 LIVE state. In exactly one bounded in-memory envelope control, hold canonical branch, plan_generation=3, current LIVE blob and current LATEST blob fixed; supply an otherwise-current envelope carrying a synthetic stale or mismatched authority-file blob and require `REJECT_STALE_AUTHORITY_BLOB`, while the exact current authority-file blob is admitted. Verify LIVE unchanged; persist/read back and return recurring-open. Do not read another worker or archival substantive state, wait, poll, retry, mutate scheduler, or start a second leaf.
