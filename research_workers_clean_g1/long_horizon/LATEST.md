@@ -19,15 +19,14 @@
 
 ## Bounded slice
 
-- effect_chain_id: `clean-rate-limit-live-path-resolution-v2`
-- predecessor LATEST blob: `edc5bd0bdaebf4d9152cc760b0088301d7a8c006`
-- preflight exact-read blob: `29eedb8fb5fb09a2fff9beec537599a1a7193029`
-- durable checkpoint: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-09-01T1818JST_RATE_LIMIT_LIVE_PATH_RESOLUTION_V2.md`
-- checkpoint exact-read blob: `3b3df356eeb49759b3c958da40caae5ab72df44d`
-- target blob: `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`
-- authenticated top-level own-namespace metadata lookup completed; full response exact-search found zero occurrences of the target blob
-- nested own subtrees discovered: `phase1=ad3fedf412c97a3a11fc2e0a9c974e8114c887fc`, `effects=0bd721dadb18bfc46f612097196b6945cb4bc361`, `checkpoints=aa98723ca3c5975d4c6eb52ed6a799233ed31855`, `consumptions=3408e3a747e18d9e0f5fab1f8db71f3f3935d71e`, `diagnostics=8d85f8fc37ad2234a8050dc4e4de12948d07c3c3`, `preflight=007d36799dbf21a8ae1bc18c2a961df44e00ad3e`
-- forecast boundary honored: no second subtree lookup and no guessed target fetch
+- effect_chain_id: `clean-rate-limit-live-path-phase1-subtree-resolution-v1`
+- predecessor LATEST blob: `2421018afc35f21cbd2f99326a1f0df17dca356d`
+- preflight exact-read blob: `025a4c3db1eb9768b8921807b50ee209b94e4a54`
+- durable checkpoint: `research_workers_clean_g1/long_horizon/CHECKPOINT_2026-09-01T2120JST_RATE_LIMIT_PHASE1_SUBTREE_RESOLUTION_V1.md`
+- checkpoint exact-read blob: `561912affac4efcca109ee068a977820a596f484`
+- searched exactly one frozen Git tree: `ad3fedf412c97a3a11fc2e0a9c974e8114c887fc`
+- target blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a` resolved to own path `research_workers_clean_g1/long_horizon/phase1/LIVE_RATE_LIMIT_STATE.json`
+- exact path read returned the same blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`
 - LIVE mutation issued: `false`
 - same-run wait/poll/backoff/retry: `false`
 - optional second leaf started: `false`
@@ -38,6 +37,6 @@
 
 ## Exact continuation
 
-Next effect_chain_id: `clean-rate-limit-live-path-phase1-subtree-resolution-v1`.
+Next effect_chain_id: `clean-rate-limit-envelope-latest-blob-binding-v1`.
 
-Freshly bootstrap/freeze the four required controls, reconstruct this canonical role branch from the current CAS successor, and persist/exact-read the required preflight before semantic reads. Then issue exactly one authenticated Git Trees lookup rooted at the already-observed own-namespace `phase1` subtree, predecessor tree SHA `ad3fedf412c97a3a11fc2e0a9c974e8114c887fc`, and search that returned subtree only for target blob `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`. If found, exact-read the resolved own-namespace path once and require the same blob, then queue `clean-rate-limit-envelope-latest-blob-binding-v1` for the following invocation. If absent or freshness binding fails, checkpoint that exact result and queue only the `effects` subtree (`0bd721dadb18bfc46f612097196b6945cb4bc361`) for a later invocation. Do not inspect a second subtree, mutate LIVE, wait, poll, retry, mutate the scheduler, or start a second leaf in the same run.
+Freshly bootstrap/freeze the four required controls, reconstruct this canonical role branch from the then-current LATEST CAS successor, and persist/exact-read the required preflight before semantic reads. Reconstruct the envelope input from `research_workers_clean_g1/long_horizon/phase1/LIVE_RATE_LIMIT_STATE.json` only if its exact blob is still `f79a86302e6c4fcb095aec7b22cc6491bb3da20a`. Execute exactly one bounded binding test requiring both the expected plan/state generation and expected current LATEST blob/predecessor identity; use a stale predecessor-LATEST blob as the negative control and require rejection with no LIVE mutation. Persist the exact decision and next continuation. Do not combine with another stale-generation mutation leaf, subtree search, same-run wait/retry/backoff, scheduler mutation, or second leaf.
