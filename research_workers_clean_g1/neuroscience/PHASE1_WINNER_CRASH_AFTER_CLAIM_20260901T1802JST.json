@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "updated_at": "2026-09-01T18:02:10+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-winner-crash-after-claim-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/PHASE1_PREFLIGHT_WINNER_CRASH_20260901T1801JST.json",
+  "preflight_blob": "3b27784b5686337d7be02efbb50143b218a9f752",
+  "predecessor_latest_blob": "c49fd9613c824b401d1867b6491ed4ac67860a28",
+  "candidate_mechanism": "Deterministic pre-effect claim barrier keyed by H(predecessor_blob || next_effect_key || assignment_task_id), with create-if-absent claim before effect and later canonical successor/terminal receipt.",
+  "tested_scope": {
+    "writers": 2,
+    "effect_type": "non-idempotent or externally visible logical effect whose completion is not atomically committed with the role-local claim",
+    "failure_point": "winner crashes after durable claim creation, either immediately before the effect or immediately after the effect but before durable successor/terminal evidence",
+    "observer": "second recurring Chat invocation sees only role-local durable claim plus absence of successor",
+    "not_tested": [
+      "transient exact-path claim invisibility",
+      "idempotent effect keyed by claim_id",
+      "atomic effect-as-repository-create/CAS",
+      "lease or timeout policies under delayed visibility"
+    ]
+  },
+  "deterministic_probe": {
+    "history_A": {
+      "steps": ["writer1 creates claim C", "writer1 crashes before effect E"],
+      "durable_observation_for_writer2": ["C present", "successor absent"]
+    },
+    "history_B": {
+      "steps": ["writer1 creates claim C", "writer1 executes non-idempotent effect E", "writer1 crashes before successor"],
+      "durable_observation_for_writer2": ["C present", "successor absent"]
+    },
+    "indistinguishability": true,
+    "recovery_rule_cases": [
+      {
+        "rule": "writer2 executes E because successor is absent",
+        "history_A": "liveness recovered",
+        "history_B": "duplicate effect; at-most-once violated"
+      },
+      {
+        "rule": "writer2 never executes E while claim C exists",
+        "history_A": "effect can remain permanently missing; recovery liveness violated",
+        "history_B": "at-most-once preserved"
+      }
+    ],
+    "result": "falsified_for_tested_scope"
+  },
+  "finding": "A pre-effect claim barrier alone removes the two-writer pre-execution race but cannot simultaneously guarantee at-most-once execution and crash recovery for a non-idempotent effect when claim creation and effect completion are not one atomic durable operation. Crash-before-effect and effect-then-crash are observationally identical to the next invocation if only the claim and missing successor are available.",
+  "revision": "Treat the claim as admission only, not as an exactly-once certificate. For positive Phase-1 use, require the effect itself to be replay-safe under the deterministic claim_id (idempotent/deduplicated), or make the durable repository CAS/create keyed by claim_id be the effect/commit boundary. A timeout/lease by itself does not resolve the indistinguishability.",
+  "recovery_certificate_requirement": "No second executor may run a non-idempotent effect after observing an existing claim unless role-local durable evidence proves the prior effect cannot have occurred. In the tested claim-only state such a certificate is unavailable, so the mechanism remains unresolved for non-idempotent effects.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded exact-path role-local state/evidence transport only; no hosted compute",
+    "phase1_acceptance": false,
+    "reason": "winner-crash ambiguity remains unresolved for non-idempotent effects"
+  },
+  "scope_guard": "This falsification applies only when claim creation and effect completion are not atomic and the effect is not replay-safe. It does not falsify claim+idempotent-effect or atomic effect-commit designs.",
+  "base_continuation_preserved": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_continuation": "On the next valid invocation, test exactly one transient exact-path-not-visible interleaving for the deterministic claim path: a real claim exists but one read returns missing/unavailable. Require that a single ambiguous miss never authorizes effect execution or completion, define the smallest zero-quota role-local read/visibility certificate that safely distinguishes confirmed absence from transient non-observation, and preserve claim+idempotent-effect crash recovery as the subsequent unresolved child. Persist/read back one bounded result and stop."
+}
