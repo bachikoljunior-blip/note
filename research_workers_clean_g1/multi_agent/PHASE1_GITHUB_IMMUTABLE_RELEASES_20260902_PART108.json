@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "recorded_at": "2026-09-02T12:30:25+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "part108-github-immutable-release-transition-tombstone",
+  "semantic_config_snapshot": {
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 50,
+    "instruction_manifest_blob": "992b017c9d2953f936f728b403fd9eb27917997d",
+    "transport_mode": "sha_only_exact_sha",
+    "main_sha_at_freeze": "2d2c749107d73ae35e78c3066928c0da79491b94",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-02T123025+0900_presemantic_liveness_witness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_GITHUB_PULL_REFS_20260902_PART107.json",
+  "scope": "One bounded official-GitHub public-source audit of immutable releases as a service-side anti-rollback witness for deterministic generation transitions coupled to repository Contents-CAS publication. No repository release/tag/settings mutation was performed.",
+  "official_sources": [
+    {
+      "url": "https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases",
+      "observed": "For a published immutable release, the associated Git tag is locked to a specific commit and cannot be moved. While the release exists the tag cannot be deleted. If the immutable release is deleted, the tag can then be deleted, but the same tag name cannot be reused. GitHub explicitly states that this non-reuse also protects against repository resurrection after delete/recreate. An immutable release also automatically generates a release attestation binding tag, commit SHA and release assets."
+    },
+    {
+      "url": "https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/establish-provenance-and-integrity/prevent-release-changes",
+      "observed": "Release immutability is enabled at repository or organization settings and applies only to future releases."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observed": "GitHub exposes enable, disable and status-check endpoints for immutable releases; repository admin permission is required for enable/disable."
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository",
+      "observed": "People with repository write access can delete releases. After publication under immutable-release policy, only title and release notes are editable; immutable assets/tag are protected as described by the immutable-release contract."
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases",
+      "observed": "A release may have up to 1000 assets, each below 2 GiB, and GitHub documents no limit on total release size or release bandwidth. This leaf uses a no-user-asset release, so asset storage/bandwidth is not part of the proposed witness."
+    }
+  ],
+  "bounded_trace_model": [
+    {
+      "case": "fresh_release_then_cas",
+      "trace": "Create/publish immutable release with deterministic transition tag T bound to proposal commit P; confirm it; then CAS the authority object from expected parent to P.",
+      "result": "safe_candidate_ordering",
+      "reason": "Authority publication is never attempted before the server-side non-rebindable witness exists."
+    },
+    {
+      "case": "release_success_response_lost",
+      "trace": "Release creation may have committed but response is lost before local acknowledgement.",
+      "result": "reconcilable_when_release_is_still_discoverable; otherwise fail_closed",
+      "reason": "GET-by-tag can reconcile a present release. If the release was deleted, GitHub documents that the immutable tag name cannot be reused, so recreating the same transition cannot silently bind T to a different commit; however this leaf did not find a documented machine-distinguishable tombstone lookup/status for the deleted-release case."
+    },
+    {
+      "case": "release_success_cas_conflict",
+      "trace": "Immutable release T is published, but the subsequent Contents-CAS loses to another authority transition.",
+      "result": "safety_preserved_with_orphan_witness",
+      "reason": "T is burned without authority publication. This is an availability/namespace-retention cost, not duplicate authoritative publication. The protocol must not delete-and-reuse T because GitHub forbids reuse."
+    },
+    {
+      "case": "cas_before_release",
+      "trace": "Authority object is advanced before immutable release publication.",
+      "result": "rejected",
+      "reason": "A crash or release failure can leave a generation published with no rollback witness."
+    },
+    {
+      "case": "history_rollback_after_success",
+      "trace": "T and authority generation G+1 were published, repository history/state later rolls back to G, and a stateless invocation deterministically attempts T again for the same G->G+1 transition.",
+      "result": "strong_positive_anti_aba_signal",
+      "reason": "GitHub documents that an immutable release tag name cannot be reused even after release deletion and even after repository delete/recreate, so the stale world cannot silently recreate T on another commit."
+    },
+    {
+      "case": "release_deleted_then_tag_deleted",
+      "trace": "A writer deletes the immutable release and then deletes its tag; later stale state attempts the same transition tag T.",
+      "result": "non_rebindable_but_readback_semantics_incomplete",
+      "reason": "The documented no-reuse rule preserves anti-ABA, but the public documentation retrieved in this leaf does not specify a dedicated tombstone read API or exact REST conflict classification for a deleted immutable tag name."
+    },
+    {
+      "case": "immutability_disabled_after_witness",
+      "trace": "Repository admin disables immutable releases after T was published.",
+      "result": "unresolved_scope",
+      "reason": "Docs expose disablement and say enablement applies to future releases, but this bounded source set did not explicitly state the persistence semantics of previously immutable release/tag tombstones after disablement. Do not generalize."
+    },
+    {
+      "case": "repository_delete_recreate",
+      "trace": "Repository containing T is deleted and a repository with the same name is recreated.",
+      "result": "documented_positive",
+      "reason": "GitHub explicitly states that tag names associated with immutable releases in the original repository cannot be reused in the resurrected repository."
+    }
+  ],
+  "findings": {
+    "stronger_than_part107": true,
+    "new_positive": "Immutable-release tag-name non-reuse is a documented GitHub service-side anti-ABA property that survives release deletion and repository resurrection; unlike refs/pull/N/head, the accepted tag identity cannot be rebound to a different commit.",
+    "safe_protocol_shape": "Use deterministic transition tag T as a release-first reservation/tombstone, confirm the immutable release, then perform Contents-CAS publication. Never use CAS-first ordering. On ambiguous release creation, reconcile by tag when possible and otherwise fail closed rather than choosing a new meaning for T.",
+    "remaining_dual_write_issue": "Release-first removes the unsafe missing-witness publication case but can leave orphan burned tags when CAS fails. That is safe but not atomic and requires explicit orphan accounting. CAS-first remains unsafe.",
+    "discoverability_gap": "The documented permanent non-reuse rule is stronger than ordinary tag immutability, but this leaf did not find a service API that directly returns a deleted immutable-tag tombstone or a documented exact error code proving that a failed recreate is specifically prior immutable-tag reuse rather than another validation conflict.",
+    "disablement_gap": "The retrieved docs do not explicitly prove that previously immutable release/tag tombstones retain their exact guarantees after repository-level immutability is disabled.",
+    "release_mutability_scope": "Title and notes remain editable; therefore witness identity must be derived only from immutable tag/commit/attestation fields, never mutable release text.",
+    "accepted_zero_dependency_candidate_found": false,
+    "minimal_unresolved_child": "Prove a machine-checkable, quota-zero reconciliation path for an immutable transition tag after the release object is deleted or immutability is disabled: either a documented tombstone/read error with stable semantics, or the automatically generated release attestation as a separately discoverable durable witness."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "release_asset_quota_dependency": false,
+    "rate_limit_dependency": "ordinary repository/API rate limits only; protocol must checkpoint and retry next invocation rather than use API volume as compute",
+    "plan_availability_for_immutable_releases_universally_proven": false,
+    "quota_zero_acceptance_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false,
+    "scope_note": "No paid compute, Actions, Codespaces, package, LFS or external coordinator is introduced. Because this bounded source set did not establish universal plan availability and did not close deleted-release tombstone readback semantics, the candidate is not Phase-1 accepted."
+  },
+  "observation_inference_boundary": {
+    "observed": "Tag lock/non-reuse and repository-resurrection protection are explicit GitHub documentation; release deletion and immutable-release enable/disable endpoints are explicit; release asset size/bandwidth rules are explicit.",
+    "inferred": "Release-first then CAS is a safety protocol derived from those primitives, not a GitHub-provided atomic transaction. A failed recreation of a deleted immutable tag should fail by the no-reuse contract, but exact machine-readable failure semantics were not documented in the retrieved source set."
+  },
+  "phase1_completion_claimed": false,
+  "global_completion": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "continuation": "Part109: execute one bounded official-GitHub public-source leaf on the automatic release attestation generated for immutable releases. Audit whether the attestation is independently addressable/verifiable after release deletion or repository delete/recreate, whether its subject identity includes immutable tag plus commit SHA and a service-stable identifier, whether attestation retention/discoverability has any finite monthly/trial/paid quota or paid-plan dependency, and whether it closes Part108's deleted-release tombstone reconciliation gap without a second authoritative write. If retention or post-deletion lookup is not documented, fail closed and persist the next service-side witness candidate without executing it in the same invocation."
+}
