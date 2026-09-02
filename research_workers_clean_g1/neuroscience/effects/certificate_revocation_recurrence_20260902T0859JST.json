@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "effect_chain_id": "neuroscience-phase1-certificate-revocation-recurrence-v1",
+  "tested_at": "2026-09-02T08:59:20+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "candidate": "generation-bound direct migration certificate with mandatory live revocation check before replay aliasing",
+  "mechanism": {
+    "native_effect_key": "K(role, task, operation, native_schema, native_payload_digest)",
+    "certificate": {
+      "certificate_id": "cert-v1-v2-A",
+      "endpoint_pair": ["schema-v1", "schema-v2"],
+      "generation_token": 17,
+      "scope": "same role/task/operation and exact certified canonicalization only",
+      "alias_rule": "A replay may alias to the native effect only when the exact certificate id, endpoint pair, generation token and current non-revoked status all match. Cached alias-derived state is never sufficient authority."
+    },
+    "revocation_rule": "A revocation mutates only certificate authorization state. It never deletes or rewrites the prior native effect record. A revocation is accepted only when its presented generation token exactly equals the certificate's current generation token.",
+    "reconstruction_rule": "Every later restart reconstructs certificate status from durable role-local state before deciding whether a schema-migrated request aliases to a prior effect or is a new claim."
+  },
+  "deterministic_trace": [
+    {
+      "step": 1,
+      "run": "A",
+      "event": "native_v1_effect_exists",
+      "input": {"schema": "v1", "payload_digest": "P", "operation": "op"},
+      "certificate_state": "cert-v1-v2-A generation 17 active",
+      "expected": "native effect record E1 remains authoritative",
+      "observed_symbolic": "E1"
+    },
+    {
+      "step": 2,
+      "run": "A",
+      "event": "v2_restart_with_active_exact_certificate",
+      "input": {"schema": "v2", "payload_digest": "P2-certified-equivalent", "operation": "op", "certificate_generation": 17},
+      "certificate_state": "active",
+      "expected": "alias to E1 and suppress duplicate effect",
+      "observed_symbolic": "duplicate_suppressed_alias_E1"
+    },
+    {
+      "step": 3,
+      "run": "between_A_and_B",
+      "event": "stale_revocation_token_negative_control",
+      "input": {"certificate_id": "cert-v1-v2-A", "presented_generation_token": 16},
+      "certificate_state_before": "generation 17 active",
+      "expected": "reject revocation as stale; certificate remains active",
+      "observed_symbolic": "stale_revocation_rejected_generation17_active"
+    },
+    {
+      "step": 4,
+      "run": "between_A_and_B",
+      "event": "exact_current_revocation_token_control",
+      "input": {"certificate_id": "cert-v1-v2-A", "presented_generation_token": 17},
+      "certificate_state_before": "generation 17 active",
+      "expected": "accept revocation; certificate generation 17 becomes revoked without altering E1",
+      "observed_symbolic": "generation17_revoked_E1_unchanged"
+    },
+    {
+      "step": 5,
+      "run": "B",
+      "event": "v2_restart_after_revocation_with_cached_alias_present",
+      "input": {"schema": "v2", "payload_digest": "P2-certified-equivalent", "operation": "op", "cached_alias": "E1", "certificate_generation": 17},
+      "certificate_state": "generation 17 revoked",
+      "expected": "fail closed against alias resurrection; classify as a new claim K_v2_new and do not mutate E1",
+      "observed_symbolic": "new_claim_K_v2_new_E1_unchanged_cached_alias_ignored"
+    }
+  ],
+  "assertions": {
+    "active_exact_certificate_suppresses_duplicate": true,
+    "stale_revocation_token_cannot_revoke": true,
+    "exact_current_revocation_token_revokes": true,
+    "revocation_does_not_mutate_prior_native_effect": true,
+    "post_revocation_restart_does_not_resurrect_cached_alias": true,
+    "post_revocation_restart_fails_closed_as_new_claim": true
+  },
+  "result": "pass within exact symbolic scope",
+  "falsified_failure_mode": "A replay cache or prior alias-derived endpoint is treated as permanent authority after the direct migration certificate is revoked.",
+  "revision": "Certificate validity must be reconstructed as current recurrence state on every restart. Alias caches are hints only; revocation is generation-bound and authorization-scoped, while native effect records are immutable under certificate revocation.",
+  "tested_scope": "One role/task/operation, one v1<->v2 direct certificate, one native effect record, one stale revocation token, one exact current revocation token, and one post-revocation restart with a cached alias. No concurrent revocation, certificate replacement/ABA, expiry, clock skew, malformed tokens, multiple certificates, partial writes or longer migration chains tested.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local state/evidence persistence only; the decision mechanism is deterministic and requires no hosted compute",
+    "acceptance_scope": "exact symbolic recurrence trace only"
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized root, frozen neuroscience role config, and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler or quota-bearing compute semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "exact_continuation": "Next valid invocation: test exactly one certificate replacement/ABA recurrence probe. Revoke generation 17, issue a new certificate for the same v1<->v2 endpoints at generation 18 with a deliberately changed canonicalization digest, and require all cached generation-17 alias material plus stale generation-17 revocation/replay tokens to remain non-authoritative while an exact generation-18 replay aliases only under the new certificate. Include one unchanged-native-effect invariant and one stale-generation negative control."
+}
