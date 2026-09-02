@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-02T20:01:45+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-partial-write-crash-consistency-v1",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260902T2001JST_partial_write_crash_consistency.json@1e861d0614f4c01bacecca909b5c13bd5938905a",
+  "tested_scope": "Deterministic symbolic crash-consistency recurrence probe for a generation-bound certificate mechanism with one immutable native effect record, immutable certificate artifacts, and one authoritative pointer. This does not claim filesystem atomicity, distributed consensus, or behavior outside the explicit state machine.",
+  "mechanism": {
+    "authoritative_reconstruction_rule": "A certificate is replayable only when both its generation and exact certificate token equal the generation and token named by the authoritative pointer. Unpointed artifacts are candidates only and never become authority by existence or recency.",
+    "native_effect_record": "native-effect-record:fixed:v1",
+    "generation_18": {
+      "certificate_token": "cert:g18:committed:v1",
+      "pointer": "ptr:g18->cert:g18:committed:v1",
+      "status": "committed_authoritative"
+    },
+    "generation_19_crash_candidate": {
+      "certificate_token": "cert:g19:candidate-before-pointer:v1",
+      "artifact_written": true,
+      "pointer_updated": false,
+      "status": "uncommitted_nonreplayable"
+    },
+    "generation_19_fresh_commit": {
+      "certificate_token": "cert:g19:committed-after-restart:v1",
+      "artifact_written": true,
+      "pointer": "ptr:g19->cert:g19:committed-after-restart:v1",
+      "status": "committed_authoritative"
+    }
+  },
+  "probe_trace": [
+    {
+      "step": 1,
+      "event": "start_generation_18",
+      "pointer_generation": 18,
+      "pointer_token": "cert:g18:committed:v1",
+      "reconstructed_generation": 18,
+      "native_effect_record": "native-effect-record:fixed:v1",
+      "assertion": "PASS"
+    },
+    {
+      "step": 2,
+      "event": "write_generation_19_candidate_then_crash_before_pointer_update",
+      "artifact_present": "cert:g19:candidate-before-pointer:v1",
+      "pointer_generation": 18,
+      "pointer_token": "cert:g18:committed:v1",
+      "assertion": "PASS"
+    },
+    {
+      "step": 3,
+      "event": "restart_after_partial_write",
+      "candidate_generation_19_present": true,
+      "candidate_pointer_bound": false,
+      "reconstructed_generation": 18,
+      "accepted_token": "cert:g18:committed:v1",
+      "rejected_token": "cert:g19:candidate-before-pointer:v1",
+      "native_effect_record": "native-effect-record:fixed:v1",
+      "assertion": "PASS: generation 18 remains authoritative; generation 19 candidate is non-replayable"
+    },
+    {
+      "step": 4,
+      "event": "fresh_generation_19_commit_after_restart",
+      "new_certificate_token": "cert:g19:committed-after-restart:v1",
+      "pointer_generation": 19,
+      "pointer_token": "cert:g19:committed-after-restart:v1",
+      "native_effect_record": "native-effect-record:fixed:v1",
+      "assertion": "PASS"
+    },
+    {
+      "step": 5,
+      "event": "second_restart_after_fresh_commit",
+      "reconstructed_generation": 19,
+      "accepted_token": "cert:g19:committed-after-restart:v1",
+      "rejected_tokens": [
+        "cert:g18:committed:v1",
+        "cert:g19:candidate-before-pointer:v1"
+      ],
+      "native_effect_record": "native-effect-record:fixed:v1",
+      "assertion": "PASS: only committed pointer-bound generation-19 token is replayable; native effect record is unchanged"
+    }
+  ],
+  "assertions": {
+    "crash_candidate_did_not_advance_authority": true,
+    "restart_kept_generation_18_authoritative": true,
+    "unpointed_generation_19_candidate_nonreplayable": true,
+    "fresh_generation_19_commit_replaced_authority": true,
+    "restart_accepts_only_pointer_bound_generation_19_token": true,
+    "native_effect_record_unchanged": true,
+    "all_assertions_pass": true
+  },
+  "interpretation": "Within this symbolic state machine, data-first partial write followed by a crash is safe when authority is defined solely by the pointer-bound generation+token pair. Artifact existence alone cannot advance recurrence state. This is evidence for reconstruction semantics only, not for transport-layer atomicity.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence/readback only; no hosted compute",
+    "accepted_scope": "deterministic symbolic recurrence semantics for data-first partial-write crash"
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized root/current neuroscience config and own neuroscience LATEST. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, hosted-compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "On the next valid invocation, execute exactly one complementary pointer-first/dangling-pointer crash probe: simulate an authoritative pointer advanced to generation 20 while the referenced generation-20 certificate artifact is absent or token-mismatched, require reconstruction to refuse replay of the dangling generation-20 target and to surface an unresolved pointer/certificate consistency fault rather than silently treating candidate recency as authority; then test one repair commit that restores a matching pointer-bound generation-20 certificate while preserving the native effect record."
+}
