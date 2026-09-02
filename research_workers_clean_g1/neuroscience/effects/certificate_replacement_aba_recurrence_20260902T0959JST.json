@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-02T09:59:10+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-certificate-replacement-aba-v1",
+  "bootstrap_valid": true,
+  "authority": {
+    "transport_mode": "exact_blob_two_pass",
+    "frozen_root_control_revision": 26,
+    "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "frozen_config_revision": 7,
+    "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274"
+  },
+  "preflight": {
+    "path": "research_workers_clean_g1/neuroscience/PHASE1_PREFLIGHT_CERT_REPLACEMENT_ABA_20260902T0959JST.json",
+    "blob": "6cf22828dbd6213f8fc9179e34fb1e10eaee4d54"
+  },
+  "candidate": "generation-and-canonicalization-bound direct migration certificate replacement",
+  "hypothesis": "Reusing the same migration endpoints after revocation is recurrence-safe only if authorization binds both a strictly newer generation and the replacement certificate's canonicalization digest; endpoint equality and cached aliases alone must never recreate authority.",
+  "symbolic_scope": {
+    "role": "neuroscience",
+    "task": "one role-local migration-alias operation",
+    "endpoints": ["v1", "v2"],
+    "old_generation": 17,
+    "new_generation": 18,
+    "old_canonicalization_digest": "canon-A17",
+    "new_canonicalization_digest": "canon-B18",
+    "native_effect_record": "native-effect-N1",
+    "cached_old_alias_material_present": true,
+    "old_certificate_revoked_before_replacement": true
+  },
+  "deterministic_trace": [
+    {
+      "step": 1,
+      "action": "issue replacement certificate",
+      "input": {"endpoints": ["v1", "v2"], "generation": 18, "canonicalization_digest": "canon-B18"},
+      "guard": "generation 18 > revoked generation 17 and canon-B18 != canon-A17",
+      "observed": "replacement certificate C18 becomes the only active certificate for these endpoints",
+      "pass": true
+    },
+    {
+      "step": 2,
+      "action": "restart with cached generation-17 alias material",
+      "input": {"cached_alias_generation": 17, "cached_digest": "canon-A17", "active_certificate_generation": 18},
+      "guard": "cached generation and digest must exactly equal active certificate generation and digest",
+      "observed": "cached generation-17 alias is treated as a non-authoritative hint and is not replayed",
+      "pass": true
+    },
+    {
+      "step": 3,
+      "action": "apply stale generation-17 revocation token after C18 issuance",
+      "input": {"token_generation": 17, "target_endpoints": ["v1", "v2"], "active_certificate_generation": 18},
+      "guard": "revocation token generation must equal the active certificate generation",
+      "observed": "stale revocation is rejected; C18 remains active",
+      "pass": true
+    },
+    {
+      "step": 4,
+      "action": "replay stale generation-17 authorization token",
+      "input": {"token_generation": 17, "token_digest": "canon-A17", "active_certificate_generation": 18, "active_digest": "canon-B18"},
+      "guard": "replay token must bind exact active generation and exact active canonicalization digest",
+      "observed": "stale replay is rejected and creates no alias effect",
+      "pass": true
+    },
+    {
+      "step": 5,
+      "action": "replay exact generation-18 authorization token",
+      "input": {"token_generation": 18, "token_digest": "canon-B18", "active_certificate_generation": 18, "active_digest": "canon-B18"},
+      "guard": "generation and digest both match C18",
+      "observed": "replay aliases to native-effect-N1 under C18 without creating or mutating a native effect record",
+      "pass": true
+    }
+  ],
+  "negative_control": {
+    "name": "stale-generation replay after same-endpoint replacement",
+    "expected": "reject",
+    "observed": "reject",
+    "reason": "generation 17 is non-authoritative once generation 18 is active even though endpoints are identical",
+    "pass": true
+  },
+  "invariants": {
+    "same_endpoints_do_not_define_certificate_identity": true,
+    "generation_monotonicity_required": true,
+    "canonicalization_digest_binding_required": true,
+    "stale_cached_alias_material_can_never_authorize": true,
+    "stale_revocation_cannot_revoke_new_generation": true,
+    "stale_replay_cannot_alias_new_generation": true,
+    "exact_new_generation_replay_requires_new_digest": true,
+    "native_effect_record_before": "native-effect-N1",
+    "native_effect_record_after": "native-effect-N1",
+    "native_effect_record_mutations": 0
+  },
+  "result": "pass within the exact deterministic symbolic scope: same-endpoint certificate replacement does not create an ABA authority collapse when generation and canonicalization digest are both mandatory authorization coordinates. Cached generation-17 aliases plus stale generation-17 revocation/replay tokens remain non-authoritative; only exact generation-18 plus canon-B18 authorizes replay, and the prior native effect record is unchanged.",
+  "revision": "Treat migration-certificate identity as (endpoints, generation, canonicalization_digest), never endpoints alone. Reconstruct this tuple on every recurrence; old caches and tokens are hints or rejects after replacement, not transferable authority.",
+  "tested_limit": "One role/task/operation, one revoked generation-17 certificate, one same-endpoint generation-18 replacement with a changed canonicalization digest, one cached old alias, one stale revocation token, one stale replay token, one exact generation-18 replay and one unchanged native-effect record. No concurrent replacement, partial writes/crash windows, certificate expiry, malformed tokens, multiple simultaneously active certificates, generation wraparound or longer migration chains were tested.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local exact-path state/evidence persistence only; no hosted compute or finite-credit feature",
+    "accepted_scope": "this deterministic symbolic recurrence trace only"
+  },
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized root, own neuroscience config and own neuroscience LATEST. No O/O-derived, other-worker, downstream, legacy, shared-ledger, other-role receipt/config or scheduler semantics were consumed.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next valid invocation, test exactly one partial-write crash-consistency recurrence probe for the same generation-bound certificate mechanism: simulate a crash after writing a generation-19 replacement certificate artifact but before updating the authoritative role-local pointer, require reconstruction to keep generation 18 authoritative and generation 19 uncommitted/non-replayable, then complete one fresh generation-19 commit and verify a restart accepts only the committed pointer-bound generation-19 token while preserving the unchanged native effect record. Include one crash-window negative control and no second leaf."
+}
