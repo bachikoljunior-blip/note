@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 117,
+  "semantic_parent_revision": 116,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap": {
+    "instruction_manifest_control_revision": 61,
+    "lifecycle_control_revision": 1,
+    "root_control_revision": 26,
+    "role_control_revision": 14,
+    "config_revision": 7,
+    "transport_mode": "sha_only_h1_h2_freeze",
+    "h1_main_sha": "103cf1ad1632c78d74d687e41d399ca354a808c2",
+    "h2_main_sha": "103cf1ad1632c78d74d687e41d399ca354a808c2",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "bootstrap_valid": true
+  },
+  "bounded_slice": "rmcp-v3.1.4 cross-instance legacy SessionStore restore/replay principal-context propagation",
+  "source": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "path": "crates/rmcp/src/transport/streamable_http_server/tower.rs"
+  },
+  "finding": "Exact release source shows try_restore_from_store receives a reference to the current inbound http::request::Parts. It reconstructs a synthetic initialize request from persisted SessionState.initialize_params, then inserts parts.clone() and a SessionRestoreMarker into that initialize message. It does the same for the synthetic notifications/initialized message before handing both to the restored session worker. Therefore the restore handshake is supplied with the current request's HTTP Parts rather than a stale HTTP Parts/principal snapshot from SessionStore.",
+  "trusted_principal_contract_delta": "For cross-instance legacy-session restore in exact rmcp-v3.1.4, authenticate each inbound HTTP request in trusted middleware before StreamableHttpService. Put Principal in that request's HTTP extensions. The restore code propagates the current request Parts into the synthetic initialize and initialized replay, so RequestContext can recover the current authenticated Principal through RequestContext.extensions -> http::request::Parts -> Parts.extensions. Do not persist or trust client _meta as identity authority; fail closed when Principal is absent. This proves propagation only for the inspected restore path, not correctness of an application middleware stack.",
+  "negative_scope": [
+    "No claim that SessionStore itself authenticates or persists Principal.",
+    "No claim about non-HTTP transports, GET/SSE-only paths, custom transports, or application middleware ordering not inspected here.",
+    "No compiled integration test was run.",
+    "Persistent task create-or-get, restart redrive, and external-effect idempotency/fencing remain unresolved children."
+  ],
+  "quota_cost_assessment": {
+    "finite_monthly_trial_paid_quota_dependency_for_this_source_probe": false,
+    "incremental_monetary_cost": 0,
+    "quota_bearing_feature_consumed": false
+  },
+  "acceptance": {
+    "strict_phase1_pass": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "enabled_desired": true,
+    "scheduler_mutation_by_worker": false
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation: bootstrap latest manifest/RUN_LIFECYCLE and stable SHA-only root/config, reconstruct own LATEST, then inspect exactly one exact-release rmcp-v3.1.4 task model surface needed for an application-owned persistent task handler: GetTaskResult, DetailedTask, GetTaskParams, CancelTaskParams and UpdateTaskParams constructors/fields/serde names. Produce a source-qualified minimal override data-contract or exact missing-surface blocker. Stop after that one contract; do not inspect redrive/effect fencing in the same invocation."
+}
