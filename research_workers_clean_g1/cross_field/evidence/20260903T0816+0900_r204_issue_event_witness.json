@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 204,
+  "updated_at": "2026-09-03T08:16:24+09:00",
+  "leaf": "github_issue_event_identity_as_external_monotonic_witness",
+  "question": "Can a GitHub issue/comment/event identity provide a zero-cost Chat-visible witness outside rewindable Git ref state that survives or fail-closes deletion/recreation/editability rollback strongly enough to close same-repository force-ref ABA?",
+  "connected_capability_observation": {
+    "repository": "bachikoljunior-blip/note",
+    "issue_surface": ["create_issue", "fetch_issue", "update_issue"],
+    "comment_surface": ["fetch_issue_comments", "update_issue_comment"],
+    "event_surface": "No first-class connected mutation action for issue events was exposed in the inspected GitHub connector; public REST GET/list issue-event endpoints remain readable through lightweight repository transport.",
+    "live_issue_or_event_mutation_performed": false,
+    "reason_no_live_mutation": "Role-authorized evidence/checkpoint work did not require user-visible issue lifecycle mutation; this leaf tested capability and platform semantics only."
+  },
+  "public_sources": [
+    {
+      "title": "REST API endpoints for issue events - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/issues/events",
+      "observed_semantics": "The current REST surface exposes list/get issue-event endpoints, with each event carrying id, Global Node ID and created_at. The issue-scoped list endpoint documents 410 Gone. No create/update/delete issue-event endpoint is listed."
+    },
+    {
+      "title": "Issue event types - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/issue-event-types",
+      "observed_semantics": "Issue-event objects document id as the unique identifier of the event and node_id as the Global Node ID of the event."
+    },
+    {
+      "title": "REST API endpoints for issues - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/issues/issues",
+      "observed_semantics": "Fetching a deleted issue can return 410 Gone to an authenticated reader with access; transferred issues can return 301."
+    },
+    {
+      "title": "Deleting an issue - GitHub Docs",
+      "url": "https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue",
+      "observed_semantics": "Repository administrators/owners can permanently delete issues under documented permission conditions."
+    },
+    {
+      "title": "Editing an issue - GitHub Docs",
+      "url": "https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/editing-an-issue",
+      "observed_semantics": "Issue title/body are editable, and issue-description edit history can itself be removed by authorized users."
+    },
+    {
+      "title": "REST API endpoints for issue comments - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/issues/comments",
+      "observed_semantics": "Issue comments have explicit update and delete endpoints, so comment content/history is not append-only."
+    }
+  ],
+  "falsification_matrix": {
+    "same_repository_force_ref_rewind": {
+      "outcome": "ISSUE_EVENT_OBJECT_STATE_IS_EXTERNAL_TO_REF_REWIND",
+      "reason": "Git ref movement does not itself mutate the issue-event service. A pinned event object would therefore not be rolled back by a branch force-update."
+    },
+    "issue_body_or_comment_as_witness": {
+      "outcome": "REJECT",
+      "reason": "Issue body/title and comments are editable; comments are deletable; issue-description edit history can be removed."
+    },
+    "issue_event_object_as_immutable_record": {
+      "outcome": "PARTIAL",
+      "reason": "The public issue-event REST surface is read-only (list/get) and event objects have unique ids/node_ids, which is favorable for tamper evidence. However the event is owned by an issue lifecycle that can be permanently deleted."
+    },
+    "delete_issue_then_recreate_activity": {
+      "outcome": "FAIL_CLOSED_IS_PLAUSIBLE_BUT_ANTI_ABA_PROMOTION_NOT_PROVED",
+      "reason": "Deletion is externally observable as Gone when access permits, so a verifier that rejects missing witness state can fail closed. But the reviewed public docs do not state a no-reuse theorem for issue numbers/event ids/node_ids after deletion/recreation, so restoration of an indistinguishable prior witness is not formally excluded by this leaf."
+    },
+    "monotonic_latest_event_selection": {
+      "outcome": "NOT_PROVED",
+      "reason": "The reviewed issue-event list documentation does not specify a repository-wide monotonic event counter or list ordering guarantee. A unique event id is an object identity, not by itself a monotonic counter."
+    },
+    "dedicated_append_per_protected_state_transition": {
+      "outcome": "NOT_AVAILABLE_AS_A_DIRECT_EVENT_APPEND_PRIMITIVE",
+      "reason": "Issue events are generated by issue/pull-request activity; there is no direct create-issue-event endpoint. Producing a witness event would require an auxiliary issue mutation such as a label/state/milestone operation."
+    }
+  },
+  "classification": "PARTIAL_ACCEPT_AS_FAIL_CLOSED_EXTERNAL_TAMPER_SENTINEL_NOT_PROMOTED_TO_MONOTONIC_ANTI_ABA_WITNESS",
+  "bottom_line": "Issue-event identity is meaningfully better than issue/comment content because it lives outside Git ref state and the public event API is read-only. It can be a fail-closed tamper sentinel when a pinned event disappears. It does not yet close same-repository force-ref ABA: this leaf found no documented monotonic allocator/order guarantee, no documented id non-reuse guarantee across deletion/recreation, and no direct append-event primitive. Do not promote it as the required non-rewindable monotonic witness.",
+  "phase1_constraints": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": false
+  },
+  "tested_scope": "Connected GitHub capability schemas plus official current GitHub issue/event/comment documentation. No issue creation/edit/delete, no event-producing mutation, no branch/ref mutation, no protected-primary authority, no manual execution, no hosted compute, no optional monthly/trial/paid quota, no multi-object atomicity test and no network-partition test.",
+  "continuation": "Test exactly one adjacent zero-cost candidate next: whether GitHub's repository-scoped issue/PR number allocator has an official monotonic/no-reuse property across issue deletion and recreation strong enough to provide an externally queryable counter. Reject absent an explicit guarantee; do not start another witness family in the same invocation."
+}
