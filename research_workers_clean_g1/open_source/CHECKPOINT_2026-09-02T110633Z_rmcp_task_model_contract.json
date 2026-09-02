@@ -1,0 +1,111 @@
+{
+  "status": "recurring_open",
+  "phase": 1,
+  "slice_kind": "rmcp_v3_1_4_task_model_contract_pin",
+  "timestamp_utc": "2026-09-02T11:06:33Z",
+  "control_revision": 26,
+  "run_lifecycle_revision": 2,
+  "role_config_revision": 7,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "bootstrap_valid": true,
+  "bootstrap_h1": "31421729ff962c15c662e47094012ecc250ecfad",
+  "bootstrap_h2": "31421729ff962c15c662e47094012ecc250ecfad",
+  "evidence": {
+    "public_source": {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "release_tag": "rmcp-v3.1.4",
+      "annotated_tag_object_sha": "2b7ea69be1701fd39de53161055212c4041ebf06",
+      "release_commit_sha": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "tagger_date_utc": "2026-08-20T03:47:15Z",
+      "task_model_path": "crates/rmcp/src/model/task.rs",
+      "request_model_path": "crates/rmcp/src/model.rs",
+      "server_handler_path": "crates/rmcp/src/handler/server.rs"
+    },
+    "task_contract": {
+      "Task": {
+        "non_exhaustive": true,
+        "serde_case": "camelCase",
+        "fields": {
+          "task_id": "String",
+          "status": "TaskStatus",
+          "status_message": "Option<String> (omitted when None)",
+          "created_at": "String",
+          "last_updated_at": "String",
+          "ttl_ms": "Option<u64> (not skip-serialized, so None serializes as null)",
+          "poll_interval_ms": "Option<u64> (omitted when None)"
+        },
+        "constructor": "Task::new(task_id, status, created_at, last_updated_at)",
+        "builders": ["with_status_message", "with_ttl_ms", "with_poll_interval_ms"]
+      },
+      "TaskPayload": {
+        "non_exhaustive": true,
+        "variants": [
+          "Working",
+          "InputRequired { input_requests: InputRequests }",
+          "Completed { result: JsonObject }",
+          "Failed { error: JsonObject }",
+          "Cancelled"
+        ],
+        "method": "status() -> TaskStatus"
+      },
+      "DetailedTask": {
+        "non_exhaustive": true,
+        "fields": {"task": "Task", "payload": "TaskPayload"},
+        "constructor": "DetailedTask::new(mut task, payload) forces task.status = payload.status()",
+        "wire_shape": "Task fields flattened with status-specific inputRequests/result/error; deserialization rejects missing required payload for input_required/completed/failed"
+      },
+      "GetTaskResult": {
+        "non_exhaustive": true,
+        "serde_case": "camelCase",
+        "fields": {
+          "result_type": "ResultType with #[serde(default)]; tasks/get standard result is complete",
+          "meta": "Option<MetaObject> serialized as _meta and omitted when None",
+          "task": "DetailedTask flattened"
+        },
+        "constructor": "GetTaskResult::new(task: DetailedTask) -> result_type COMPLETE, meta None"
+      }
+    },
+    "task_request_params": {
+      "GetTaskParams": {
+        "non_exhaustive": true,
+        "fields": {"meta": "Option<RequestMetaObject> as _meta", "task_id": "String"},
+        "constructor": "GetTaskParams::new(task_id)"
+      },
+      "UpdateTaskParams": {
+        "non_exhaustive": true,
+        "fields": {"meta": "Option<RequestMetaObject> as _meta", "task_id": "String", "input_responses": "InputResponses"},
+        "constructor": "UpdateTaskParams::new(task_id, input_responses)"
+      },
+      "CancelTaskParams": {
+        "non_exhaustive": true,
+        "fields": {"meta": "Option<RequestMetaObject> as _meta", "task_id": "String"},
+        "constructor": "CancelTaskParams::new(task_id)"
+      },
+      "stock_client_request_union": ["GetTaskRequest", "UpdateTaskRequest", "CancelTaskRequest"],
+      "list_tasks_stock_surface": "No ListTasksRequest appears in the rmcp-v3.1.4 ClientRequest union; do not invent a stock list_tasks override for this release."
+    },
+    "server_handler_contract": {
+      "get_task": "fn get_task(&self, request: GetTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<GetTaskResult, McpError>> + MaybeSendFuture + '_",
+      "update_task": "fn update_task(&self, request: UpdateTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_",
+      "cancel_task": "fn cancel_task(&self, request: CancelTaskParams, context: RequestContext<RoleServer>) -> impl Future<Output = Result<(), McpError>> + MaybeSendFuture + '_",
+      "dispatcher": "Before each tasks/* handler, validate_tasks_capability checks both server advertisement and client Tasks declaration. tasks/get maps handler output to ServerResult::GetTaskResult; tasks/update and tasks/cancel map unit success to ServerResult::task_ack()."
+    },
+    "implementation_consequence": "A custom persistent adapter should construct Task via Task::new/builders, wrap status-specific state with TaskPayload then DetailedTask::new, and return GetTaskResult::new. Because core result/param structs are #[non_exhaustive], external code should prefer constructors rather than struct literals. The released stock task endpoint set is get/update/cancel, not list.",
+    "compiled_or_runtime_verified": false,
+    "verification_scope": "Exact release source pin only; no Rust compiler/runtime claim in this slice."
+  },
+  "confidence": "source_exact_high",
+  "unresolved_children": [
+    "A minimal application-owned persistent get_task/update_task/cancel_task adapter skeleton has not yet been source-checked end-to-end against rmcp-v3.1.4 error constructors and store semantics.",
+    "Restart redrive/claim generation and external-effect idempotency or fencing remain separate unresolved proof obligations.",
+    "Strict Phase-1 completion remains false."
+  ],
+  "continuation": "At modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, pin the exact McpError constructors and handler-side unknown-task/conflict behavior needed for an application-owned persistent tasks/get, tasks/update, tasks/cancel adapter, then write a source-qualified minimal adapter skeleton using Task::new, TaskPayload, DetailedTask::new, and GetTaskResult::new; do not claim compile/runtime verification unless a compiler is actually available.",
+  "cost_assessment": {
+    "finite_hosted_quota_used": false,
+    "incremental_monetary_cost": 0
+  },
+  "termination": "checkpoint_committed_and_exact_readback_after_one_bounded_phase1_slice"
+}
