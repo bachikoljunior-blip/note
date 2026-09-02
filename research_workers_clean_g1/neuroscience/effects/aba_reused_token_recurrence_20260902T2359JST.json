@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "recorded_at": "2026-09-02T23:59:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-aba-reused-token-recurrence-v1",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260902T2358JST_aba_reused_token_recurrence.json",
+  "preflight_checkpoint_blob": "4a186d7e9d616469deff4a6746be767ca1eb8a05",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "transport_mode": "sha_only_exact_sha_h1_h2",
+  "probe_type": "deterministic_symbolic_recurrence_aba_test",
+  "mechanism_under_test": {
+    "baseline": "generation plus replay token/certificate, with token reuse allowed after a generation number cycles",
+    "candidate": "pointer authority tuple (epoch, generation, nonce, effect_digest) plus a certificate containing the identical tuple; every pointer mutation increments epoch and uses a fresh nonce; replay requires exact pointer-certificate tuple equality and the referenced native effect digest; pointer mutation is conditional on the currently observed pointer version",
+    "repair_order": "certificate-first for the proposed fresh epoch/nonce, then conditional pointer install; replay remains fail-closed until pointer and certificate exactly agree"
+  },
+  "initial_state": {
+    "native_effect": "E_native",
+    "native_effect_digest": "d_native",
+    "authoritative_pointer": {"epoch": 20, "generation": 20, "nonce": "n20_old", "effect_digest": "d_native"},
+    "matching_certificate": {"epoch": 20, "generation": 20, "nonce": "n20_old", "effect_digest": "d_native"}
+  },
+  "tests": [
+    {
+      "id": "T1_generation_token_only_aba_control",
+      "trace": "20/n20_old -> 19/n19 -> 20/n20_old, with the old generation-20 certificate reused",
+      "expected": "unsafe acceptance under the baseline because generation and reused token again match the stale certificate",
+      "observed_symbolic": "ACCEPT_STALE",
+      "result": "FAIL_CONTROL"
+    },
+    {
+      "id": "T2_epoch_nonce_rule_rejects_stale_revival",
+      "trace": "(e20,g20,n20_old) -> (e21,g19,n19) -> (e22,g20,n20_new); stale replay presents (e20,g20,n20_old)",
+      "expected": "reject because current authority epoch e22 differs from stale e20 even though generation returned to 20",
+      "observed_symbolic": "REJECT_STALE_EPOCH",
+      "result": "PASS"
+    },
+    {
+      "id": "T3_old_nonce_fresh_epoch_mismatch",
+      "trace": "pointer proposal (e22,g20,n20_old) paired with old certificate (e20,g20,n20_old)",
+      "expected": "reject exact-tuple mismatch",
+      "observed_symbolic": "REJECT_CERTIFICATE_MISMATCH",
+      "result": "PASS"
+    },
+    {
+      "id": "T4_old_epoch_fresh_nonce_mismatch",
+      "trace": "pointer proposal (e20,g20,n20_new) paired with current certificate (e22,g20,n20_new)",
+      "expected": "reject exact-tuple mismatch",
+      "observed_symbolic": "REJECT_CERTIFICATE_MISMATCH",
+      "result": "PASS"
+    },
+    {
+      "id": "T5_current_fresh_tuple_replays_native_effect",
+      "trace": "pointer and certificate both equal (e22,g20,n20_new,d_native)",
+      "expected": "accept exactly E_native without creating a second native effect",
+      "observed_symbolic": "ACCEPT_E_NATIVE",
+      "result": "PASS"
+    }
+  ],
+  "bounded_repair": {
+    "trigger": "current pointer is missing its exact certificate or is stale/token-mismatched after a restart",
+    "steps": [
+      "read the current pointer and the immutable native-effect digest",
+      "choose next_epoch=current_epoch+1 and a fresh nonce",
+      "persist the matching certificate for (next_epoch,current_generation,fresh_nonce,d_native) first",
+      "conditionally replace the pointer only if its observed version is still current",
+      "on later reconstruction, replay only after exact pointer-certificate tuple and d_native match"
+    ],
+    "preserves_native_effect": true,
+    "duplicate_native_effect_required": false,
+    "fail_closed_before_pointer_install": true
+  },
+  "probe_result": "PASS within deterministic single-writer/conditional-update symbolic scope: generation+token alone is ABA-vulnerable when a generation number and token are reused; adding a strictly monotonic pointer epoch plus a fresh nonce, exact certificate equality, and certificate-first conditional pointer repair rejects stale 20->19->20 authority resurrection while preserving E_native.",
+  "scope_guard": "This proves only the explicit symbolic pointer/certificate state machine under serialized role-local conditional updates and deterministic native-effect identity. It does not prove distributed consensus, malicious-writer resistance, cryptographic nonce unpredictability, repository transport atomicity, multi-writer linearizability, or recovery from corruption of E_native itself.",
+  "neuroscience_transfer": "The safe reconstruction rule separates content identity (E_native) from recency/context authority (monotonic epoch plus fresh nonce): a familiar content state may recur, but recurrence does not restore an old temporal-context tag. This is a state-machine transfer claim only, not evidence that a specific biological circuit implements this repository protocol.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence and conditional read/write transport only; no hosted compute and no repository API volume used as computation",
+    "accepted_scope": "deterministic serialized role-local recurrence reconstruction with ABA rejection"
+  },
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized root, current neuroscience role config, and own neuroscience LATEST. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, hosted-compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_next_action": "On the next valid invocation, execute exactly one ambiguous-write/duplicate-resume recurrence probe for the certificate-first epoch rule: simulate a certificate write that succeeds while the response is lost before pointer CAS, then restart from durable state and require reconstruction to avoid both false rollback and duplicate E_native application; compare one idempotent resume rule against a naive retry, preserve exact scope, and keep zero richer-mode/protected/manual-user/hosted-compute/finite-quota/paid dependency."
+}
