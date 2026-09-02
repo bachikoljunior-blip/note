@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 120,
+  "semantic_parent_revision": 119,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 64,
+  "lifecycle_control_revision": 1,
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "transport_mode": "sha_only_h1_h2_freeze",
+  "frozen_main_sha": "e4940c1fbf279aacbdb7698ea31982a06ba53658",
+  "slice": "rmcp-v3.1.4 router-first tool_handler plus application-owned task RPC adapter wiring",
+  "finding": "At exact rust-sdk release commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, #[tool_handler] only synthesizes call_tool, list_tools, get_tool, and get_info when those methods are absent. Therefore a ServerHandler impl may keep macro-generated router-first call_tool while supplying its own get_task(GetTaskParams, RequestContext<RoleServer>) -> Result<GetTaskResult, McpError>, update_task(UpdateTaskParams, RequestContext<RoleServer>) -> Result<(), McpError>, and cancel_task(CancelTaskParams, RequestContext<RoleServer>) -> Result<(), McpError>. The central Service<RoleServer> dispatcher capability-gates tasks/get, tasks/update, and tasks/cancel before invoking those overrides. No stock TaskManager identifier appears in this adapter seam, so the task RPC storage implementation may be application-owned. Because auto-generated get_info only adds the tools capability, a task-capable adapter must provide its own get_info that advertises Tasks; the macro preserves a user-supplied get_info rather than overwriting it.",
+  "minimum_adapter_shape": {
+    "macro": "#[tool_handler] on impl ServerHandler for App",
+    "router_first_call_tool": "omit a custom call_tool so the macro generates ToolCallContext::new(self, request, context) followed by router.call(tcc).await",
+    "task_rpc_overrides": [
+      "get_task(request: GetTaskParams, context: RequestContext<RoleServer>) -> Result<GetTaskResult, McpError>",
+      "update_task(request: UpdateTaskParams, context: RequestContext<RoleServer>) -> Result<(), McpError>",
+      "cancel_task(request: CancelTaskParams, context: RequestContext<RoleServer>) -> Result<(), McpError>"
+    ],
+    "capability_requirement": "provide custom get_info advertising both tools and tasks; do not rely on tool_handler auto-generated get_info for Tasks",
+    "storage_boundary": "delegate task RPC methods to an application-owned persistent store; stock TaskManager is not required by the ServerHandler RPC seam"
+  },
+  "source_evidence": [
+    {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "path": "crates/rmcp-macros/src/tool_handler.rs",
+      "blob_sha": "e274c102e2ece071615e96e586e6d95a207c139d",
+      "evidence": "has_method guards preserve user methods; generated call_tool uses ToolCallContext and router.call; generated get_info is added only when absent and enables Tools for the macro caller"
+    },
+    {
+      "repository": "modelcontextprotocol/rust-sdk",
+      "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+      "path": "crates/rmcp/src/handler/server.rs",
+      "evidence": "Service<RoleServer> dispatch validates Tasks capability for get/update/cancel then invokes ServerHandler overrides; exact task method parameter/result identifiers confirmed"
+    }
+  ],
+  "tested_scope": "Exact-source structural composition only. This slice did not compile Rust code, instantiate a persistent backend, construct GetTaskResult/DetailedTask values, prove task creation/router parity, restart redrive, authenticated principal binding, executor liveness, or external-effect idempotency/fencing.",
+  "source_qualified_result": true,
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "conflict_check": "Manifest64 and RUN_LIFECYCLE1 were read first. SHA-only H1/H2 were both e4940c1fbf279aacbdb7698ea31982a06ba53658. DESIRED_STATE26 and open_source config7 matched the frozen authority. Parent LATEST was revision119 blob 4ac3f458ba916687bfd0f16b41a5d9d234a3edb4. CLEAN inputs only.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "Next invocation: bootstrap latest manifest/RUN_LIFECYCLE and stable SHA-only root/config, reconstruct own LATEST, then inspect exactly one exact-release rmcp-v3.1.4 model surface defining GetTaskResult, DetailedTask, GetTaskParams, UpdateTaskParams, and CancelTaskParams. Resolve only the exact constructors/fields needed to turn the stored adapter shape into a compile-ready persistent-backend skeleton; stop before restart redrive, executor design, authenticated middleware composition, or external-effect fencing."
+}
