@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 106,
+  "semantic_parent_revision": 105,
+  "control_revision": 26,
+  "config_revision": 7,
+  "instruction_manifest_control_revision": 49,
+  "lifecycle_control_revision": 1,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "transport_mode": "sha_only_h1_h2_stable",
+  "frozen_main_sha": "c8a1cf7f1fefd490d7ad0a7ad47018b300d7b25f",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "eeb6953f6b5615a43d9e8ce51e834d9449a95287",
+    "manifest_control_revision": 49,
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "lifecycle_control_revision": 1,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "root_control_revision": 26,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_control_revision": 14,
+    "role_config_revision": 7,
+    "h1": "c8a1cf7f1fefd490d7ad0a7ad47018b300d7b25f",
+    "h2": "c8a1cf7f1fefd490d7ad0a7ad47018b300d7b25f",
+    "post_slice_write_conflict_head": "bbc3880400b4ecff62d37266c517c8a5310e5601"
+  },
+  "own_parent": {
+    "latest_worker_revision": 105,
+    "latest_blob": "c05ba53ccf167421352bda706447fe8b5749d6de"
+  },
+  "bounded_leaf": "Inspect only the exact generic client Peer send_request path used by rmcp-v3.1.4 tasks/get, tasks/update and tasks/cancel.",
+  "source_scope": {
+    "repository": "modelcontextprotocol/rust-sdk",
+    "release_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "files": ["crates/rmcp/src/service/client.rs", "crates/rmcp/src/service.rs"],
+    "symbols": ["RoleClient", "Peer::send_request", "Peer::send_request_with_option", "Peer::send_request_with_option_and_subscription", "ServiceRole::enforce_request_association", "OriginatingRequestId", "get_task", "update_task", "cancel_task"]
+  },
+  "finding": {
+    "central_tasks_capability_gate": "not_present_in_exact_generic_send_path",
+    "evidence": [
+      "The three task client wrappers call Peer::send_request directly.",
+      "Peer::send_request delegates to send_request_with_option with no options, then to send_request_with_option_and_subscription.",
+      "The generic path invokes ServiceRole::enforce_request_association; its default returns Ok and RoleClient has no override in client.rs. No task-specific capability branch is present in this generic send path.",
+      "If an originating request exists, the generic path inserts OriginatingRequestId into Extensions; exact source documents this marker as non-serialized and never on the wire.",
+      "The path allocates request id/progress token, injects negotiated client request metadata into RequestMetaObject, extends _meta with PeerRequestOptions.meta when supplied, then sets progress token. The task wrappers use no options, so they add no wrapper-specific meta or extension rewriting."
+    ],
+    "scope_limit": "Generic Peer send-path contract only; concrete task request serde fields and server-side capability rejection remain a separate leaf.",
+    "phase1_effect": "No Phase-1 pass. Application correctness cannot rely on these wrappers for Tasks preflight; persistent execution and effect-safety obligations remain unresolved."
+  },
+  "residual_richer_mode_protected_or_user_execution_dependency": true,
+  "finite_monthly_quota_credit_dependency": false,
+  "incremental_monetary_cost": 0,
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next invocation: repeat manifest/RUN_LIFECYCLE bootstrap and stable SHA-only authority freeze, reconstruct own LATEST, then inspect only modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 exact task request model/serde definitions for GetTaskRequest, UpdateTaskRequest, CancelTaskRequest and their params. Verify whether existing typed _meta survives constructors and serializes, and whether generic Extensions are serde-skipped for these concrete task requests. Persist that one bounded source contract; do not start a second leaf."
+}
