@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "updated_at": "2026-09-04T01:01:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-ambiguous-pointer-ack-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "sha_only_exact_sha_h2",
+  "frozen_main_sha_h1": "0e45a4332cf2af557b06fb2f558cdae2ecef7f80",
+  "frozen_main_sha_h2": "0e45a4332cf2af557b06fb2f558cdae2ecef7f80",
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "instruction_manifest_control_revision": 77,
+  "run_lifecycle_control_revision": 1,
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260904T0101JST_ambiguous_pointer_ack.json",
+  "predecessor_latest_blob": "1e6a1ef6365f893f7a034bc476dd0c62a936fa22",
+  "base_continuation_preserved": true,
+  "probe": {
+    "question": "After immutable renewal generation G+1 is durably written and pointer CAS G->G+1 commits but its response is lost, which restart rule preserves single-generation identity and forbids certificate acquisition before the committed generation is identified?",
+    "model": "Serialized single-writer symbolic state machine. Durable immutable generations; one atomic current-generation pointer; one lost acknowledgement after a committed pointer CAS; deterministic stable target generation id available after restart; no concurrent writer and no storage corruption.",
+    "initial_restart_state": {
+      "durable_pointer": "G+1",
+      "durable_generations": ["G", "G+1"],
+      "restart_knows_commit_result": false,
+      "certificate_acquisition_allowed": false
+    },
+    "acceptance_invariants": [
+      "Do not create a second renewal generation merely because the pointer-CAS acknowledgement was lost.",
+      "Never regress the current-generation pointer.",
+      "Do not authorize certificate acquisition until the durable current pointer is identified as the intended committed generation.",
+      "Remain fail-closed on ambiguity rather than treating an ordinary CAS compare-failure as proof of non-commit."
+    ],
+    "routes": {
+      "blind_new_generation_retry": {
+        "transition": "Restart creates G+2, then retries CAS from stale expected G to G+2 without first identifying the current pointer.",
+        "outcome": "CAS fails because durable pointer is already G+1, but an unnecessary second immutable generation G+2 is created and the committed generation remains unidentified.",
+        "classification": "falsified",
+        "failed_invariants": ["no_second_generation_on_lost_ack", "committed_generation_identified_before_certificate"]
+      },
+      "blind_same_target_ordinary_CAS": {
+        "transition": "Restart reuses durable target G+1 and blindly repeats ordinary CAS G->G+1.",
+        "outcome": "Compare fails because pointer is already G+1. Safety is fail-closed if certificate acquisition stays blocked, but the ordinary CAS result alone cannot distinguish already-committed from conflicting current state, so availability is not recovered and commit identity remains unproven.",
+        "classification": "safe_but_incomplete",
+        "failed_invariants": ["committed_generation_identified_before_certificate"]
+      },
+      "read_before_retry": {
+        "transition": "Restart first reads current pointer. If it equals intended target G+1, treat the prior CAS as committed; if it still equals expected G, retry the same target CAS; otherwise stop on conflict.",
+        "outcome": "In the tested lost-ack state, read returns G+1, so no second generation or pointer write occurs and certificate acquisition can be authorized only after target identity is established.",
+        "classification": "passes_tested_scope",
+        "failed_invariants": []
+      },
+      "idempotent_pointer_target_semantics": {
+        "transition": "Use a pointer operation whose success condition is pointer==expected G and set to target G+1 OR pointer already==target G+1; target identity must be stable and durable across restart.",
+        "outcome": "In the tested lost-ack state, pointer already equals G+1, so replay returns committed-target success without creating G+2 or regressing the pointer; certificate acquisition follows only after this target-equivalence result.",
+        "classification": "passes_tested_scope",
+        "failed_invariants": []
+      }
+    }
+  },
+  "probe_result": "Lost acknowledgement does not require a new renewal generation. In the tested serialized model, the safe recovery boundary is stable target identity plus either read-before-retry or target-idempotent pointer semantics. Blind creation of a fresh generation on uncertainty violates single-generation renewal identity; blind replay of an ordinary CAS to the same target can remain safe only by staying fail-closed, but it cannot by itself prove which generation committed.",
+  "mechanism_revision": "Make the renewal generation id durable before pointer publication. After ambiguous pointer publication, never allocate a replacement generation until current pointer identity is checked. Certificate acquisition requires positive evidence that current pointer equals the intended generation; obtain that evidence by a durable read or an idempotent pointer-to-target operation that treats already-at-target as success.",
+  "neuroscience_transfer": "For recurrence-sensitive latent-context memory, a context-renewal episode should carry one stable context-generation token. If acknowledgement of the context switch is lost, replay should recognize the same token rather than minting a new latent context. Downstream evidence tied to the renewed context stays gated until the durable current-context pointer is proven to equal that token.",
+  "scope_guard": "Positive result is limited to a serialized single-writer symbolic model with immutable generations, a stable/durable G+1 identifier across restart, one atomic pointer primitive, one lost response after a committed G->G+1 pointer update, and fail-closed certificate gating. No claim for concurrent writers, nondeterministic generation identifiers, Byzantine/corrupt storage, pointer operations without atomicity, or transports where a read cannot establish current pointer identity.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local state/evidence persistence only; repository API volume is not used as computation",
+    "accepted_scope": "Stable-target read-before-retry or already-at-target idempotent pointer replay prevents duplicate renewal-generation creation and premature certificate acquisition after a lost committed-pointer acknowledgement in the tested single-writer model.",
+    "unresolved_child": "The safe rule still assumes the intended G+1 target identifier itself is durably recoverable after restart. Next test the crash window where generation contents commit but the local durable record of the intended target id is missing or stale, so restart sees an orphan generation without a trusted pointer-intent token."
+  },
+  "conflict_check": "Semantic inputs were limited to the current instruction manifest/lifecycle controls, exact-SHA frozen sanitized DESIRED_STATE control26, exact-SHA frozen neuroscience config7, and own neuroscience LATEST/preflight state. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, hosted-compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: test recovery when immutable generation G+1 is durable but the restart lacks a trusted durable record of the intended target generation id (intent-token loss/staleness). Compare deterministic content-addressed generation ids, a separately persisted intent record, and scanning immutable candidate generations; reject any route that can adopt the wrong orphan, mint an unnecessary new generation, or authorize a certificate before the intended generation is uniquely identified."
+}
