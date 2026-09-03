@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "recorded_at": "2026-09-03T22:31:55+09:00",
+  "part": 124,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 26,
+    "root_manifest_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 75,
+    "instruction_manifest_blob": "f54909ab288850086e030b8d3da64ce7f6353680",
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-03T223155+0900_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_CAPABILITY_SURFACE_INVARIANT_MODEL_20260903_PART123.json",
+  "leaf_id": "phase1-multi-agent-repository-incarnation-binding-observability-part124",
+  "tested_scope": "One bounded observability/model leaf using only the current connected Chat GitHub tool schemas and current same-role LATEST continuation. No destructive repository event was executed. Live reads were limited to current note repository metadata, the authenticated GitHub App installation metadata needed to associate note with an installation, and tool contracts. Unrelated repository entries incidentally returned by installation listing were quarantined and not used semantically.",
+  "live_observations": {
+    "repository_full_name": "bachikoljunior-blip/note",
+    "current_repository_id": "1325150959",
+    "current_installation_id": 143247947,
+    "note_observed_in_current_installation_listing": true,
+    "content_write_selector_contract": "create_file/update_file/delete_file and low-level repository content/ref writes exposed in the current Chat GitHub connector take repository_full_name (owner/name); the content-file write contracts do not expose expected_repository_id, expected_installation_id, expected_grant_id, or an atomic repository-incarnation precondition.",
+    "read_selector_asymmetry": "get_repo can address a repository by repository_id, and list_repositories_by_installation can expose installation membership, so current IDs are observable; that observation is separate from a write-time pin because the content write actions do not accept those IDs as preconditions.",
+    "content_cas_observation": "update_file/delete_file require the current content blob SHA, which fences stale content incarnation at a path inside whichever repository the name selector resolves to, but does not itself fence repository identity."
+  },
+  "model": {
+    "mechanisms": [
+      "M1_owner_name_only",
+      "M2_observable_repository_id_preflight_then_name_write",
+      "M3_observable_repository_id_plus_installation_preflight_then_name_write"
+    ],
+    "events": [
+      "same_name_delete_recreate",
+      "transfer_or_rename",
+      "credential_rotation",
+      "connector_reconnection_or_regrant",
+      "response_loss_after_content_write",
+      "rate_limit_or_transport_interruption_before_commit"
+    ],
+    "scenario_count": 18,
+    "cells": [
+      {"mechanism":"M1_owner_name_only","event":"same_name_delete_recreate","result":"not_fenced","reason":"The caller supplies only owner/name, so a later repository with the same name is not distinguishable by the write selector."},
+      {"mechanism":"M1_owner_name_only","event":"transfer_or_rename","result":"not_proven_fenced","reason":"The contract provides no stable-incarnation predicate; resolution may fail or follow current routing semantics, but identity continuity is not caller-enforced."},
+      {"mechanism":"M1_owner_name_only","event":"credential_rotation","result":"not_fenced","reason":"No expected grant/credential identity is supplied with the write."},
+      {"mechanism":"M1_owner_name_only","event":"connector_reconnection_or_regrant","result":"not_fenced","reason":"No expected installation/grant identity is supplied with the write."},
+      {"mechanism":"M1_owner_name_only","event":"response_loss_after_content_write","result":"recoverable_only_within_same_repository_incarnation","reason":"Path uniqueness and content-SHA CAS can make replay detectable/idempotent, but they do not prove the repository incarnation stayed the same."},
+      {"mechanism":"M1_owner_name_only","event":"rate_limit_or_transport_interruption_before_commit","result":"fail_closed_for_that_attempt","reason":"No committed write means no duplicate effect; a later invocation still needs fresh identity validation."},
+
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"same_name_delete_recreate","result":"preflight_detects_prior_change_but_TOCTOU_remains","reason":"A changed id can be detected before the write, but the write cannot atomically require that id; delete/recreate after preflight remains unfenced."},
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"transfer_or_rename","result":"preflight_detects_prior_mapping_change_but_TOCTOU_remains","reason":"Repository id observation narrows stale mapping before the write but is not a write-time precondition."},
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"credential_rotation","result":"not_fenced","reason":"Repository id continuity says nothing about which credential/grant authorized the write."},
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"connector_reconnection_or_regrant","result":"not_fenced","reason":"The repository id can remain stable while connector authorization changes."},
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"response_loss_after_content_write","result":"recoverable_only_within_same_repository_incarnation","reason":"Repository-id preflight plus content CAS helps reconstruction but cannot bind a replayed name-addressed write atomically to the observed id."},
+      {"mechanism":"M2_observable_repository_id_preflight_then_name_write","event":"rate_limit_or_transport_interruption_before_commit","result":"fail_closed_for_that_attempt","reason":"Safe interruption, but identity must be revalidated next invocation and is still not atomic with write."},
+
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"same_name_delete_recreate","result":"preflight_detects_prior_change_but_TOCTOU_remains","reason":"Repository id plus installation membership can reject an already changed target, but the subsequent write has no expected-id or expected-installation field."},
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"transfer_or_rename","result":"preflight_detects_prior_change_but_TOCTOU_remains","reason":"Both observations remain separate reads rather than one atomic write predicate."},
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"credential_rotation","result":"partially_observable_not_fenced","reason":"Installation id can remain stable across credential rotation; no credential epoch/grant fingerprint is exposed as a write precondition."},
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"connector_reconnection_or_regrant","result":"preflight_can_detect_changed_installation_only_before_write","reason":"A changed installation can be noticed, but a reconnection/regrant after preflight is still not atomically fenced."},
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"response_loss_after_content_write","result":"recoverable_only_within_same_repository_and_grant_observation_window","reason":"CAS/replay evidence is useful but does not turn the preflight identity observations into write-time predicates."},
+      {"mechanism":"M3_observable_repository_id_plus_installation_preflight_then_name_write","event":"rate_limit_or_transport_interruption_before_commit","result":"fail_closed_for_that_attempt","reason":"Interruption itself is safe; next invocation must repeat identity observation and still faces the same write-time binding gap."}
+    ]
+  },
+  "results": {
+    "accepted_zero_dependency_candidate_found": false,
+    "owner_name_only_acceptance": false,
+    "observable_repository_id_preflight_acceptance": false,
+    "observable_repository_id_plus_installation_preflight_acceptance": false,
+    "new_narrowing": "The previously missing repository/install identities are in fact observable in the current connector, and note can be associated with installation 143247947. The narrower blocker is atomicity: current content/ref write contracts do not accept an expected repository_id or installation/grant incarnation. Therefore an own-state pinned expected id can reject changes that happened before preflight, but cannot close the preflight-to-write race or bind authorization continuity.",
+    "minimal_unresolved_child": "Expose a Chat-native write-time repository-incarnation precondition (for example expected_repository_id plus, if authorization continuity is required, expected installation/grant epoch) that is checked atomically with content/ref mutation, or provide an equivalent connector-side pinned binding. It must require no manual/admin provisioning, protected authority, external monotonic witness, finite monthly/trial/paid quota, or incremental cost.",
+    "scope_guard": "This falsifies acceptance only for the current connector contracts tested here. It does not prove GitHub as a service lacks stronger identity primitives, nor that future connector actions cannot expose them. Transfer/rename and credential/reconnection events were modeled from selector capability, not destructively executed."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "accepted_external_hosted_coordination": false,
+    "richer_mode_protected_manual_execution_dependency": "unresolved_for_acceptance: atomic write-time repository/install binding is not exposed by the current Chat content/ref mutation contracts",
+    "quota_zero_acceptance_proven": false
+  },
+  "conflict_and_idempotency_assessment": {
+    "content_sha_CAS": "useful for stale path-content conflict inside a resolved repository",
+    "unique_path_create": "useful for exactly-once receipt/checkpoint creation under response loss",
+    "repository_incarnation_fence": "missing at write-time",
+    "authorization_incarnation_fence": "missing at write-time",
+    "rate_limit_behavior": "fail closed for the interrupted attempt; no same-run retry under RUN_LIFECYCLE"
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part125: execute one bounded atomic-selector alternative-route model using only current Chat GitHub tool contracts plus this own checkpoint. Compare (A) any currently exposed repository_id-addressed mutation action, (B) owner/name content CAS plus an own-state pinned repository_id sentinel, and (C) a connector-side pinned repository/install binding if such a contract is discoverable. Test the same-name recreate race specifically across PRECHECK -> TARGET_REBIND -> WRITE. Do not execute destructive repository lifecycle operations. If no write action exposes an atomic identity precondition, preserve that exact capability gap and then select the next CLEAN-safe coordination leaf for the following invocation rather than repeating observability."
+}
