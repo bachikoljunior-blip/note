@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 129,
+  "created_at": "2026-09-04T05:28:22+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 81,
+    "authority_commit": "71366aad135280a9ed9f00e1c431695e00bfdf79",
+    "transport_mode": "sha_only_exact_authority",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_witness": {
+    "path": "automation_control/receipts/multi_agent/receipt_2026-09-04T052822+0900_presemantic_liveness.json",
+    "blob": "492e6355e3fe3f140053e280176f8e1e04e3c448",
+    "exact_readback_verified": true
+  },
+  "predecessor": {
+    "path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_INCARNATION_FENCE_MODEL_20260904_PART128.json",
+    "blob": "aeabf6724d94ba5a3de7b0d066b2c7f3c6b740e2",
+    "continuation_used": "Part129 external-effect generation/effect-fencing leaf"
+  },
+  "leaf_id": "phase1-multi-agent-external-effect-generation-fencing-part129",
+  "tested_scope": {
+    "model": "128 finite traces = 4 protocols x 2 stale/current-generation states x 2 clean/ambiguous-response retry states x 2 live/expired request-dedupe states x 2 stable/rebound sink-incarnation states x 2 no-advance/generation-advance-after-precheck states",
+    "rate_limit_interruption": "Interruption before the sink call is fail-closed with zero effect and cross-invocation checkpoint. Interruption/response loss after a possibly committed sink call is represented by ambiguous-response retry.",
+    "effect_identity": "stable effect_id; duplicate means the same semantic external effect must not be applied twice",
+    "excluded": "Byzantine sinks, cryptographic forgery, arbitrary sink APIs lacking the modeled validation primitives, and repository-incarnation safety already falsified in Part128"
+  },
+  "protocols": {
+    "sink_local_monotonic_fence": "Sink atomically checks a current-generation floor and permanent effect_id ledger, but both are scoped to the current sink incarnation and are lost on sink rebind/reset.",
+    "request_id_only_dedupe": "Sink deduplicates request_id only while its dedupe record is live; there is no generation fence.",
+    "repository_precheck_unfenced_sink": "Worker checks repository generation immediately before calling a sink that does not itself fence generation or effect_id.",
+    "fail_closed_capability_token": "Strong candidate prerequisite: sink atomically validates token(effect_id,generation,sink_incarnation) against its durable current generation/incarnation and permanent effect ledger at apply time; stale incarnation/generation or repeated effect_id is rejected."
+  },
+  "results": {
+    "sink_local_monotonic_fence": {"unsafe": 14, "traces": 32, "safe": 18, "failure_mode": "rebind/reset loses the fence/ledger; stale generation, ambiguous retry, or superseded generation can then cross"},
+    "request_id_only_dedupe": {"unsafe": 27, "traces": 32, "safe": 5, "failure_mode": "no generation fence plus dedupe expiry/rebind permits stale or duplicate effects"},
+    "repository_precheck_unfenced_sink": {"unsafe": 12, "traces": 32, "safe": 20, "failure_mode": "TOCTOU generation advance after precheck and ambiguous-commit retry remain unfenced at the effect boundary"},
+    "fail_closed_capability_token": {"unsafe": 0, "traces": 32, "safe": 32, "failure_mode": null, "scope_condition": "Only under the strong modeled prerequisite that sink-side current generation/incarnation and effect ledger are durable and atomically checked at effect application. This prerequisite is not generically available on arbitrary external sinks."}
+  },
+  "public_precedent": {
+    "source": "Apache Kafka protocol/API documentation",
+    "observation": "Kafka's broker-side producer epoch is checked against the request epoch and an old epoch can be rejected as InvalidProducerEpoch/producer fencing. This is precedent for putting freshness fencing at the authoritative effect boundary rather than relying only on a client-side precheck.",
+    "urls": [
+      "https://kafka.apache.org/25/design/protocol/",
+      "https://kafka.apache.org/43/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html"
+    ],
+    "usage": "mechanism analogy only; Kafka is not an accepted dependency for the zero-quota Chat route"
+  },
+  "observation_vs_inference": {
+    "observed": [
+      "The finite model produces 14/32 unsafe traces for sink-local fencing when rebind can erase the fence/ledger.",
+      "Request-id-only dedupe produces 27/32 unsafe traces.",
+      "Repository precheck plus unfenced sink write produces 12/32 unsafe traces.",
+      "The strong fail-closed sink capability-token model produces 0/32 unsafe traces under its explicit durability/atomic-validation prerequisite."
+    ],
+    "inference": "Generic external-effect safety needs sink-boundary participation that combines generation/incarnation freshness with permanent effect identity. Client/repository prechecks or expiring request-id dedupe cannot establish the same property. Zero unsafe traces for the capability-token model do not prove generic implementability because its sink-native anti-rollback prerequisite remains unresolved."
+  },
+  "phase1_assessment": {
+    "accepted_zero_dependency_candidate_found_for_generic_external_sink_scope": false,
+    "narrow_candidate": "Native sink-side fail-closed generation+incarnation+effect_id validation",
+    "residual_richer_mode_protected_manual_execution_dependency": "none in this bounded model/public-doc audit",
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "accepted_external_hosted_coordination": false,
+    "quota_zero_rule": "Repository/public reads are lightweight transport/evidence only; rate-limit interruption checkpoints to a later invocation without same-run retry. No hosted runner, Codespaces, cloud compute, external coordinator, paid credit, artifact/LFS/package quota, or user execution is part of the candidate route."
+  },
+  "unresolved_children": [
+    "Prove or falsify a zero-cost Chat-native way for an arbitrary non-repository effect endpoint to preserve or reconstruct a non-rollbackable sink generation/incarnation floor across reset/rebind without introducing external hosted coordination.",
+    "Part128 repository-incarnation write-time fencing remains unresolved and is not solved by sink-local effect fencing."
+  ],
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part130: execute one bounded sink anti-rollback/bootstrap leaf. Hold Part127 replay semantics, Part128 repository-incarnation blocker, and Part129 external-effect model fixed. Model reset/rebind and complete local-state loss for a sink that must validate generation+incarnation+effect_id at apply time. Compare (a) sink-native non-rollbackable monotonic epoch, (b) client-carried signed/current certificate with no sink floor, (c) repository-issued capability plus sink-incarnation binding, and (d) fail-closed refusal until a current sink floor is re-established. Include response loss, duplicate retry, stale certificate, sink name reuse, rate-limit interruption, and later retry. Require zero external hosted coordination, zero finite monthly/trial/paid quota dependency, zero incremental cost, and no richer-mode/protected/manual execution handoff; treat any unavailable sink-native primitive as unresolved rather than accepted." 
+}
