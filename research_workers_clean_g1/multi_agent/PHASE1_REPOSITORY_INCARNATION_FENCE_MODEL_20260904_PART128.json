@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "updated_at": "2026-09-04T04:31:41+09:00",
+  "control_revision": 27,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 128,
+  "leaf_id": "phase1-multi-agent-repository-incarnation-write-time-fence",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "control_revision": 27,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 80,
+    "instruction_manifest_blob": "19bc5c82fd8a42b42143d1e5b1226b7724f6284b",
+    "transport_mode": "sha_only_main_ref_exact_sha",
+    "authority_commit": "cbf37ea19ee5cc5887628193c6dfec0c60a906b9",
+    "bootstrap_valid": true,
+    "quarantined_nonsemantic_transport_metadata": "Branch-head lookup exposed commit metadata beyond the SHA; it was not used as semantic evidence."
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-04T043141+0900_presemantic.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_AMBIGUOUS_CAS_REPLAY_MODEL_20260904_PART127.json",
+  "scope": {
+    "tested": "One bounded capability audit plus 64-trace finite counterexample model for same owner/name repository delete-recreate/rebind between an identity precheck and mutation. The replacement may either lack or deliberately/importantly reuse the same Git blob/commit history. Response loss and next-invocation retry are toggled independently. Part127 generation/idempotency semantics are held fixed.",
+    "dimensions": {
+      "protocols": [
+        "repo_id_precheck_then_contents_blob_sha_write",
+        "contents_branch_plus_blob_sha_write",
+        "immutable_git_objects_then_named_ref_publication",
+        "fast_forward_named_ref_update"
+      ],
+      "destination_rebound_before_mutation": [false, true],
+      "replacement_reuses_required_blob_or_git_history": [false, true],
+      "response_lost_after_mutation": [false, true],
+      "retry_next_invocation": [false, true]
+    },
+    "scenario_count_per_protocol": 16,
+    "total_protocol_traces": 64,
+    "assumptions": [
+      "Same-name replacement is allowed to contain identical file content and/or imported identical Git history, so content-addressed blob/commit SHAs can coincide across the old and replacement repository states.",
+      "The stale agent is cooperative and uses only currently Chat-exposed GitHub connector mutation preconditions.",
+      "No same-run retry/backoff is used; a response-loss or rate-limit ambiguity is resumed only on a later invocation.",
+      "A repository metadata read can expose a repository id/node id, but the tested mutation surfaces do not accept that id as an atomic mutation precondition."
+    ],
+    "not_tested": [
+      "GitHub internal guarantees not documented or exposed to the connector",
+      "Organization-level policies that forbid repository deletion/recreation",
+      "Byzantine mutation of the authority file itself",
+      "External non-repository effect sinks"
+    ]
+  },
+  "current_exposed_mutation_surface": {
+    "update_file": "repository_full_name + path + replacement content + current file blob sha + optional branch; no repository id/node id/expected repository incarnation/If-Match field is exposed.",
+    "create_file_delete_file": "repository_full_name + path (+ file blob sha for delete) + optional branch; no repository-incarnation compare is exposed.",
+    "create_tree_create_commit": "repository_full_name plus Git-object inputs; target repository is still selected by owner/name and no repository-incarnation precondition is exposed.",
+    "update_ref_create_branch": "repository_full_name + branch/ref name + commit sha; update_ref can require non-force fast-forward, but no expected old ref SHA or repository-id compare is exposed by the connector.",
+    "capability_narrowing": "No current Chat-exposed GitHub mutation action found in this bounded audit can atomically bind both logical repository owner/name and immutable repository incarnation to the same write."
+  },
+  "public_source_basis": [
+    {
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "observation": "Create/update file contents addresses the repository by owner and repo; update requires the blob SHA of the file being replaced and optionally a branch name. The documented mutation parameter set contains no repository id/node id precondition."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/git/refs",
+      "observation": "Update a reference addresses owner/repo/ref and supplies the new SHA plus optional force; force=false constrains fast-forward but the documented parameters contain no repository-incarnation compare and no expected-old-ref parameter."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observation": "Repository reads expose repository metadata including stable numeric id/node_id, but the tested write endpoints are still owner/name addressed rather than id-preconditioned."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests",
+      "observation": "GitHub documents ETag conditional requests as conditional GET optimization; this does not supply the missing write-time repository-incarnation fence for the tested mutation actions."
+    }
+  ],
+  "model_results": {
+    "repo_id_precheck_then_contents_blob_sha_write": {
+      "unsafe": "4/16",
+      "unsafe_condition": "repository rebind occurs after the metadata precheck and the replacement contains the same expected file blob; stale update can satisfy the file-SHA CAS in the replacement repository because repository identity is not part of the atomic mutation precondition.",
+      "safe_fail_closed": "4/16 rebind traces where replacement does not contain the required blob/history; remaining 8/16 have no rebind."
+    },
+    "contents_branch_plus_blob_sha_write": {
+      "unsafe": "4/16",
+      "unsafe_condition": "same branch name and same expected blob exist in the replacement; branch name plus content-addressed blob SHA identifies state, not repository incarnation."
+    },
+    "immutable_git_objects_then_named_ref_publication": {
+      "unsafe": "4/16",
+      "unsafe_condition": "replacement imports/recreates the same required Git history/object identities, so a later owner/name-addressed publication can target the replacement. Immutable object identity does not by itself bind the destination repository incarnation."
+    },
+    "fast_forward_named_ref_update": {
+      "unsafe": "4/16",
+      "unsafe_condition": "replacement contains a compatible identical/imported history; fast-forward validity is evaluated inside whichever repository owner/name resolves at mutation time and therefore does not prove old repository incarnation."
+    },
+    "aggregate": {
+      "unsafe": "16/64",
+      "unsafe_rebind_with_matching_history_slice": "16/16",
+      "duplicate_effect_from_response_loss": "0 additional repository-local duplicates in this model when Part127 stable semantic edge/effect identity is retained; the defect is wrong-incarnation mutation, not replay classification.",
+      "rate_limit_or_lost_response_behavior": "Checkpoint and defer exact readback to the next scheduled invocation; no lease expiry, same-run poll, or finite-credit rescue is introduced. Deferral does not repair a mutation that already landed in the wrong repository incarnation."
+    }
+  },
+  "finding": {
+    "new_narrowing": "Part127's file/blob CAS plus stable semantic generation-edge identity remains safe only after destination repository incarnation is fixed. A pre-read repository id is TOCTOU evidence, not a write fence. Branch/ref names and Git object SHAs can also survive or be recreated by import/restore, so they cannot generically distinguish old and same-name replacement repositories. The current Chat-exposed GitHub write actions audited here expose no atomic repository-id/incarnation compare.",
+    "accepted_zero_dependency_candidate_found_for_tested_repository_rebind_scope": false,
+    "exact_missing_capability": "A Chat-exposed zero-cost mutation primitive whose success predicate atomically includes both the current logical state CAS (file/blob/ref/generation) and an immutable destination repository-incarnation identifier, or an equivalent server-enforced destination capability that cannot be valid after same-name delete/recreate/rebind.",
+    "global_phase1_acceptance": false
+  },
+  "unresolved_children": [
+    {
+      "id": "repository-incarnation-write-time-fence",
+      "status": "exact_capability_missing_on_current_exposed_github_mutations",
+      "detail": "Precheck-only repository identity is not atomic with the later owner/name-addressed write."
+    },
+    {
+      "id": "external-effect-generation-fence",
+      "status": "next_highest_value_role_safe_leaf",
+      "detail": "Test sink-side stable effect identity + generation/claim-owner fencing for non-repository useful effects without hosted coordination, finite quota, or richer-mode arbitration."
+    }
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "accepted_external_hosted_coordination": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the bounded repository transport audit/model itself; the missing repository-incarnation fence remains unresolved rather than handed off",
+    "quota_zero_scope_guard": "The candidate transport uses lightweight repository APIs only and tolerates rate-limit interruption through cross-invocation checkpoint/resume. This is not a claim of continuous API availability or paid-plan independence."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "continuation": "Part129: execute one bounded external-effect generation/effect-fencing leaf. Keep Part127 replay semantics and Part128 repository-incarnation blocker explicit. Model a non-repository sink with stable effect_id, generation/claim-owner fence, response loss, duplicate delivery, sink reset/rebind, rate-limit interruption, and later retry. Compare sink-local monotonic fence, request-id-only dedupe with expiry, repository precheck plus unfenced sink write, and fail-closed sink capability tokens. Require zero external hosted coordination, zero finite monthly/trial/paid quota dependency, zero incremental cost, and no richer-mode/protected/manual execution handoff."
+}
