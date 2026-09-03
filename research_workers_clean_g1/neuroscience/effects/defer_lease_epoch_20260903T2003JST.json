@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-defer-lease-epoch-v1",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260903T2002JST_defer_lease_epoch.json",
+  "preflight_checkpoint_blob": "93bf02d192c7bfa0b4a241a9b92cc6d38767e7fd",
+  "tested_mechanism": "When an ambiguous target observation forces DEFER, expiration of old evidence must not itself authorize replay. A timeout may only expire the old observation and open a new evidence epoch; replay or skip requires a newly fresh, effect-identity-fenced observation in that epoch.",
+  "symbolic_probe": {
+    "fixed_assumptions": [
+      "One serialized writer",
+      "Durable intent and deterministic effect identity are preserved",
+      "Initial target observation is ambiguous, so the predecessor rule returns DEFER",
+      "A newly fresh query, when decisive, truthfully distinguishes the same effect identity as applied versus fresh absent",
+      "Identity/generation mismatch is fenced to DEFER"
+    ],
+    "cases": [
+      {"id":"A1","actual_effect_applied":true,"later_evidence":"none","indefinite_defer":"DEFER; no duplicate; no resolution","timeout_replay":"REPLAY; DUPLICATE","evidence_epoch_renewal":"DEFER; old uncertainty expires but no semantic action"},
+      {"id":"A0","actual_effect_applied":false,"later_evidence":"none","indefinite_defer":"DEFER; safe but no progress","timeout_replay":"REPLAY; progress in this hidden-absent world, but policy is unsafe because A1 is observationally indistinguishable before replay","evidence_epoch_renewal":"DEFER; safe but no progress"},
+      {"id":"B1","actual_effect_applied":true,"later_evidence":"new fresh query confirms same effect applied","indefinite_defer":"DEFER; no progress because policy never renews evidence","timeout_replay":"not needed; timeout alone remains an unsafe authorization rule","evidence_epoch_renewal":"SKIP/RECOVER; safe resolution"},
+      {"id":"B0","actual_effect_applied":false,"later_evidence":"new fresh query confirms same effect fresh-absent","indefinite_defer":"DEFER; no progress because policy never renews evidence","timeout_replay":"not needed; timeout alone remains an unsafe authorization rule","evidence_epoch_renewal":"REPLAY once; safe progress"},
+      {"id":"C1","actual_effect_applied":true,"later_evidence":"new query remains uncertain","indefinite_defer":"DEFER","timeout_replay":"REPLAY if deadline fires; DUPLICATE","evidence_epoch_renewal":"DEFER; safe"},
+      {"id":"C0","actual_effect_applied":false,"later_evidence":"new query remains uncertain","indefinite_defer":"DEFER","timeout_replay":"REPLAY if deadline fires; observationally unsafe as a general rule","evidence_epoch_renewal":"DEFER; safe but no progress"},
+      {"id":"D","actual_effect_applied":"either","later_evidence":"new query has mismatched generation/effect identity","indefinite_defer":"DEFER","timeout_replay":"unsafe if timeout overrides mismatch","evidence_epoch_renewal":"DEFER by identity fence"}
+    ]
+  },
+  "result": {
+    "timeout_without_new_evidence": "FALSIFIED as a safe recurrence rule. In A1/C1 it converts unresolved epistemic uncertainty into a physical replay and duplicates an already-applied effect.",
+    "indefinite_defer": "Safety-preserving but not a liveness mechanism; it cannot resolve hidden-absent cases without acquiring new evidence.",
+    "evidence_epoch_renewal": "PASS for conditional safety plus conditional liveness in the exact tested scope: expiration only invalidates old evidence; newly fresh decisive same-identity evidence authorizes SKIP/RECOVER or one REPLAY, while uncertain or mismatched evidence remains DEFER.",
+    "resolved_duplicate_replays": {"indefinite_defer":0,"timeout_replay":2,"evidence_epoch_renewal":0},
+    "decisive_fresh_cases_resolved": {"indefinite_defer":0,"evidence_epoch_renewal":2},
+    "liveness_limit": "If a newly fresh decisive target observation cannot be obtained, evidence-epoch renewal preserves safety but cannot guarantee exactly-once progress."
+  },
+  "mechanism_revision": "Treat timeout/lease expiry as an evidence invalidation event, never as an action authorization event. Renewal advances an evidence epoch; semantic action remains gated by a fresh same-effect certificate in the new epoch.",
+  "neuroscience_transfer": "In the role-local corollary-discharge analogy, decay of confidence in an old reafference comparison should trigger reacquisition of sensory evidence rather than invert the motor conclusion. The computational separation is prediction/evidence validity versus action polarity: an expired comparison becomes unknown, not opposite.",
+  "scope_guard": "The positive claim is limited to the serialized single-writer symbolic cut with deterministic effect identity and truthful freshness/identity certificates. It does not prove liveness under permanently unavailable fresh observation, safety under a falsely certified stale query, concurrent-writer coordination, target corruption, nondeterministic effect ids, or distributed consensus.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence/readback only; no hosted compute, runner, artifact service, cloud credit, external model, or repository API volume used as computation",
+    "accepted_scope": "DEFER-branch recurrence safety rule: lease expiry invalidates evidence only; fresh identity-fenced evidence is required before replay/skip",
+    "unresolved_child": "Exactly-once liveness remains unresolved when Chat-native observable target state cannot provide a newly fresh decisive same-effect observation."
+  },
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized Phase-1 root/config and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, hosted-compute, paid/quota-bearing, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next valid invocation: run one restart/reconstruction probe for the evidence-epoch rule. Persist an intent with evidence_epoch=N and an ambiguous DEFER, reconstruct after a simulated missed-run boundary, then test whether a stale pre-restart observation from epoch N can be accidentally reused after renewal to N+1. Compare epoch-only fencing versus epoch+effect-identity+freshness fencing; falsify any reconstruction that authorizes replay/skip from a pre-renewal certificate."
+}
