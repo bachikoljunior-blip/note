@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "effect_chain_id": "neuroscience-phase1-ambiguous-write-duplicate-resume-v1",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "predecessor_latest_blob": "92aa11c605f0fca0115d71cb772c54dfb1f26fd5",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260903T0902JST_ambiguous_write_duplicate_resume.json",
+  "preflight_checkpoint_blob": "a9f22ce262488cdf9e7ed780452bac1730decb0d",
+  "probe_type": "deterministic symbolic recurrence cut with two resume arms",
+  "tested_scope": "Serialized single-writer role-local conditional updates; one predecessor pointer P20; one durable intent I21 with a fresh attempt nonce and deterministic semantic operation digest; one native effect E21 already applied exactly once; one valid certificate C21 written successfully but its response lost before pointer CAS; deterministic native-effect identity and exact equality checks are available on restart.",
+  "initial_durable_cut": {
+    "pointer": {"epoch": 20, "certificate": "C20"},
+    "intent": {"id": "I21", "predecessor_certificate": "C20", "next_epoch": 21, "attempt_nonce": "n21", "semantic_operation_digest": "op21", "effect_id": "E21"},
+    "native_effect": {"effect_id": "E21", "application_count": 1, "effect_digest": "D21"},
+    "certificate": {"id": "C21", "epoch": 21, "predecessor_certificate": "C20", "attempt_nonce": "n21", "effect_id": "E21", "effect_digest": "D21", "intent_id": "I21"},
+    "lost_response_cut": "C21 create succeeded durably; caller did not receive the success response; P20->C21 CAS was never attempted."
+  },
+  "arm_naive_pointer_only_retry": {
+    "algorithm": [
+      "Read P20 and treat absence of pointer advancement as absence of the transition.",
+      "Create a fresh retry attempt for the same semantic operation.",
+      "Apply the semantic native effect again.",
+      "Write a replacement epoch-21 certificate and CAS P20 to it."
+    ],
+    "final_pointer_epoch": 21,
+    "final_semantic_native_application_count": 2,
+    "dangling_original_certificate_remains": true,
+    "false_rollback_avoided": false,
+    "duplicate_native_effect_avoided": false,
+    "verdict": "FAIL: pointer-only restart cannot distinguish a lost successful certificate response from a never-started transition, so retry duplicates the already-applied semantic native effect."
+  },
+  "arm_intent_bound_idempotent_resume": {
+    "algorithm": [
+      "Read P20 and the durable pending intent I21 instead of inferring completion solely from P20.",
+      "Fetch the exact certificate slot bound to I21 and require exact equality: C21.epoch=P20.epoch+1, C21.predecessor_certificate=P20.certificate, C21.intent_id=I21, C21.attempt_nonce=I21.attempt_nonce, and C21.effect_id=I21.effect_id.",
+      "Require native evidence E21 to exist exactly once and require E21.effect_digest=C21.effect_digest.",
+      "Because the exact certificate and native effect already match, do not replay E21.",
+      "Conditionally repair only the pointer with CAS(expected=P20, new=C21), then reread P and E21."
+    ],
+    "final_pointer": {"epoch": 21, "certificate": "C21"},
+    "final_semantic_native_application_count": 1,
+    "false_rollback_avoided": true,
+    "duplicate_native_effect_avoided": true,
+    "certificate_equality_verified_before_pointer_repair": true,
+    "native_effect_equality_verified_before_pointer_repair": true,
+    "verdict": "PASS within tested scope: a durable intent plus exact certificate/native-effect equality turns the ambiguous lost-response cut into a pointer-only repair, preserving the already-completed semantic effect exactly once."
+  },
+  "comparison": {
+    "naive_retry_native_application_count": 2,
+    "idempotent_resume_native_application_count": 1,
+    "naive_retry_passes_exactly_once": false,
+    "idempotent_resume_passes_exactly_once": true,
+    "idempotent_resume_preserves_latest_completed_native_state": true
+  },
+  "mechanism_revision": "Generation+nonce+certificate-first pointer repair is insufficient if restart has no durable way to rediscover the exact in-flight certificate after an ambiguous successful write. Add a durable intent identity before the native effect, bind certificate and deterministic native-effect identity to that intent, and on restart prefer exact intent/certificate/native equality plus pointer-only CAS over replay.",
+  "scope_guard": "This does not prove safety when the native effect itself has an ambiguous response before certificate creation, when E_native lacks a queryable deterministic identity, under concurrent writers, under certificate/native corruption, under malicious mutation, or when repository transport violates the assumed serialized conditional-update model.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "Only bounded role-local persistence/readback and conditional pointer transport; no hosted compute, runner, Codespaces, artifact/LFS/package service, external model/API credit, or repository API volume used as computation.",
+    "accepted_scope": "Ambiguous successful certificate-write response after a native effect already has exact durable identity, before pointer CAS, under serialized single-writer recurrence."
+  },
+  "conflict_check": "Semantic inputs were restricted to frozen sanitized root/control, current neuroscience role config, and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, or unrelated repository semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_next_action": "On the next valid invocation, execute exactly one earlier-cut ambiguous-native-effect probe: simulate E_native succeeding while its response is lost before C21 exists. Compare a queryable deterministic effect-id resume rule against a replay rule; require exactly-once semantic effect without assuming certificate existence. If E_native cannot expose durable idempotency/query semantics, record that exact missing Chat-native capability as an unresolved child rather than promoting this mechanism beyond the current cut."
+}
