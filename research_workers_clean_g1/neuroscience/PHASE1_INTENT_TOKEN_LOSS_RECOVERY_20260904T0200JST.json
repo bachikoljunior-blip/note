@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "updated_at": "2026-09-04T02:00:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-intent-token-loss-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "predecessor_latest_blob": "c9e3da541c46a41b4f1af492e858202a0a39a0c4",
+  "base_continuation_preserved": true,
+  "probe_type": "finite symbolic crash-recovery state reconstruction probe",
+  "question": "When immutable successor generation G+1 is durable but restart lacks a trusted durable record naming the intended target generation id, which recovery rule avoids wrong-orphan adoption, unnecessary new generations, and premature certificate authorization?",
+  "candidate_mechanisms": {
+    "content_addressed_target": "Reconstruct target T deterministically from trusted predecessor identity plus recoverable transition payload/fingerprint; immutable generation id is the resulting digest.",
+    "durable_intent_record": "Before successor creation, persist immutable intent I={predecessor P,target T,transition_digest,epoch}; all replay uses the same I and T.",
+    "candidate_scan": "Enumerate immutable successor candidates of predecessor P and choose an apparently plausible orphan without a trusted intended-target token.",
+    "combined_intent_capsule": "Persist immutable intent capsule I before effects, derive or bind T deterministically to I and the transition digest, embed I's digest in generation T, and treat scans only as discovery for the exact T rather than as authority to select a candidate."
+  },
+  "test_cases": [
+    {
+      "case": "lost_ack_current_already_target",
+      "state": "Pointer update P->T committed but response was lost; restart can read current pointer and current==T.",
+      "required_safe_behavior": "Recognize committed target, create no new generation, and authorize certificate only after the read proves current==T.",
+      "result": "content-addressed, durable-intent, and combined capsule pass when they retain/reconstruct T; blind scan is unnecessary and supplies no stronger proof."
+    },
+    {
+      "case": "multiple_orphans_payload_recoverable",
+      "state": "current==P; immutable children T1 and T2 both exist; trusted transition payload/fingerprint reconstructs T2 as intended.",
+      "required_safe_behavior": "Select T2 only; never infer intent from orphan count/order.",
+      "result": "content-addressed target and combined capsule pass; intact durable intent passes; candidate scan alone fails because multiple plausible children are observationally compatible with intent."
+    },
+    {
+      "case": "multiple_orphans_payload_lost_intent_intact",
+      "state": "current==P; T1 and T2 exist; transition payload needed to derive a content hash is unavailable after restart, but immutable intent record names T2 and its transition digest.",
+      "required_safe_behavior": "Use T2 if generation metadata verifies against intent; otherwise fail closed.",
+      "result": "durable intent and combined capsule pass; content-addressed reconstruction alone is unavailable because its derivation input was lost; candidate scan fails."
+    },
+    {
+      "case": "target_missing_intent_intact",
+      "state": "current==P; intent I durably names target T but successor creation did not complete.",
+      "required_safe_behavior": "Recreate exactly T only when the transition payload/fingerprint required by I is recoverable; never mint a fresh unrelated target id.",
+      "result": "combined capsule passes with idempotent exact-target creation; durable intent passes if it carries enough reconstruction data; a random-id intent lacking payload is only a locator and cannot recreate contents; scan cannot solve a missing target."
+    },
+    {
+      "case": "stale_intent_after_newer_commit",
+      "state": "Recovered intent refers to predecessor P and target T, but current pointer is U where U is neither P nor T because a later valid generation already committed.",
+      "required_safe_behavior": "Treat intent as stale/superseded; do not regress pointer, adopt T, mint another generation, or issue T's certificate.",
+      "result": "All safe mechanisms require read-current-first and fail closed on current not in {P,T}; intent alone is not authorization to overwrite a changed lineage."
+    },
+    {
+      "case": "intent_and_transition_identity_both_lost",
+      "state": "current==P; multiple immutable orphan children exist; restart has neither a trusted intended-target record nor enough deterministic transition material to reconstruct the target identity.",
+      "required_safe_behavior": "Do not choose an orphan, do not mint a replacement successor, and do not issue a certificate.",
+      "result": "No tested mechanism can uniquely identify intent from storage shape alone. Candidate scan is specifically falsified; uniqueness of a presently visible orphan would be an environmental assumption, not a durable proof of intended identity."
+    }
+  ],
+  "probe_result": "Content addressing and a durable intent record solve complementary failure modes but neither is sufficient under arbitrary loss of its own reconstruction input. Scanning immutable candidates is not a safe authority when more than one plausible orphan can exist. The narrow safe rule is an immutable write-ahead intent capsule that binds predecessor, transition digest and a stable target id before successor effects; the generation self-binds to the capsule; recovery reads current first, reuses the same target id, and authorizes a certificate only after current==target is positively re-established. If both the intent capsule and deterministic transition identity are unavailable, the controller must remain fail-closed rather than adopt or mint.",
+  "recovery_algorithm": [
+    "Persist immutable intent capsule I={P,T,transition_digest,epoch} before creating or publishing T; when possible derive T deterministically from I plus the transition payload digest.",
+    "On restart or ambiguous acknowledgement, read current pointer C before any new generation allocation.",
+    "If C==T, verify generation T self-binds to I and then treat publication as acknowledged; certificate may be acquired only after this proof.",
+    "If C is neither P nor T, classify I as stale/superseded and fail closed; never regress the pointer.",
+    "If C==P, address exact T directly. If T exists, verify predecessor, intent digest and transition digest. If T is missing, recreate exactly T only if I plus recoverable transition material uniquely define its contents.",
+    "Publish only CAS(P,T). If its response is ambiguous, repeat this same algorithm with the same I and T; never allocate T2 merely because acknowledgement was lost.",
+    "Candidate enumeration may locate the exact digest T, but must never choose intent from candidate count, age, lexical order or apparent plausibility."
+  ],
+  "neuroscience_transfer": "Treat recurrence-sensitive latent-context renewal like a prospective memory intention rather than post-hoc familiarity. A stable intention/context token is committed before state transition, successor state carries a self-binding trace of that token, and reinstatement after interruption is permitted only when current-context evidence matches the same token. Familiarity with one of several plausible orphan states is insufficient to authorize reinstatement.",
+  "mechanism_revision": "Upgrade stable-target replay to write-ahead self-certifying intent capsules. The durable unit is not only successor generation identity but the predecessor->intended-successor relation. Content addressing supplies idempotent identity when transition material is recoverable; the intent capsule supplies selection when multiple immutable candidates exist; read-current-first prevents stale-intent regression.",
+  "falsified_mechanism": "Scanning immutable candidate generations as the authoritative recovery rule. It cannot distinguish intended from merely plausible orphan states when multiple candidates satisfy the same parent-level invariants, and therefore cannot justify pointer publication or certificate acquisition.",
+  "scope_guard": "Positive result is limited to a serialized single-writer symbolic model with immutable generations, one atomic current pointer, atomic immutable intent-capsule persistence, verifiable predecessor/intent/transition digests, and fail-closed certificate gating. It does not claim safety for concurrent writers, corrupt or equivocal storage, non-atomic pointer updates, missing/corrupt intent capsule plus missing deterministic transition identity, adversarial hash collisions, or transports that cannot positively read current pointer identity.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local text persistence/readback only; no hosted runner, external model/API credit, artifact store, package service, or repository API volume used as computation",
+    "accepted_scope": "Write-ahead self-certifying intent capsule plus stable target replay prevents wrong-orphan adoption, duplicate successor allocation, stale-intent regression, and premature certificate acquisition across the six tested serialized crash-recovery cases when either the capsule or deterministic transition identity required for exact target reconstruction remains trustworthy.",
+    "unresolved_child": "The intent capsule is now a minimal recovery root-of-trust. If it is itself missing, torn, corrupt or stale while deterministic transition identity is also unavailable, safe unique successor recovery is unresolved and must remain fail-closed."
+  },
+  "conflict_check": "Semantic inputs were limited to the latest required instruction/lifecycle controls, exact-blob-two-pass frozen sanitized DESIRED_STATE control26, exact-blob-two-pass frozen neuroscience config7, and own neuroscience LATEST/preflight state. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, hosted-compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: test the new minimal root-of-trust itself under intent-capsule write loss, torn/corrupt capsule, and stale duplicated intent records. Compare one immutable write-ahead capsule, a two-slot append-only intent journal with monotonic predecessor binding, and generation-embedded self-certification. Require fail-closed behavior whenever a unique current intention cannot be proven; reject any scheme that infers intent solely from orphan uniqueness or requires external execution/quota-bearing recovery."
+}
