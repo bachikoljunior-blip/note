@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "effect_chain_id": "neuroscience-phase1-evidence-epoch-restart-fencing-v1",
+  "created_at": "2026-09-03T22:01:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 26,
+  "frozen_root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260903T2200JST_evidence_epoch_restart_fencing.json",
+  "preflight_checkpoint_blob": "68a5f31e3d77965c598078cc0c6b529656d3ef43",
+  "predecessor_latest_blob": "6b20f3acd1917c5dd388e648e4c46a150de7e82a",
+  "probe_type": "symbolic_restart_reconstruction_falsification",
+  "tested_scope": "Serialized single-writer durable-intent model with deterministic effect identity, an explicit evidence_epoch, immutable raw observation timestamps, and a simulated missed-run boundary after the old certificate lease has expired. No concurrent writers, no corrupted target, no nondeterministic ids, no distributed consensus, and no claim when no fresh decisive observation can be obtained.",
+  "setup": {
+    "durable_intent_before_boundary": {
+      "effect_id": "E17",
+      "evidence_epoch": 7,
+      "decision": "DEFER",
+      "reason": "last target observation is no longer fresh"
+    },
+    "missed_run_boundary": "No action is taken while the old observation lease is expired.",
+    "renewal": {
+      "new_evidence_epoch": 8,
+      "epoch_started_after": "missed_run_boundary",
+      "safety_rule": "Renewal invalidates prior evidence; it does not copy or promote the prior observation into the new epoch."
+    }
+  },
+  "candidate_rules": {
+    "epoch_only": "A certificate is actionable when certificate.evidence_epoch equals intent.evidence_epoch. Effect identity and observation freshness are not independently checked.",
+    "epoch_effect_identity_freshness": "A certificate is actionable only when certificate.evidence_epoch equals intent.evidence_epoch, certificate.effect_id equals intent.effect_id, observed_at is at or after the current epoch start, and the certificate is still fresh at decision time."
+  },
+  "cases": [
+    {
+      "case": "A_unchanged_old_epoch",
+      "certificate": "same effect E17, epoch 7, pre-boundary observation, stale at reconstruction",
+      "epoch_only": "DEFER_REJECT_EPOCH_MISMATCH",
+      "epoch_effect_identity_freshness": "DEFER_REJECT_EPOCH_AND_FRESHNESS",
+      "finding": "Epoch increment correctly blocks an unchanged pre-renewal certificate."
+    },
+    {
+      "case": "B_relabelled_old_observation",
+      "certificate": "same old pre-boundary E17 observation is reconstructed with epoch field rewritten to 8 but observed_at remains before epoch-8 start",
+      "epoch_only": "REPLAY_AUTHORIZED_FROM_STALE_ABSENT_VALUE",
+      "epoch_effect_identity_freshness": "DEFER_REJECT_FRESHNESS",
+      "finding": "Epoch-only fencing is falsified under a reconstruction that treats epoch renewal as permission to re-stamp old evidence. Freshness binding prevents the stale value from becoming actionable."
+    },
+    {
+      "case": "C_wrong_effect_same_epoch",
+      "certificate": "fresh epoch-8 certificate for effect E18 with decisive applied/absent status",
+      "epoch_only": "ACTION_AUTHORIZED_FOR_WRONG_EFFECT",
+      "epoch_effect_identity_freshness": "DEFER_REJECT_EFFECT_IDENTITY",
+      "finding": "Epoch-only fencing is insufficient when multiple deterministic effect identities can occupy the same evidence epoch."
+    },
+    {
+      "case": "D_fresh_same_effect",
+      "certificate": "fresh epoch-8 certificate for E17 observed after epoch-8 start",
+      "epoch_only": "REPLAY_IF_FRESH_ABSENT_OR_SKIP_IF_FRESH_APPLIED",
+      "epoch_effect_identity_freshness": "REPLAY_IF_FRESH_ABSENT_OR_SKIP_IF_FRESH_APPLIED",
+      "finding": "The composite fence preserves conditional liveness when a newly fresh decisive same-effect observation exists."
+    }
+  ],
+  "probe_result": "The restart probe falsifies any reconstruction that treats evidence_epoch renewal itself as freshness or identity proof. Epoch-only fencing safely rejects an unchanged old-epoch certificate, but it can authorize a stale re-labelled observation or a fresh certificate for the wrong effect. The minimal safe reconstruction rule in the tested cut is conjunctive: current epoch + exact effect identity + post-renewal observation freshness. Renewal creates an evidence-acquisition obligation, not an action authorization.",
+  "mechanism_revision": "Persist immutable observation provenance separately from evidence_epoch. On restart, reconstruct intent and epoch, discard actionability of all pre-epoch observations, and require a newly observed same-effect certificate before REPLAY/SKIP. Never synthesize freshness by rewriting an old certificate's epoch.",
+  "neuroscience_transfer": "Source-memory analogy: a recency/context tag alone cannot establish that a retrieved trace belongs to the currently queried item; safe action requires conjunctive item identity plus temporally current evidence. A context reset should trigger reacquisition rather than re-date an old trace.",
+  "scope_guard": "Positive claim is only conditional safety/liveness for the serialized single-writer symbolic model above. Epoch-only fencing is not claimed universally unsafe when certificate immutability, exact effect identity, and independent freshness are already guaranteed elsewhere; the falsification targets reconstructions that use epoch as a substitute for those guarantees.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence/readback only; no hosted compute or repository API volume used as computation",
+    "accepted_scope": "Restart-safe evidence renewal requires current epoch, exact effect identity, and post-renewal freshness before actionability.",
+    "unresolved_child": "Crash consistency of the epoch-renewal write itself remains untested: a restart between persisting epoch N+1 and persisting its epoch-start/provenance fence could create an authority gap unless renewal metadata is atomically reconstructible."
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized DESIRED_STATE control26, frozen neuroscience config7, and own neuroscience LATEST/preflight checkpoint. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, hosted-compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next valid invocation: test crash consistency of evidence-epoch renewal as a single state transition. Symbolically split renewal into durable fields (epoch number, epoch_started_at, effect identity fence, last-certificate pointer) and inject one crash after each write boundary. Compare non-atomic multi-field renewal versus a single versioned renewal record with checksum/version pointer; falsify any reconstruction that can accept a certificate without a self-consistent renewal record."
+}
