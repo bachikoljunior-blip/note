@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "updated_at": "2026-09-04T01:29:34+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 126,
+  "leaf_id": "phase1-multi-agent-immutable-claim-no-lease-fixed-destination-incarnation",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_blob": "0204439e5ae431df610e9fd345a2161fa3195190",
+    "instruction_manifest_revision": 78,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-04T012934+0900_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_ATOMIC_SELECTOR_ALTERNATIVE_ROUTE_MODEL_20260904_PART125.json",
+  "scope": {
+    "tested": "A bounded non-destructive finite model of repository-local claim/idempotency under a FIXED destination-repository incarnation. Claim transition is a generation-scoped unique-path create. Compared permanent monotonic ownership, wall-clock lease/timeout takeover without fencing, explicit generation handoff recorded separately from the effect authority, and explicit generation handoff plus terminal effect commit serialized through the same CAS authority object.",
+    "dimensions": {
+      "two_concurrent_claimers": "always present; both target the same generation-scoped claim path",
+      "response_loss_after_successful_claim_create": [false, true],
+      "duplicate_delivery": [false, true],
+      "initial_claimant_abandoned": [false, true],
+      "late_old_claimant_resumes": [false, true],
+      "effect_vs_takeover_order": ["old_effect_first", "takeover_first"],
+      "rate_limit_after_claim": [false, true]
+    },
+    "scenario_count": 64,
+    "assumptions": [
+      "Destination repository incarnation is fixed for the entire trace; Part125's same-name repository rebind problem is intentionally held orthogonal and remains unresolved.",
+      "Workers are crash/retry/concurrency faulty but not Byzantine: a worker attempts terminal effect commit only after proving that its token owns the generation-scoped claim path.",
+      "The current connected Chat GitHub create_file contract is create-only for a named path: the path must not already exist. Current update_file uses the current blob SHA as the file-level CAS precondition.",
+      "For the strong handoff policy, generation advance and terminal repository-local effect status mutate the SAME authority file by current-blob CAS. A later invocation may attempt at most one generation handoff; no wall-clock expiry or lease is used.",
+      "Liveness for abandoned claims is conditional on at least one later fair scheduled invocation obtaining a mutation opportunity. Infinite adversarial preemption or a permanent repository outage is outside the tested scope."
+    ],
+    "not_tested": [
+      "Repository same-name delete/recreate or force-rebind after precheck",
+      "Byzantine workers that intentionally ignore claim ownership",
+      "External/non-repository side effects whose sink does not participate in the same generation fence",
+      "Global asynchronous liveness under infinitely many preempting invocations",
+      "Plan-entitlement or paid-plan independence beyond the already-connected lightweight repository transport surface"
+    ]
+  },
+  "public_source_evidence": [
+    {
+      "source": "GitHub Docs, REST API endpoints for repository contents",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "retrieved_date": "2026-09-04",
+      "relevant_public_mechanism": "Create/update file contents is path-addressed; sha is required when updating an existing file; documented responses include 409 Conflict. This supports file-level CAS/conflict handling but does not provide multi-file atomicity or an effect-sink fence by itself."
+    }
+  ],
+  "model_protocols": {
+    "shared_claim_transition": {
+      "path": "claims/<work_id>/g<generation>.json",
+      "operation": "unique-path create with claimant_token in content",
+      "concurrent_result": "Exactly one cooperative claimer obtains the generation claim; the other observes create conflict/existing path. After an ambiguous successful-create response, exact readback of the path distinguishes self-token success from another claimant's ownership. Duplicate delivery reuses the same logical claim path and token and therefore does not create a second generation claim."
+    },
+    "permanent_monotonic_claim": "Never transfer ownership after the first claim. Safe against duplicate owners, but a permanently abandoned winner stalls the work indefinitely.",
+    "lease_timeout_unfenced": "Allow another worker to act after a wall-clock timeout without a monotonic sink/effect fencing token. A late original claimant can still commit, so timeout is not authority revocation.",
+    "generation_handoff_split_authority": "Advance generation in a separate handoff record while terminal effect commit is guarded by a different authority object. The old effect and new handoff can both succeed in opposite objects, so a late old claimant remains a duplicate/conflict risk.",
+    "generation_handoff_same_authority_cas": "Store {generation,status,effect_id/transition_id} in one authority file. Terminal effect commit CAS-updates that file while still at generation n/open. Handoff CAS-updates the SAME file from n/open to n+1/open. If old effect wins first, handoff conflicts or observes terminal. If handoff wins first, the old effect's stale SHA fails and re-read observes a newer generation. Claim creation for n+1 is then create-only at the new generation path. No clock-based lease is required for safety."
+  },
+  "results": {
+    "permanent_monotonic_claim": {
+      "safe": "64/64",
+      "unsafe_duplicate_effect": "0/64",
+      "live": "32/64",
+      "stalled": "32/64",
+      "abandoned_claim_slice": "0/32 live",
+      "claim_uniqueness": "64/64"
+    },
+    "lease_timeout_unfenced": {
+      "safe": "40/64",
+      "unsafe_duplicate_effect": "24/64",
+      "live": "64/64 in the bounded model",
+      "takeover_attempted_and_succeeded": "48/64",
+      "unsafe_condition": "takeover occurred and the old claimant later resumed",
+      "claim_uniqueness": "64/64"
+    },
+    "generation_handoff_split_authority": {
+      "safe": "40/64",
+      "unsafe_duplicate_effect": "24/64",
+      "live": "64/64 in the bounded model",
+      "takeover_attempted_and_succeeded": "48/64",
+      "unsafe_condition": "handoff/effect authority split allowed a late generation-n effect after generation n+1 activation",
+      "claim_uniqueness": "64/64"
+    },
+    "generation_handoff_same_authority_cas": {
+      "safe": "64/64",
+      "unsafe_duplicate_effect": "0/64",
+      "live": "64/64 under the stated later-fair-invocation assumption",
+      "takeover_attempted_and_succeeded": "48/64",
+      "takeover_safety": "48/48",
+      "abandoned_claim_slice": "32/32 live and safe",
+      "response_loss_claim_create_slice": "32/32 recoverable by claim-token readback",
+      "duplicate_delivery_slice": "32/32 deduped at the generation claim/terminal state",
+      "rate_limit_after_claim_slice": "32/32 safety preserved; interruption does not expire ownership and a later invocation may resume or perform one fenced handoff",
+      "claim_uniqueness": "64/64"
+    }
+  },
+  "finding": {
+    "new_narrowing": "Unique-path create is sufficient for one-winner claim acquisition under a fixed destination incarnation, including ambiguous create response recovery by token readback, but it is NOT sufficient for safe takeover. Permanent claims preserve safety but lose liveness on abandonment. Timeout/lease takeover does not revoke stale authority and is unsafe without fencing. A generation handoff recorded outside the terminal effect authority has the same stale-owner hole. In this finite repository-local model, safe no-wall-clock takeover requires the generation advance and terminal effect commit to contend on the SAME current-blob-CAS authority object (or an external sink with equivalent generation fencing).",
+    "important_distinction": "The strong protocol does not prove that an old claimant is dead. It deliberately permits a later invocation to preempt it by advancing a monotonic generation. Safety comes from the effect-time generation fence, not from failure detection or elapsed time.",
+    "repository_local_candidate": "Under the fixed-destination-incarnation assumption, a create-only generation claim plus one same-file CAS authority state machine is a zero-incremental-cost, no-wall-clock-lease candidate for repository-local idempotent effects. Rate-limit interruption is fail-closed because no lease expires while the worker is unable to write.",
+    "accepted_zero_dependency_candidate_found_for_tested_repository_local_scope": true,
+    "global_phase1_acceptance": false
+  },
+  "unresolved_children": [
+    {
+      "id": "repository-incarnation-write-time-fence",
+      "status": "open_orthogonal_from_part125",
+      "detail": "The tested candidate assumes owner/name still denotes the same repository incarnation. Current tested mutation contracts lack an atomic write-time repository_id/install binding, so same-name rebind remains unresolved."
+    },
+    {
+      "id": "external-effect-generation-fence",
+      "status": "open_for_non_repository_effects",
+      "detail": "If the useful effect is outside the same CAS authority object, the external effect sink must reject stale generations or participate atomically; a separate repository handoff record alone is insufficient."
+    },
+    {
+      "id": "ambiguous_cas_handoff_and_effect_response",
+      "status": "next_leaf",
+      "detail": "Part126 modeled ambiguous success for claim create, not ambiguous success for the generation-advance CAS or terminal-effect CAS. Those writes need transition/effect IDs and exact replay rules to avoid double-advance or duplicate terminalization after response loss."
+    }
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "accepted_external_hosted_coordination": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the tested repository-local fixed-incarnation state machine; unresolved for repository-incarnation fencing and non-repository effect sinks",
+    "rate_limit_behavior": "No same-run retry/backoff is required. A blocked mutation leaves an explicit durable claim/authority state; the next invocation may resume or make one generation-fenced handoff. Rate limiting delays progress but does not trigger a lease-expiry race.",
+    "quota_zero_scope_guard": "This establishes absence of an added finite monthly/trial/paid compute-credit mechanism in the tested design; it is not a guarantee of continuous API availability or proof of every GitHub plan entitlement."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "continuation": "Part127: execute one bounded ambiguous-CAS replay model for the Part126 same-authority generation state machine under the same fixed-destination-incarnation scope. Inject response loss after a successful generation-advance CAS and after a successful terminal-effect CAS, plus a concurrent third invocation and a rate-limit interruption before readback. Require stable transition_id/effect_id, monotonic generation, current-blob CAS, and exact readback to distinguish already-applied from not-applied writes. Test whether any trace can double-advance, resurrect an old claimant, or duplicate terminal effect; keep repository-incarnation write-time fencing and non-repository sink fencing as orthogonal unresolved children."
+}
