@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-04T04:02:01+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-intent-root-of-trust-corruption-v1",
+  "bootstrap_valid": true,
+  "authority": {
+    "transport_mode": "sha_pinned_exact_authority",
+    "frozen_main_sha": "8f5332886ca0df8eec66894f62154bfff7e54e94",
+    "frozen_root_control_revision": 27,
+    "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "frozen_config_revision": 7,
+    "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+    "predecessor_latest_blob": "18870c13658705b6ce5ea4dc02b47496a87edd8a"
+  },
+  "question": "Can the prior write-ahead intent capsule cease to be a single recovery root-of-trust while preserving fail-closed recurrence when the capsule is lost, torn/corrupt, or duplicated stale, and deterministic transition identity is unavailable?",
+  "tested_scope": {
+    "model": "serialized single-writer symbolic recurrence",
+    "storage": "immutable generations plus one atomic current pointer; intent records are immutable and independently checksum/hash verifiable",
+    "transition_identity": "deliberately unavailable during recovery so the probe isolates the intent-root design",
+    "designs": {
+      "single_capsule": "one verified write-ahead intent record binding predecessor, stable target id and transition digest before successor effects",
+      "replicated_two_slot_journal": "two independently verifiable copies of the same predecessor-bound intent are durably prepared before successor effects; restart accepts a target only when at least one valid current-predecessor record exists and no conflicting same-predecessor intent exists, repairs the missing copy before proceeding, and reads current first",
+      "generation_embedded_self_cert": "the successor generation carries predecessor and transition-integrity metadata, but no separately durable pre-effect selector of which child was intended"
+    },
+    "forbidden_inference": "orphan uniqueness alone never proves intent",
+    "out_of_scope": [
+      "concurrent writers",
+      "non-atomic current-pointer mutation",
+      "adversarial hash collisions",
+      "corruption that forges a valid checksum/hash",
+      "both intent replicas unavailable together with deterministic transition identity",
+      "journal rollover/ABA across multiple consecutive transitions"
+    ]
+  },
+  "case_matrix": [
+    {"case":"no_intent_no_effects","single_capsule":"safe_noop","replicated_two_slot_journal":"safe_noop","generation_embedded_self_cert":"safe_noop"},
+    {"case":"valid_intent_no_successor","single_capsule":"resume_same_target","replicated_two_slot_journal":"resume_same_target","generation_embedded_self_cert":"fail_closed"},
+    {"case":"valid_intent_successor_orphan","single_capsule":"verify_target_then_commit","replicated_two_slot_journal":"verify_target_then_commit","generation_embedded_self_cert":"fail_closed_singleton_orphan_not_authority"},
+    {"case":"one_intent_record_torn_no_effects","single_capsule":"fail_closed","replicated_two_slot_journal":"surviving_copy_selects_then_repair_and_resume","generation_embedded_self_cert":"fail_closed"},
+    {"case":"one_intent_record_torn_successor_orphan","single_capsule":"fail_closed","replicated_two_slot_journal":"surviving_copy_selects_then_verify_and_commit","generation_embedded_self_cert":"fail_closed"},
+    {"case":"stale_old_predecessor_record_plus_current_valid","single_capsule":"ignore_predecessor_mismatch_and_use_current_record","replicated_two_slot_journal":"ignore_predecessor_mismatch_and_use_current_record","generation_embedded_self_cert":"fail_closed_without_pre_effect_selector"},
+    {"case":"conflicting_same_predecessor_valid_intents","single_capsule":"fail_closed","replicated_two_slot_journal":"fail_closed_conflict_never_choose_highest_by_familiarity_or_recency_alone","generation_embedded_self_cert":"fail_closed"},
+    {"case":"all_intent_evidence_lost_successor_orphan","single_capsule":"fail_closed","replicated_two_slot_journal":"fail_closed","generation_embedded_self_cert":"fail_closed"},
+    {"case":"current_already_target_stale_intent_remains","single_capsule":"read_current_first_safe_noop","replicated_two_slot_journal":"read_current_first_safe_noop","generation_embedded_self_cert":"read_current_first_safe_noop"}
+  ],
+  "metrics": {
+    "false_orphan_adoptions_or_stale_regressions": {"single_capsule":0,"replicated_two_slot_journal":0,"generation_embedded_self_cert":0,"tested_cases":9},
+    "automatic_useful_continuation_cases": {"denominator":6,"single_capsule":4,"replicated_two_slot_journal":6,"generation_embedded_self_cert":1},
+    "single_record_loss_or_tear_tolerance": {"single_capsule":false,"replicated_two_slot_journal":true,"generation_embedded_self_cert":false}
+  },
+  "result": "The two-copy predecessor-bound write-ahead journal strictly improves liveness over a single capsule in the tested single-record loss/tear cases without weakening fail-closed safety. Generation-embedded self-certification cannot replace a pre-effect intent selector: it proves child integrity after creation but cannot prove which of multiple possible children was intended when deterministic transition identity is unavailable. Its safe role is an integrity cross-check after an independently trusted intent record selects the target.",
+  "mechanism_revision": "Split recurrence recovery into two certificates: a pre-effect selection certificate and a post-effect integrity certificate. Replicate the selection certificate across two independently verifiable intent slots before successor effects; on restart read current first, require at least one valid current-predecessor intent and zero conflicting same-predecessor intents, repair redundancy, then require the successor's embedded certificate to agree before current-pointer commit. If unique intent cannot be proven, fail closed.",
+  "neuroscience_transfer": "Treat the durable intent selector like a prospective-memory cue that must identify the intended future context, while the successor's embedded certificate is analogous to reinstatement-content consistency. Redundant cue traces can tolerate loss of one trace, but content familiarity or a single surviving orphan representation cannot by itself establish which intention was active; conflict should suppress reinstatement rather than force a guess.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local state/evidence transport only, not computation",
+    "positive_scope": "Within the nine serialized symbolic cases above, replicated two-slot intent selection preserved zero false adoption/regression and recovered all six non-ambiguous useful-continuation cases, including either one intent-copy loss/tear case.",
+    "unresolved_child": "Two-slot redundancy still has an unresolved root under double intent loss/corruption, and this probe did not test multi-transition slot rollover, ABA/stale-generation resurrection, or crash between first and second replica preparation."
+  },
+  "conflict_check": "Semantic inputs were limited to the current sanitized controls, exact frozen neuroscience config, and own neuroscience LATEST/preflight state. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, external hosted compute, finite-credit, paid, or manual-user execution semantics were used.",
+  "base_continuation_preserved": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: test the replicated two-slot intent journal across three consecutive transitions with slot reuse. Inject crash after only the first replica is prepared, stale valid records from generation n-2, and counter/slot ABA patterns. Require that a restart can repair a one-copy prepared intent without adopting an old same-slot record, that conflicting same-predecessor records fail closed, and that no scheme relies on orphan uniqueness, external execution, finite quota, paid service, or user/protected recovery. Compare explicit monotonic generation binding against hash-chained predecessor epochs; preserve generation-embedded self-certification only as a post-selection integrity check."
+}
