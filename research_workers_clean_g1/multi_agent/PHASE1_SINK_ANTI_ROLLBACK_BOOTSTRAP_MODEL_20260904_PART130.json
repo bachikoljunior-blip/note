@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 130,
+  "created_at": "2026-09-04T06:29:01+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "phase1-multi-agent-sink-anti-rollback-bootstrap-part130",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 82,
+    "instruction_manifest_blob": "381a68651b9a0acb399bbf9e3c253acb61af3ee5",
+    "authority_commit": "7aab654157c9d37fac515dcad3cbfab74c9e5112",
+    "transport_mode": "sha_only_main_ref_exact_sha",
+    "bootstrap_valid": true,
+    "head_lookup_non_sha_metadata_quarantined_and_unused": true
+  },
+  "presemantic_liveness_witness": {
+    "path": "automation_control/receipts/multi_agent/receipt_2026-09-04T062901+0900_presemantic_witness_control27_cfg9.json",
+    "blob": "8b765a2473079384a7ed8c7ab8b0b534e19cae0b",
+    "exact_readback_verified": true
+  },
+  "predecessor": {
+    "path": "research_workers_clean_g1/multi_agent/PHASE1_EXTERNAL_EFFECT_FENCING_MODEL_20260904_PART129.json",
+    "blob": "443f9264e11ebb3f82420af91c89badb789f10b7",
+    "continuation_used": "Part130 sink anti-rollback/bootstrap leaf"
+  },
+  "tested_scope": {
+    "model": "192 finite traces = 4 protocols x 2 current/stale credential states x 3 sink recovery states x 2 prior-effect states x 4 transport/retry traces.",
+    "sink_recovery_states": ["stable", "reset_same_incarnation_with_complete_local_state_loss", "same_name_rebind_to_new_incarnation_with_complete_local_state_loss"],
+    "transport_retry_traces": ["clean", "response_loss_after_commit_then_retry", "rate_limit_before_apply_then_cross_invocation_retry", "response_loss_then_rate_limit_then_later_retry"],
+    "effect_identity": "stable effect_id; unsafe means stale generation/incarnation accepted or the same semantic effect applied more than once.",
+    "rate_limit_semantics": "A rate limit before sink application performs no effect and does not trigger same-run retry; the modeled later retry is a later invocation.",
+    "excluded": "Byzantine sinks, signature forgery, generic availability of a sink-native anti-rollback primitive, and Part128 repository-incarnation write-time fencing."
+  },
+  "protocols": {
+    "sink_native_nonrollbackable_epoch": "Sink atomically checks current generation, current incarnation and permanent effect_id ledger stored in a non-rollbackable sink-native domain that survives reset/rebind.",
+    "signed_certificate_no_sink_floor": "A valid signed certificate carries generation/incarnation/effect_id, but the sink has no durable freshness floor; its effect ledger is volatile and is lost on reset/rebind.",
+    "repository_capability_sink_incarnation": "A repository-issued capability is signed/bound to sink incarnation and effect_id; the sink compares current incarnation but has no durable generation floor and only a volatile effect ledger.",
+    "fail_closed_until_floor_reestablished": "After any sink local-state loss, refuse effects until a current generation/incarnation floor plus effect history is re-established; stable-state operation uses the same currentness/duplicate checks."
+  },
+  "results": {
+    "sink_native_nonrollbackable_epoch": {"unsafe": 0, "traces": 48, "accepted_traces": 12, "fully_blocked_traces": 36},
+    "signed_certificate_no_sink_floor": {"unsafe": 30, "traces": 48, "accepted_traces": 40, "fully_blocked_traces": 8},
+    "repository_capability_sink_incarnation": {"unsafe": 21, "traces": 48, "accepted_traces": 32, "fully_blocked_traces": 16},
+    "fail_closed_until_floor_reestablished": {"unsafe": 0, "traces": 48, "accepted_traces": 4, "fully_blocked_traces": 44}
+  },
+  "diagnostic_slices": {
+    "signed_certificate_stale_credential": "20/24 unsafe; valid signature without a sink freshness floor does not prove current authority.",
+    "signed_certificate_current_credential_after_loss_with_prior_effect": "8/8 unsafe; after reset/rebind erases the volatile effect ledger, even a current credential can duplicate an already-applied effect.",
+    "repository_capability_stale_same_incarnation_reset": "8/8 unsafe; incarnation binding alone does not fence an older generation when reset preserves the same incarnation but erases the generation/effect ledger.",
+    "repository_capability_stale_same_name_new_incarnation": "0/8 unsafe and 8/8 rejected; incarnation binding does fence credentials from the prior incarnation on name reuse.",
+    "repository_capability_current_same_incarnation_reset_with_prior_effect": "4/4 unsafe; a current bound capability can still replay the same effect after ledger loss.",
+    "response_loss_rate_limit_later_retry": {"sink_native_nonrollbackable_epoch":"0/12 unsafe","signed_certificate_no_sink_floor":"9/12 unsafe","repository_capability_sink_incarnation":"6/12 unsafe","fail_closed_until_floor_reestablished":"0/12 unsafe"}
+  },
+  "observation_vs_inference": {
+    "observed": [
+      "A sink-native non-rollbackable generation/incarnation/effect ledger produced 0/48 unsafe traces under the modeled recovery/retry scope.",
+      "A signed certificate with no sink freshness floor produced 30/48 unsafe traces.",
+      "Repository capability plus sink-incarnation binding reduced same-name rebind failures but still produced 21/48 unsafe traces, especially same-incarnation reset and lost effect history.",
+      "Fail-closed refusal after local-state loss produced 0/48 unsafe traces but fully blocked 44/48 traces."
+    ],
+    "inference": "Authenticity and incarnation binding are not substitutes for a durable freshness/effect-history floor. Incarnation binding is specifically useful against same-name rebind, but cannot prevent stale-generation or duplicate-effect replay when state loss preserves the incarnation. Generic safety therefore requires at least one recovery domain that cannot roll back the current generation/incarnation/effect history, or fail-closed refusal until such state is re-established."
+  },
+  "phase1_assessment": {
+    "accepted_zero_dependency_candidate_found_for_generic_external_sink_scope": false,
+    "conditional_safe_mechanisms": ["sink-native non-rollbackable monotonic generation/incarnation/effect ledger", "fail-closed refusal until an equivalent current floor/history is re-established"],
+    "residual_richer_mode_protected_manual_execution_dependency": "none in this bounded self-local model",
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "accepted_external_hosted_coordination": false,
+    "quota_zero_rule": "Only lightweight repository state transport and local finite modeling were used. Rate-limit interruption checkpoints to a later invocation; no same-run wait/retry, hosted runner, Codespaces, cloud compute, external coordinator, paid credit, artifact/LFS/package quota, or user execution is part of the candidate route."
+  },
+  "unresolved_children": [
+    "No generic zero-cost Chat-native primitive is proven to reconstruct a current sink floor and permanent effect history after complete sink-local loss without importing a second non-rollbackable authority domain.",
+    "Part128 repository-incarnation write-time fencing remains unresolved; a repository-issued capability cannot be promoted to generic sink safety while that authority can itself be rebound/rolled back.",
+    "Fail-closed refusal is safe in this model but not useful-outcome parity unless a current floor/history can later be re-established without protected/manual execution or finite quota."
+  ],
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part131: execute one bounded cross-domain rollback-indistinguishability leaf. Hold Parts127-130 fixed. Model simultaneous rollback/rebind of repository authority and sink-local state after a newer generation/effect has existed, then compare client-carried signed certificates, repository hash-chain/commit identity, sink-local incarnation binding, dual repository+sink witnesses, and fail-closed refusal. Determine whether any zero-cost route can distinguish a legitimately-old world from a rolled-back world without at least one non-rollbackable recovery domain. Include stale credential, same-name reuse, ambiguous committed effect, rate-limit interruption and later retry. Treat impossibility/absence of the needed primitive as an unresolved child, not closure; require zero external hosted coordination, zero finite monthly/trial/paid quota, zero incremental cost, and no richer-mode/protected/manual execution handoff."
+}
