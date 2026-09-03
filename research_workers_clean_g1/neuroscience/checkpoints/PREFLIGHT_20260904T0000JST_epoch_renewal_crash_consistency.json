@@ -1,14 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "worker": "neuroscience",
   "created_at": "2026-09-04T00:00:00+09:00",
+  "completed_at": "2026-09-04T00:03:00+09:00",
   "phase_id": "phase_1_chat_parity",
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
   "effect_chain_id": "neuroscience-phase1-epoch-renewal-crash-consistency-v1",
   "bootstrap_valid": true,
   "instruction_manifest_control_revision": 76,
-  "instruction_manifest_blob": "7fUNKNOWN_FROM_FETCH_WRAPPER",
+  "instruction_manifest_blob": "5cb4d782baf2dff66d7ce057311b326cd5125ae0",
   "run_lifecycle_control_revision": 1,
   "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
   "frozen_main_sha_h1": "b13014390c269775a4eeb99665a800eb386b33f6",
@@ -22,11 +23,41 @@
   "predecessor_latest_blob": "68a83a04e13deb47bf63a514cf5776055423b3b2",
   "predecessor_effect_chain_id": "neuroscience-phase1-evidence-epoch-restart-fencing-v1",
   "exact_predecessor_frontier": "Test crash consistency of evidence-epoch renewal as a single state transition by splitting epoch number, epoch_started_at, effect identity fence, and last-certificate pointer across write boundaries; compare non-atomic multi-field renewal against a single versioned renewal record and reject reconstruction that can accept without a self-consistent renewal record.",
-  "planned_atomic_boundary": "One symbolic crash-injection probe only. Enumerate crash after each split-field boundary, classify fail-open acceptance versus fail-closed ambiguity, then compare to a single versioned renewal record with generation/checksum and cert_ptr cleared on renewal. Persist one effect artifact, update LATEST, write one immutable receipt; no public-source leaf and no second optional effect chain.",
+  "planned_atomic_boundary": "One symbolic crash-injection probe only; no public-source leaf and no second optional effect chain.",
+  "probe_model": {
+    "old_record": {"epoch": 7, "epoch_started_at": 100, "effect_id": "A", "cert_ptr": "C7A"},
+    "old_certificate": {"epoch": 7, "effect_id": "A", "observed_at": 120},
+    "renewal_target": {"epoch": 8, "epoch_started_at": 200, "effect_id": "B", "cert_ptr": null},
+    "split_write_order": ["epoch=8", "epoch_started_at=200", "effect_id=B", "cert_ptr=null"],
+    "acceptance_rule": "A certificate is actionable only if certificate.epoch == record.epoch AND certificate.effect_id == record.effect_id AND certificate.observed_at >= record.epoch_started_at."
+  },
+  "crash_injection_results": [
+    {"crash_after_writes": 0, "record_view": "coherent old record", "old_certificate_actionable": true, "classification": "old authority remains coherent; renewal did not durably begin"},
+    {"crash_after_writes": 1, "record_view": "epoch=8,start=100,effect=A,ptr=C7A", "old_certificate_actionable": false, "fresh_certificate_issued_before_repair": "C8A@150 would pass the local conjunction", "classification": "unsafe if reacquisition is allowed against the torn record: freshness window and effect fence are inherited from old authority"},
+    {"crash_after_writes": 2, "record_view": "epoch=8,start=200,effect=A,ptr=C7A", "old_certificate_actionable": false, "fresh_certificate_issued_before_repair": "C8A@210 would pass but binds the wrong effect relative to the intended renewal", "classification": "unsafe if reacquisition is allowed before effect fence completion"},
+    {"crash_after_writes": 3, "record_view": "epoch=8,start=200,effect=B,ptr=C7A", "old_certificate_actionable": false, "fresh_certificate_issued_before_repair": "C8B@210 matches the intended renewed authority", "classification": "safe for newly acquired same-effect evidence, but the durable record is still visibly mixed until old cert_ptr is cleared"},
+    {"crash_after_writes": 4, "record_view": "coherent renewed record epoch=8,start=200,effect=B,ptr=null", "old_certificate_actionable": false, "classification": "safe; newly fresh B evidence is required"}
+  ],
+  "control_result": "If certificate acquisition is forbidden whenever the renewal record is not self-consistent, split-field persistence is safety-preserving but introduces fail-closed availability gaps. The unsafe case appears when restart logic treats a partially renewed field set as current authority and permits reacquisition: crash points 1 and 2 can mint a certificate that passes the local epoch/effect/freshness conjunction while being bound to a mixed old/new authority state.",
+  "versioned_record_result": "A single versioned renewal record containing generation, epoch, epoch_started_at, effect_id, cert_ptr=null and an integrity tag/pointer removes the mixed-authority minting window when replaced atomically. After crash, reconstruction observes either the old coherent generation or the new coherent generation; no certificate may be minted from an intermediate field set. If whole-record atomic replacement is not guaranteed by the transport, use two immutable generations plus one atomic current-generation pointer and fail closed on checksum/version mismatch.",
+  "mechanism_revision": "Evidence renewal is an authority transition, not a collection of independently current fields. Certificate acquisition must be gated on a self-consistent renewal-generation record. Do not allow reacquisition against a torn generation even when the certificate-level epoch/effect/freshness conjunction would pass.",
+  "neuroscience_transfer": "Context renewal should behave like latent-state remapping with a commit boundary: new sensory evidence must bind to one coherent context state, not a hybrid of the previous and next context. The relevant safety property is conjunctive binding to a committed latent context, not merely recency tagging.",
+  "scope_guard": "Tested only a serialized single-writer symbolic renewal with deterministic effect ids, immutable certificate epoch/effect/observation time, one restart after each of four field writes, and optional certificate reacquisition after restart. No claim for concurrent writers, Byzantine/corrupt storage, nondeterministic effect ids, or transports lacking any atomic pointer/replace primitive.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence/readback only; no hosted compute or repository API volume used as computation",
+    "accepted_scope": "A renewal generation must be self-consistent before it can authorize certificate acquisition; atomic whole-record replacement or immutable-generation-plus-atomic-pointer satisfies the tested crash model.",
+    "unresolved_child": "Pointer publication itself can be acknowledged ambiguously: if the client loses the response after the atomic generation pointer was committed, restart must distinguish committed-new-pointer from uncommitted-old-pointer without duplicating renewal or minting against the wrong generation."
+  },
   "base_continuation_preserved": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "enabled_desired": true,
   "scheduler_mutation_by_worker": false,
-  "continuation": "After this single crash-consistency probe, continue with the next unresolved recurrence-sensitive state-reconstruction hazard selected from the resulting artifact; do not restore unrelated base neuroscience work while Phase 1 is open."
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: test ambiguous acknowledgement of the atomic renewal-generation pointer. Model a client that writes immutable generation G+1 then attempts one pointer CAS old->G+1, loses the response, and restarts with only durable role-local state. Compare blind retry, read-before-retry, and idempotent pointer target semantics; falsify any route that can create a second renewal generation, regress the pointer, or authorize certificate acquisition before the committed generation is identified."
 }
