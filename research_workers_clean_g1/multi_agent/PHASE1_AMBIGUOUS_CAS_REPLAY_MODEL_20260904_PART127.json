@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "updated_at": "2026-09-04T02:27:59+09:00",
+  "control_revision": 27,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "part": 127,
+  "leaf_id": "phase1-multi-agent-ambiguous-cas-replay-fixed-destination-incarnation",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "control_revision": 27,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_blob": "096dbcc4a535419c5adc0baeed768a1f3ee44cd8",
+    "instruction_manifest_revision": 79,
+    "transport_mode": "preferred_sha_pinned_main_ref",
+    "authority_commit": "e8ec335416ff12f6c215d95c79c5f22c972a911d",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-04T022759+0900_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_IMMUTABLE_CLAIM_NO_LEASE_MODEL_20260904_PART126.json",
+  "scope": {
+    "tested": "One bounded 96-scenario finite replay model for Part126's SAME-authority generation state machine under a FIXED destination-repository incarnation. A successful generation-advance CAS or successful terminal-effect CAS may lose its response; a third invocation may then perform no action, one further generation handoff, or one terminal effect before exact readback; readback may be rate-limited until the next invocation; duplicate delivery and a late old claimant are independently toggled.",
+    "dimensions": {
+      "primary_successful_cas": ["handoff_g1_to_g2", "terminal_effect_g1"],
+      "response_loss_after_success": [false, true],
+      "third_invocation_action_before_replay_readback": ["none", "handoff_current_generation_plus_one", "terminal_effect_current_generation"],
+      "rate_limit_before_readback": [false, true],
+      "duplicate_delivery": [false, true],
+      "late_old_claimant_resumes": [false, true]
+    },
+    "scenario_count_per_protocol": 96,
+    "protocols_compared": 4,
+    "total_protocol_traces": 384,
+    "assumptions": [
+      "Destination repository incarnation is fixed for the whole trace; repository same-name rebind remains orthogonal and unresolved.",
+      "Generation advance is exactly +1, monotonic, and contends with terminalization on one current-blob-CAS authority object.",
+      "Terminal state is absorbing within this repository-local model; no handoff is allowed after terminalization.",
+      "Claimants are cooperative/non-Byzantine. The strong protocol rechecks current generation/claim ownership before terminalization and never lets a stale claimant adopt a newer generation.",
+      "A stable transition_id is semantic for one logical generation edge, not one network attempt. In this model T1 denotes the g1-to-g2 edge regardless of which cooperative invocation observes/replays it. A stable effect_id denotes one logical terminal effect.",
+      "Rate-limit interruption causes no same-run retry/backoff; exact readback is deferred to a later fair invocation."
+    ],
+    "not_tested": [
+      "Repository delete/recreate, transfer, force-rebind, or write-time repository_id binding",
+      "External/non-repository side effects",
+      "Byzantine agents or sinks that ignore generation ownership",
+      "Garbage collection or rollback of the authority object after terminalization",
+      "Continuous API availability or paid-plan entitlement"
+    ]
+  },
+  "model_protocols": {
+    "stable_semantic_edge_exact_readback": "Use deterministic/stable logical transition_id/effect_id, monotonic +1 generation, same-authority current-blob CAS, absorbing terminal state, and generation/claim-owner recheck. After ambiguous handoff success, current generation >= target proves the semantic edge occurred because generations cannot skip or roll back. After ambiguous terminal CAS, terminal effect_id identifies the already-applied effect. A later generation is never adopted by the old claimant.",
+    "blind_ambiguous_retry": "Negative control: after response loss or duplicate delivery, reread current open authority state and perform another handoff as a fresh attempt instead of recognizing the already-satisfied semantic edge.",
+    "last_transition_id_only_fail_closed": "Conservative control: store only the most recent attempt-scoped transition_id. If a third handoff overwrites it before readback, do not mutate further but classify the original response as unresolved.",
+    "ownership_rebind_on_read": "Negative control: after a handoff, permit the old claimant to reread the newer open generation and adopt it before terminalization."
+  },
+  "results": {
+    "stable_semantic_edge_exact_readback": {
+      "unsafe": "0/96",
+      "double_advance": "0/96",
+      "old_claimant_resurrection": "0/96",
+      "duplicate_terminal_effect": "0/96",
+      "ambiguous_unresolved_after_eventual_readback": "0/96",
+      "lost_handoff_response_slice": "0/24 unsafe",
+      "lost_terminal_effect_response_slice": "0/24 unsafe",
+      "rate_limited_lost-success_readback_slice": "0/24 unsafe; all 24 defer without same-run retry and resolve on later exact readback under the stated fair-invocation assumption"
+    },
+    "blind_ambiguous_retry": {
+      "unsafe": "24/96",
+      "double_advance": "24/96",
+      "old_claimant_resurrection": "0/96",
+      "duplicate_terminal_effect": "0/96",
+      "lost_handoff_response_slice": "16/24 unsafe by repeated generation advance",
+      "lost_terminal_effect_response_slice": "0/24 unsafe because repository-local terminal state is absorbing",
+      "rate_limited_lost-success_readback_slice": "8/24 unsafe if a later replay treats the current open generation as a fresh handoff target"
+    },
+    "last_transition_id_only_fail_closed": {
+      "unsafe": "0/96",
+      "ambiguous_unresolved": "12/96",
+      "lost_handoff_response_slice": "8/24 remain unresolved when a third handoff has replaced the last attempt-scoped id",
+      "third-handoff-plus-replay_slice": "12/12 safe but unresolved",
+      "interpretation": "Keeping only the latest attempt-scoped id is safe when it fails closed, but it does not provide exact replay classification after intervening legal transitions."
+    },
+    "ownership_rebind_on_read": {
+      "unsafe": "16/96",
+      "old_claimant_resurrection": "16/96",
+      "lost_handoff_response_slice": "8/24 unsafe",
+      "interpretation": "Current-state reread is not authority transfer. A stale claimant must not infer ownership of a newer generation merely because it can observe that generation."
+    }
+  },
+  "finding": {
+    "new_narrowing": "For the fixed-incarnation repository-local state machine, ambiguous CAS success does not require an attempt-specific lease or a blind retry. Safe replay needs a semantic idempotency identity. If each generation transition is exactly +1 and monotonic, a stable logical transition_id can be defined by the generation edge itself: after response loss, observing generation >= n+1 proves that edge n->n+1 has happened, even if a third invocation already advanced again. This avoids the 12/96 fail-closed ambiguity seen when only the latest attempt-scoped transition id is retained. Blind replay is unsafe because it can convert one ambiguous successful handoff into an extra generation advance (24/96 overall; 16/24 in the lost-handoff slice).",
+    "terminal_effect_distinction": "Within the tested repository-local absorbing-terminal state, lost response after terminal-effect CAS is simpler: exact readback of the stable effect_id is sufficient and no protocol produced duplicate terminalization in the 24 lost-effect scenarios. This does NOT prove idempotency for an external side effect executed outside the authority CAS.",
+    "ownership_distinction": "Exact readback proves state, not claimant authority. Allowing the old claimant to adopt a newer generation after reread resurrected stale ownership in 16/96 traces. Generation ownership must remain separately fenced even when replay classification is exact.",
+    "accepted_zero_dependency_candidate_found_for_tested_repository_local_scope": true,
+    "global_phase1_acceptance": false
+  },
+  "source_basis": {
+    "new_public_source_read_this_slice": false,
+    "basis": "Pure role-local finite-model extension of Part126's already source-qualified file-level current-blob CAS/create-only mechanism contract. No new external API behavior is claimed by Part127."
+  },
+  "unresolved_children": [
+    {
+      "id": "repository-incarnation-write-time-fence",
+      "status": "open_orthogonal_from_part125",
+      "detail": "The strong replay result assumes owner/name still denotes the same destination repository incarnation at mutation time."
+    },
+    {
+      "id": "external-effect-generation-fence",
+      "status": "open",
+      "detail": "Repository-local terminal-state idempotency does not make a non-repository useful effect idempotent; the sink still needs the same generation/effect fence or equivalent atomic participation."
+    },
+    {
+      "id": "semantic-transition-identity-under-nonsequential-or-rollback-generation",
+      "status": "open_outside_tested_scope",
+      "detail": "The generation-edge proof relies on monotonic +1 transitions with no rollback/skip. If authority can skip, rewind, or be garbage-collected, an additional durable semantic witness is required."
+    }
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "accepted_external_hosted_coordination": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the tested fixed-incarnation repository-local replay protocol; unresolved for repository-incarnation fencing and non-repository effect sinks",
+    "rate_limit_behavior": "A lost-success plus rate-limit before readback checkpoints ambiguity and waits for a later scheduled invocation; no wall-clock lease expires and no same-run polling/backoff is required.",
+    "quota_zero_scope_guard": "The model adds no finite compute/storage credit mechanism. It does not prove continuous transport availability or plan entitlement."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "continuation": "Part128: execute one bounded repository-incarnation write-time-fence leaf, keeping Part127 replay semantics fixed. Test whether any Chat-exposed zero-cost repository mutation route can bind the same atomic write precondition to both current file/blob state and immutable repository incarnation (or an equivalent destination identity) across same-name delete/recreate/rebind. Compare fail-closed precheck-only identity, branch/ref-pinned writes, immutable Git-object addressing plus ref publication, and any current API conditional that is actually exposed. Do not read downstream/O/other-worker state; if no atomic incarnation fence is exposed, persist the exact missing capability and select the next role-safe external-sink-fencing child for the following invocation."
+}
