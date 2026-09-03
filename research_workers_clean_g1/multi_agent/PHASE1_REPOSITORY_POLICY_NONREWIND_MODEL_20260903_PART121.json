@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "part121-same-repository-nonrewind-policy-enforcement",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "config_revision": 9,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 72,
+    "instruction_manifest_blob": "b77eff9bf3bbdd64aa717e0cc70bf6c88b19b1d1",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/2026-09-03T173159+09-00_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_AUTHORITY_ROLLBACK_DELETE_RECREATE_MODEL_20260903_PART120.json",
+  "scope": "One bounded 24-cell policy-enforcement model: three same-repository authority surfaces x eight adversarial/interruption events. No live policy mutation was performed. Evidence is limited to own clean continuation plus current official GitHub documentation.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+      "observations": [
+        "Protected branches are available for public repositories on GitHub Free; private-repository availability depends on paid plans.",
+        "Branch protection blocks force pushes and branch deletion by default.",
+        "By default those restrictions do not apply to repository admins or custom roles with bypass-branch-protections permission; GitHub allows applying restrictions to them too."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets",
+      "observations": [
+        "Repository admins or custom roles with edit-repository-rules permission can create, edit, and delete repository rulesets.",
+        "Rulesets can restrict branch/tag deletion and block force pushes; bypass actors may be configured.",
+        "Rulesets are available for public repositories on GitHub Free; private/internal availability is plan-dependent, and some push-ruleset cases require GitHub Team."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/creating-and-managing-repositories/deleting-a-repository",
+      "observations": [
+        "Repository admins or organization owners can delete a repository unless a higher-level organization or enterprise policy prevents it.",
+        "Repository deletion is therefore outside the enforcement power of repository-local branch protection/rulesets themselves."
+      ]
+    }
+  ],
+  "policies": {
+    "unprotected_ref_plus_blob_CAS": "Authority state lives on an ordinary repository ref; claim writes use current-blob CAS/readback.",
+    "protected_branch_default_plus_blob_CAS": "Default branch protection blocks ordinary force-push/delete but default admin bypass semantics remain; claim writes use current-blob CAS/readback.",
+    "admin_enforced_or_empty_bypass_ruleset_plus_blob_CAS": "Direct force-push/delete is blocked even for normal admin/bypass paths where configured, but repository admins/edit-rules roles can still change/delete repository-local rulesets and repository admins/owners can delete the repository; claim writes use current-blob CAS/readback."
+  },
+  "events": [
+    "admin_force_push_or_ref_retarget",
+    "admin_protected_ref_delete",
+    "admin_disable_edit_or_delete_policy",
+    "admin_delete_repository",
+    "stale_claimant_against_current_blob",
+    "response_loss_then_deterministic_readback_retry",
+    "rate_limit_interruption_fail_closed",
+    "two_concurrent_claimants_current_blob_CAS"
+  ],
+  "matrix": {
+    "unprotected_ref_plus_blob_CAS": ["unsafe", "unsafe", "unsafe", "unsafe", "safe", "safe", "safe_unavailable", "safe_one_wins"],
+    "protected_branch_default_plus_blob_CAS": ["unsafe_admin_bypass", "unsafe_admin_bypass", "unsafe_policy_change", "unsafe_repository_lifecycle", "safe", "safe", "safe_unavailable", "safe_one_wins"],
+    "admin_enforced_or_empty_bypass_ruleset_plus_blob_CAS": ["safe_direct_mutation_blocked", "safe_direct_delete_blocked", "unsafe_policy_editor_can_weaken_or_remove", "unsafe_repository_lifecycle", "safe", "safe", "safe_unavailable", "safe_one_wins"]
+  },
+  "aggregate": {
+    "cells": 24,
+    "unsafe_cells": {
+      "unprotected_ref_plus_blob_CAS": 4,
+      "protected_branch_default_plus_blob_CAS": 4,
+      "admin_enforced_or_empty_bypass_ruleset_plus_blob_CAS": 2
+    },
+    "direct_ref_mutation_slice": {
+      "admin_enforced_or_empty_bypass_ruleset_plus_blob_CAS": "0/2 unsafe"
+    },
+    "meta_policy_and_repository_lifecycle_slice": {
+      "admin_enforced_or_empty_bypass_ruleset_plus_blob_CAS": "2/2 unsafe"
+    }
+  },
+  "observation_vs_inference": {
+    "observed_from_docs": "GitHub repository-level protections can block force pushes/deletions, but repository admins/edit-rules roles can edit/delete rulesets, default branch protection exempts admins unless explicitly included, and repository admins/owners can delete repositories unless prevented by a higher-level policy.",
+    "model_inference": "A same-repository freshness/retirement witness cannot be called non-rewindable against an authority that can both weaken repository-local policy and destroy the repository containing the witness. Stronger branch protection closes direct-ref mutation but not the meta-policy/repository-lifecycle channel.",
+    "scope_guard": "This does not prove impossibility against every GitHub account/organization design. It falsifies the narrower candidate in which the non-rewind proof is entirely repository-local while repository-level administrators or owners remain in the threat model."
+  },
+  "retry_and_claim_result": {
+    "stale_claimant": "Current-blob CAS remains sufficient only while repository identity/history has not been authoritatively rewound or replaced.",
+    "response_loss": "A deterministic claim path plus exact readback can convert unknown response into committed/not-committed classification without duplicating the same repository effect.",
+    "rate_limit": "Fail closed and checkpoint across invocations; rate limit is an availability interruption, not authority to retry blindly or accept stale state.",
+    "concurrency": "Same-object current-blob CAS gives one-winner conflict behavior for concurrent writers, but does not itself provide anti-rewind history."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency_added": false,
+    "public_repository_free_scope": "Protected branches and repository rulesets are documented as available on GitHub Free for public repositories; no finite hosted-compute credit is needed for the policy check itself.",
+    "generic_private_repository_scope": "Plan/visibility dependence exists for protected branches/rulesets in private repositories, so a generic paid-plan-independent acceptance claim is not established.",
+    "residual_richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false
+  },
+  "result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "new_narrowing": "Repository-local protection can close direct branch rewind, but it cannot be a non-bypassable monotonic freshness boundary when an in-scope repository admin/rules editor can weaken that protection or an admin/owner can delete the repository. The remaining useful candidate is privilege-domain separation: all recurring workers must lack policy/lifecycle authority, and a durable identity/freshness check must survive credential rotation and repository replacement without relying on an external hosted coordinator.",
+    "minimal_unresolved_child": "Can least-privileged worker credentials plus a stable repository-identity fence make claim/effect authority safe against worker-originated rewind/delete while explicitly failing closed on owner/admin policy or repository-lifecycle changes, with public-free/zero-quota operation and no external monotonic witness?"
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part122: execute one bounded least-privilege authority-separation model. Compare worker token/App permissions limited to contents, worker credentials with administration, and repository-owner lifecycle authority across force-push, rule edit/delete, repository delete/recreate, token rotation/revocation, stale claimant, response-loss retry, and rate-limit interruption. Require a stable repository-identity check and fail closed on identity/policy uncertainty. Determine whether narrowing the threat model to worker-originated effects yields a zero-cost public-free repository-local candidate without claiming safety against owner/admin compromise; persist one checkpoint and no second leaf."
+}
