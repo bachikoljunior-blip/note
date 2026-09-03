@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 120,
+  "created_at": "2026-09-03T16:29:23+09:00",
+  "control_revision": 26,
+  "config_revision": 9,
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 71,
+    "instruction_manifest_blob": "55450e6eac87ad80f938cb9b29afe72688c9212d",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/20260903T162923+0900_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_LOCAL_MONOTONIC_INCARNATION_MODEL_20260903_PART119.json",
+  "leaf_id": "phase1-multi-agent-authority-rollback-delete-recreate-part120",
+  "tested_scope": "One bounded 24-cell finite model: four authority-freshness mechanisms crossed with force-rewind, delete/recreate, snapshot restore, stale claimant, response-loss retry, and rate-limit interruption. Same-domain rollback means the authority record and all repository-local remembered freshness state may rewind together. Sibling-witness safety is evaluated only when that sibling authority remains intact; it is separately rejected by the no-external-hosted-coordination acceptance gate.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/rest/git/refs",
+      "observation": "GitHub's Update a reference endpoint accepts force=true for non-fast-forward ref movement; leaving force false requires fast-forward. The same API family exposes reference deletion. Therefore ordinary Git ancestry is not by itself an unrewindable freshness witness when force/deletion authority exists."
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+      "observation": "Protected branches block force pushes and deletions by default, but policy configuration and bypass semantics are separate from commit ancestry. Public-repository Free availability is documented; private repositories require paid plans for this feature, so plan-independent acceptance cannot be assumed from branch protection alone."
+    }
+  ],
+  "model": {
+    "events": ["force_rewind","delete_recreate","snapshot_restore","stale_claimant","response_loss_retry","rate_limit_interrupt"],
+    "mechanisms": {
+      "same_repository_monotonic_record": {
+        "assumption": "generation, transition_id, and current-blob CAS live only in the same rollback domain",
+        "cells": {
+          "force_rewind": "unsafe_indistinguishable_after_joint_rewind",
+          "delete_recreate": "unsafe_incarnation_freshness_erased",
+          "snapshot_restore": "unsafe_prior_generation_can_become_self_consistent_current",
+          "stale_claimant": "safe_reject_by_current_generation_cas",
+          "response_loss_retry": "safe_dedupe_with_stable_transition_id_and_current_blob_cas",
+          "rate_limit_interrupt": "safe_fail_closed_checkpoint_no_effect"
+        },
+        "unsafe_cells": 3,
+        "safe_cells": 3,
+        "accepted_phase1": false
+      },
+      "sibling_repository_monotonic_witness": {
+        "assumption": "a distinct repository-level witness remains current and is outside the target authority rollback/delete/restore event",
+        "cells": {
+          "force_rewind": "safe_detect_floor_regression",
+          "delete_recreate": "safe_detect_incarnation_or_floor_mismatch",
+          "snapshot_restore": "safe_detect_floor_regression",
+          "stale_claimant": "safe_reject",
+          "response_loss_retry": "safe_dedupe",
+          "rate_limit_interrupt": "safe_fail_closed"
+        },
+        "unsafe_cells": 0,
+        "safe_cells": 6,
+        "accepted_phase1": false,
+        "rejection": "The sibling becomes a separate hosted coordination authority. Safety is conditional on its independent survival, so this does not meet the current no-external-hosted-coordination acceptance target even when incremental monetary cost is zero."
+      },
+      "same_repository_commit_ancestor_witness": {
+        "assumption": "claimant checks that current ref descends from a remembered prior commit, but the remembered prior commit identity is itself reconstructed only from repository-local state",
+        "cells": {
+          "force_rewind": "unsafe_if_remembered_tip_rewinds_with_repository",
+          "delete_recreate": "unsafe_without_nonlocal_prior_repository_incarnation_witness",
+          "snapshot_restore": "unsafe_if_remembered_tip_restores_with_repository",
+          "stale_claimant": "safe_when_current_nonrewound_ancestry_is_available",
+          "response_loss_retry": "safe_when_transition_commit_or_effect_id_is_visible",
+          "rate_limit_interrupt": "safe_fail_closed"
+        },
+        "unsafe_cells": 3,
+        "safe_cells": 3,
+        "accepted_phase1": false,
+        "narrowing": "Ancestor checking becomes safe against rewind only if the prior tip/incarnation is anchored outside the rollback domain or force/delete/restore is authoritatively impossible. The first adds an external witness; the second is a new policy-enforcement leaf rather than a property of commit history itself."
+      },
+      "fail_closed_without_nonrollback_freshness_proof": {
+        "assumption": "never authorize an external effect unless a freshness proof outside the possible rollback domain is available",
+        "cells": {
+          "force_rewind": "safe_block",
+          "delete_recreate": "safe_block",
+          "snapshot_restore": "safe_block",
+          "stale_claimant": "safe_block",
+          "response_loss_retry": "safe_block",
+          "rate_limit_interrupt": "safe_block"
+        },
+        "unsafe_cells": 0,
+        "safe_cells": 6,
+        "useful_progress_cells": 0,
+        "accepted_phase1": false,
+        "rejection": "Safety by universal refusal does not reproduce the useful coordination outcome."
+      }
+    },
+    "total_cells": 24,
+    "unsafe_cells_by_mechanism": {
+      "same_repository_monotonic_record": 3,
+      "sibling_repository_monotonic_witness": 0,
+      "same_repository_commit_ancestor_witness": 3,
+      "fail_closed_without_nonrollback_freshness_proof": 0
+    }
+  },
+  "observation_vs_inference": {
+    "observations": [
+      "Git references can be force-updated when explicitly requested, and refs can be deleted through the documented API.",
+      "Protected branches default to blocking force pushes and deletions, but that is a separate repository policy control with plan/bypass conditions."
+    ],
+    "inferences": [
+      "A monotonic value and CAS stored entirely inside one rollback domain cannot distinguish a true old world from a later world that was completely rewound to the same bytes.",
+      "Commit ancestry is not a durable anti-rollback witness if both the ref and the remembered prior tip can rewind together.",
+      "An independent witness removes the indistinguishability in the tested rollback scope but violates the current acceptance target when it becomes a separate hosted coordination authority.",
+      "Fail-closed unknown preserves safety but not useful-outcome parity."
+    ]
+  },
+  "phase1_leaf_result": {
+    "accepted_zero_dependency_candidate_found": false,
+    "new_narrowing": "Repository-local monotonic generation plus CAS remains sufficient for ordinary stale-claim/retry/rate-limit interruption, but not for complete authority-domain rewind/delete-recreate/restore. Among the four tested mechanisms, the only progress-preserving rollback-safe witness is an independent authority, which fails the no-external-hosted-coordination gate; universal fail-closed is safe but non-useful.",
+    "minimal_unresolved_child": "Can the same repository make authority rewind/delete/recreate authoritatively impossible, with policy that is itself non-bypassable in the tested actor model and works with zero finite monthly/trial/paid quota and zero incremental cost?"
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "quota_zero_acceptance_proven": false,
+    "paid_plan_independence_proven": false,
+    "richer_mode_protected_manual_execution_dependency": false,
+    "accepted_external_hosted_coordination": false
+  },
+  "scope_guard": "No O/O-derived state, other-worker state/config/receipt, downstream state, legacy research, shared ledger, scheduler state, protected-primary state, or unrelated repository semantics were used. Positive/negative claims are limited to the 24 modeled cells and cited GitHub reference/protection behavior.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part121: execute one bounded policy-enforcement model for a same-repository non-rewind authority boundary. Compare unprotected ref, protected branch default, protected branch with administrator/bypass disabled where available, and repository delete/recreate exposure under force-push, ref deletion, settings change/bypass, repository delete/recreate, stale claimant, response-loss retry, and rate-limit interruption. Treat any plan/visibility requirement, bypassable administrator path, richer-mode/manual step, finite monthly/trial/paid quota, or incremental cost as an unresolved child; persist exactly one checkpoint and no second leaf."
+}
