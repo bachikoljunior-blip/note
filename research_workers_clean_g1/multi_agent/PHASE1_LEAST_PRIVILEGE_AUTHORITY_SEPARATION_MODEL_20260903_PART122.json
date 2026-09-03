@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "leaf_id": "part122-least-privilege-authority-separation",
+  "semantic_config_snapshot": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_revision": 73,
+    "instruction_manifest_blob": "145c8b83647c043e3592ef327d1bb420a5c5cc85",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "481660fb6008a57cea162da38439cf115c8d7ebe",
+    "control_revision": 26,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "role_control_revision": 12,
+    "config_revision": 9,
+    "authority_commit": "3da5abc042ccfee9eb3b99ec2825ef68bd4d5e2f",
+    "transport_mode": "sha_only_exact_sha",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_receipt_path": "automation_control/receipts/multi_agent/receipt_2026-09-03T193257+0900_presemantic_liveness.json",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_POLICY_NONREWIND_MODEL_20260903_PART121.json",
+  "scope": "One bounded 24-cell least-privilege model: three authority classes x eight interruption/authority events. The model tests worker-originated concurrency/rewind risk separately from repository-admin/owner lifecycle authority. No live branch policy, credential, repository, or scheduler mutation was performed.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens",
+      "observations": [
+        "Fine-grained Contents(write) covers file-content writes and also Git ref create/update/delete endpoints, so Contents permission alone is not a non-rewind fence for a protected authority ref.",
+        "Fine-grained Administration(write) includes repository-level administration endpoints including DELETE /repos/{owner}/{repo}; separating Administration from worker credentials materially narrows destructive authority."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation",
+      "observations": [
+        "Expired or revoked tokens can no longer authenticate API or Git requests and cannot be restored; a replacement credential must be created."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation",
+      "observations": [
+        "Installation access tokens can be restricted to selected repositories/repository_ids and to permissions no greater than the App installation grants; installation tokens expire after one hour."
+      ]
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observations": [
+        "Get-a-repository is available with Metadata(read), while repository deletion requires administrative authority. The repository response exposes a repository id usable as a current identity field, but the reviewed public documentation does not establish that a same-repository stored expected id is a non-rewindable witness across owner-authorized delete/recreate."
+      ]
+    }
+  ],
+  "authority_classes": {
+    "least_privilege_worker": "Worker has only the claim/effect content capability plus metadata read, has no Administration/ruleset/repository-lifecycle authority, is not an allowed branch-protection bypass actor, and every authority/effect transition uses current-blob CAS plus exact readback. Because generic Contents(write) can update Git refs, direct-ref safety additionally requires an already-current protection rule or an execution surface that does not expose raw ref mutation.",
+    "administrative_worker": "Worker also possesses Administration or equivalent ruleset/repository-lifecycle authority; therefore privilege separation is absent even if its ordinary claim path still uses CAS.",
+    "repository_owner_lifecycle_authority": "Actor can change repository policy/lifecycle or credential grants. This actor is explicitly outside the narrow worker-originated candidate threat model; uncertainty attributable to this authority must fail closed rather than be called safe."
+  },
+  "events": [
+    "force_push_or_ref_retarget",
+    "ruleset_edit_or_delete",
+    "repository_delete_recreate",
+    "token_rotation",
+    "token_revocation",
+    "stale_claimant",
+    "response_loss_retry",
+    "rate_limit_interruption"
+  ],
+  "matrix": {
+    "least_privilege_worker": [
+      "safe_if_current_no_bypass_ref_protection_or_raw_ref_write_not_exposed",
+      "safe_denied_no_administration",
+      "safe_denied_no_repository_lifecycle_authority",
+      "safe_if_replacement_credential_is_same_or_narrower_and_repository_identity_policy_are_revalidated_else_fail_closed",
+      "safe_unavailable_authentication_failure",
+      "safe_current_blob_cas_rejects_stale",
+      "safe_exact_readback_classifies_commit_before_retry",
+      "safe_unavailable_fail_closed_checkpoint"
+    ],
+    "administrative_worker": [
+      "conditional_direct_block_only_while_nonbypass_policy_remains_current",
+      "unsafe_can_weaken_or_remove_policy",
+      "unsafe_can_destroy_or_replace_repository_when granted repository administration",
+      "fail_closed_required_scope_or_policy_change_can_expand_authority",
+      "safe_unavailable_after_revocation",
+      "safe_only_while_repository_identity_history_policy_remain_current",
+      "safe_only_while_repository_identity_history_policy_remain_current",
+      "safe_unavailable_fail_closed_checkpoint"
+    ],
+    "repository_owner_lifecycle_authority": [
+      "conditional_direct_block_only_while_nonbypass_policy_remains_current",
+      "unsafe_meta_policy_authority",
+      "unsafe_repository_lifecycle_authority",
+      "fail_closed_required_credential_or_repository_grant_rebinding",
+      "safe_unavailable_for_revoked_worker_token_but_owner_can_issue_new_authority",
+      "safe_only_under_current_identity_policy_no_owner_rewind",
+      "safe_only_under_current_identity_policy_no_owner_rewind",
+      "safe_unavailable_fail_closed_checkpoint"
+    ]
+  },
+  "aggregate": {
+    "cells": 24,
+    "least_privilege_worker_structurally_unsafe_cells_under_stated_preconditions": 0,
+    "administrative_worker_structurally_unsafe_cells": 2,
+    "repository_owner_lifecycle_structurally_unsafe_cells": 2,
+    "conditional_or_fail_closed_cells": 8,
+    "availability_only_safe_unavailable_cells": 6,
+    "interpretation": "Privilege separation removes the two structural meta-authority failures for the worker class: policy mutation and repository lifecycle mutation. It does not by itself make generic Contents(write) non-rewindable because Contents(write) includes Git ref update/delete endpoints; a current no-bypass protection rule or an execution surface that omits raw-ref writes is still required."
+  },
+  "stable_repository_identity_fence": {
+    "candidate": "Bind each claim/effect attempt to the current repository id plus authority-blob SHA and policy epoch/expected protection state; reread identity and authority immediately before the authoritative effect and fail closed on mismatch, missing identity, policy uncertainty, 401/403/404, or rate limit.",
+    "works_for_narrow_worker_threat": "Yes, because the least-privileged worker cannot itself delete/recreate the repository or edit the protection policy; identity/policy mismatches caused by out-of-scope lifecycle authority become a stop condition rather than a reason to accept stale state.",
+    "does_not_solve_owner_replacement": "An expected repository id stored only inside the same repository is rewindable with that repository. The reviewed public docs do not provide a repository-local monotonic anchor that remains authoritative after owner-authorized delete/recreate. A selected-repository GitHub App installation may narrow access by repository_ids, but this run does not claim its grant/recreation semantics form an immutable anti-replacement witness, and provisioning/rebinding that grant would be an administrative action outside this CLEAN worker."
+  },
+  "claim_idempotency_protocol": {
+    "claim_key": "stable logical effect id + generation/incarnation",
+    "claim_transition": "Read current authority object and current repository identity/policy evidence; write exactly one current-blob CAS transition; exact-readback after success or ambiguous response.",
+    "conflict": "CAS conflict loses without side effect; do not retry blindly in the same invocation.",
+    "stale": "Any stale authority blob, identity mismatch, policy mismatch, or old generation fails closed.",
+    "response_loss": "Read deterministic claim/effect record before deciding whether another invocation may retry.",
+    "rate_limit": "Checkpoint availability interruption; never interpret it as authority and never burn quota as compute."
+  },
+  "observation_vs_inference": {
+    "observed_from_docs": "GitHub exposes separable Contents and Administration permissions; Contents(write) includes Git ref mutation endpoints, Administration(write) includes repository deletion, revoked tokens stop authenticating, and GitHub App installation tokens can be permission/repository scoped.",
+    "model_inference": "For cooperative recurring workers, keeping Administration/ruleset/lifecycle authority out of worker credentials plus current-blob CAS/readback and a no-bypass ref fence is sufficient to eliminate duplicate/conflicting worker-originated claim effects in the tested event set. The same design is not safe against an owner/admin who can alter policy, credentials, or repository lifecycle.",
+    "scope_guard": "This is a worker-originated concurrency/idempotency result, not an anti-admin-compromise or owner-lifecycle proof. It does not prove that the current connected credential is least-privileged or that required branch/ruleset policy is already configured."
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency_added": false,
+    "public_repository_free_scope": "The Part121 predecessor already source-qualified public-repository branch protection/ruleset availability on GitHub Free. This leaf adds no hosted compute/storage credit mechanism; ordinary API rate limits are treated as availability interruptions and fail closed.",
+    "residual_richer_mode_protected_manual_execution_dependency": "unresolved_for_acceptance: establishing or proving least-privilege credential grants and current no-bypass protection may require administrative configuration outside this CLEAN worker if not already present",
+    "accepted_external_hosted_coordination": false,
+    "quota_zero_acceptance_proven": false,
+    "paid_plan_independence_proven": "only for the public-repository policy scope inherited from Part121; not generic private repositories"
+  },
+  "result": {
+    "narrow_worker_originated_candidate_found": true,
+    "accepted_zero_dependency_candidate_found": false,
+    "new_narrowing": "The non-rewind requirement can be scoped away from ordinary recurring workers if their credential/tool authority excludes Administration/ruleset/repository-lifecycle mutation and the authoritative ref is protected from their generic Contents(ref-update) capability. Under those preconditions, current-blob CAS + identity/policy revalidation + exact readback handles stale claimants, concurrent claims, response loss, revocation, and rate limits without a second hosted coordinator. The remaining blockers are proving those least-privilege/protection preconditions without a manual/protected setup step and obtaining a non-rewindable repository-identity anchor for owner-authorized replacement.",
+    "minimal_unresolved_child": "Can a Chat-native repository transport expose an already-enforced least-privilege worker capability boundary and stable repository incarnation binding as observable invariants, with no manual/admin provisioning step and no external monotonic witness, so the narrow worker-originated candidate becomes Phase-1-acceptable rather than merely conditional?"
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false,
+  "continuation": "Part123: execute one bounded capability-surface invariant model. Compare (a) connected Chat repository tool surface that exposes only content-file CAS writes, (b) generic Contents(write) token with raw-ref endpoints, and (c) selected-repository GitHub App installation binding. Test whether capability introspection plus repository-id/install binding can prove, without admin/manual setup, that a worker cannot force-rewind, edit policy, or bind to a delete/recreated repository. Include token rotation/revocation and rate-limit fail-closed controls. If the installed capability boundary cannot be proven from Chat-native observable state, preserve it as the minimal unresolved child; persist one checkpoint and no second leaf."
+}
