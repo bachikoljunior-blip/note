@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-03T12:01:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-stale-query-fence-v1",
+  "preflight_checkpoint": "research_workers_clean_g1/neuroscience/checkpoints/PREFLIGHT_20260903T1200JST_stale_query_fence.json",
+  "preflight_checkpoint_blob": "b44c69d6b54d274a08d2a98cc90c2ac291569221",
+  "tested_scope": "Serialized single-writer symbolic recurrence after durable intent I21(effect_id=e21,payload_hash=hA,generation=21,nonce=n21) exists but the effect certificate is absent. Target state is queried before replay. Query observations may be fresh, stale, partial, or identity-ambiguous. No concurrent writers, target corruption, nondeterministic effect ids, or distributed-consensus semantics are modeled.",
+  "policies": {
+    "permissive_existence_only": "If any target record with effect_id=e21 is visible, skip replay; otherwise replay.",
+    "strict_fenced": "Skip replay only when a target observation is certified fresh for generation>=21 and contains exact (effect_id=e21,payload_hash=hA,generation=21,nonce=n21). Replay only when a certified-fresh complete observation proves exact absence. On stale/partial observation or identity/payload/nonce conflict, neither skip nor replay; persist DEFER/UNRESOLVED until freshness+identity is certifiable."
+  },
+  "cases": [
+    {
+      "case": "fresh_exact_applied",
+      "truth": "E21 already applied exactly once",
+      "query": "fresh complete generation=21, exact e21/hA/n21 visible",
+      "permissive": {"decision":"SKIP","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1},
+      "strict": {"decision":"SKIP_AND_RECOVER_CERTIFICATE","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1}
+    },
+    {
+      "case": "fresh_exact_absent",
+      "truth": "E21 not applied",
+      "query": "fresh complete generation=21, e21 absent",
+      "permissive": {"decision":"REPLAY","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1},
+      "strict": {"decision":"REPLAY","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1}
+    },
+    {
+      "case": "stale_absent_but_applied",
+      "truth": "E21 already applied exactly once after the queried snapshot",
+      "query": "stale generation=20 snapshot, e21 absent",
+      "permissive": {"decision":"REPLAY","false_skip":false,"duplicate_replay":true,"semantic_effect_count_after":2},
+      "strict": {"decision":"DEFER_STALE_QUERY","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1}
+    },
+    {
+      "case": "stale_absent_and_unapplied",
+      "truth": "E21 not applied",
+      "query": "stale generation=20 snapshot, e21 absent",
+      "permissive": {"decision":"REPLAY","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":1},
+      "strict": {"decision":"DEFER_STALE_QUERY","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":0,"liveness_deferred":true}
+    },
+    {
+      "case": "fresh_payload_collision",
+      "truth": "Different payload occupies reused/ambiguous effect identity e21",
+      "query": "fresh complete generation=21, e21 visible with payload_hash=hB != hA",
+      "permissive": {"decision":"SKIP","false_skip":true,"duplicate_replay":false,"semantic_effect_count_after":"wrong effect remains"},
+      "strict": {"decision":"DEFER_IDENTITY_CONFLICT","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":"unchanged"}
+    },
+    {
+      "case": "fresh_nonce_or_generation_collision",
+      "truth": "Old/reused record shares e21/hA but not generation=21,nonce=n21",
+      "query": "fresh complete observation, e21/hA visible with mismatched generation or nonce",
+      "permissive": {"decision":"SKIP","false_skip":true,"duplicate_replay":false,"semantic_effect_count_after":"required E21 still absent"},
+      "strict": {"decision":"DEFER_IDENTITY_CONFLICT","false_skip":false,"duplicate_replay":false,"semantic_effect_count_after":"unchanged"}
+    },
+    {
+      "case": "partial_exact_looking_record",
+      "truth": "Application status cannot be identified from the returned fields",
+      "query": "partial observation shows e21 but omits payload hash and/or generation/nonce fence",
+      "permissive": {"decision":"SKIP","false_skip":"possible and unobservable","duplicate_replay":false},
+      "strict": {"decision":"DEFER_PARTIAL_QUERY","false_skip":false,"duplicate_replay":false}
+    }
+  ],
+  "aggregate_result": {
+    "permissive_existence_only": {"resolved_duplicate_replay_cases":1,"resolved_false_skip_cases":2,"additional_unverifiable_false_skip_cases":1},
+    "strict_fenced": {"resolved_duplicate_replay_cases":0,"resolved_false_skip_cases":0,"deliberate_defer_cases":5,"safe_immediate_recovery_or_replay_cases":2},
+    "verdict": "PASS for safety, not liveness: exact payload equality plus generation/nonce and freshness fencing prevents the tested false-skip and duplicate-replay failures by refusing to guess under stale, partial, or identity-ambiguous observations. It does not eliminate the capability gap: without a Chat-visible way to certify target-query freshness/completeness and effect identity, the safe action is DEFER, so exactly-once progress remains unresolved."
+  },
+  "mechanism_revision": "Treat target query as sensory feedback that must itself carry a freshness/identity reliability signal. Intent/efference-copy plus an unfenced observation is insufficient. Recovery therefore needs a three-way decision: CONFIRMED_APPLIED -> skip and recover certificate; CONFIRMED_FRESH_ABSENT -> replay; UNCERTAIN_OR_CONFLICT -> no semantic action, checkpoint and defer.",
+  "neuroscience_transfer": "The role-local corollary-discharge analogy is refined from binary prediction-versus-observation matching to reliability-gated comparison: a self-action prediction should not be canceled by an observation whose provenance/freshness is uncertain. The recurrence analogue is to gate replay/skip on the reliability of the target-state observation, not merely on record presence.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local persistence/readback only; symbolic computation is performed in scheduled Chat, not by hosted runners or repository compute",
+    "unresolved_child": "A target that cannot expose a complete freshness/generation/nonce certificate (or equivalent linearizable/idempotent target semantics) cannot safely distinguish applied-from-unapplied after an ambiguous response. Safe recurrence can preserve state by DEFER, but cannot guarantee exactly-once progress until that observable capability exists."
+  },
+  "conflict_check": "Only frozen sanitized controls and own neuroscience state were used semantically. No O, other-worker, downstream, legacy, shared-ledger, other-role, protected-primary, hosted-compute, finite-credit, paid, scheduler, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_continuation": "Next valid invocation: execute one recurrence-sensitive lease/timeout probe on the DEFER branch. Hold the same intent/effect identity and compare (a) indefinite safe defer, (b) time-based replay without new evidence, and (c) evidence-epoch renewal requiring a newly fresh query. Falsify any timeout rule that converts uncertainty into replay and duplicates an already-applied effect; test whether evidence-epoch renewal can recover liveness without finite quota, richer-mode, protected, or manual-user execution."
+}
