@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "updated_at": "2026-09-04T10:01:20+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-same-predecessor-intent-crash-window-v1",
+  "bootstrap_valid": true,
+  "authority": {
+    "transport_mode": "main_sha_exact_ref",
+    "frozen_main_sha": "d39bf1f1fc29ff0ba97d912f2c8b59639bd50b4b",
+    "instruction_manifest_control_revision": 84,
+    "instruction_manifest_blob": "99caaccc721e51c9c6441fab9dba2ce2d2cff228",
+    "run_lifecycle_control_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "frozen_root_control_revision": 27,
+    "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "frozen_config_revision": 7,
+    "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+    "predecessor_latest_blob": "adc1918fcb81c7e8c1a7cd762771696d16f046f8",
+    "preflight_blob": "826954f343d9b65e87a1834e3b2862d62faf97f8"
+  },
+  "probe_question": "Can predecessor binding plus deterministic effect_id/payload_hash detection make two same-predecessor competing intents safe across intent-before-current and current-before-intent crashes without relying on a global compare-and-swap?",
+  "symbolic_model": {
+    "certified_predecessor": "e2",
+    "candidate_fields": ["predecessor_epoch", "effect_id", "payload_hash"],
+    "current_pointer_rule_under_test": "current is advisory only; restart authority comes from completed immutable successor self-certificates bound to e2",
+    "revised_atomic_record": "Each completed successor self-certificate embeds the same predecessor_epoch/effect_id/payload_hash triple that a separate intent would carry. A separate intent may be replicated for diagnostics but is not required to authorize restart.",
+    "restart_rule": [
+      "Enumerate completed self-certified successors bound to e2; do not authorize from numeric generation or current pointer alone.",
+      "If no completed successor exists, remain at e2.",
+      "If every completed successor has the same effect_id and payload_hash, treat them as equivalent idempotent replicas and choose a deterministic representative.",
+      "If one effect_id appears with different payload_hash values, fail closed before replay/output.",
+      "If different effect_id values are bound to the same e2, classify as competing effects and fail closed before replay/output in this tested scope."
+    ]
+  },
+  "cases": [
+    {
+      "case": "same_effect_same_payload",
+      "intent_a": "(e2, x, h1)",
+      "intent_b": "(e2, x, h1)",
+      "intent_before_current": "idempotent: completed successor certificates are equivalent even if current was never advanced",
+      "current_before_separate_intent": "idempotent only when the already-durable successor self-certificate itself embeds (e2,x,h1); the missing separate intent is non-authoritative",
+      "classification": "safe_idempotent_with_embedded_certificate"
+    },
+    {
+      "case": "same_effect_conflicting_payload",
+      "intent_a": "(e2, x, h1)",
+      "intent_b": "(e2, x, h2)",
+      "intent_before_current": "fail closed once both completed predecessor-bound certificates are visible; current cannot break the tie",
+      "current_before_separate_intent": "fail closed after restart if both completed certificates embed their payload hashes; a current pointer that lacks the embedded triple is insufficient",
+      "classification": "safe_fail_closed_after_static_restart_snapshot"
+    },
+    {
+      "case": "different_effects_same_predecessor",
+      "intent_a": "(e2, x, h1)",
+      "intent_b": "(e2, y, h2)",
+      "intent_before_current": "fail closed; deterministic lexical ordering would silently discard a semantically distinct effect and is not accepted",
+      "current_before_separate_intent": "fail closed only if both completed successors remain discoverable and self-describe their predecessor/effect/payload; last-writer-wins current is never sufficient",
+      "classification": "safe_fail_closed_after_static_restart_snapshot"
+    }
+  ],
+  "negative_control": {
+    "protocol": "two-record protocol where current can become authoritative before the predecessor/effect/payload triple is durable in either an immutable intent or the successor certificate",
+    "result": "unsafe",
+    "reason": "A crash can expose an apparently admitted successor while the conflicting intent is absent. Deterministic effect_id/payload_hash comparison has no evidence to compare, so predecessor binding alone cannot detect the hidden conflict."
+  },
+  "result": {
+    "static_restart_claim": "For a finite already-durable candidate set, predecessor binding plus embedded effect_id/payload_hash certificates is sufficient to make duplicate proposals idempotent and conflicting proposals fail closed without a global CAS. Both interruption orders are restart-safe only when the successor certificate is durable before current and carries the full conflict-detection triple.",
+    "live_concurrency_limit": "Not solved: after restart scans a currently finite candidate set and authorizes one result, a late writer may still publish another completed successor bound to e2. Without a fence/CAS/deadline that closes the predecessor to new proposals before any user-visible or irreversible effect, static conflict detection does not prove exactly-once live execution.",
+    "mechanism_revision": "Collapse intent identity into the immutable successor self-certificate and demote current to an advisory cache. This removes the current-before-separate-intent crash gap, but it does not by itself close the late-writer race."
+  },
+  "tested_scope": "One symbolic certified predecessor e2; two completed successor proposals; three relation classes (same effect/same payload, same effect/different payload, different effects); two crash orderings (intent-before-current and current-before-separate-intent); current treated as advisory; immutable successor certificates assumed enumerable at restart.",
+  "untested_or_unresolved": [
+    "A proposal that appears after restart selection/authorization (late-writer race)",
+    "Concurrent user-visible or irreversible side effects before predecessor closure",
+    "Incomplete directory enumeration or transient transport reads",
+    "Garbage collection of losing successor certificates",
+    "More than two writers or arbitrary replica counts",
+    "Malicious certificate forgery or compromised clock/scheduler identity"
+  ],
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local immutable certificate persistence and readback only; rate-limit interruption must checkpoint and resume across invocations rather than wait",
+    "accepted_scope": "static post-crash reconstruction only",
+    "unresolved_child": "Close the predecessor to late same-predecessor proposals before any externally visible effect without using a global CAS or richer execution service."
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized controls and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, scheduler, protected-primary, hosted-compute, paid, finite-credit, or manual-user execution semantics were used.",
+  "exact_continuation": "Next valid invocation: checkpoint first, then test exactly one cross-invocation predecessor-closure mechanism: predecessor e2 precommits a proposal deadline/slot and successor certificates are proposals only; a later scheduled invocation may authorize an effect only after the closed slot and only if every admissible predecessor-bound certificate is equivalent. Stress a late conflicting writer before vs after the precommitted deadline. Determine whether this bounded admission barrier removes the late-writer race without global CAS, waiting/polling, richer-mode execution, finite monthly quota, or user action. If clock/slot authority is insufficient, preserve that as the blocker and test a deterministic single-owner precommit alternative next time.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open"
+}
