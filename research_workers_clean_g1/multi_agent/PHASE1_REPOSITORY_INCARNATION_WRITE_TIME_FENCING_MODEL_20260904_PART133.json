@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 133,
+  "created_at": "2026-09-04T11:27:08+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 85,
+    "instruction_manifest_blob": "3e431f61e670f93bcb4c23b33d03bc7ffad25985",
+    "main_ref_at_freeze": "5f184820418d4e82e48dd5cb8bbec8fd83881cb5",
+    "transport_mode": "sha_only_main_ref_exact_blob",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_witness": {
+    "path": "automation_control/receipts/multi_agent/20260904T112708+0900_entry_witness_5f184820.json",
+    "blob": "4666271e308a3364529bc06d0eb7db1fdd567486",
+    "exact_readback": true
+  },
+  "predecessor": {
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_GIT_OBJECT_RETAINED_SHA_RECOVERY_WITNESS_MODEL_20260904_PART132.json",
+    "checkpoint_blob": "71d9eae85f4fd1305714647d0e07fef1fa4ff57b",
+    "held_fixed": true
+  },
+  "leaf_id": "phase1-multi-agent-part133-repository-incarnation-write-time-fencing",
+  "objective": "Test whether an idealized provider-distinct repository identity plus current Contents/blob CAS preconditions can fence a stale pre-delete client from writing into a delete/recreate same-name repository without separately durable old-incarnation memory, including create/update paths, response loss and rate-limit-later-retry.",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/rest/repos/repos",
+      "observation": "GitHub repository representations expose repository id and node_id fields, while repository URLs and contents_url are name-addressed under /repos/{owner}/{repo}. Part133 does not assume undocumented permanence or non-reuse of these IDs; the negative result grants an idealized incarnation-distinct ID and asks whether it is atomically enforced at the content write."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "observation": "The documented Create or update file contents endpoint is addressed by owner, repo and path. The file blob sha is required when updating an existing file; no repository-id/node-id incarnation precondition is documented for that write."
+    }
+  ],
+  "finite_model": {
+    "scenario_count": 42,
+    "factors": {
+      "history": ["same_incarnation_control", "delete_recreate_same_name"],
+      "operation": ["create_missing_path", "update_expected_old_blob"],
+      "recreated_target_state": ["path_absent", "same_old_blob_sha", "different_blob_sha"],
+      "recreation_timing": ["before_identity_preflight", "after_identity_preflight_before_write"],
+      "transport": ["ok", "response_loss_after_commit", "rate_limit_before_write_then_later_invocation"]
+    },
+    "same_incarnation_control_restriction": "For the legitimate same-incarnation control, create is tested only with path_absent and update only with same_old_blob_sha; recreation_timing is collapsed to one control timing. This yields 6 legitimate-control traces and 36 delete/recreate traces.",
+    "identity_assumption": "For the strongest negative control, the provider repository identity is generously assumed distinct across delete/recreate. This assumption is stronger than the public documentation required for the result: if even a distinct ID is only read before a name-addressed write and not atomically bound to that write, a TOCTOU window remains.",
+    "contents_precondition_model": "Create without sha can commit when the recreated target path is absent. Update with expected old blob sha can commit when the recreated target path has the same old blob content identity; absent or different blob states fail the file-level precondition. Rate-limit-before-write produces no same-invocation effect and is checkpointed for a later invocation."
+  },
+  "strategies": {
+    "name_plus_contents_sha_only": {
+      "unsafe_cross_incarnation_commits": 8,
+      "delete_recreate_traces": 36,
+      "rate_limited_no_effect_traces": 12,
+      "legitimate_same_incarnation_commits": 4,
+      "legitimate_rate_limited_checkpoints": 2,
+      "finding": "File-level blob CAS is not an incarnation fence. Create can target an absent path in the new same-name repository, and update can target the new repository when its path happens to contain the same expected old blob SHA. Response loss does not make the already-committed cross-incarnation effect safe."
+    },
+    "repo_id_preflight_without_remembered_old_id": {
+      "unsafe_cross_incarnation_commits": 8,
+      "finding": "Reading the current repository ID without a remembered expected incarnation supplies identity but no comparison baseline; it is behaviorally equivalent to name+blob checks for this stale-client question."
+    },
+    "repo_id_preflight_with_remembered_old_id": {
+      "unsafe_cross_incarnation_commits": 4,
+      "delete_recreate_non_rate_traces_blocked_by_preflight": 12,
+      "finding": "Remembered old ID blocks cases where recreation is already visible before the preflight, but it does not fence recreation after the preflight and before the name-addressed content mutation. The surviving old ID is also client-retained incarnation memory, which Part133 was asked not to smuggle in as an uncounted dependency."
+    },
+    "hypothetical_atomic_repo_id_bound_contents_write": {
+      "unsafe_cross_incarnation_commits": 0,
+      "delete_recreate_non_rate_traces_fenced": 24,
+      "legitimate_same_incarnation_commits": 4,
+      "finding": "An atomic server-side compare of expected repository incarnation at the same mutation boundary would close the modeled race, but the cited GitHub Contents endpoint does not document such a repository-id/node-id precondition. Therefore this is a missing-capability child, not accepted evidence."
+    }
+  },
+  "path_specific_results": {
+    "create_path": "Because create has no existing-file sha precondition, a stale client can create into a recreated same-name repository when the path is absent unless a repository-incarnation fence exists at mutation time.",
+    "update_path": "The required blob sha protects against changed/absent file state but not against repository reincarnation when the new repository contains the same blob at that path. Blob identity authenticates file content, not repository incarnation.",
+    "same_name_same_blob": "Name reuse plus identical file content is the sharp counterexample: owner/repo/path and expected blob sha can all look valid while repository incarnation changed.",
+    "response_loss": "If the cross-incarnation write committed and the response was lost, later CAS conflict or duplicate suppression cannot retroactively repair the authority violation. Idempotency after the fact is weaker than target-incarnation fencing.",
+    "rate_limit": "A rate limit before mutation is safely checkpointed with no same-run retry. A later invocation must re-bootstrap and re-evaluate, but absent an atomic incarnation-bound write it does not remove the generic race."
+  },
+  "indistinguishability_and_atomicity": {
+    "no_memory_case": "A stale client that retains only owner/repo/path plus a file-level expected blob cannot distinguish old repository versus recreated same-name repository when the target path state satisfies the same file precondition.",
+    "remembered_id_case": "A remembered incarnation ID can distinguish histories only at the instant it is read/compared. If the subsequent mutation is routed by owner/repo and has no repository-incarnation precondition, delete/recreate between compare and mutation recreates the ambiguity.",
+    "necessary_boundary_in_this_model": "Either the write itself must be bound server-side to the expected repository incarnation, or some authority/capability used by the write must be guaranteed to cease authorizing after incarnation replacement. A separate read-then-write comparison is insufficient under the tested race."
+  },
+  "phase1_result": {
+    "accepted_zero_dependency_candidate_found_for_part133": false,
+    "new_narrowing": "Provider repository identity is useful only if it participates in the authoritative mutation boundary. File blob CAS and a non-atomic repository-ID preflight do not generically prevent a stale pre-delete client from committing into a recreated same-name repository. The missing primitive is an atomic incarnation-bound write or equivalent server-enforced capability whose validity cannot carry across delete/recreate.",
+    "exact_tested_scope": "42 finite traces under the explicit file-precondition model plus current GitHub REST documentation for repository representations and the Contents create/update endpoint. The result does not prove repository ID permanence/non-reuse, GitHub-internal routing behavior beyond documented parameters, token capability semantics, arbitrary concurrent branch changes, or external sink fencing.",
+    "global_phase1_acceptance": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_quota_bearing_feature_consumed": false,
+    "external_hosted_compute_or_coordinator_used": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the finite model itself; the only safe generic strategy in this slice is hypothetical and depends on an unproven server-enforced incarnation-bound mutation capability",
+    "repository_transport": "lightweight repository state/evidence transport only; rate-limit interruption checkpoints across invocations without same-run retry"
+  },
+  "unresolved_children": [
+    "Find a Chat-exposed zero-cost mutation route whose server-side authority is bound to a repository incarnation rather than only owner/repo/path and file blob state.",
+    "Test whether GitHub App installation/repository-scoped authorization or another provider-issued capability is automatically invalidated across delete/recreate same-name replacement, without requiring separate durable old-incarnation memory or manual repair.",
+    "Test whether any GraphQL or REST mutation accepts a repository node/id as the authoritative target and preserves an atomic incarnation fence at the write boundary.",
+    "Parts131-132 common-mode rollback witness dependency remains unresolved even if write-time reincarnation fencing is later found."
+  ],
+  "continuation": "Part134: execute one bounded provider-issued capability-bound write leaf. Hold Parts128-133 fixed. Using only public provider documentation and own clean state, test whether a GitHub App installation/repository-scoped token, GraphQL node-ID mutation, or another Chat-exposed lightweight API can make the server reject writes after delete/recreate same-name replacement without separately durable remembered old-incarnation state. Separate (a) target addressed by immutable repository identity, (b) authorization capability bound to the old incarnation, and (c) ordinary owner/repo name routing. Include capability issuance/revocation or expiry, recreation before versus after authorization check, response loss, rate-limit interruption and later retry, and zero optional monthly quota/cost. Any route requiring manual reinstallation, hosted coordinator, paid feature, or external durable witness remains an unresolved child, not acceptance.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false
+}
