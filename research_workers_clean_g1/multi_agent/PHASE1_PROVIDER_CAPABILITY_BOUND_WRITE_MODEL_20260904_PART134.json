@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 134,
+  "created_at": "2026-09-04T13:32:06+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 87,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "presemantic_liveness_witness": "automation_control/receipts/multi_agent/2026-09-04T133206+0900_presemantic_witness.json"
+  },
+  "predecessor_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPOSITORY_INCARNATION_WRITE_TIME_FENCING_MODEL_20260904_PART133.json",
+  "selected_leaf_id": "part134-provider-issued-capability-bound-write",
+  "question": "Can a provider-issued authorization capability or identity-addressed mutation make a server reject a stale write after delete/recreate of the same repository name, while also preserving retry/idempotency safety, without external hosted coordination, richer-mode arbitration, finite quota, paid features, or a separately consulted old-incarnation witness?",
+  "public_sources": [
+    {
+      "url": "https://docs.github.com/en/rest/apps/apps#create-an-installation-access-token-for-an-app",
+      "observation": "GitHub documents installation access tokens that can be restricted with repositories or repository_ids; tokens cannot exceed the installation's repository grants; token creation requires an app JWT; installation tokens expire after one hour. The documentation does not state the delete/recreate same-name behavior of an already-minted repository-ID-scoped token."
+    },
+    {
+      "url": "https://docs.github.com/en/graphql/reference/git#committablebranch",
+      "observation": "GitHub documents CommittableBranch as addressable either by a Ref global node ID or by repositoryNameWithOwner plus branchName."
+    },
+    {
+      "url": "https://docs.github.com/en/graphql/reference/commits#createcommitonbranch",
+      "observation": "GitHub documents createCommitOnBranch as appending a commit and updating the branch in one mutation; CreateCommitOnBranchInput requires expectedHeadOid."
+    },
+    {
+      "url": "https://docs.github.com/en/graphql/guides/using-global-node-ids",
+      "observation": "GitHub documents global node IDs as identifiers usable to access GraphQL objects. It does not explicitly promise that a deleted Ref node ID can never be rebound or reused for a replacement Ref."
+    }
+  ],
+  "chat_surface_observation": {
+    "scope": "Current connected GitHub tool schemas inspected for commit and GraphQL operations during this invocation.",
+    "observed": "The inspected Chat-exposed write surface includes name-addressed Contents writes and Git-object/ref primitives such as create_commit and update_ref, plus several specialized GraphQL PR mutations. No generic createCommitOnBranch mutation was exposed in the inspected GraphQL schema set.",
+    "not_tested": "Direct installation-token issuance, exact underlying connector credential scope, destructive repository recreation, or undocumented GraphQL/REST endpoints.",
+    "inference_guard": "Absence from the inspected schema set is capability evidence for this connected surface only, not a claim that GitHub lacks the API."
+  },
+  "finite_model": {
+    "trace_count": 144,
+    "dimensions": {
+      "strategy": [
+        "name+broad_auth",
+        "ref_node_id+broad_auth",
+        "name+repo_id_scoped_installation_token",
+        "ref_node_id+repo_id_scoped_installation_token"
+      ],
+      "recreate_timing": ["none", "before_preflight", "after_preflight_before_mutation"],
+      "head_state": ["expected", "changed"],
+      "transport": ["ok", "response_loss", "rate_limit"],
+      "credential_state": ["valid", "expired"]
+    },
+    "fixed_controls": [
+      "Every strategy includes expectedHeadOid-style branch-head precondition where the candidate API supports it.",
+      "For delete/recreate traces the replacement repository deliberately recreates the branch at the same expected commit OID, so commit-OID equality alone cannot distinguish incarnation.",
+      "response_loss means the first mutation may have committed but its response is lost; a retry reuses the exact mutation input.",
+      "rate_limit is modeled as interruption before effect with checkpoint to a later invocation and no same-run retry.",
+      "expired credentials reject before effect."
+    ],
+    "conditional_assumptions": {
+      "ref_node_id": "An old Ref global node ID is not rebound to a replacement Ref after repository delete/recreate.",
+      "repo_id_scoped_installation_token": "A token minted with the old repository_id remains unauthorized for the replacement repository with a different repository ID even when owner/name is reused."
+    },
+    "results": {
+      "name+broad_auth": {"traces": 36, "unsafe_wrong_incarnation": 4, "correct_incarnation_effect": 2, "blocked_or_no_effect": 30},
+      "ref_node_id+broad_auth": {"traces": 36, "unsafe_wrong_incarnation": 0, "correct_incarnation_effect": 2, "blocked_or_no_effect": 34, "status": "conditional_on_node_id_nonrebind"},
+      "name+repo_id_scoped_installation_token": {"traces": 36, "unsafe_wrong_incarnation": 0, "correct_incarnation_effect": 2, "blocked_or_no_effect": 34, "status": "conditional_on_repository_id_scope_after_recreate"},
+      "ref_node_id+repo_id_scoped_installation_token": {"traces": 36, "unsafe_wrong_incarnation": 0, "correct_incarnation_effect": 2, "blocked_or_no_effect": 34, "status": "conditional_on_both_provider_guarantees"}
+    },
+    "negative_control_detail": "The four unsafe name+broad_auth traces are exactly the two recreate timings times ok/response_loss, with valid credential and replacement branch head equal to expectedHeadOid. The stale name routes to the replacement repository, so head CAS alone does not fence incarnation.",
+    "retry_detail": "In no-recreate response-loss traces, expectedHeadOid makes the exact retry reject after the first successful commit moved the branch head, preventing a duplicate second commit in this model."
+  },
+  "finding": {
+    "new_narrowing": "A single provider mutation addressed by Ref global node ID and guarded by expectedHeadOid is the first Part128-134 mechanism that composes object identity and branch-head concurrency at mutation time rather than performing a separate repository-ID preflight. This removes the specific preflight-to-write TOCTOU in the finite model. Repository-ID-scoped installation authorization is a second possible incarnation fence because the scope is provider-carried, but it is authorization evidence rather than a documented mutation-target identity guarantee.",
+    "why_not_accepted": [
+      "GitHub's public docs inspected here do not explicitly guarantee stale Ref node-ID non-rebinding after repository delete/recreate, so the zero-unsafe Ref-ID rows are conditional model evidence rather than current positive acceptance evidence.",
+      "The docs do not explicitly specify already-minted repository-ID-scoped token behavior across same-name delete/recreate; that zero-unsafe row is also conditional.",
+      "The current inspected Chat connector surface does not expose generic createCommitOnBranch, so the strongest documented identity+expectedHead mutation is not currently executable through this connected write surface.",
+      "Creating a GitHub App installation token requires an app JWT and yields a one-hour credential; relying on manual installation, private-key handling outside the connected surface, or user execution would violate the accepted zero-residual-execution route unless Chat already exposes the needed capability."
+    ],
+    "accepted_zero_dependency_candidate_found_for_part134": false,
+    "global_phase1_acceptance": false
+  },
+  "observation_vs_inference": {
+    "observations": [
+      "Official docs expose repository_ids scoping for installation tokens, Ref global-node-ID addressing for CommittableBranch, and required expectedHeadOid for createCommitOnBranch.",
+      "Current inspected connector schemas did not expose generic createCommitOnBranch."
+    ],
+    "inferences": [
+      "If Ref node IDs are never rebound after deletion, Ref-ID + expectedHeadOid is an atomic incarnation+head fence for the modeled mutation.",
+      "If installation-token repository_ids are enforced by immutable repository identity across deletion, an old scoped token cannot authorize the replacement repository."
+    ]
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_monthly_trial_paid_quota_dependency_added": false,
+    "rate_limit_behavior": "No same-run retry; interruption remains checkpoint/resume across invocations.",
+    "external_hosted_coordination_added": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the bounded documentation/modeling work; the strongest candidate is not accepted because its required generic GraphQL mutation is not exposed on the inspected Chat connector and token minting would require an unexposed JWT/private-key route if used directly.",
+    "paid_plan_independence_proven": false
+  },
+  "scope_guard": "This checkpoint is limited to 144 finite traces, the cited GitHub public documentation as observed on 2026-09-04, and the current inspected connected GitHub schema surface. It does not prove undocumented node-ID lifetime/non-reuse semantics, token behavior after destructive recreation, arbitrary authorization backends, Byzantine safety, or external sink fencing.",
+  "minimal_unresolved_children": [
+    "Establish or falsify provider-guaranteed stale Ref node-ID rejection/non-rebinding after repository delete/recreate without destructive user-repository testing.",
+    "Establish exact already-minted repository-ID-scoped installation-token behavior after same-name recreation, or retain it as conditional only.",
+    "Find a currently Chat-exposed atomic identity-addressed + expected-old-state mutation, or prove the available connector primitives cannot synthesize one without a name-addressed race."
+  ],
+  "continuation": "Part135: execute one bounded current-connector Git-object/ref composition leaf. Hold Parts128-134 fixed. Using only current Chat-exposed GitHub connector schemas, public Git reference-update semantics if needed, and own clean state, test whether create_commit plus update_ref(force=false), or another currently exposed lightweight primitive, can synthesize the Ref-node-ID + expected-old-head safety property without generic GraphQL createCommitOnBranch. Enumerate recreation before object creation, between object creation and ref update, and after ref update; same-history replacement with copied Git objects; concurrent same-incarnation branch advance; response loss; rate-limit interruption/later retry. Treat fast-forward ancestry as distinct from exact-head CAS. Any same-name recreation trace that can accept a copied object/commit in the replacement repository is unsafe. Persist exact tested scope, zero-cost/zero-quota assessment, unresolved child and nonempty continuation; do not execute another leaf in the same invocation."
+}
