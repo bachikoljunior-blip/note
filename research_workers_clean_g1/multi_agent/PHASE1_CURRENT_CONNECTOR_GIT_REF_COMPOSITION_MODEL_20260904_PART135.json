@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 135,
+  "observed_at": "2026-09-04T15:29:49+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision_observed": 90,
+    "instruction_manifest_blob": "7fdeb484bf85fb6ccfb79e6fbea2243140a745cf",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "predecessor_checkpoint": {
+    "path": "research_workers_clean_g1/multi_agent/PHASE1_PROVIDER_CAPABILITY_BOUND_WRITE_MODEL_20260904_PART134.json",
+    "blob": "ee2dbafe3ed66bac761434d3750e1652a81faa2f"
+  },
+  "selected_leaf_id": "part135-current-connector-git-object-ref-composition",
+  "question": "Can currently Chat-exposed create_commit plus update_ref(force=false), or another exposed lightweight GitHub write primitive, synthesize the Ref-identity plus expected-old-head safety property without generic GraphQL createCommitOnBranch?",
+  "observations": {
+    "connector_create_commit": "Observed current Chat GitHub connector schema addresses repository by repository_full_name and takes tree_sha plus parent_sha; it exposes no repository numeric/node identity parameter and no branch expected-head condition.",
+    "connector_update_ref": "Observed current Chat GitHub connector schema addresses repository by repository_full_name and branch by branch_name, takes target sha and force, and exposes no Ref node-ID target nor expected-old-head argument.",
+    "connector_contents_update": "Observed current contents update primitive uses repository_full_name/path plus current file blob sha. This is file-content CAS, not repository-incarnation identity plus branch-head CAS.",
+    "public_reference_semantics": "GitHub REST documentation for Update a reference states that force=false ensures a fast-forward update rather than overwriting work; the endpoint is owner/repo/ref plus target sha and force. It documents conflict/validation responses but no expected-current-head parameter.",
+    "public_commit_semantics": "GitHub REST documentation for Create a commit takes owner/repo, tree and parent commit SHAs; creating the commit object is separate from moving a branch ref."
+  },
+  "finite_model": {
+    "type": "synthetic_state_machine",
+    "scope": "432 strategy-scenarios = 4 strategies x 108 traces each",
+    "dimensions_per_strategy": {
+      "recreation_timing": ["none", "before_object_creation", "between_object_creation_and_ref_update", "after_first_ref_attempt_before_retry"],
+      "replacement_copy_state": ["none", "same_head_only", "same_head_and_target_object"],
+      "same_incarnation_concurrency": ["none", "sibling_branch_advance", "target_already_current"],
+      "transport": ["ok", "response_loss_then_later_retry", "rate_limit_before_effect_then_later_retry"]
+    },
+    "target_model": "Target commit C is a single-parent child of expected head H. force=false accepts only when C is a fast-forward from the current branch head; retry to an already-current C is treated as idempotent/no-op. Wrong-incarnation acceptance means any authoritative branch effect lands in same-name replacement repository I1 when authority was frozen for I0.",
+    "strategies": {
+      "create_commit_plus_update_ref_force_false": {
+        "scenarios": 108,
+        "unsafe_wrong_incarnation": 18,
+        "duplicate_cross_incarnation_effects": 1,
+        "unsafe_by_recreation_timing": {
+          "before_object_creation": 9,
+          "between_object_creation_and_ref_update": 3,
+          "after_first_ref_attempt_before_retry": 6,
+          "none": 0
+        },
+        "result": "FAIL_GENERIC_INCARNATION_FENCE"
+      },
+      "named_head_preflight_plus_create_commit_plus_update_ref_force_false": {
+        "scenarios": 108,
+        "unsafe_wrong_incarnation": 18,
+        "duplicate_cross_incarnation_effects": 1,
+        "result": "FAIL_NONATOMIC_PREFLIGHT_DOES_NOT_CLOSE_RECREATION_WINDOW"
+      },
+      "contents_file_sha_cas_negative_comparator": {
+        "scenarios": 108,
+        "unsafe_wrong_incarnation": 48,
+        "duplicate_cross_incarnation_effects": 27,
+        "result": "FAIL_WHEN_REPLACEMENT_COPIES_MATCHING_FILE_STATE"
+      },
+      "ideal_ref_id_plus_exact_expected_head_specification_baseline": {
+        "scenarios": 108,
+        "unsafe_wrong_incarnation": 0,
+        "duplicate_cross_incarnation_effects": 0,
+        "assumptions": ["stale Ref node IDs are never rebound across delete/recreate", "mutation checks expected head atomically with the Ref-identity-addressed write"],
+        "result": "SPEC_BASELINE_ONLY_NOT_CURRENTLY_EXPOSED_AND_PROVIDER_ID_LIFETIME_ASSUMPTION_REMAINS_UNPROVEN"
+      }
+    }
+  },
+  "new_narrowing": {
+    "fixed_incarnation_result": "Within the tested single-parent commit model and a fixed repository incarnation, create_commit(parent=H) followed by update_ref(force=false) rejects a sibling concurrent branch advance because C is not a descendant of that sibling head. Thus fast-forward semantics can supply useful same-incarnation conflict rejection in this narrow construction.",
+    "not_exact_head_cas": "force=false is an ancestry condition, not equality against an explicitly supplied expected head. It may accept an already-current target on retry, which can be useful for idempotency but is semantically different from expectedHeadOid.",
+    "incarnation_failure": "Because both exposed calls re-resolve repository by repository_full_name, a same-name replacement before object creation can receive the whole effect. If recreation occurs between object creation and ref update, a replacement containing copied target Git objects can accept the old target as a fast-forward. After response loss, later retry can also apply the same target to a copied replacement, producing a cross-incarnation duplicate.",
+    "composition_verdict": "Current create_commit + update_ref(force=false) does not synthesize the Part134 Ref-node-ID + expected-old-head safety property generically. A separate named-head preflight does not help because the check and mutation are not atomic. File-blob CAS is also insufficient under same-history recreation."
+  },
+  "scope_guard": "This is a finite synthetic model plus current connector-schema inspection and public GitHub REST documentation observed this invocation. It does not assert undocumented GitHub object-retention/copy behavior, Ref node-ID lifetime/non-reuse, authorization-token behavior, branch-protection semantics, Byzantine safety, or safety for external sinks. The unsafe copied-object traces are adversarial possibility tests, not claims that GitHub automatically copies deleted repositories.",
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_hosted_compute_or_storage_quota_dependency_added": false,
+    "richer_mode_protected_manual_execution_dependency": "none for this bounded modeling/documentation slice",
+    "accepted_external_hosted_coordination": false,
+    "rate_limit_behavior": "rate-limit interruption is modeled as no effect in the current invocation followed by cross-invocation retry; no same-run wait/backoff is required",
+    "generic_accepted_candidate_from_part135": false
+  },
+  "minimal_unresolved_children": [
+    "No currently exposed write primitive in the inspected connector supplies both stable repository/ref incarnation identity and an atomic expected-current-head condition.",
+    "Provider-guaranteed stale Ref node-ID rejection/non-rebinding across delete/recreate remains unproven from inspected public documentation.",
+    "Detection after a name-addressed write may identify recreation but cannot by itself prove that no wrong-incarnation effect was transiently or durably emitted."
+  ],
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_continuation": "Part136: execute one bounded pre/post repository-identity sandwich leaf. Hold Parts128-135 fixed. Using only current Chat-exposed GitHub read/write schemas, public GitHub repository identity semantics if needed, and own clean state, test whether reading immutable repository numeric/node identity immediately before and after a name-addressed staged write can convert recreation into a safe fail-closed protocol when the write is explicitly non-authoritative until postcheck. Enumerate recreation before precheck, between precheck and staged write, between staged write and postcheck, after postcheck; copied same-history state; response loss; rate-limit interruption/later retry; and postcheck failure. Distinguish prevention of a wrong authoritative effect from detection of a wrong staging effect. If safety depends on staging being non-authoritative and all external publication occurring only after a later identity-fenced gate, classify that residual publication gate as unresolved rather than accepted. Persist exact tested scope, zero-cost/zero-quota assessment, unresolved child and nonempty continuation; do not execute another leaf in the same invocation."
+}
