@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 227,
+  "updated_at": "2026-09-04T20:16:05+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "d4310d8f55579cb4e04c03c046f52ebaa7825dc0",
+    "manifest_control_revision": 91,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "run_lifecycle_control_revision": 1,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass_with_manifest_identity_transport",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "fc46fde804dee65694aa71af9223f2adf36b91a2",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/cross_field/checkpoints/r226_20260904T1918JST_git_commit_lineage_probe.json",
+  "slice": {
+    "leaf": "strict single-parent expected-predecessor CAS checkpoint protocol for two competing writers plus idempotent retry",
+    "selection_reason": "This is the highest-value continuation from r226 because it converts provider-anchored content-addressed lineage from passive duplicate/stale detection into an explicit conflict-rejecting recurrence protocol without hosted compute or protected authority.",
+    "public_source": {
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "observed_contract": [
+        "Create-or-update requires the current blob sha when updating a file.",
+        "The endpoint exposes HTTP 409 Conflict as a possible failure class.",
+        "A successful contents update returns a commit object whose response includes parent commit identity."
+      ]
+    },
+    "candidates_compared": [
+      {
+        "candidate": "single mutable pointer file updated with expected current blob sha plus immutable checkpoint records",
+        "expected_completion_time": "low",
+        "success_probability": "high conditional on stale-sha rejection",
+        "conflict_duplication_risk": "low",
+        "integration_cost": "low",
+        "quota_cost_fragility": "low; lightweight repository transport only"
+      },
+      {
+        "candidate": "commit-parent lineage only",
+        "expected_completion_time": "low",
+        "success_probability": "medium",
+        "conflict_duplication_risk": "medium because lineage detects but does not itself serialize competing writers",
+        "integration_cost": "low",
+        "quota_cost_fragility": "low"
+      },
+      {
+        "candidate": "immutable unique checkpoint files without a CAS pointer",
+        "expected_completion_time": "low",
+        "success_probability": "medium",
+        "conflict_duplication_risk": "medium because duplicate payloads can be detected but a single current successor is not forced",
+        "integration_cost": "medium",
+        "quota_cost_fragility": "low"
+      }
+    ],
+    "protocol_model": {
+      "record_fields": [
+        "prev_checkpoint_blob_sha",
+        "expected_pointer_blob_sha",
+        "operation_id",
+        "payload_digest",
+        "single_parent=true"
+      ],
+      "two_writer_trace": [
+        "Initial state: pointer file has blob p0 and names immutable checkpoint C0.",
+        "Writers A and B both read p0 and C0 before either writes.",
+        "A creates CA with prev=C0 and updates the pointer using expected sha=p0; under the contents-API model this is the unique transition from p0 to a new pointer blob p1.",
+        "B then presents stale expected sha=p0. Because the update contract requires the blob sha of the file being replaced while the current pointer is now p1, B is rejected as a conflict instead of overwriting A.",
+        "If A loses the response and retries, A first rereads the pointer. If operation_id and payload_digest already equal A's intended operation, the retry is classified as success without another write.",
+        "If B rereads after its conflict and sees another operation_id, B must stop or explicitly rebase from the new predecessor; it cannot silently reuse p0."
+      ],
+      "invariants": [
+        "At most one logical successor can be accepted from one expected pointer blob under stale-sha rejection.",
+        "A response-loss retry is idempotent when operation_id plus payload_digest are checked before any retry write.",
+        "A stale writer cannot overwrite the current pointer without first acquiring the new current pointer identity.",
+        "The immutable checkpoint predecessor field makes the accepted linear chain replayable and lets a later reader reject a branch whose declared predecessor is not the pointer it observed."
+      ]
+    },
+    "result": "PASS_MODEL_LEVEL_TRANSVERSAL_CAS_WITH_PROVIDER_STALE_SHA_LIVE_BEHAVIOR_UNRESOLVED",
+    "exact_tested_scope": "A linear single-branch GitHub Contents-API model with one mutable pointer path, immutable checkpoint records, exact blob identities, two writers that begin from the same pointer blob, and idempotent response-loss retry. No merge DAG, force-push adversary, branch-protection assumption, signed provenance, or provider-independent retention is included.",
+    "scope_limits": [
+      "This invocation did not spend an extra repository-write chain to live-probe a stale sha against the provider; stale-writer rejection is therefore model-level evidence grounded in the documented replacement-sha requirement and 409 conflict class, not a live 409 observation.",
+      "Provider trust, branch/ref mutability, force-push resistance, repository deletion, unreachable-object retention, and provider-independent authenticity remain unresolved children.",
+      "The protocol requires repository contents write permission but no hosted runner, Actions, Codespaces, artifact/LFS/package service, external executor, protected-primary authority, or manual user execution step."
+    ],
+    "phase1_constraints": {
+      "residual_richer_mode_or_protected_or_manual_user_execution_dependency_for_tested_model": 0,
+      "finite_monthly_trial_paid_quota_dependency": 0,
+      "incremental_monetary_cost": 0,
+      "candidate_phase1_acceptance": "PARTIAL_TRANSVERSAL_PASS_AT_MODEL_LEVEL_ONLY"
+    }
+  },
+  "conflict_check": "Used only current sanitized controls, own cross_field LATEST, and public GitHub documentation. No O/O-derived, other-worker, downstream, legacy, shared-ledger, protected-primary, or scheduler semantics were consumed or mutated.",
+  "frontier": [
+    "Live-probe stale-sha rejection and response-loss idempotent retry on a disposable role-local pointer path using only lightweight Contents API writes, while staying inside one-invocation write/checkpoint limits.",
+    "Test whether provider-signed commits or signed tags add useful provenance without external verifier execution, finite quota, incremental cost, or manual user execution.",
+    "Keep provider-independent append-only retention and force-push resistance unresolved until separately tested."
+  ],
+  "exact_continuation": "Fresh-bootstrap the current manifest, RUN_LIFECYCLE, DESIRED_STATE and cross_field config; reconstruct r227 from LATEST. Execute exactly one bounded Phase-1 leaf that live-tests the expected-predecessor CAS assumption on an authorized disposable role-local pointer: obtain its current blob sha, perform one update with that sha, then attempt a stale retry using the old sha and classify the provider response; after a successful first update, reread operation_id plus payload_digest to demonstrate response-loss idempotency without a duplicate logical effect. If the lifecycle write cap cannot accommodate both probe and durable checkpoint/receipt in one invocation, create only the disposable fixture as the one bounded slice and defer the stale write to the next invocation. Use no Actions, hosted runner, Codespaces, artifacts/LFS/packages, external execution, finite monthly/trial/paid quota, incremental cost, protected authority, or manual user execution. Preserve provider-trust/retention limits, exact tested scope, durable readback and a nonempty next frontier.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true
+}
