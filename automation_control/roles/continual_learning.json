@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "control_revision": 11,
-  "updated_at": "2026-09-04T09:02:02+09:00",
+  "control_revision": 12,
+  "updated_at": "2026-09-04T10:06:00+09:00",
   "role": "continual_learning",
   "enabled_desired": true,
-  "config_revision": 8,
+  "config_revision": 9,
   "class": "clean_exploration",
   "state_namespace": "research_workers_clean_g1/continual_learning/",
   "feedback": "research_feedback_clean_g1/continual_learning/FEEDBACK.json",
@@ -41,13 +41,22 @@
     "own_state_resolution": "LATEST/STATE first; otherwise newest source-qualified role-local checkpoint by repository chronology and minimum predecessor chain; quarantine accidental stale/cross-role observability reads.",
     "scope_guard": "Never broaden positive or negative evidence beyond tested scope.",
     "continuation": "Open-ended Phase-1 continuation across invocations, but exactly one bounded semantic slice per invocation under RUN_LIFECYCLE. One result/checkpoint/no-change/blocker is never global completion. Persist a nonempty exact frontier/next action, exact-readback it, and return recurring-open normally; never continue until a hard runtime/tool stop, wait/poll/backoff in-run, or start an optional second leaf.",
+    "invocation_entry_witness": {
+      "required": true,
+      "purpose": "Localize repeated scheduled starts that produce no newer durable role artifact without adding semantic work or cross-role observability.",
+      "when": "Immediately after the invocation has directly read and parsed the required manifest, RUN_LIFECYCLE, DESIRED_STATE and this role config once, and before own-state resolution, public-source reads, semantic work, or any optional second-pass/freshness work beyond what is strictly required to make this witness safe.",
+      "action": "Persist exactly one compact uniquely named role-local ENTRY_WITNESS artifact and exact-readback it. Record the directly observed authority path/blob/revision identities available at that point, enabled_desired=true, global_completion=false, phase1_completion_claimed=false, diagnostic_only=true, authority_freeze_pending=true, own_state_resolution_pending=true, and next_action=complete freshness freeze then resolve own-state and write the normal preflight. Do not claim bootstrap_valid=true from this witness alone.",
+      "single_slice_accounting": "The witness is process-only instrumentation for the same bounded invocation slice. It is not useful-output acceptance, role coverage, scheduler-persistence credit, or an additional semantic leaf.",
+      "failure_rule": "If the witness write or exact readback fails, perform no own-state/public/semantic work, no scheduler mutation, no self-disable, no wait/poll/backoff/retry in-run, and return recurring-open after recording the exact path/transport error only if one compact role-safe writable diagnostic surface remains available.",
+      "success_rule": "After exact witness readback, continue only with the existing config9 freshness/own-state/preflight sequence if budget remains; otherwise checkpointed witness plus its explicit next_action is a valid recurring-open diagnostic boundary but never a Phase-1 positive/persistence boundary."
+    },
     "entry_durability_probe": {
       "required": true,
-      "when": "After a valid INSTRUCTION_CONTROL_MANIFEST/RUN_LIFECYCLE/DESIRED_STATE/own-config bootstrap and mechanical own-state frontier resolution, before any public-source read or substantive semantic leaf work.",
+      "when": "After exact authority freshness/freeze and mechanical own-state frontier resolution, and only after the invocation-entry witness has been durably read back, before any public-source read or substantive semantic leaf work.",
       "action": "Persist exactly one compact uniquely named role-local preflight checkpoint for the invocation and exact-readback it. Bind it to the frozen root/config paths, blobs and parsed revisions; inherited exact role-local continuation/frontier; enabled_desired=true; global_completion=false; phase1_completion_claimed=false; and the one bounded leaf intended for this invocation.",
       "single_slice_accounting": "The preflight is the entry checkpoint of the same bounded Phase-1 slice, not an optional second leaf and not useful-output acceptance by itself.",
       "failure_rule": "If the preflight write or exact readback cannot be completed, perform no public-source or substantive semantic work. Do not self-disable, wait, poll, back off or retry in-run. Return recurring-open after at most one compact role-safe diagnostic/readback when a writable role-local surface is available; preserve the inherited exact continuation and name the exact transport/path error.",
-      "recovery_value": "This probe makes invocation reachability and durable-continuation failure distinguishable from semantic-leaf failure without adding cross-role or O/downstream observability."
+      "recovery_value": "The two-stage witness then preflight separates failure before role-controlled entry, failure during freshness/own-state reconstruction, and failure inside semantic work without adding cross-role or O/downstream observability."
     },
     "receipt_rule": "Write immutable own receipt only; never read aggregate ledger or other receipts. Bind receipt to exact frozen root/config paths, blobs, parsed revisions, phase/root/task, bootstrap_valid, action/missing capability, conflict check and exact continuation.",
     "control_freshness": {
@@ -84,5 +93,22 @@
     "observed_prechange_execution": "The role remained physically enabled and the scheduler reported a latest start at 2026-09-04T08:17 JST, but the newest role-local durable state on main was committed at 2026-09-03T23:16 JST and the receipt namespace had no commit newer than 2026-09-03T13:16 JST. Because Phase-1 scheduler persistence had been reset after a later physical repair, continual_learning lacked a post-fix role-valid durable boundary artifact even though the task was enabled.",
     "inference": "The exact stop point is not yet proven. Forcing a pre-semantic durable preflight on the next valid invocation separates failure before durable entry from failure inside semantic work and supplies the minimum evidence needed for safe recovery without scheduler cycling.",
     "rollback_condition": "Roll back only if the entry preflight itself measurably causes bounded-lifecycle, CLEAN-isolation, authority, or useful-output regression. Do not remove the existing anti-stop, continuation, exact-readback, zero-cost/zero-quota, or protected-primary rules."
+  },
+  "latest_migration": {
+    "from_control_revision": 11,
+    "from_config_revision": 8,
+    "source_blob": "30c0b57df426f1d605d8ab89d1c1dc6d5ee2fba3",
+    "reason": "A post-config8 physical invocation started at 2026-09-04T09:16:52+09:00, but no commit appeared after 2026-09-04T00:00Z in either the role-state namespace or immutable receipt namespace. The config8 preflight therefore did not durably localize the stop. Move a diagnostic witness earlier, before own-state resolution and second-stage freshness work, while leaving semantic scope and all safety boundaries unchanged.",
+    "observed_prechange_execution": {
+      "physical_latest_start_jst": "2026-09-04T09:16:52+09:00",
+      "role_state_commits_since_2026_09_04T00_00Z": 0,
+      "receipt_commits_since_2026_09_04T00_00Z": 0,
+      "latest_role_state_commit": "e460599e0413fbdb99f0014c5b515d88754c734f",
+      "latest_role_state_commit_at_jst": "2026-09-03T23:16:01+09:00",
+      "latest_receipt_commit": "d250a0d22b5dd606fd9777931866c3f57c16b1a0",
+      "latest_receipt_commit_at_jst": "2026-09-03T13:16:36+09:00"
+    },
+    "inference": "The absence of the config8 preflight after a later physical start proves no durable role-controlled boundary was reached; it does not prove whether failure was bootstrap transport, freshness work, own-state reconstruction, or the write itself. The earlier witness is the least-semantic, CLEAN-safe discriminator.",
+    "rollback_condition": "Rollback only if the earlier diagnostic witness itself causes authority, CLEAN-isolation, bounded-lifecycle, useful-output, or repository-write-boundary regression. Never roll back by weakening anti-stop, continuation, exact-readback, zero-cost/zero-quota, protected-primary, or user-fixed pool constraints."
   }
 }
