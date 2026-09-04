@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-single-owner-successor-precommit-v1",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260905T0401JST.json",
+  "preflight_blob": "55f93042b7027f000284158b26144d172995b4da",
+  "tested_mechanism": {
+    "name": "single-owner content-addressed successor precommit",
+    "precommit": "Predecessor e3 immutably publishes exactly one tuple C=(effect_id E, payload_hash H) before any successor materialization.",
+    "canonicalization": "The only valid successor key K is deterministically derived from (e3,E,H). A materialization is valid only if its bytes hash to H; existing content counts as success only after exact readback verifies H.",
+    "safety_rule": "Any materializer proposing H' != H is rejected before canonical materialization. If incorrect bytes nevertheless occupy K, verification fails closed; they never become a valid effect.",
+    "liveness_rule": "A crash after C but before materialization leaves C sufficient for a later invocation to reconstruct K and H without proposal enumeration or temporal closure."
+  },
+  "finite_symbolic_traces": [
+    {
+      "trace": "crash_before_materialization",
+      "steps": ["e3 publishes immutable C=(E,H)", "materializer crashes before K is written", "later invocation reconstructs K from C and writes bytes P with hash(P)=H", "readback verifies H"],
+      "result": "pass",
+      "reason": "No open proposal set exists; C survives the crash and uniquely determines the successor."
+    },
+    {
+      "trace": "duplicate_materializers_after_restart",
+      "steps": ["two materializers read the same immutable C", "both derive the same K and same required H", "at most one canonical immutable create survives; a conflicting duplicate is not retried in-run", "the loser may only accept existing K after exact later readback verifies H"],
+      "result": "pass_idempotent_or_fail_closed",
+      "reason": "All protocol-conforming writers target one content-addressed identity. Duplicate exact payloads cannot define divergent effects; conflict is a checkpointable transport event rather than permission to create another effect."
+    },
+    {
+      "trace": "stale_different_payload",
+      "steps": ["stale invocation proposes payload P' with hash H' != H", "comparison to immutable C rejects H' for canonical K", "if wrong bytes are forced into K, consumer verification against H rejects them", "no alternate successor key is authoritative because e3 precommitted only (E,H)"],
+      "result": "pass_fail_closed",
+      "reason": "The stale writer cannot change successor identity; incorrect content is either noncanonical or hash-invalid."
+    }
+  ],
+  "probe_result": "Within this finite symbolic model, deterministic predecessor precommit removes the deadline-only closure race found in the predecessor probe. Safety does not require proposal-set enumeration or a causal deadline fence: one immutable predecessor tuple closes successor identity before materialization. Crash recovery is reconstructible from C; duplicate materializers converge on one canonical key; a stale different payload fails closed under hash verification.",
+  "scope_guard": "Positive evidence is limited to one predecessor, one immutable precommit tuple, one canonical content-addressed successor key, protocol-conforming materializers, exact payload-hash verification, three symbolic traces, and create-only immutable repository-style persistence. It does not establish safety for mutable destinations, non-hash-verifying consumers, multi-successor fanout, side effects occurring before durable verification, or storage lacking unique canonical naming/create-only semantics.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "lightweight immutable state/evidence persistence and later exact readback only",
+    "accepted_scope": "finite symbolic successor-identity reconstruction and duplicate/stale-writer safety under content-addressed create-only persistence",
+    "unresolved_child": "Test the next boundary: whether a verified materialization can be promoted to an externally meaningful side effect without introducing a non-idempotent executor. Use one effect-application state machine where durable verified record precedes application, then stress crash between verification and application plus duplicate re-application."
+  },
+  "conflict_check": "Semantic inputs were limited to current sanitized controls and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, hosted compute, finite credits, paid service, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then test exactly one durable-before-apply effect state machine built on the verified successor record. Stress (1) crash after verified record but before application, (2) crash after application but before recording applied, and (3) duplicate re-application after restart. Accept only if externally meaningful effects are idempotent or fail closed with zero residual richer-mode/protected/manual-user execution, zero finite monthly quota, zero incremental cost, and no same-run wait/poll/backoff."
+}
