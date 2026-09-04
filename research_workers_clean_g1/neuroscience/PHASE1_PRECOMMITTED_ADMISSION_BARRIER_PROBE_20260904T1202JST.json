@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "updated_at": "2026-09-04T12:02:23+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-precommitted-admission-barrier-v1",
+  "bootstrap_valid": true,
+  "authority": {
+    "instruction_manifest_control_revision": 86,
+    "instruction_manifest_blob": "b828abc35b2ca135261ce58fd48460899dc305ae",
+    "run_lifecycle_control_revision": 1,
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "frozen_root_control_revision": 27,
+    "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "frozen_config_revision": 7,
+    "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274"
+  },
+  "predecessor_latest_blob": "3b8b89d834aeb68c25647a27ddb164a0ca830114",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260904T1202JST.json",
+  "tested_mechanism": "Predecessor e2 precommits a proposal deadline/slot. Successor certificates are proposals only. A later invocation authorizes an effect after the boundary iff every then-visible admissible predecessor-bound certificate is equivalent.",
+  "finite_symbolic_cases": [
+    {
+      "case": "equivalent_before_boundary",
+      "trace": ["p1 commits H before boundary", "closer observes p1", "all visible hashes equivalent", "authorize H"],
+      "result": "safe_in_this_trace"
+    },
+    {
+      "case": "conflict_before_boundary",
+      "trace": ["p1 commits H1 before boundary", "p2 commits H2!=H1 before boundary", "closer observes both", "non-equivalence detected"],
+      "result": "fail_closed"
+    },
+    {
+      "case": "straggler_crosses_boundary",
+      "trace": ["p2 starts before boundary and locally passes admission check", "p2 is delayed before durable proposal", "closer runs after boundary and sees only p1/H1", "closer authorizes H1", "p2 later durably commits H2!=H1"],
+      "result": "unsafe_late_writer_race"
+    },
+    {
+      "case": "backdated_claim_after_boundary",
+      "trace": ["p2 starts after boundary", "proposal carries a claimed pre-boundary timestamp without a non-forgeable transport-enforced cutoff", "closer cannot distinguish this from a genuine pre-boundary proposal from role-local content alone"],
+      "result": "unsafe_without_trusted_admission_timestamp_or_fence"
+    }
+  ],
+  "probe_result": "A precommitted deadline plus post-deadline enumeration does not close the predecessor against late proposals. The decisive counterexample is a writer that passes an admission check before the boundary but makes its conflicting proposal durable only after the closer has authorized an effect. Claimed timestamps do not repair this unless admission is enforced by a non-forgeable transport/server fence. Therefore the bounded admission barrier is not a zero-dependency proof under the tested Chat-native role-local semantics.",
+  "mechanism_revision": "Closure must be causal, not merely temporal. Either an admission primitive must durably fence all future predecessor-bound proposals before authorization, or the predecessor must avoid open competition by precommitting exactly one successor effect_id/payload_hash so every later materializer can only reproduce the same immutable effect.",
+  "scope_guard": "Negative evidence is limited to one predecessor e2, two candidate writers, one locally checked precommitted boundary, immutable role-local proposal files, post-boundary enumeration, and one irreversible authorization point. It does not prove impossibility when a trusted server-enforced append cutoff, fencing token, linearizable CAS, predetermined closed membership with payload precommit, or equivalent admission primitive is available.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local immutable persistence/readback only; no hosted compute",
+    "accepted_scope": "counterexample to deadline-only predecessor closure under the stated finite symbolic model",
+    "unresolved_child": "Establish a zero-quota causal predecessor fence without global CAS/waiting, or replace open proposal selection with deterministic single-owner successor precommit."
+  },
+  "conflict_check": "Semantic inputs were limited to frozen sanitized controls and own neuroscience LATEST/preflight plus this finite symbolic probe. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, hosted-compute, paid, finite-credit, or manual-user execution semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then test exactly one deterministic single-owner successor-precommit protocol. Let predecessor e3 immutably choose effect_id and payload_hash before any successor materialization. Stress (1) crash before materialization, (2) duplicate materializers after restart, and (3) a stale invocation attempting a different payload under the same predecessor. Accept only if all surviving paths are idempotent or fail closed without CAS, waiting/polling, richer-mode execution, finite monthly quota, protected authority, or user action."
+}
