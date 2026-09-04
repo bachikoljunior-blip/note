@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "part": 132,
+  "created_at": "2026-09-04T10:30:51+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "semantic_config_snapshot": {
+    "control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "config_revision": 9,
+    "role_config_blob": "d37724dde3e3bbd1a475839058edba41f10107c2",
+    "run_lifecycle_blob": "8fe5d79365dcd943984d69f4767b2ed0c03fc3ac",
+    "instruction_manifest_revision": 85,
+    "instruction_manifest_blob": "3e431f61e670f93bcb4c23b33d03bc7ffad25985",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "presemantic_liveness_witness": {
+    "path": "automation_control/receipts/multi_agent/ENTRY_WITNESS_20260904T103051+0900.json",
+    "blob": "b7fab763d874183d0d706fd60d44c62830618fff",
+    "exact_readback": true
+  },
+  "predecessor": {
+    "checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_CROSS_DOMAIN_ROLLBACK_INDISTINGUISHABILITY_MODEL_20260904_PART131.json",
+    "checkpoint_blob": "743682d2626d6009d0a0862fdd10ed94c6c2acf6",
+    "held_fixed": true
+  },
+  "leaf_id": "phase1-multi-agent-part132-git-object-retained-sha-recovery-witness",
+  "objective": "Test whether Git object identity plus a separately retained SHA can provide a zero-cost non-rollbackable freshness witness across branch rewind, repository delete/recreate same-name reuse, unreachable-object retention uncertainty, response loss, rate-limit interruption and later retry, without silently introducing another durable recovery domain.",
+  "public_sources": [
+    {
+      "url": "https://git-scm.com/docs/git",
+      "observation": "The Git overview describes repository objects as named by a hash of their contents and refs as named pointers to object identities. This supports content-address identity/authenticity reasoning, not freshness by itself."
+    },
+    {
+      "url": "https://git-scm.com/docs/git-prune",
+      "observation": "git-prune explicitly removes unreachable objects from the object database, subject to reachability/expiry rules. Therefore an unreachable object identity is not a generic permanent retention guarantee."
+    },
+    {
+      "url": "https://git-scm.com/docs/git-gc/2.43.0.html",
+      "observation": "git-gc documents repository housekeeping that can remove unreachable objects and notes automatic maintenance plus configurable pruning. This supports treating unreachable-object survival as uncertain rather than durable anti-rollback memory."
+    }
+  ],
+  "finite_model": {
+    "scenario_count": 144,
+    "factors": {
+      "history": ["legit_old_g1", "advanced_g2_then_rollback_to_g1"],
+      "rollback_event": ["force_rewind_same_repository", "delete_recreate_same_name"],
+      "newer_object_state": ["g2_fetchable_unreachable_retained", "g2_unreachable_not_discoverable", "g2_pruned_or_absent"],
+      "retained_witness": ["none", "same_repo_pointer", "external_bare_sha", "external_generation_sha"],
+      "transport": ["ok", "response_loss", "rate_limit_then_later_retry"]
+    },
+    "decision_goal": "Accept useful current g1 in legitimately-old histories while rejecting or refusing g1 after a hidden g2 existed and the repository-visible authority rolled back. A rate-limit trace may checkpoint/refuse in this invocation and retry later; no same-run retry is counted.",
+    "collision_scope": "Cryptographic hash collision attacks are outside this bounded model; the tested question is rollback/freshness, not collision resistance."
+  },
+  "results": {
+    "current_ref_hash_only": {
+      "unsafe_old_accepts": 72,
+      "rollback_traces": 72,
+      "legit_useful_accepts": 72,
+      "legit_traces": 72,
+      "finding": "Current content/object identity authenticates the visible state but contains no memory that a newer state previously existed."
+    },
+    "same_repo_pointer_or_anchor": {
+      "unsafe_old_accepts": 72,
+      "rollback_traces": 72,
+      "legit_useful_accepts": 72,
+      "legit_traces": 72,
+      "finding": "A witness stored only inside the same rollback/delete-recreate domain rolls back or disappears with that domain in this tested adversarial event."
+    },
+    "external_bare_sha_conservative": {
+      "unsafe_old_accepts": 0,
+      "legit_useful_accepts": 18,
+      "legit_false_blocks": 54,
+      "rollback_stale_proofs": 4,
+      "rollback_safe_refusals": 68,
+      "finding": "A surviving bare SHA can distinguish identity when it survives elsewhere, but a mismatch is not itself an ordering proof. When the newer object is unavailable or the compare is rate-limited, the safe action is refusal/checkpoint. Its durable survival is already a third recovery domain."
+    },
+    "external_generation_sha_record": {
+      "unsafe_old_accepts": 0,
+      "legit_useful_accepts": 18,
+      "legit_false_blocks": 54,
+      "rollback_stale_proofs": 18,
+      "rollback_safe_refusals": 54,
+      "finding": "A surviving generation+SHA record can carry freshness even after object loss, but only because generation metadata and the SHA survived in an independent durable domain."
+    },
+    "combined_fail_closed_external_witness": {
+      "unsafe_old_accepts": 0,
+      "legit_useful_accepts": 36,
+      "legit_false_blocks": 36,
+      "rollback_stale_proofs": 22,
+      "rollback_safe_refusals": 50,
+      "finding": "Safety is obtainable by using surviving external witness material and refusing when proof is absent, but this is not generic useful-outcome parity and does not eliminate the independent durable-domain requirement."
+    }
+  },
+  "indistinguishability": {
+    "strict_pair_count": 36,
+    "pair_definition": "For each rollback_event x newer_object_state x transport x witness in {none,same_repo_pointer}, the visible current-domain observation is identical between legit_old_g1 and advanced_g2_then_rollback_to_g1.",
+    "consequence": "Any deterministic mechanism restricted to that current rollback domain must either accept both worlds (unsafe after rollback) or refuse both worlds (safe but not useful in the legitimate-old world)."
+  },
+  "separation": {
+    "content_address_authenticity": "If object bytes are available, the retained hash can identify the expected content/object under this non-collision model.",
+    "discoverability_reachability": "A hash must be remembered somewhere and the object must remain fetchable/reachable/retained to recover object-graph relations. Git documents pruning of unreachable objects, so unreachable-object survival is not a generic permanent guarantee.",
+    "freshness_anti_rollback": "A bare hash has no intrinsic generation order. Freshness requires surviving ordering metadata, an ancestry relation that can still be checked, or another non-rollbackable witness."
+  },
+  "response_loss_and_rate_limit": {
+    "response_loss": "Does not create independent anti-rollback memory. The safe model preserves idempotent refusal/checkpoint unless a surviving witness already proves freshness.",
+    "rate_limit": "No same-run retry. The current effect is refused/checkpointed and the comparison is retried in a later invocation under a fresh bootstrap; this preserves safety but does not solve witness absence."
+  },
+  "phase1_result": {
+    "accepted_zero_dependency_candidate_found_for_part132": false,
+    "new_narrowing": "Immutable Git object identity is an authenticity/addressing primitive, not self-remembering anti-rollback state. Keeping a newer SHA in the same rollback domain does not survive common-mode rewind/delete-recreate; keeping it outside that domain explicitly introduces the third durable recovery domain Part131 already identified. Bare SHA survival also does not by itself encode newer-than ordering when object ancestry is unavailable.",
+    "exact_tested_scope": "The stated 144 finite traces plus the cited Git object/ref/pruning semantics. This does not prove GitHub-specific retention durations, deletion restoration guarantees, cryptographic collision resistance, arbitrary Byzantine safety, or provider-level repository-incarnation fencing.",
+    "global_phase1_acceptance": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_quota_bearing_feature_consumed": false,
+    "external_hosted_compute_or_coordinator_used": false,
+    "richer_mode_protected_manual_execution_dependency": "none for the finite model itself; any accepted anti-rollback design that relies on externally retained SHA/generation metadata still has an unresolved independent durable recovery-domain dependency",
+    "repository_transport": "lightweight state/evidence transport only; rate-limit interruption is checkpointed across invocations"
+  },
+  "unresolved_children": [
+    "A zero-cost Chat-native non-rollbackable recovery witness independent of repository+sink common-mode rollback remains unproven.",
+    "A bare retained SHA requires both durable survival and enough surviving ordering/ancestry information to establish freshness; otherwise it is identity-only evidence.",
+    "Same-repository unreachable-object retention is not a generic permanent guarantee because unreachable objects can be pruned.",
+    "Part128 repository-incarnation write-time fencing remains unresolved and is now the highest-value direct child."
+  ],
+  "continuation": "Part133: execute one bounded repository-incarnation write-time fencing leaf. Hold Parts128-132 fixed. Test whether a provider-stable repository identity (for example repository ID/node identity), current contents/blob CAS preconditions, and lightweight repository APIs can prevent a stale pre-delete client from committing into a delete/recreate same-name repository without requiring a separately durable remembered old incarnation token. Include same-name reuse, stale blob SHA collision-of-name but not content, create-versus-update paths, response loss, rate-limit interruption and later retry. Separate server-enforced target identity from client-retained incarnation memory. Any scheme that requires remembering the prior repository ID/token in another durable domain must count that dependency explicitly. Use only own clean state and public sources; no hosted compute/coordinator/finite quota/manual execution. Absence of a generic fence remains an unresolved child, not closure.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false
+}
