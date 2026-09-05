@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-05T10:00:14+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-cas-pointer-symbolic-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260905T100014JST.json",
+  "preflight_blob": "3455a211051751e72295e693eea6af4c6daae2b3",
+  "probe_type": "deterministic finite symbolic state-machine verification",
+  "mechanism": {
+    "artifact_A": "immutable content-addressed object; create-if-absent is idempotent and an existing digest must verify the exact payload",
+    "pointer_L": "single canonical latest pointer with a monotonically changing version identity and atomic compare-and-swap from the caller's expected predecessor version",
+    "restart_rule": "read and hash-verify A and read L before any promotion retry; if L already targets A, return semantic success without another mutation; if L differs and predecessor identity is stale, fail closed",
+    "application_fact": "observable publication is the verified L target plus verified A payload; local success markers are derived bookkeeping only"
+  },
+  "tested_scope": {
+    "initial_state": "L=(version 0,target OLD); OLD artifact present",
+    "writer_A": "create A(payload_A), then promote expected_version=0 to A",
+    "competing_writer_B": "create B(payload_B), then attempt promote expected_version=0 to B after A has won",
+    "required_traces": [
+      "crash after A creation before L promotion",
+      "crash after successful L promotion before local confirmation",
+      "duplicate re-promotion of the same A",
+      "stale competing writer B using the superseded predecessor identity"
+    ]
+  },
+  "trace_results": {
+    "crash_after_A_before_L": {
+      "restart_promotion": "promoted",
+      "final_pointer": "version 1 -> A",
+      "final_payload_verified": true,
+      "cas_mutations": 1,
+      "verdict": "pass_in_scope"
+    },
+    "crash_after_L_before_local_confirmation": {
+      "first_promotion": "promoted",
+      "restart_action": "already_current",
+      "final_pointer": "version 1 -> A",
+      "final_payload_verified": true,
+      "cas_mutations": 1,
+      "verdict": "pass_in_scope"
+    },
+    "duplicate_promotion": {
+      "first_promotion": "promoted",
+      "duplicate_action": "already_current",
+      "final_pointer": "version 1 -> A",
+      "final_payload_verified": true,
+      "cas_mutations": 1,
+      "verdict": "pass_in_scope"
+    },
+    "stale_competing_writer": {
+      "A_promotion": "promoted",
+      "B_promotion": "stale_cas_rejected",
+      "final_pointer": "version 1 -> A",
+      "final_A_payload_verified": true,
+      "cas_mutations": 1,
+      "orphan_B_artifact_present": true,
+      "verdict": "pass_for_latest_state_correctness; orphan cleanup not tested or required for publication correctness"
+    }
+  },
+  "result": "Within this exact symbolic model, immutable artifact plus read-before-retry CAS pointer promotion makes observable latest-state publication idempotent across the tested crash windows and duplicate retry, while a stale competing writer fails closed. The pointer is the sole mutable publication authority; an orphan immutable losing artifact does not change the published latest state.",
+  "scope_guard": "This is not evidence for stores lacking atomic compare-and-swap, read-after-write visibility, immutable/content-verifiable artifacts, or a single canonical pointer. It does not cover multi-pointer transactions, mutable artifacts, append/send/increment effects, ABA without version identities, pointer deletion/recreation, garbage collection, or external irreversible side effects before durable canonical state.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "role-local durable state transport only; no hosted runner, Codespaces, artifact/LFS/package quota, cloud compute, or external model/API execution is required by the tested state machine",
+    "accepted_scope": "two-object latest-state publication with immutable content-addressed artifact, versioned atomic CAS pointer, read/hash verification before retry, and the four tested traces",
+    "unresolved_child": "Test the same mechanism against ABA-style pointer identity reuse and corrupted/stale pointer reads; require a generation-qualified predecessor identity and fail-closed reconstruction without same-run polling."
+  },
+  "conflict_check": "Semantic inputs were limited to exact sanitized controls, exact neuroscience role config, own neuroscience LATEST, and this deterministic role-local model. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, or public-source semantics were consumed.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then test exactly one generation-qualified CAS pointer reconstruction model with ABA and stale-read adversaries. Compare a plain predecessor version, a monotone generation plus target digest identity, and fail-closed unknown-read handling. Accept only the generation-qualified design if stale/ABA traces cannot republish an obsolete artifact and if restart remains idempotent with zero residual richer-mode/protected/manual-user execution, zero finite monthly quota, zero incremental cost, and no same-run wait/poll/backoff."
+}
