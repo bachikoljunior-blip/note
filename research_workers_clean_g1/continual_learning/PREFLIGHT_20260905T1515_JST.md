@@ -1,0 +1,22 @@
+# continual_learning invocation preflight — 2026-09-05 15:15 JST
+
+- mode: persistence_recovery_micro_slice
+- bootstrap_valid: true
+- phase_id: phase_1_chat_parity
+- root_problem_id: o-chat-parity-root-v4-zero-work-dependency-zero-quota
+- task_id: phase1-clean-continual-learning-durable-adaptation
+- enabled_desired: true
+- global_completion: false
+- phase1_completion_claimed: false
+- scheduler_mutation_by_worker: false
+- transport_mode: exact_blob_two_pass
+- frozen_manifest: automation_control/INSTRUCTION_CONTROL_MANIFEST.json @ 1d8ae4d12cdbf6d09c41d8f6909eb283097026bc, control_revision 100
+- frozen_run_lifecycle: automation_control/RUN_LIFECYCLE.json @ 560024d46b6c26ea63ab58137be9d48863cab941, control_revision 3
+- frozen_desired_state: automation_control/DESIRED_STATE.json @ 0eee15a94c23400653d84506da1f795081a6ef24, control_revision 27
+- frozen_role_config: automation_control/roles/continual_learning.json @ 2c2931beb44c8f9506488b398a2b1717ba0d6301, control_revision 14, config_revision 11
+- own_frontier_source: research_workers_clean_g1/continual_learning/LATEST.md @ 4bf01931a2f6e1dc1c19285706f6d96f8ea259a3
+- inherited_exact_continuation: inspect only research_workers_clean_g1/continual_learning/RUN_20260827T1801_JST.md for target marker `e4b` or an explicit predecessor path; if present, record exact source location and stop after one bounded leaf; if absent, record absence and carry only its explicit predecessor, or the immediately earlier source-qualified role-local checkpoint if none is named.
+- bounded_leaf_this_invocation: perform exactly that one local reconstruction check; no public web, no forbidden surfaces, no target synthesis, no optional second leaf.
+- residual_richer_mode_or_protected_manual_execution_dependency: 0
+- finite_monthly_trial_paid_quota_dependency: 0
+- incremental_monetary_cost: 0
