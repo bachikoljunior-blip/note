@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-durable-before-apply-idempotent-create-v1",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260905T0903JST.json",
+  "preflight_blob": "1f8ce03b4e1694762f4c65a2ace56e4dfc69001f",
+  "tested_scope": {
+    "model": "One immutable verified successor S binding effect_id E and payload_hash H(P); one externally readable role-local publication target K=f(E); create-only application; exact readback/hash verification; optional applied marker; crash/restart may occur at the three specified boundaries.",
+    "application_protocol": [
+      "Verify immutable successor S and H(P) before any application attempt.",
+      "Derive exactly one canonical publication target K from effect_id E, not from attempt number or wall-clock time.",
+      "Apply only with create-only semantics. On create success, exact-read K and require H(readback_payload)=H(P).",
+      "If create reports already-exists or the prior call outcome is unknown, read K. Identical effect_id and payload hash means the effect is already applied and the retry is a semantic no-op; any mismatch fails closed.",
+      "An applied marker is bookkeeping only and cannot authorize the effect; K plus verified payload hash is the durable application fact."
+    ],
+    "invariants": [
+      "At most one canonical publication object can exist for an effect_id under protocol-conforming create-only storage.",
+      "No application occurs before durable successor verification.",
+      "A same-payload retry converges on the same K and cannot create a second canonical effect.",
+      "A stale or conflicting payload for the same effect_id cannot overwrite K and is rejected after hash mismatch.",
+      "Unknown transport outcome is resolved by next-invocation readback, not same-run wait, poll, or backoff."
+    ]
+  },
+  "finite_symbolic_traces": [
+    {
+      "trace": "crash_after_verified_successor_before_application",
+      "prefix": ["S_verified", "K_absent", "crash"],
+      "restart": ["verify_S", "read_K_absent", "create_K_with_P", "readback_hash_matches"],
+      "result": "one durable publication effect; reconstructible from S; no exactly-once executor required"
+    },
+    {
+      "trace": "crash_after_application_before_applied_marker",
+      "prefix": ["S_verified", "create_K_with_P_succeeds", "crash_before_marker"],
+      "restart": ["verify_S", "read_K_present", "payload_hash_matches", "treat_as_already_applied", "marker_may_be_written_later"],
+      "result": "no duplicate publication; K is the application fact and marker loss is harmless"
+    },
+    {
+      "trace": "duplicate_reapplication_after_restart",
+      "prefix": ["S_verified", "K_present_with_matching_payload"],
+      "restart": ["create_only_attempt_conflicts_or_is_skipped", "read_K", "payload_hash_matches", "semantic_no_op"],
+      "counterfactual_conflict": "If K exists with a different payload hash for the same effect_id, the protocol fails closed and does not overwrite.",
+      "result": "duplicate retry is idempotent in the tested publication model"
+    }
+  ],
+  "probe_result": "The prior successor-precommit mechanism is sufficient to remove an exactly-once executor for one class of externally meaningful effect: create-only canonical publication keyed by stable effect_id with payload-hash verification. Durable-before-apply plus read-before-retry converts crash ambiguity into reconstructible state. The applied marker is not a correctness dependency.",
+  "mechanism_revision": "Use an idempotency-keyed canonical effect target as the externally observable state. Treat durable verified successor data as intent, the canonical create-only target as the application fact, and any later marker as derived bookkeeping. Retry by read/verify, never by blind re-emit.",
+  "scope_guard": "Positive evidence is limited to a single effect_id, one immutable successor, one create-only canonical target with readable exact contents, deterministic payload hashing, and protocol-conforming consumers that define the effect by canonical target state. Mutable append/send/increment effects, non-readable targets, targets lacking create-if-absent semantics, multi-target transactions, and effects whose first attempt can cause an irreversible side effect before durable target state exists remain unresolved.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_role": "bounded role-local create/read persistence only; no hosted runner, Codespaces, artifact service, package service, cloud compute, external API/model, or paid credit is required",
+    "accepted_scope": "idempotent create-only canonical publication effect across the three finite crash/restart traces",
+    "unresolved_child": "Many useful Chat outcomes expose a mutable canonical pointer such as LATEST rather than only an immutable effect object. Test a two-object immutable-artifact plus compare-and-swap pointer-promotion protocol across crash windows and stale-writer contention without assuming exactly-once execution."
+  },
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized root, the exact neuroscience role config, and own neuroscience LATEST/preflight. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, hosted-compute, finite-credit, paid, or manual-user-execution semantics were consumed.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then test exactly one two-object publication state machine: immutable content-addressed artifact A plus mutable canonical pointer L updated by compare-and-swap from predecessor identity to A. Stress crash after A before L, crash after L before local confirmation, duplicate promotion, and stale competing writer. Accept only if observable latest-state publication is idempotent or fail closed with zero residual richer-mode/protected/manual-user execution, zero finite monthly quota, zero incremental cost, and no same-run wait/poll/backoff."
+}
