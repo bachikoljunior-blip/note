@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 243,
+  "updated_at": "2026-09-06T04:20:48+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "a64dbde8ab8d6ac17c958b8c39852018b0a6fbfe",
+    "manifest_control_revision": 108,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass_for_DESIRED_and_role_plus_exact_manifest/lifecycle",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "65615256a41c4c125aa1cb2194f16156961ba08a",
+  "slice": {
+    "kind": "bounded_connector_contract_audit",
+    "question": "Does a Chat-exposed connector provide a native compare-and-swap or idempotency primitive that can make repository mutations duplicate-safe across recurring retries without hosted compute or paid/monthly quota?",
+    "candidate_tested": "GitHub Contents connector SHA-preconditioned mutation",
+    "source_scope": "Current Chat-exposed GitHub connector contract only; no O/downstream/other-worker/legacy/shared-ledger semantics and no public-web expansion in this slice.",
+    "observed_contract": {
+      "update_file": "Replacing an existing UTF-8 file requires the current blob sha; the connector returns the resulting commit SHA and content blob SHA and instructs callers to use content_sha for a subsequent sequential update; same-path update/delete writes must not be run in parallel.",
+      "delete_file": "Deleting an existing file requires its current blob sha.",
+      "create_file": "Creating a file requires that the path not already exist; replacing an existing path is explicitly routed through fetch_file plus update_file. No separate idempotency-key field is exposed.",
+      "readback": "fetch_file returns the exact same-path blob sha and content, enabling an explicit read-modify-CAS-readback protocol."
+    },
+    "result": "SUPPORTED_AT_CONNECTOR_CONTRACT_LEVEL_FOR_EXISTING_FILE_UPDATE_AND_DELETE_CAS",
+    "reasoning": "The required current blob SHA is an explicit version precondition, and the returned content SHA supplies the next version token. This is the minimum connector-native CAS shape needed to reject a stale writer instead of blindly applying it. The contract also gives create-path uniqueness for first creation, but exposes no generic idempotency-key argument. This slice did not execute an intentional stale-SHA conflict, so exact server error behavior and lost-response retry semantics remain untested rather than inferred as end-to-end proven.",
+    "transversal_value": "A SHA-CAS transport can simultaneously support duplicate/conflict resistance for durable checkpoints, LATEST pointers, receipts/index pointers, and other small recurring-Chat state mutations while keeping computation inside Chat rather than in hosted runners.",
+    "comparison": [
+      {
+        "candidate": "existing-file SHA CAS via update_file/delete_file",
+        "expected_completion_time": "low",
+        "success_probability_under_exact_SHA": "high at connector-contract level",
+        "conflict_duplication_risk": "low when every mutation uses current SHA and stale conflicts fail closed",
+        "integration_cost": "low",
+        "incremental_monetary_cost": 0,
+        "finite_monthly_trial_paid_quota_dependency": 0,
+        "quota_fragility": "repository API may still rate-limit; cross-invocation checkpoint/resume is required"
+      },
+      {
+        "candidate": "create-path uniqueness only",
+        "expected_completion_time": "low",
+        "success_probability": "limited to first creation",
+        "conflict_duplication_risk": "moderate for workflows that need updates because no idempotency-key field is exposed",
+        "integration_cost": "low",
+        "incremental_monetary_cost": 0,
+        "finite_monthly_trial_paid_quota_dependency": 0,
+        "status": "preserved alternative, not selected"
+      }
+    ],
+    "exact_tested_scope": "Connector schema/contract presence of SHA-preconditioned update/delete and returned content SHA. Not a live stale-SHA race test; not a provider-independent persistence proof; not a proof for arbitrary external side effects outside GitHub repository contents.",
+    "residual_external_or_manual_execution_dependency": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "provider_independent_persistence": false,
+    "phase1_acceptance_effect": "PARTIAL_MECHANISM_ONLY_PROVIDER_SPECIFIC; duplicate-safe repository mutation primitive is present, but provider-independent durable state remains unresolved and the Phase-1 root remains open."
+  },
+  "clean_conflict_check": "Consumed only current manifest/lifecycle/DESIRED/cross_field role controls, own cross_field LATEST, and the Chat-exposed GitHub connector contract. No O/O-derived state, downstream state, other-worker state/config/output, legacy research, shared ledger, other-role receipts, unrelated commit messages/diffs, or protected-primary semantics were used.",
+  "frontier": [
+    "GitHub Contents exposes a usable SHA-CAS version token for existing-file update/delete and exact same-path readback, making it a strong provider-specific duplicate/conflict guard for recurring Chat repository state.",
+    "Live stale-SHA/lost-response retry behavior is not yet experimentally verified in this CLEAN role and must not be broadened beyond connector-contract support.",
+    "Provider-independent durable state is still unresolved; GitHub-backed state remains a provider-specific fallback rather than root acceptance.",
+    "Next bounded leaf: test one Chat-exposed non-GitHub connector or intrinsic conversation artifact for an equivalent conditional-write/idempotency primitive, or if none is exposed, falsify provider-independent CAS availability at the connector-contract level without touching O/downstream/other-worker semantics."
+  ],
+  "exact_continuation": "Fresh-bootstrap the current manifest, RUN_LIFECYCLE, DESIRED_STATE and cross_field role config; reconstruct r243 from LATEST plus this exact checkpoint. Do not repeat the GitHub Contents SHA-CAS contract audit. Execute exactly one bounded CLEAN Phase-1 leaf that checks a different Chat-exposed state surface for a native conditional-write/idempotency primitive with zero hosted-compute, finite monthly/trial/paid quota, protected authority, manual execution, and incremental cost. Prefer an intrinsic conversation/file or another already-exposed lightweight connector surface; if the surface lacks such a primitive, record that precise falsification. Preserve provider-independent persistence as unresolved and GitHub SHA-CAS as provider-specific fallback only.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true
+}
