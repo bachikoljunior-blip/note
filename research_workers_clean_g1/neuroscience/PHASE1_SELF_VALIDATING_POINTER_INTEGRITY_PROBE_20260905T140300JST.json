@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "created_at": "2026-09-05T14:03:00+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-self-validating-pointer-integrity-v1",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260905T140300JST.json",
+  "preflight_blob": "186b03e2ea26b7f5b249e9cb3bcebbe983d3ca4f",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "tested_scope": {
+    "model": "finite deterministic symbolic reconstruction model with immutable artifacts g1->g2 and one mutable canonical pointer",
+    "designs": {
+      "pair": "readable atomic pointer (generation,target_digest); accept only when target exists, digest matches, and artifact-embedded generation equals pointer generation",
+      "self_chain": "pair plus predecessor_digest in pointer/artifact; accept only when predecessor field also matches the target artifact",
+      "floor_guarded_self_chain": "self_chain plus a trusted monotone generation floor reconstructed independently of the mutable canonical pointer; reject any pointer generation below that floor"
+    },
+    "fault_classes": [
+      "torn_or_corrupted_field",
+      "generation_reset_or_recreate_to_old_valid_state",
+      "stale_old_valid_pointer_replay",
+      "unreadable_or_unverifiable_pointer"
+    ],
+    "torn_subcases": [
+      "new generation paired with an older valid target digest",
+      "current target with corrupted predecessor field"
+    ],
+    "trusted_floor_assumption": "For floor_guarded_self_chain only, floor=2 is supplied by an immutable role-local witness outside the mutable pointer's rollback domain. How to reconstruct that witness safely is not proved in this slice."
+  },
+  "results": [
+    {"case":"current_g2","pair":"accept","self_chain":"accept","floor_guarded_self_chain":"accept","expected":"accept"},
+    {"case":"torn_generation_target_mix_g2_to_g1","pair":"reject","self_chain":"reject","floor_guarded_self_chain":"reject","expected":"reject"},
+    {"case":"torn_predecessor_field_on_g2","pair":"cannot_express_or_check_predecessor_integrity","self_chain":"reject","floor_guarded_self_chain":"reject","expected":"reject"},
+    {"case":"generation_reset_recreate_to_internally_valid_g1","pair":"accept_unsafe","self_chain":"accept_unsafe","floor_guarded_self_chain":"reject","expected":"reject"},
+    {"case":"stale_old_valid_g1_replay","pair":"accept_unsafe","self_chain":"accept_unsafe","floor_guarded_self_chain":"reject","expected":"reject"},
+    {"case":"unreadable_pointer","pair":"reject_fail_closed","self_chain":"reject_fail_closed","floor_guarded_self_chain":"reject_fail_closed","expected":"reject"}
+  ],
+  "probe_result": "Pointer-local integrity and freshness are separable. Digest/generation cross-checking rejects mixed-field corruption, and predecessor self-chaining rejects predecessor corruption, but neither an atomic pair nor an internally self-consistent predecessor chain can distinguish a valid current snapshot from a replayed older valid snapshot. Reset/recreate-to-old and stale-old-valid are observationally equivalent to those pointer-local validators. A freshness guarantee therefore requires a monotone witness outside the mutable pointer rollback domain; if that witness or pointer is unreadable/unverifiable, the safe action is no write and cross-invocation continuation.",
+  "mechanism_revision": "Retain one canonical atomic pointer for publication, but do not treat pointer self-consistency as proof of freshness. Separate integrity validation from freshness validation. Admission of a recovered pointer requires both a valid content/predecessor chain and a monotone floor independently reconstructed from immutable role-local generation evidence; unknown or incomplete witness reconstruction fails closed.",
+  "scope_guard": "Positive evidence is conditional on the trusted monotone-floor assumption and only covers the enumerated two-generation symbolic traces. It does not prove safe floor reconstruction under namespace truncation, forked certificates, whole-namespace rollback, repository history rewrite, GC, rate-limit partial listing, non-CAS stores, or external irreversible effects.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "same_run_wait_poll_backoff_dependency": false,
+    "repository_transport_role": "bounded role-local durable transport only",
+    "accepted_scope": "conditional logical result: local pointer integrity cannot certify freshness; floor-guarded chain rejects the tested old-valid replays when the monotone floor is trustworthy",
+    "unresolved_child": "Construct and test a Chat-native monotone-floor witness from immutable role-local generation certificates under partial namespace listing, duplicate/forked certificates, rate-limit interruption, and certificate-set rollback/truncation."
+  },
+  "conflict_check": "Only exact sanitized controls, exact neuroscience role config, own neuroscience LATEST/preflight, and one deterministic role-local symbolic model were used. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, public-source, hosted-compute, paid, finite-credit, manual-user, or scheduler semantics were consumed.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_next_action": "Next valid invocation: checkpoint first, then execute exactly one monotone-floor reconstruction probe using immutable role-local generation certificates as the only candidate witness. Test complete listing, prefix/truncated listing, duplicate same-generation certificates, conflicting forked certificates, newest-certificate unreadable, and certificate-set rollback. Accept only a rule that never authorizes an obsolete pointer from partial evidence, remains restart-idempotent with no same-run polling/backoff, and preserves zero residual richer-mode/protected/manual-user execution, zero finite monthly quota dependency, and zero incremental cost."
+}
