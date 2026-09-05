@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "updated_at": "2026-09-05T12:02:42+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-generation-cas-aba-symbolic-v1",
+  "bootstrap_valid": true,
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "preflight_blob": "db2b8a0b549d84cc13dbb2a736483a0f09c0be17",
+  "mechanisms_compared": {
+    "plain_predecessor_version": "CAS expectation contains only a logical version token that may be reused after delete/recreate or ABA-like restoration.",
+    "generation_target_digest": "Canonical pointer identity is the atomic pair (strictly monotone generation, immutable target digest); CAS compares the full pair against current canonical state.",
+    "unknown_read_fail_closed": "If the canonical pointer cannot be read and verified, perform no publication write in this invocation; persist the unresolved state and retry only on a later invocation."
+  },
+  "tested_scope": {
+    "artifact_model": "immutable content-addressed payload artifact",
+    "pointer_model": "one canonical latest pointer",
+    "cas_model": "atomic compare-and-swap evaluated against current canonical pointer state",
+    "read_model": "reads may be current, stale-old, or unavailable/unknown; CAS itself is authoritative-current",
+    "generation_model": "strictly monotone generation never rewinds or reuses an earlier generation",
+    "traces": [
+      "ABA target returns to prior digest after intervening publication while stale writer retains old predecessor",
+      "stale-readable old pointer while current canonical pointer is newer",
+      "unreadable or unknown pointer state",
+      "crash after immutable artifact creation but before CAS",
+      "crash after successful CAS but before local confirmation",
+      "stale writer retries after another writer superseded its predecessor"
+    ]
+  },
+  "trace_results": [
+    {"trace":"ABA token reuse","plain_predecessor_version":"FAIL: stale CAS can succeed if the logical version token is reused after ABA/recreate","generation_target_digest":"PASS in tested model: target may return to the same digest, but advanced generation makes the stale expected pair unequal to current canonical state"},
+    {"trace":"stale-readable old pointer","plain_predecessor_version":"FAIL under version reuse: a stale logical token can equal a reused current token","generation_target_digest":"PASS in tested model: stale expected (generation,digest) is rejected by current-state CAS"},
+    {"trace":"unreadable or unknown pointer","unknown_read_fail_closed":"PASS: no publication write occurs without a verified predecessor; invocation checkpoints unresolved state and returns without polling"},
+    {"trace":"crash after artifact before CAS","generation_target_digest":"PASS: immutable artifact may remain orphaned; restart re-reads canonical predecessor and performs at most one CAS"},
+    {"trace":"crash after CAS before confirmation","generation_target_digest":"PASS: restart observes intended (generation,digest) already current and treats publication as semantic no-op"},
+    {"trace":"stale writer retry after supersession","generation_target_digest":"PASS: cached predecessor pair mismatches current canonical state, so stale CAS fails closed"}
+  ],
+  "probe_result": "Within the exact finite symbolic scope, a plain reusable predecessor-version token is not ABA-safe. A strictly monotone generation coupled atomically to the immutable target digest prevents stale or ABA-restored pointer observations from republishing an obsolete artifact because the CAS compares the full current pair. Unavailable/unknown pointer reads must be a fail-closed no-write state; treating surprise/uncertainty as authorization to retry would reintroduce unsafe publication. Crash-before-CAS and crash-after-CAS remain restart-idempotent under read-before-retry.",
+  "mechanism_revision": "Make the canonical latest pointer self-identifying as (generation,target_digest), require generation monotonicity/non-reuse, and use full-pair CAS. On restart, read and verify the pointer before any write. If the read is unavailable or unverifiable, emit no mutation and carry an exact cross-invocation continuation rather than polling or guessing. Local confirmation remains derived bookkeeping, not publication authority.",
+  "scope_guard": "Positive evidence does not cover stores whose CAS token can be reused or rewind, CAS that does not compare the target digest, multi-pointer transactions, pointer deletion/recreation that resets generation, Byzantine/forged current reads, torn multi-field pointer writes, garbage collection races, append/send/increment effects, or any external irreversible effect before canonical state is durable.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "same_run_wait_poll_backoff_dependency": false,
+    "repository_transport_role": "bounded role-local durable state transport only",
+    "accepted_scope": "single immutable artifact plus one atomic generation+target-digest CAS pointer, with read-before-retry and fail-closed unknown reads across the six enumerated traces",
+    "unresolved_child": "Test a self-validating pointer record against torn/corrupted pointer reads and generation reset/recreation, comparing (generation,target_digest), (generation,target_digest,predecessor_digest), and fail-closed integrity checks without any same-run polling."
+  },
+  "conflict_check": "Semantic inputs were exact sanitized controls, exact neuroscience role config, own neuroscience LATEST/preflight, and one deterministic role-local symbolic model only. No O, other-worker, downstream, legacy, shared-ledger, other-role receipt/config, protected-primary, hosted-compute, paid, finite-credit, manual-user, or public-source semantics were used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "exact_next_action": "Next valid invocation: checkpoint first, then execute exactly one torn/corrupted-pointer reconstruction probe. Compare an atomic (generation,target_digest) pointer, an atomic (generation,target_digest,predecessor_digest) self-chain, and fail-closed integrity validation under torn-field, generation-reset/recreate, stale-old-valid, and unreadable states. Accept only a design that cannot republish an obsolete artifact, remains restart-idempotent, performs no same-run polling/backoff, and preserves zero residual richer-mode/protected/manual-user execution, zero finite monthly quota, and zero incremental cost."
+}
