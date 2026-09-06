@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "worker": "neuroscience",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-concurrency-order-manifest-cas-v1",
+  "bootstrap_valid": true,
+  "transport_mode": "exact_blob_two_pass",
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "predecessor_latest_blob": "e70697d5441d4d2d1d992786bfbdf84a13f57416",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260906T185946JST.json",
+  "preflight_blob": "1489461b632749a09e1c0779465281fcb1c8c144",
+  "base_continuation_preserved": true,
+  "tested_scope": {
+    "model": "Deterministic symbolic append-only content-addressed object store plus one logical-root compare-and-swap pointer. Two concurrent writers begin from the same root R0; a causally ordered two-object update is compared as independent per-object publication versus one immutable manifest containing both content keys followed by one root CAS.",
+    "controls": [
+      "two writers publish distinct candidate manifests from the same expected root in both publication orders",
+      "stale replay using the old expected root after one winner published",
+      "duplicate retry of the winning candidate using the old expected root",
+      "crash after content-key materialization but before logical-root publication",
+      "naive cross-key publication where the second logical effect may publish before the first",
+      "single-manifest co-publication of two causally ordered content keys"
+    ],
+    "not_tested": [
+      "provider-specific CAS linearizability or outage behavior",
+      "multi-object server-side transactions",
+      "automatic semantic merge of concurrent conflicting intents",
+      "garbage collection of orphaned immutable blobs",
+      "Byzantine writers or malicious key collisions",
+      "unbounded writer populations",
+      "real external irreversible side effects"
+    ]
+  },
+  "observations": [
+    "For two writers W1 and W2 that both expect R0, exactly the first root CAS succeeds in the tested model and the second conflicts. Reversing publication order reverses the winner. Therefore the pointer never silently contains a mixture of the two manifests and a stale writer cannot overwrite the winner when expected-root CAS is enforced.",
+    "A stale replay from R0 after R1 is published conflicts and cannot regress the logical root. A duplicate retry of the already-published candidate also conflicts rather than publishing a second logical transition; if the current root already equals the candidate, that conflict can be classified as duplicate-success without another mutation.",
+    "A crash after immutable content materialization but before root publication leaves only unreachable/orphan content and no partial logical state. Retrying content materialization is idempotent; publication can be retried against the unchanged expected root.",
+    "Publishing two causally ordered objects through independent logical pointers can expose the later object while the earlier pointer remains unpublished after a crash, so cross-key causal order is not preserved by content addressing alone.",
+    "Encoding both causally ordered content keys in one immutable manifest and publishing only that manifest through one root CAS makes logical visibility all-or-nothing in the tested model: a crash before root publication exposes neither logical update; a successful root CAS exposes the complete manifest snapshot. Stale replay still conflicts.",
+    "Single-root CAS detects concurrent conflicting intents but does not merge or preserve both intents automatically. The losing writer remains an unresolved semantic child that must rebase, merge, or explicitly abandon its candidate in a later bounded step."
+  ],
+  "mechanism_revision": "For replay-safe scheduled-Chat state, separate immutable materialization from logical visibility. Materialize all content-addressed payloads first, encode every causally ordered key needed for one logical transition in one immutable manifest, then publish exactly one logical-root CAS from the frozen predecessor to that manifest. Treat CAS conflict as a detected concurrency event, never as permission to overwrite; a duplicate candidate matching the current root is idempotent success, while a distinct losing candidate remains unresolved and requires later rebase/merge. This removes partial cross-key visibility in the tested model without an external freshness service, but it does not solve semantic reconciliation of concurrent distinct intents.",
+  "result": {
+    "same_object_concurrent_integrity": "conditional_pass_in_symbolic_model",
+    "silent_lost_update": false,
+    "concurrent_intent_preservation": "unresolved_for_loser",
+    "stale_root_regression": false,
+    "duplicate_logical_transition": false,
+    "crash_before_pointer_partial_visibility": false,
+    "naive_cross_key_ordering": "fail",
+    "single_manifest_cross_key_snapshot_integrity": "conditional_pass_in_symbolic_model",
+    "phase1_acceptance": false
+  },
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "same_run_wait_poll_backoff_dependency": false,
+    "repository_transport_role": "bounded role-local durable state transport only",
+    "unresolved_children": [
+      "Verify the exact repository/API CAS primitive used by the Chat path has the required stale-write rejection semantics without consuming finite quota or hosted compute.",
+      "Define and test a bounded deterministic rebase/merge rule for a distinct losing concurrent candidate while preserving both intents when required.",
+      "Define orphan-content reclamation that cannot delete content still reachable from any valid manifest/root."
+    ]
+  },
+  "conflict_check": "Only exact frozen sanitized controls, exact neuroscience config, predecessor neuroscience LATEST, role-local preflight, and this deterministic symbolic model were used. No O, other-worker state/output, downstream, legacy, shared ledger, other-role receipts/configs, public web, hosted compute, finite-credit service, manual user execution, protected-primary state, or scheduler mutation was used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "frontier_nonempty": true,
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then execute exactly one provider-contract verification slice for the lightweight repository/API write path available to scheduled Chat. Verify from official contract or a role-local non-destructive CAS observation that stale expected-version writes are rejected and that current-root equality can distinguish duplicate retry from a distinct concurrent loser without hosted compute, finite credits, manual execution, or same-run waiting. If the primitive is weaker than the symbolic CAS assumption, classify the manifest-root rule as unproven and preserve the rebase/merge child."
+}
