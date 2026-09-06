@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 254,
+  "record_kind": "phase1_cross_field_bounded_evidence",
+  "updated_at": "2026-09-07T01:16:16+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "ba87aa28544c750e36e1ab786a4c26b75a48a17b",
+    "manifest_control_revision": 117,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "e15a621ba075aba0cdc155742466625af8c217e2",
+  "leaf": {
+    "question": "Can a provider-independent expected-version state machine prove same-intent duplicate-commit safety without relying on an undocumented same-path create-if-absent guarantee?",
+    "candidate": "atomic expected-version compare-and-swap state transition with durable intent membership",
+    "formal_model": {
+      "state": "S=(version, committed), where version is a monotone integer and committed is a map intent_id -> effect_digest.",
+      "required_primitive": "CAS(expected_version, replacement_state) is atomic: it succeeds iff the durable state's current version equals expected_version, otherwise it performs no write and returns conflict.",
+      "proposal": "An actor reads S=(v,C). If intent_id is already in C, it returns ALREADY_COMMITTED with no mutation. Otherwise it constructs S'=(v+1, C union {intent_id:effect_digest}) and attempts CAS(v,S').",
+      "success_rule": "Only a successful CAS is a logical commit. A failed CAS has zero durable effect and requires a later invocation/fresh read rather than same-run waiting or retry.",
+      "scope_guard": "The logical effect tested here is the durable committed-map transition itself. This model does not prove exactly-once execution of an arbitrary non-transactional external side effect."
+    },
+    "deterministic_two_actor_interleaving": {
+      "class": "same intent, same base version, A-CAS-before-B-CAS",
+      "initial_state": {"version": 7, "committed": {}},
+      "intent_id": "I",
+      "effect_digest": "E",
+      "trace": [
+        "A reads S0=(7,{}) and prepares S1=(8,{I:E}).",
+        "B reads the same S0=(7,{}) and prepares the same logical replacement S1=(8,{I:E}).",
+        "A executes CAS(7,S1); current version is 7, so A succeeds and durable state becomes S1.",
+        "B executes CAS(7,S1); current version is now 8, so B conflicts and performs no durable write.",
+        "A later acknowledgement is irrelevant to uniqueness: durable committed membership for I exists exactly once.",
+        "On a later fresh invocation, B reads S1, observes I in committed, and returns ALREADY_COMMITTED without mutation."
+      ],
+      "invariant": "For intent I, cardinality of successful logical commits is <= 1.",
+      "proof": "Both actors can commit only via CAS from version 7. Atomic expected-version CAS permits at most one success from a single durable version. The first success increments the version to 8; every remaining CAS carrying expected_version=7 has zero effect. Because committed[I] is inserted in the same atomic replacement as the version increment, a later fresh reader deterministically suppresses a duplicate same-intent commit.",
+      "result": "PASS_DUPLICATE_COMMIT_SAFETY_FOR_TESTED_INTERLEAVING_UNDER_EXPLICIT_ATOMIC_CAS_PRIMITIVE"
+    },
+    "semantic_conclusion": "The r253 provider-specific same-path-create gap can be avoided at the formal coordination layer by requiring an explicit atomic expected-version primitive rather than inferring create-if-absent linearizability. The tested interleaving has at-most-one logical commit. This is a provider-independent architecture condition, not evidence that any particular repository API supplies the primitive, and it does not establish exactly-once arbitrary external effects."
+  },
+  "candidate_comparison": {
+    "tested_candidate": "provider-independent atomic expected-version CAS + durable intent map",
+    "expected_completion_time": "low for coordination-layer duplicate-commit safety; provider binding remains separate",
+    "success_probability": "high for the proved interleaving when the substrate explicitly guarantees atomic expected-version CAS",
+    "conflict_duplication_risk": "low for same-intent logical commits in the tested interleaving; external non-transactional side effects remain unresolved",
+    "integration_cost": "low-to-moderate because state schema requires version and committed intent membership",
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "quota_fragility": "formal mechanism itself has none; any concrete transport must still tolerate repository/API rate limits across invocations",
+    "preserved_alternatives": [
+      "append-only intent/event log with a documented conditional append/version primitive",
+      "r250 durable intent_id + fresh read-before-write + expected-blob CAS",
+      "r249 expected-blob CAS stale-write rejection",
+      "r251 deterministic create-once path identity for providers that document suitable create atomicity"
+    ]
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "hosted_compute_consumed": 0,
+    "user_semantic_data_reads": 0,
+    "user_semantic_data_writes": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "provider_independent_persistence": "FORMAL_COORDINATION_LAYER_ONLY",
+    "candidate_phase1_acceptance": "PARTIAL_COORDINATION_SAFETY_ONLY_PROVIDER_BINDING_AND_EXTERNAL_EFFECT_ATOMICITY_UNRESOLVED"
+  },
+  "conflict_check": "Exactly one bounded CLEAN Phase-1 child from the r253 continuation. Semantic inputs were own role-local state plus frozen sanitized root/config controls. No O/downstream/other-worker/legacy/shared-ledger semantics; no scheduler mutation; no same-run wait/poll/backoff/retry; no optional second leaf.",
+  "frontier": [
+    "r249 stale expected-blob rejection established.",
+    "r250 sequential same-intent retry suppression after simulated lost acknowledgement established.",
+    "r251 sequential create-once same-path deduplication established.",
+    "r252 serialized two-actor at-most-one effect proof remains conditional on provider linearizability.",
+    "r253 finds no explicit same-path concurrent create linearizability guarantee in the audited GitHub Contents API specification.",
+    "r254 formalizes a provider-independent atomic expected-version CAS state machine and proves at-most-one same-intent logical commit for the deterministic same-base-version A-before-B CAS interleaving.",
+    "A concrete zero-quota transport with an explicit atomic expected-version guarantee remains to be bound and tested.",
+    "Exactly-once arbitrary non-transactional external side effects remain unresolved.",
+    "Full richer-mode outcome parity remains unresolved."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r254 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: audit one concrete zero-cost, zero-optional-monthly-quota transport primitive for an explicit atomic expected-version/conditional-update guarantee that can instantiate the r254 state machine; test only the documented guarantee against one stale-version conflict case. Do not infer undocumented atomicity, do not use O/downstream/other-worker semantics, and do not start a second leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
