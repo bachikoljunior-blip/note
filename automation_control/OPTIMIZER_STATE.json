@@ -1,7 +1,7 @@
 {
   "schema_version": 14,
-  "updated_at": "2026-09-06T09:00:39+09:00",
-  "run_id": "optimizer-2026-09-06T090039+09-first-post-repair-boundary-audit",
+  "updated_at": "2026-09-06T10:00:27+09:00",
+  "run_id": "optimizer-2026-09-06T100027+09-long-horizon-prewrite-gap-diagnosis",
   "role": "automation_optimizer",
   "phase": {
     "phase_id": "phase_1_chat_parity",
@@ -12,8 +12,8 @@
   },
   "bootstrap": {
     "manifest_first_required": true,
-    "manifest_control_revision_observed": 111,
-    "manifest_blob_observed": "b9673984ea5a7eb1e51a1aa6fec827a06ac4935e",
+    "manifest_control_revision_observed": 112,
+    "manifest_blob_observed": "d07935be628ed25cf0c6d00f464d2179986b3b1f",
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "required_instruction_paths": 21,
@@ -32,9 +32,9 @@
       "O_OPERATIONS.json": "25e744a5a9905fc7522028c55f77b08e1799b9c2",
       "PROMPT_LIFECYCLE_ALIGNMENT.json": "642ec58a801fbeb6cb9e3936acf485de48960314",
       "SCHEDULER_OPTIMIZATION.json": "90d7bc05e0e60e5442c4e465ffe3c16bc0d14fc7",
-      "SCHEDULER_RECONCILIATION.json": "1a583e53e5266c7590055e4890dbb9e5f58c0e81",
-      "PHYSICAL_SCHEDULER_STATE.json": "d01441f35917b4d10e8bcdd0b4c148af7268f781",
-      "OPTIMIZER_STATE.json": "bf8a92bc4053c3fbb1d76d9bb620060d8541400b"
+      "SCHEDULER_RECONCILIATION.json": "b2bfa2b1250547987ed226fa471b2495e29fe59c",
+      "PHYSICAL_SCHEDULER_STATE.json": "f63643ffe1e0771961b4c65e521f53419b4d20d7",
+      "OPTIMIZER_STATE.json": "f5e74a693126c7c19157594fabd56f16ea2497e8"
     }
   },
   "current_user_fixed_pool": {
@@ -76,23 +76,41 @@
   "selected_phase1_slice": {
     "physical_effect_count": 0,
     "semantic_effect_count": 1,
-    "kind": "scheduler_persistence_boundary_audit",
-    "reason": "No physical repair was required. The highest-value bounded slice was to test the first complete post-08:02:56 persistence boundary fail-closed; the audit terminated as soon as long_horizon was proven to lack any post-epoch durable continuation despite a post-repair scheduled start.",
+    "kind": "long_horizon_config10_prewrite_gap_diagnosis",
+    "reason": "No physical, prompt or schedule repair was required. The highest-value bounded slice was the exact continuation from the prior checkpoint: inspect the newest long_horizon config10 execution and localize its first safely observable failing lifecycle boundary. The newest 09:24:04 JST start produced no role-state or receipt commit, so receipt exact-readback cannot be the first failing step; durable evidence localizes the gap only to at-or-before successful receipt creation and does not distinguish the three required reads from receipt creation. A lifecycle-method change was therefore withheld rather than inferred from missing commits.",
     "acceptance_claim": false,
-    "phase1_still_open": true
+    "phase1_still_open": true,
+    "semantic_method_change": false
+  },
+  "before_after_rationale": {
+    "before": "The prior checkpoint knew only that the 08:21:36 JST post-repair start lacked durable continuation and required the next invocation to inspect a newer config10 execution for the earliest safely observable failing boundary.",
+    "after": "A second newer post-repair start at 09:24:04.437532 JST is now observed while the task remains enabled, and exact Git history after that start is empty in both long_horizon role-state and immutable receipt namespaces. The latest successful config10 receipt remains the 06:26:56 JST receipt. This strengthens the repeated durability-gap diagnosis but still does not identify whether manifest read, RUN_LIFECYCLE read, role-config read, or receipt create is the causal first failure. No speculative method change was made."
   },
   "durable_execution_evidence": {
     "long_horizon": {
       "task_id": "6a8d291fcc2881919f0039c25f142c9d",
       "observed_enabled": true,
-      "post_repair_last_run_time": "2026-09-06T08:21:36+09:00",
+      "latest_post_repair_last_run_time": "2026-09-06T09:24:04.437532+09:00",
+      "role_control_revision": 19,
+      "config_revision": 10,
+      "role_config_blob": "a8045d3010260fa3d4d72a7edc3d870bb1c64531",
       "state_namespace": "research_workers_clean_g1/long_horizon/",
-      "state_namespace_commits_since_2026_09_05T230256Z": 0,
+      "state_namespace_commits_after_latest_start": 0,
       "receipt_namespace": "automation_control/receipts/long_horizon/",
-      "receipt_namespace_commits_since_2026_09_05T230256Z": 0,
-      "role_valid_post_epoch_terminal_continuation_proven": false
+      "receipt_namespace_commits_after_latest_start": 0,
+      "latest_existing_successful_receipt_path": "automation_control/receipts/long_horizon/receipt_2026-09-06T062656_JST_config10_lifecycle_fastpath.json",
+      "latest_existing_successful_receipt_blob": "2723a537fea7181c8ca10970fffa3494a342eb66",
+      "earliest_safely_observable_failing_boundary": "at_or_before_successful_receipt_create",
+      "unresolved_hidden_steps": [
+        "manifest_read",
+        "RUN_LIFECYCLE_read",
+        "role_config_read",
+        "receipt_create"
+      ],
+      "receipt_exact_readback_can_be_first_failure": false,
+      "role_valid_post_epoch_terminal_continuation_proven_for_latest_start": false
     },
-    "audit_semantics": "Persistence is conjunctive; this single failed required cell is sufficient to deny the boundary. No uninspected role was assumed valid or invalid from this early-fail result."
+    "audit_semantics": "Missing commits prove absence of durable role-local effects, not the hidden cause of that absence. Because no new receipt file exists, exact readback of a newly created receipt cannot be the first failure. The remaining four steps are unresolved and no one is inferred failed without direct evidence."
   },
   "phase1_persistence": {
     "required_consecutive_boundaries": 2,
@@ -102,26 +120,27 @@
     "credited_consecutive_global_boundaries": 0,
     "scheduler_persistence_pass": false,
     "this_invocation_credit": false,
-    "first_post_fix_boundary_audited": true,
-    "first_post_fix_boundary_failed_role": "long_horizon",
-    "reason": "A post-repair scheduled start without a role-valid durable checkpoint/receipt does not satisfy the per-role continuation requirement."
+    "latest_required_role_failure": "long_horizon",
+    "reason": "The newest post-repair scheduled start again lacks a role-valid durable continuation. Persistence is conjunctive and remains 0/2."
   },
   "repeated_persistence_failures": {
     "long_horizon_repeat_physical_stop_historical": true,
     "neuroscience_repeat_physical_stop_historical": true,
     "long_horizon_post_repair_durable_continuation_gap_current": true,
+    "observed_post_repair_no_durable_output_starts": [
+      "2026-09-06T08:21:36+09:00",
+      "2026-09-06T09:24:04.437532+09:00"
+    ],
     "common_platform_or_runtime_cause_proven": false,
     "semantic_method_change_this_run": false,
-    "next_diagnostic_rule": "Do not infer a hidden cause from missing commits. On the next bootstrap-valid no-repair invocation inspect only the earliest safely observable long_horizon config10 fast-path boundary and revise method only if a bounded Chat-capable causal repair is supported."
+    "next_diagnostic_rule": "Do not infer a hidden cause from missing commits. On the next bootstrap-valid no-repair invocation inspect the next config10 execution and any task-specific execution-result surface if available; revise lifecycle method only after a failing step or stable latency/contention cause is durably supported."
   },
   "repository_checkpoint": {
-    "optimizer_state_previous_blob": "bf8a92bc4053c3fbb1d76d9bb620060d8541400b",
-    "scheduler_reconciliation_previous_blob": "1a583e53e5266c7590055e4890dbb9e5f58c0e81",
+    "optimizer_state_previous_blob": "f5e74a693126c7c19157594fabd56f16ea2497e8",
     "scheduler_reconciliation_current_blob": "b2bfa2b1250547987ed226fa471b2495e29fe59c",
-    "physical_scheduler_state_previous_blob": "d01441f35917b4d10e8bcdd0b4c148af7268f781",
     "physical_scheduler_state_current_blob": "f63643ffe1e0771961b4c65e521f53419b4d20d7",
-    "immutable_receipt_path": "automation_control/receipts/automation_optimizer/receipt_2026-09-06T090039_JST_first_post_repair_boundary_audit.json",
-    "immutable_receipt_blob": "02ba881aa039b6a2f3f8df1dd8109de342fa265a",
+    "immutable_receipt_path": "automation_control/receipts/automation_optimizer/receipt_2026-09-06T100027_JST_long_horizon_prewrite_gap_diagnosis.json",
+    "immutable_receipt_blob": "ae8925d556ac905bde782d81cf955bc71d5ed83f",
     "manifest_refresh_required_after_optimizer_state_exact_readback": true
   },
   "contamination_audit": {
@@ -136,10 +155,8 @@
     "self_improvement_user_stop_overridden": false
   },
   "rollback": {
-    "optimizer_state_previous_blob": "bf8a92bc4053c3fbb1d76d9bb620060d8541400b",
-    "scheduler_reconciliation_previous_blob": "1a583e53e5266c7590055e4890dbb9e5f58c0e81",
-    "physical_scheduler_state_previous_blob": "d01441f35917b4d10e8bcdd0b4c148af7268f781",
-    "condition": "Correct forward if exact scheduler or same-path Git history disproves the audit. Never re-enable self_improvement, disable a current managed role, weaken CLEAN/zero-dependency/zero-quota/zero-cost gates, change primary/protected authority, or grant scheduler-persistence credit without complete current-18 role-valid boundaries."
+    "optimizer_state_previous_blob": "f5e74a693126c7c19157594fabd56f16ea2497e8",
+    "condition": "Correct forward if exact scheduler metadata or same-path Git history disproves the 09:24 no-durable-output observation. Do not roll back by re-enabling self_improvement, disabling a current managed role, weakening CLEAN/zero-dependency/zero-quota/zero-cost gates, changing primary/protected authority, or granting scheduler-persistence credit without complete current-18 role-valid boundaries."
   },
   "termination": {
     "global_completion": false,
@@ -150,8 +167,8 @@
     "optional_second_semantic_leaf": false,
     "material_semantic_effect_count": 1,
     "normal_recurring_return": true,
-    "kind": "bounded_scheduler_persistence_boundary_audit_incomplete_recurring_open"
+    "kind": "bounded_long_horizon_prewrite_gap_diagnosis_incomplete_recurring_open"
   },
   "continuation_nonempty": true,
-  "exact_next_action": "Next invocation perform manifest-first validation and physical-first inventory. If no current-pool repair is required, inspect the newest long_horizon config10 execution for the earliest safely observable failing boundary among manifest read, RUN_LIFECYCLE read, role-config read, receipt write and receipt exact-readback; make at most one bounded lifecycle-method change only if a Chat-capable causal repair is durably supported. Preserve persistence at 0/2 until a complete current-18 boundary is role-valid for every included role."
+  "exact_next_action": "Next invocation perform manifest-first validation and physical-first inventory. If no current-pool repair is required, inspect the next long_horizon config10 execution and any newly available task-specific execution-result surface for the first failing step among manifest read, RUN_LIFECYCLE read, role-config read and receipt create. Do not change lifecycle method until that step or a stable latency/contention cause is durably supported. Preserve persistence at 0/2 until a complete current-18 boundary is role-valid for every included role."
 }
