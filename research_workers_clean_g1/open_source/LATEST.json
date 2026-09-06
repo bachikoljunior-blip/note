@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 188,
-  "semantic_parent_revision": 187,
-  "supersedes_worker_revision": 187,
+  "worker_revision": 189,
+  "semantic_parent_revision": 188,
+  "supersedes_worker_revision": 188,
   "control_revision": 27,
   "config_revision": 7,
   "instruction_manifest_control_revision": 116,
   "instruction_manifest_blob": "845448e06ff781e31a4e36701b0906e0d9af9142",
   "lifecycle_control_revision": 3,
   "lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-  "bootstrap_main_sha": "a6f5d51c40b240d5dccd114ece8e102846289b1f",
+  "bootstrap_main_sha": "7c23da76345eb6c938be8b5cebc3b03843bc5734",
   "bootstrap_valid": true,
   "enabled_desired": true,
   "status": "bounded_slice_complete_recurring_open",
@@ -20,16 +20,17 @@
   "role_config_path": "automation_control/roles/open_source.json",
   "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
   "checkpoint_path": "research_workers_clean_g1/open_source/LATEST.json",
-  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-06T230613_JST_worker188.json",
-  "receipt_blob": "9210bbd7166782882f8dab2a56f1ad29f0d3dacf",
-  "result": "At exact commit modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, the Event::ProxyMessage(PeerSinkMessage::Request { request, id, responder }) path in service.rs immediately registers the responder, constructs JsonRpcMessage::request, invokes transport.send, and spawns the send future. Its SendTaskResult::Request handling only propagates a transport-send failure as ServiceError::TransportSend and removes the responder. No protocol-version conditional, capability conditional, task-method discriminator, rejection, suppression, or request rewrite appears in this inspected queue-receipt-to-transport-send path. Combined with worker187's pre-enqueue finding, no such gate has been observed from get_task/cancel_task call-through to the immediate generic transport-send boundary. Transport implementation behavior and peer/server handling remain untested.",
+  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-07T000439_JST_worker189.json",
+  "receipt_blob": "49746584bbe8c1b570dc1f1dbee7b1acfd5e406f",
+  "result": "At modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, crates/rmcp/src/transport.rs defines Transport::send only as a generic TxJsonRpcMessage<R> -> Future<Result<(), Error>> interface; it does not itself choose a concrete adapter or contain protocol-version, capability, or task-method policy. In crates/rmcp/src/transport/async_rw.rs, JsonRpcMessageCodec<T>::encode serializes any Serialize item with serde_json::to_writer and appends a newline. No method-name inspection, protocol-version branch, capability gate, task-method discriminator, rejection, suppression, or rewrite exists in that inspected outbound encoder. Therefore, for the AsyncRwTransport path specifically, a GetTaskRequest or CancelTaskRequest that has already become a TxJsonRpcMessage reaches JSON bytes without an encoder-level task gate. The generic service transport.send call alone cannot prove which concrete transport adapter is active; streamable-HTTP or other concrete transport behavior remains untested.",
   "public_source_repository": "modelcontextprotocol/rust-sdk",
   "public_source_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
   "public_source_files": [
-    {"path": "crates/rmcp/src/service.rs", "blob": "20fd2e98100be9635413267ee6b0313e9df151e0"}
+    {"path": "crates/rmcp/src/transport.rs", "blob": "06fde8e513511bc1b94f24890481c8568b6278af"},
+    {"path": "crates/rmcp/src/transport/async_rw.rs", "blob": "e18fd4fceb2fafd312d06f8ea1ad3b928fa31ba6"}
   ],
   "source_scope": "Own clean state, sanitized root, own role config, instruction/lifecycle controls, exact-commit public repository source only.",
-  "scope_guard": "Exact new scope is the queued Request event handling and immediate transport-send/error boundary at the stated commit. No claim about transport serialization/implementation gates, compile/runtime behavior, server task support, persistent backend, restart durability, idempotency, exactly-once external effects, scheduler parity, default branch, or repository-wide behavior.",
+  "scope_guard": "Exact tested scope is the generic Transport trait plus AsyncRwTransport's JSON encoder boundary at the stated commit. No claim about which adapter is used by any particular deployed connector, streamable-HTTP behavior, server handling, runtime task support, persistent backend, restart durability, idempotency, exactly-once external effects, scheduler parity, default branch, or repository-wide behavior.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -41,5 +42,5 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "exact_continuation": "Next invocation: bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and open_source config; reconstruct worker_revision 188; then at modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056 inspect only the generic Transport send abstraction and the immediately selected serialization/send adapter reached by this service.rs transport.send call, stopping at the first concrete outbound message boundary. Determine whether any protocol-version, capability, or task-method conditional can reject/suppress/rewrite GetTaskRequest or CancelTaskRequest before bytes/messages leave the adapter. Record exact file/blob and error semantics. Do not broaden to server implementation, runtime execution, persistent backend, scheduler parity, default branch, or a second semantic leaf."
+  "exact_continuation": "Next invocation: bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and open_source config; reconstruct worker_revision 189. Continue the same transport-boundary frontier by inspecting only StreamableHttpClientTransport::send (or its immediately delegated outbound request builder) at modelcontextprotocol/rust-sdk@4a738b9dd99eaca418b614afa433a0cbdaf8d056, stopping at the first HTTP request/body boundary. Determine whether protocol-version, capability, or task-method logic can reject, suppress, or rewrite GetTaskRequest or CancelTaskRequest after generic service dispatch but before the HTTP body leaves the adapter. Record exact file/blob and error semantics. Do not broaden to server implementation, runtime execution, persistent backend, scheduler parity, default branch, or a second semantic leaf."
 }
