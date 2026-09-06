@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 246,
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "b9673984ea5a7eb1e51a1aa6fec827a06ac4935e",
+    "manifest_control_revision": 111,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "dcdb0cf8478a3125828ef9b008eb1647c76ddea7",
+  "slice": {
+    "id": "CF_CHAT_STATE_GCAL_LABEL_CAS_002",
+    "kind": "capability_discovery_contract_audit",
+    "hypothesis": "Google Calendar's connector-internal ETag-protected private-label write may expose enough caller-visible label/readback state to act as a deterministic finite-state compare-and-set coordination cell.",
+    "connector": "Google_Calendar",
+    "tested_surface": "list_event_labels, set_event_label_silently, read_event/batch_read_event contracts; generic update_event was not re-audited substantively beyond the inherited r245 comparison.",
+    "tested_scope": "Current Chat-exposed tool schema only. No calendars, events, labels, attendees, or other user semantic data were read or mutated.",
+    "source_kind": "owned_current_connector_schema",
+    "independent_query_or_source_ref": [
+      "api_tool.list_resources path=Google_Calendar query=label",
+      "api_tool.list_resources path=Google_Calendar query=event"
+    ],
+    "result": "SPECIALIZED_INTERNAL_ETAG_WRITE_NOT_CALLER_CONTROLLED_CAS",
+    "evidence": {
+      "label_catalog_contract": "list_event_labels can resolve an existing label's exact name and UUID, but it exposes label identity rather than an event-local version/precondition token.",
+      "guarded_write_contract": "set_event_label_silently accepts only event_id and label_id. The connector states that missing ETags fail before write and concurrent updates are protected with the current ETag; the caller cannot supply an expected ETag, expected prior label, version, idempotency key, or compare predicate.",
+      "event_read_contract": "read_event/batch_read_event read full event details by ID, but their input contracts expose no version-bound read token that can be supplied back to set_event_label_silently. Even if the returned event detail includes the current private label, the exposed write has no caller-controlled precondition tying a subsequent mutation to that observed state.",
+      "atomicity_consequence": "The schema supports a narrow lost-update-resistant blind assignment using the connector's internally current ETag, but not compare(observed state/version)==expected then set(new) as one caller-controlled atomic action.",
+      "live_execution": "NOT_PERFORMED_BY_DESIGN"
+    },
+    "mechanism_summary": "Connector-internal current-ETag acquisition protects the specialized label mutation against concurrent stale writes, while a caller-visible CAS requires an expected state/version to cross the read/write boundary. That binding is absent from the exposed schema.",
+    "transfer_hypothesis": "A caller-controlled CAS cell could serve scheduled-Chat durable coordination and duplicate/conflict defense without hosted compute; this Calendar surface cannot establish that property from schema alone.",
+    "exact_component_benefit": "Preserves the narrower conclusion that silent private-label assignment has provider-side lost-update protection, while preventing overclassification as a deterministic finite-state CAS primitive.",
+    "measurable_effect": "CAS-expressibility checklist: readable state identity=partial; caller-supplied expected version/state=absent; atomic compare predicate=absent; guarded write=present internally; generic idempotency token=absent. Result: 2 required CAS controls absent, so Phase-1 generic conditional-write acceptance is false.",
+    "complexity_resource_estimate": "Two connector-schema discovery calls; zero user semantic reads/writes; zero hosted compute; no provider operation executed; no paid/trial/monthly quota consumed by this audit leaf.",
+    "failure_edge_cases": [
+      "A future connector schema could expose event ETag or expected-label preconditions; this result is scoped to the current exposed contract.",
+      "The set_event_label_silently result may contain useful state, but without a caller-supplied precondition it still cannot make a prior read and later write atomic.",
+      "An existing Google account, primary-calendar event, and pre-existing named label are prerequisites, so this is provider-specific and not provider-independent persistence.",
+      "Label cardinality/payload capacity is not established and may be insufficient for checkpoints even for blind assignment.",
+      "Zero finite monthly/trial/paid quota and zero incremental monetary cost are not established for actual Calendar use by schema-only inspection."
+    ],
+    "contamination_independence": "Used only current instruction controls, own cross_field LATEST/checkpoint, and current Google_Calendar connector schemas. No O/O-derived state, other worker state, downstream Comparator/Integrator, legacy pipeline semantics, shared substantive ledger, or user semantic data was consumed.",
+    "reproducibility_notes": "Re-run schema discovery for Google_Calendar labels/events and verify set_event_label_silently input remains exactly event_id+label_id with an internal current-ETag guard, while no read action yields a caller token accepted as a write precondition.",
+    "keep_discard_reason": "KEEP only as a provider-specific specialized guarded-assignment candidate; DISCARD as a caller-controlled deterministic CAS or Phase-1 parity acceptance mechanism.",
+    "acceptance_scope": "PROVIDER_SPECIFIC_SPECIALIZED_GUARDED_ASSIGNMENT_ONLY",
+    "phase1_acceptance": false
+  },
+  "constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "hosted_compute_consumed": 0,
+    "user_semantic_data_reads": 0,
+    "user_semantic_data_writes": 0,
+    "finite_monthly_trial_paid_quota_dependency": "NOT_ESTABLISHED_FROM_SCHEMA_ONLY",
+    "incremental_monetary_cost": "NO_COST_BEARING_OPERATION_PERFORMED; ACCEPTANCE_NOT_ESTABLISHED",
+    "provider_independent_persistence": false
+  },
+  "conflict_check": "Exactly one bounded Phase-1 leaf was executed: Google_Calendar label/readback schema audit. No optional second leaf was started. No O, downstream, other-worker, legacy, shared substantive ledger, or user semantic data was consumed.",
+  "frontier": [
+    "Google Calendar private-label mutation remains a specialized provider-internal current-ETag guarded blind assignment; current schemas do not expose caller-controlled CAS semantics.",
+    "GitHub SHA-CAS remains the strongest previously verified provider-specific generic conditional-write primitive in own state; live stale-SHA/lost-response retry remains untested.",
+    "A separate schema-only audit of another already-exposed Chat connector can test for caller-visible conditional-write/idempotency primitives without touching user data.",
+    "Provider-independent durable state remains unresolved; provider-specific specialized mutations are not Phase-1 parity acceptance results."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r246 from LATEST plus this exact checkpoint. Do not repeat the Calendar label/readback audit. Execute exactly one bounded CLEAN Phase-1 schema-only leaf on Gmail draft/message-label mutation and readback contracts, without reading or mutating user data, to test whether the current Chat-exposed Gmail connector offers a caller-visible stable version/precondition, conditional write, or idempotency key usable as a deterministic finite-state coordination cell. If absent, classify it as blind/provider-specific mutation only and preserve GitHub SHA-CAS live stale-SHA/lost-response retry as a separate future leaf. Keep zero hosted-compute, finite-monthly/trial/paid-quota, protected/manual execution and incremental-cost requirements explicit.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "updated_at": "2026-09-06T09:16:12+09:00"
+}
