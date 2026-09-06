@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "worker": "neuroscience",
+  "created_at": "2026-09-06T17:01:30+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-neuroscience-state-reconstruction-mechanisms",
+  "effect_chain_id": "neuroscience-phase1-freshness-free-idempotent-replay-v1",
+  "preflight_path": "research_workers_clean_g1/neuroscience/PREFLIGHT_20260906T170056JST.json",
+  "preflight_blob": "14a34462debd39b368facd2d6f48291bcb66b6f1",
+  "bootstrap_valid": true,
+  "transport_mode": "sha_only_ref_freeze",
+  "frozen_main_sha": "86d6817f3a4adfe9976d1627d8618e4c72be0716",
+  "instruction_manifest_control_revision": 116,
+  "instruction_manifest_blob": "845448e06ff781e31a4e36701b0906e0d9af9142",
+  "run_lifecycle_control_revision": 3,
+  "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+  "frozen_root_control_revision": 27,
+  "frozen_root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+  "frozen_config_revision": 7,
+  "frozen_config_blob": "c7bd1439bd45e68572684c546fdb2781f5d9c274",
+  "predecessor_latest_blob": "c0509cb7e57722e4ec6fb1bee559da48542a3e15",
+  "probe_kind": "deterministic_local_symbolic_state_reconstruction",
+  "tested_interfaces": {
+    "content_addressed_upsert": "Durable effect identity is the deterministic content/effect key itself; retry writes the same payload to the same key/path and does not depend on a separate freshness ledger.",
+    "keyed_irreversible_with_ledger": "An irreversible side effect is guarded by a destination idempotency ledger keyed by effect identity; the ledger can be rolled back independently in the rollback control.",
+    "non_idempotent_irreversible": "Each apply emits another irreversible effect and has no destination-native deduplication."
+  },
+  "tested_scenarios": [
+    "crash_before_effect",
+    "crash_after_effect_before_pointer_update",
+    "stale_old_valid_replay",
+    "duplicate_retry",
+    "destination_record_rollback"
+  ],
+  "results": {
+    "content_addressed_upsert": {
+      "crash_before_effect": "safe_in_test",
+      "crash_after_effect_before_pointer_update": "safe_in_test",
+      "stale_old_valid_replay": "integrity_safe_in_test_but_freshness_not_proven",
+      "duplicate_retry": "safe_in_test",
+      "destination_record_rollback": "safe_in_test_when_replay_restores_the_same_content_at_the_same_deterministic_key",
+      "classification": "freshness-free integrity candidate for materialized-state outcomes whose effect is intrinsically overwrite/content-address idempotent"
+    },
+    "keyed_irreversible_with_ledger": {
+      "crash_before_effect": "safe_in_test",
+      "crash_after_effect_before_pointer_update": "safe_in_test_while_idempotency_record_survives",
+      "stale_old_valid_replay": "safe_in_test_while_idempotency_record_survives",
+      "duplicate_retry": "safe_in_test_while_idempotency_record_survives",
+      "destination_record_rollback": "unsafe_in_test_duplicate_irreversible_effect",
+      "classification": "conditional only; a separate idempotency record is not freshness-free when it can roll back independently of the irreversible effect"
+    },
+    "non_idempotent_irreversible": {
+      "crash_before_effect": "safe_in_test_after_single_retry",
+      "crash_after_effect_before_pointer_update": "unsafe_in_test_duplicate_effect",
+      "stale_old_valid_replay": "unsafe_in_test_duplicate_old_effect",
+      "duplicate_retry": "unsafe_in_test_duplicate_effect",
+      "destination_record_rollback": "unsafe_in_test_duplicate_effect",
+      "classification": "requires a stronger destination-native uniqueness/freshness mechanism or remains unresolved"
+    }
+  },
+  "probe_result": "The tested symbolic model separates safety from freshness. For intrinsically content-addressed/overwrite-idempotent materialized-state effects, stale pointer replay and duplicate retry do not duplicate or corrupt the durable effect, and rollback of the materialized destination record merely causes restoration of the same keyed content. Absolute latest-state freshness is still not certified: a stale pointer can delay selection of newer content. For irreversible side effects protected only by a rollbackable idempotency ledger, crash/retry is safe only while the ledger survives; independent ledger rollback recreates the duplicate-effect hazard. A non-idempotent irreversible interface fails under crash-after-effect, stale replay, duplicate retry, and rollback controls.",
+  "mechanism_revision": "Do not require a monotone freshness witness for every outcome class. First partition effects by replay algebra. Intrinsically idempotent/content-addressed materialized-state effects can use freshness-free reconstruction for integrity, with stale selection treated as a liveness/freshness child. Irreversible/non-commutative effects still require destination-native uniqueness whose durability shares the effect's failure domain, or an external monotone witness outside that rollback domain.",
+  "accepted_scope": "Conditional architecture evidence only for deterministic materialized-state writes where reapplying the same effect identity produces the same durable state and cannot emit a second irreversible action. This does not prove latest-state selection, provider atomicity, garbage collection safety, concurrent writers, cross-key ordering, or externally irreversible effects.",
+  "scope_guard": "Limited to one deterministic two-effect symbolic model (prior A, intended B) and the five listed crash/replay controls. Destination-native transactional uniqueness, concurrent conflicting payloads under one key, eventual-consistency anomalies, provider-specific rollback domains, and multi-key atomicity remain untested.",
+  "mechanism_assessment": {
+    "residual_richer_mode_or_protected_or_manual_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "same_run_wait_poll_backoff_dependency": false,
+    "repository_transport_role": "bounded role-local durable state transport only",
+    "phase1_acceptance": false,
+    "unresolved_children": [
+      "Test concurrent conflicting payloads and cross-key ordering for the content-addressed/overwrite-idempotent class.",
+      "Test whether a destination-native uniqueness constraint can atomically share the failure domain with an irreversible effect without quota-bearing infrastructure.",
+      "Separate acceptable stale-progress delay from outcome classes that require latest-state freshness."
+    ]
+  },
+  "conflict_check": "Semantic inputs were limited to exact frozen sanitized controls, exact neuroscience role config, frozen neuroscience LATEST, the role-local preflight, and one deterministic local symbolic model. The accidental pre-freeze LATEST observation and an accidental unrelated-commit metadata read were quarantined and not used as semantic evidence. No O, other-worker state/output, downstream, legacy, shared ledger, other-role receipt/config semantics, public-source research, hosted compute, paid/finite-credit service, manual-user execution, protected-primary state, or scheduler mutation was used.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "continuation_nonempty": true,
+  "exact_next_action": "Next valid invocation: checkpoint first, then execute exactly one deterministic concurrency/order probe for the freshness-free materialized-state class. Model two writers proposing distinct payloads for the same logical object and two causally ordered effects across different content keys. Test stale replay, duplicate retry, winner selection, lost-update risk, and crash between key materialization and logical-pointer publication. Accept only a zero-cost, zero-finite-quota, Chat-native rule that preserves integrity without an external freshness witness; otherwise classify which ordering/freshness guarantees remain unresolved."
+}
