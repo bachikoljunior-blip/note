@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 247,
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "5cf779c42188d6b37744f0c2e245212c7fd518c7",
+    "manifest_control_revision": 114,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "frozen_head_commit_sha": "4e3f71f516fdddd8af769b5a380b8c93b1f1e83d",
+    "transport_mode": "exact_sha_head_double_read",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "afa5883854d9ac7a22ecea0344d3d72f0d95ee29",
+  "predecessor_checkpoint_path": "research_workers_clean_g1/cross_field/checkpoints/r246_20260906T0916JST_google_calendar_label_readback_cas.json",
+  "predecessor_checkpoint_blob_sha": "c4f6c39dfaafeda60f267850eb8ffa3118313ee7",
+  "slice": {
+    "id": "CF_CHAT_STATE_GMAIL_CAS_003",
+    "kind": "capability_discovery_contract_audit",
+    "hypothesis": "Current Chat-exposed Gmail draft and message-label contracts expose a caller-visible stable version/precondition, conditional write, or idempotency key sufficient for a deterministic finite-state coordination cell without richer-mode execution.",
+    "connector": "Gmail",
+    "tested_surface": "Schema-only inspection of create_draft, update_draft, list_drafts, send_draft, create_label, list_labels, apply_labels_to_emails, batch_modify_email, read_email/search contracts as exposed by one Gmail connector discovery batch.",
+    "tested_scope": "Current Chat-exposed tool schemas only. No Gmail profile, drafts, messages, threads, labels, attachments, recipients, or other user semantic data were read or mutated. No Gmail operation was executed.",
+    "source_kind": "owned_current_connector_schema",
+    "independent_query_or_source_ref": [
+      "api_tool.list_resources path=Gmail"
+    ],
+    "result": "NO_CALLER_VISIBLE_VERSIONED_CAS_NARROW_LABEL_NAME_DEDUPLICATION_ONLY",
+    "evidence": {
+      "draft_create_contract": "create_draft accepts recipient/content/threading inputs but no idempotency key, expected prior state, version, ETag, or caller-supplied request token. A lost response followed by blind retry therefore has no schema-level duplicate-suppression contract.",
+      "draft_update_contract": "update_draft accepts draft_id plus replacement fields and preserves omitted fields, but accepts no draft revision, ETag, expected body/subject, compare predicate, or idempotency key. It is a blind overwrite of the identified draft rather than compare-and-set.",
+      "draft_readback_contract": "list_drafts exposes summarized draft metadata for selection, while the exposed mutation inputs do not accept any version/read token returned by readback. send_draft accepts only draft_id. No read->expected-version->write atomic binding is expressible.",
+      "message_label_contract": "apply_labels_to_emails and batch_modify_email accept message_ids plus label names/IDs to add/remove. They expose no expected current label set, message version, ETag, compare predicate, or idempotency key, so a prior read cannot be atomically bound to a later label transition.",
+      "label_create_contract": "create_label explicitly returns the existing label instead of creating a duplicate when the same name already exists. This is a narrow name-deduplicated create behavior, not a mutable finite-state CAS: the caller supplies no expected state/version, the response contract does not provide winner/transition semantics, and no conditional rename/delete/state-transition primitive is exposed in the current Gmail tool set.",
+      "atomicity_consequence": "Current schemas provide stable object identifiers and some operation-level deduplication/set-like behavior, but not caller-controlled compare(observed state/version)==expected then mutate(new) as one atomic action.",
+      "live_execution": "NOT_PERFORMED_BY_DESIGN"
+    },
+    "transversal_comparison": {
+      "gmail_schema_candidate": {
+        "expected_completion_time": "LOW for schema audit; unknown for operational coordination",
+        "generic_coordination_success": "FAIL_CURRENT_SCHEMA for versioned CAS; partial only for name-deduplicated label creation",
+        "conflict_duplication_risk": "HIGHER_THAN_CALLER_CAS because draft updates and label transitions are blind; create_draft lacks a caller idempotency key",
+        "integration_cost": "LOW_TO_MODERATE but provider-specific",
+        "quota_fragility": "NOT_ESTABLISHED_FROM_SCHEMA_ONLY",
+        "incremental_cost": "NO_COST_BEARING_OPERATION_PERFORMED; operational acceptance not established"
+      },
+      "github_sha_cas_from_own_state": "Remains the stronger provider-specific generic conditional-write primitive already verified in own state because the write contract accepts the current blob SHA as a caller-supplied precondition. Its live stale-SHA/lost-response retry behavior remains a separate unexecuted future leaf."
+    },
+    "measurable_effect": "CAS-expressibility checklist: stable object identity=present; caller-supplied expected version/state=absent; atomic compare predicate=absent; write mutation=present; generic idempotency key=absent; narrow duplicate-name suppression=create_label only. Result: generic deterministic finite-state CAS acceptance is false for the tested Gmail schemas.",
+    "complexity_resource_estimate": "One connector-schema discovery batch; zero user semantic reads/writes; zero hosted compute; zero Gmail operations; no paid/trial/monthly quota consumed by this audit leaf.",
+    "failure_edge_cases": [
+      "A future Gmail connector schema could expose ETags, message/draft history IDs as accepted write preconditions, conditional mutation, or explicit idempotency keys; this result is scoped to the current exposed contracts.",
+      "Provider internals may make some repeated label operations idempotent, but the exposed schema still lacks caller-controlled version binding for state transitions.",
+      "Gmail label-name deduplication could support a monotone existence marker, but without conditional transition/delete semantics it is not a general mutable coordination cell.",
+      "Actual Gmail operation quotas, account prerequisites, mailbox visibility, and incremental monetary cost are not established by schema-only inspection; therefore no Phase-1 zero-quota/cost acceptance is claimed."
+    ],
+    "contamination_independence": "Used only current instruction controls, own cross_field LATEST/r246 checkpoint, and current Gmail connector schemas. No O/O-derived state, downstream state, other-worker state/config/output, legacy/pre-independence research, shared substantive ledger, other-role receipts, or user semantic Gmail data was consumed.",
+    "reproducibility_notes": "Re-run Gmail connector schema discovery and verify update_draft lacks caller version/precondition/idempotency fields; apply_labels_to_emails/batch_modify_email lack expected-label/version predicates; create_label retains name-deduplicated create behavior without mutable transition CAS.",
+    "keep_discard_reason": "KEEP Gmail only as a provider-specific blind mutable store plus narrow label-name deduplication candidate. DISCARD the tested Gmail schema as a caller-controlled deterministic CAS/idempotent state-transition primitive and as Phase-1 parity acceptance evidence.",
+    "acceptance_scope": "PROVIDER_SPECIFIC_BLIND_MUTATION_WITH_NARROW_NAME_DEDUP_ONLY",
+    "phase1_acceptance": false
+  },
+  "constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "hosted_compute_consumed": 0,
+    "user_semantic_data_reads": 0,
+    "user_semantic_data_writes": 0,
+    "finite_monthly_trial_paid_quota_dependency": "NOT_ESTABLISHED_FROM_SCHEMA_ONLY",
+    "incremental_monetary_cost": "NO_COST_BEARING_OPERATION_PERFORMED; ACCEPTANCE_NOT_ESTABLISHED",
+    "provider_independent_persistence": false
+  },
+  "conflict_check": "Exactly one bounded Phase-1 leaf was executed: Gmail draft/message-label/readback schema audit. No optional second semantic leaf was started. No O, downstream, other-worker, legacy, shared substantive ledger, or user semantic data was consumed.",
+  "frontier": [
+    "Current Gmail schemas expose blind draft/message-label mutations and narrow duplicate-name suppression for label creation, but no caller-controlled expected-version/state precondition or generic idempotency key.",
+    "GitHub SHA-CAS remains the strongest previously verified provider-specific generic conditional-write primitive in own state; live stale-SHA conflict behavior remains untested.",
+    "Lost-response retry semantics for GitHub contents writes remain a separate unresolved child after stale-SHA behavior is tested.",
+    "Provider-independent durable coordination remains unresolved; provider-specific persistence is not Phase-1 parity acceptance by itself."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r247 from LATEST plus this exact checkpoint. Do not repeat the Gmail or Calendar schema audits. Execute exactly one bounded CLEAN Phase-1 live GitHub contents-API stale-SHA conflict probe confined to a dedicated scratch file under research_workers_clean_g1/cross_field/experiments/: create/read a scratch value, perform one CAS update using its current blob SHA, then attempt exactly one second update with the now-stale prior SHA and require a conflict/no-write result plus exact readback of the surviving value. Do not test lost-response retry in the same invocation. Treat any connector conflict or unavailable write capability as a bounded diagnostic, preserve zero hosted-compute, finite-monthly/trial/paid-quota, protected/manual execution and incremental-cost constraints, and leave provider-independent persistence unresolved.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "updated_at": "2026-09-06T13:18:40+09:00"
+}
