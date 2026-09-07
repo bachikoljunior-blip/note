@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "recovery_epoch": "2026-09-04T22:59:28+09:00",
+  "mode": "persistence_recovery_micro_slice",
+  "selected_leaf_id": "phase1-multi-agent-create-only-claim-replay-validity",
+  "authority": {
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "root_control_revision": 27,
+    "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
+    "role_control_revision": 13,
+    "config_revision": 10,
+    "transport_mode": "exact_blob_two_pass"
+  },
+  "tested_scope": "One deterministic self-local replay-validity check for create-only path claims. The check distinguishes one already-reserved role-local path from one path that was absent from the immediately preceding role-local inventory and then successfully created/read back in this invocation. It does not test simultaneous competing writers, fairness, lease expiry, cross-role arbitration, or rate-limit recovery.",
+  "observations": [
+    "The prior claim probe path research_workers_clean_g1/multi_agent/2026-09-07T052730+0900_presemantic_claim_probe.json exists and exact-read back with blob a868aec9e28e28d80cd88112bcafdeac2641ce02; it is therefore classified as already reserved and was not mutated.",
+    "The path research_workers_clean_g1/multi_agent/2026-09-07T193027+0900_presemantic_witness.json was not present in the immediately preceding role-local directory inventory, then a create-only write succeeded and exact-read back with blob 6c7421667d82c5f91184e8a770c59549d653ea5a.",
+    "The two path states are distinguishable using role-local repository identity/readback alone, without external coordination or a second mutation against the reserved path."
+  ],
+  "inference": "For this exact single-writer replay scope, create-only path identity plus exact readback is sufficient to classify an existing reservation versus a fresh reservation candidate while avoiding duplicate mutation of the existing path. This narrows the open concurrency-claim mechanism but does not establish atomic behavior under simultaneous competing creates.",
+  "zero_residual_work_protected_manual_execution": true,
+  "zero_finite_quota_dependency": true,
+  "zero_incremental_cost": true,
+  "conflict_check": "Only multi_agent role-local state was read/written. No O, downstream, other-worker state, shared aggregate ledger, protected authority, or scheduler state was consumed or mutated.",
+  "unresolved_children": [
+    "Simultaneous competing-create atomicity/race behavior remains untested.",
+    "Rate-limit interruption and cross-invocation retry idempotency remain untested."
+  ],
+  "recurring_objective_open": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "persistence_recovery_micro_slice_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "On the next invocation, re-bootstrap and freeze current authority, persist/read back the required presemantic witness, then execute exactly one bounded non-duplicative role-local claim/idempotency leaf. Highest-value next leaf: a deterministic rate-limit interruption/retry fixture that uses only role-local zero-cost state and demonstrates whether an idempotency key plus create-only path classification prevents duplicate committed effects across an interrupted retry. If the connector cannot safely expose a controllable interruption without same-run retry, persist that exact blocker and select a later-invocation CLEAN-safe fixture. Keep simultaneous multi-writer atomicity as a separate unresolved child; do not combine both leaves in one invocation."
+}
