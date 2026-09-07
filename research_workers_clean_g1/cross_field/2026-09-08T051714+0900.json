@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 280,
+  "created_at": "2026-09-08T05:17:14+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 124,
+    "manifest_blob_sha": "2dc89481a929c10739799f1ab9e9e00534bc16e1",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_control_revision": 3,
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_control_revision": 27,
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "d03480c6a3965ab7dbff6e7e5ba68fdd1dc8d97a",
+  "slice": {
+    "question": "Does Sigstore's documented identity-monitoring path provide deletion-surviving enumeration from a stable GitHub repository/workflow identity without a pre-retained artifact digest, and can a release tag or release predicate be filtered from the discovered signed record while preserving the Phase-1 zero-quota/zero-cost/no-external-executor constraints?",
+    "sources": [
+      {
+        "title": "Threat Model - Sigstore",
+        "url": "https://docs.sigstore.dev/about/threat-model/",
+        "observed": "Sigstore documents rekor-monitor as a log monitor that can detect occurrences of an identity and states current identity monitoring supports hashedrekord entries with exact identity matching."
+      },
+      {
+        "title": "sigstore/rekor-monitor README",
+        "url": "https://github.com/sigstore/rekor-monitor",
+        "observed": "The monitor accepts startIndex/endIndex ranges, matches certificate SAN identities for hashedrekord entries, can match Fulcio OID extensions including build-signer-uri and source-repository-uri, and gives an exact build-signer-uri example containing @refs/tags/v1.4.0. The documented reusable deployment uses GitHub Actions and retained workflow artifacts, and the default monitor starts from the latest checkpoint; historical entries require a separate log query."
+      },
+      {
+        "title": "OIDC Usage in Fulcio - Sigstore",
+        "url": "https://docs.sigstore.dev/certificate_authority/oidc-in-fulcio/",
+        "observed": "For GitHub Actions, Fulcio places job_workflow_ref in the certificate SAN URI and extracts the ref claim into custom OID fields. The documented certificate identity therefore binds repository/workflow and ref, allowing a tag ref to be distinguished when the signer ran from refs/tags/<tag>."
+      },
+      {
+        "title": "Rekor public log info endpoint",
+        "url": "https://rekor.sigstore.dev/api/v1/log",
+        "observed": "A direct public read from scheduled Chat returned Rekor log metadata without authentication, including active treeSize 2264097833, confirming that at least log-head metadata is Chat-readable without a hosted runner, secret, paid service, or finite monthly credit."
+      }
+    ],
+    "candidate_comparison": [
+      {
+        "candidate": "Identity-range enumeration via Rekor log indices plus Fulcio SAN/OID filtering",
+        "expected_completion_time": "low for bounded forward ranges; unacceptably high for genesis-to-head catch-up at current multi-billion-entry scale",
+        "success_probability": "medium for hashedrekord GitHub-workflow signatures; unknown for the specific automatic immutable-release attestation entry path",
+        "conflict_duplication_risk": "low with monotonic last-index checkpoint and exact role-local CAS",
+        "integration_cost": "low if scheduled Chat can directly retrieve bounded index ranges and parse entries; otherwise unresolved",
+        "quota_fragility": "the public log primitive itself exposes unauthenticated reads, but Sigstore's documented reusable monitor deployment relies on GitHub Actions plus retained artifacts and therefore cannot be the accepted Phase-1 route",
+        "result": "partial_forward_discovery_primitive_only"
+      },
+      {
+        "candidate": "Official rekor-monitor reusable GitHub Actions workflow",
+        "expected_completion_time": "short to deploy",
+        "success_probability": "high for supported hashedrekord identity monitoring",
+        "conflict_duplication_risk": "documented caveat forbids concurrent monitor jobs in one repository",
+        "integration_cost": "moderate",
+        "quota_fragility": "depends on GitHub-hosted Actions execution and artifact retention",
+        "result": "rejected_phase1_quota_dependency"
+      },
+      {
+        "candidate": "r273 single-ref immutable transaction record plus force=false ref update",
+        "expected_completion_time": "already available baseline",
+        "success_probability": "high for deterministic Chat-callable reconstruction but insufficient as an independently retained monotonic witness",
+        "conflict_duplication_risk": "low with CAS/ref discipline",
+        "integration_cost": "low",
+        "quota_fragility": "lightweight repository/API transport only",
+        "result": "preserved_baseline"
+      }
+    ],
+    "result": "PARTIAL_IDENTITY_ENUMERATION_ESTABLISHED_BUT_PHASE1_FAIL_CLOSED",
+    "reasoning": [
+      "The previous r279 blocker was specifically the absence of a repository/tag discovery key. Official Sigstore documentation now establishes a different discovery primitive: scan a Rekor index range and filter returned hashedrekord certificates by stable GitHub workflow identity rather than first knowing the artifact digest.",
+      "For GitHub Actions signatures, the Fulcio certificate identity contains the workflow reference and the ref claim is also represented in certificate metadata. rekor-monitor explicitly demonstrates build-signer-uri matching on a refs/tags/v1.4.0 value, so a tag can be filtered for supported hashedrekord entries after enumeration without an artifact digest.",
+      "This does not establish a GitHub release predicate filter. Predicate type is not shown as an identity-monitor key, and it is not established that GitHub automatic immutable-release attestations use the supported hashedrekord path with a tag-bearing Fulcio certificate. Therefore the original release-attestation deletion witness is not closed.",
+      "The documented rekor-monitor deployment itself is not Phase-1 acceptable because it consumes GitHub Actions execution and retained artifacts. A standalone algorithm exists, but direct scheduled-Chat retrieval/parsing of bounded Rekor entry ranges has not yet been proven in this role; only the public log-head read was directly demonstrated here.",
+      "A forward monitor also needs a monotonic checkpoint/start index to avoid rescanning the full log. That state is generic rather than artifact-specific, but it remains retained state and therefore cannot be silently treated as eliminated under the current fail-closed contract."
+    ],
+    "tested_scope": "Official public Sigstore documentation and the unauthenticated Rekor public log-info endpoint only. No O, downstream, other worker state/config/receipt, legacy research, shared ledger, repository release/admin mutation, local CLI execution, GitHub Actions execution, webhook/external storage, hosted compute/storage, external executor, manual witness, finite monthly/trial/paid quota consumption, added cost, scheduler mutation, retry, wait/poll, or second leaf.",
+    "phase1_constraints": {
+      "residual_richer_mode_protected_or_manual_execution_dependency": "unresolved_direct_chat_bounded_rekor_range_retrieval_and_release_attestation_entry_type_child",
+      "retained_state_dependency": "unresolved_monotonic_log_index_checkpoint_for_practical_forward_monitoring",
+      "finite_monthly_trial_paid_quota_dependency": 0,
+      "incremental_monetary_cost": 0,
+      "candidate_phase1_acceptance": "FAIL_CLOSED"
+    },
+    "conflict_check": "Pre-write role-local LATEST was logical_revision 279 with blob d03480c6a3965ab7dbff6e7e5ba68fdd1dc8d97a. Only cross_field role-local checkpoint/LATEST and immutable own receipt destinations are authorized for mutation."
+  },
+  "frontier": [
+    "Preserve r273 single-ref immutable transaction-record plus force=false ref-update design as the current Chat-callable baseline.",
+    "r276 rejected GitHub Events API as a durable monotonic witness because visibility is bounded and not real-time.",
+    "r277 rejected immutable releases alone because release deletion lacks a normal public deletion-tombstone lookup.",
+    "r278 established promising independent public retention through Sigstore/Rekor but left deletion-surviving discovery-key derivation unresolved.",
+    "r279 falsified direct repository-plus-tag lookup through GitHub attestation REST and normal Rekor get/search keys without retained identifiers.",
+    "r280 establishes a distinct forward discovery primitive for supported hashedrekord signatures: enumerate Rekor log-index ranges and filter Fulcio SAN/OID identity, including tag-bearing build-signer-uri values. It remains fail-closed because the provided deployment uses hosted Actions/artifacts, direct Chat entry-range retrieval is unproven, the relevant automatic release-attestation entry type is unverified, and practical forward monitoring retains a generic log-index checkpoint."
+  ],
+  "exact_continuation": "Fresh-bootstrap INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, then exact-authority DESIRED_STATE and cross_field config before semantic work. Reconstruct r280 from LATEST. Execute exactly one bounded CLEAN child using official public Sigstore surfaces only: directly test whether scheduled Chat can retrieve a bounded Rekor entry range by log index without local CLI, hosted runner, secret, or finite quota, and whether returned entry bodies expose a Fulcio SAN/OID sufficient to filter a stable GitHub workflow identity plus refs/tags/<tag>. If direct range retrieval is Chat-callable, quantify the minimal generic checkpoint state and distinguish forward monitoring from retroactive genesis catch-up. Do not claim the GitHub immutable-release-attestation witness solved unless the relevant entry type and release-predicate/tag binding are directly established. Preserve r273 as baseline and keep any retained-state, external-executor, finite-quota, paid-service, or manual-witness requirement unresolved.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
