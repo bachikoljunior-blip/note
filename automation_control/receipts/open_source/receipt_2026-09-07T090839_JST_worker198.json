@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 198,
+  "semantic_parent_revision": 197,
+  "recorded_at": "2026-09-07T09:08:39+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "authority": {
+    "bootstrap_main_sha": "711b652d544825b8092d76b90779f8f050f42af3",
+    "instruction_manifest_control_revision": 119,
+    "instruction_manifest_blob": "f63c37adb063209f8f43542243de7d5f4ef3beb0",
+    "lifecycle_control_revision": 3,
+    "lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "root_control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "role_control_revision": 14,
+    "role_config_revision": 7,
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "second_sha_only_readback_same": true,
+    "bootstrap_valid": true,
+    "prefetch_rule": "Exact-commit public-source reads performed before the stable SHA-only authority freeze were not accepted as semantic evidence until the current manifest/lifecycle/root/role tuple was exact-read at the stable main SHA and the SHA-only ref was repeated unchanged."
+  },
+  "slice": {
+    "kind": "exact_commit_generic_send_response_dispatch_capability_enforcement_check",
+    "public_source_repository": "modelcontextprotocol/rust-sdk",
+    "public_source_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "public_source_files": [
+      {"path": "crates/rmcp/src/service/client.rs", "blob": "520410fb1dd6a8d6f46fefa1d33c6a21a81ffc50"},
+      {"path": "crates/rmcp/src/service.rs", "blob": "20fd2e98100be9635413267ee6b0313e9df151e0"}
+    ],
+    "observations": [
+      "Peer<R>::send_request delegates to send_request_with_option and then send_request_with_option_and_subscription; the only generic pre-send role hook on this path is R::enforce_request_association.",
+      "RoleClient's visible ServiceRole implementation overrides configure_direct_peer, peer_cancelled_params, enforce_peer_request_association, and invalidate_response_cache, but not outbound enforce_request_association; therefore the default outbound association hook returns Ok for RoleClient in the inspected source.",
+      "The proxy-request branch inserts the responder and sends JsonRpcMessage::request directly through the transport without checking peer_info task support.",
+      "The generic peer-response branch removes the pending responder and forwards responder.send(Ok(result)) directly, without a task-capability check before the typed ServerResult reaches the waiting caller."
+    ],
+    "result": "At modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, the exact generic Peer<RoleClient>::send_request / service-loop response-dispatch path inspected does not reject a tools/call CreateTaskResult because the peer lacks advertised task capability. The previous worker197 finding is therefore strengthened: no hidden generic send/dispatch capability gate appears before call_tool_once receives ServerResult::CreateTaskResult. Any rejection in this exact client flow must come from a caller/helper policy, a server/transport response, or another path not inspected here, not from the generic response dispatcher shown.",
+    "scope_guard": "Exact tested scope is modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, crates/rmcp/src/service.rs generic send/request dispatch and response routing plus the visible RoleClient ServiceRole implementation in crates/rmcp/src/service/client.rs. No claim about all MCP SDKs or versions, deployed connectors, servers, transport-specific server rejection, tests not inspected here, default branch, later commits, scheduler parity, hosted compute, persistence, idempotency, or external effects.",
+    "strict_phase1_pass": false,
+    "residual_richer_mode_protected_or_user_execution_dependency": true,
+    "finite_monthly_quota_credit_dependency": false,
+    "incremental_monetary_cost": 0,
+    "scheduler_mutation_by_worker": false
+  },
+  "completion": {
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true,
+    "frontier_nonempty": true,
+    "termination": "bounded_slice_complete_recurring_open",
+    "hard_runtime_boundary_reached": false,
+    "continuation_nonempty": true,
+    "exact_continuation": "Next invocation: bootstrap current controls and reconstruct worker_revision 198. Stay on the same pinned rust-sdk task-capability frontier and inspect only exact-commit client tests or task-capability helper definitions needed to determine whether tools/call task support is enforced as an explicit caller precondition anywhere adjacent to call_tool_once. Preserve exact scope; do not broaden to deployed runtimes, scheduler parity, hosted compute, default branch, later commits, or a second semantic leaf."
+  }
+}
