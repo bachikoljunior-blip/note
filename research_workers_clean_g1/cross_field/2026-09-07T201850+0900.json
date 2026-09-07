@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 271,
+  "updated_at": "2026-09-07T20:18:50+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "f63c37adb063209f8f43542243de7d5f4ef3beb0",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "05ecbea0892f01defb51e46433170f80e054e921",
+  "probe": "Test r270's exact continuation: whether a dedicated second Git ref, with both data and anchor refs updated only through non-force fast-forward operations by protocol-compliant scheduled-Chat writers, serves as an independent O(1) anchor without branch-protection/admin authority; separately model a force-capable writer.",
+  "result": "CONDITIONAL_PROTOCOL_SAFETY_ONLY; TWO_REFS_DO_NOT_ELIMINATE_SHARED_CAS. For protocol-compliant writers, force=false rejects a stale divergent sibling update after another writer advances the shared data ref, so a stale writer cannot overwrite the winner. A second cross-linked anchor ref can detect a force rewrite of only one ref if the other survives. However the data ref remains a shared serialization/CAS-like hotspot, the second ref adds another serialization point and a non-atomic torn-update window when using separate REST ref updates, and any actor permitted to force-move both refs can restore a prior mutually consistent pair and erase the evidence visible to later recurrences. Exact rollback detection therefore still fails against force-capable rewrite of both refs without an independently monotonic retention/authority domain.",
+  "model": {
+    "protocol_compliant_concurrency": [
+      "W1 and stale W2 read the same data head D0 and anchor head A0.",
+      "Each constructs a divergent child data commit D1a or D1b of D0. W1 advances D with force=false to D1a.",
+      "W2's later attempt to move D from current D1a to sibling D1b is not a fast-forward and is rejected rather than overwriting W1.",
+      "W1 then appends an anchor commit A1 that cross-links D1a and prior A0 and advances A with force=false. A deterministic effect id/terminal path can make a later replay fail closed or no-op after reading D1a/A1.",
+      "This prevents stale overwrite for compliant divergent writers, but the mechanism still serializes on D; it does not remove the shared ref hotspot."
+    ],
+    "torn_update_boundary": [
+      "Separate REST updates of D then A are not atomic as a pair. A crash or connector failure after D advances but before A advances leaves D1/A0.",
+      "A later recurrence can detect this mismatch if D1 records the expected prior anchor and reconstruct the missing A1, but that is recovery logic rather than atomicity; no second leaf was executed here."
+    ],
+    "single_ref_force_rewrite": [
+      "If a force-capable actor rewinds D while A1 survives, A1's cross-link to D1 exposes divergence and the recurrence can fail closed.",
+      "If a force-capable actor rewinds A while D1 survives and D1 cross-links A0/expected anchor transition, D exposes divergence."
+    ],
+    "dual_force_rewrite": "If an actor can force-move both D and A to an earlier mutually consistent pair (D0,A0), the later observable pair can be identical to a history where D1/A1 never existed. Two mutable refs therefore do not provide unconditional historical existence or rollback detection against an actor with force authority over both refs.",
+    "stronger_next_candidate": "GitHub GraphQL updateRefs publicly documents atomic multi-ref updates, per-ref beforeOid preconditions, afterOid targets, and force control. This is a stronger candidate for removing the REST torn-update window and adding explicit expected-old-state CAS across both refs, but its Phase-1 acceptability remains unproven until a later bounded slice verifies that the scheduled-Chat execution surface exposes a zero-cost, quota-independent callable path without protected/admin authority."
+  },
+  "candidate_comparison": {
+    "single_shared_ref_non_force": {
+      "expected_completion_time": "low",
+      "success_probability": "high for compliant stale-writer rejection",
+      "conflict_duplication_risk": "shared serialization hotspot remains",
+      "integration_cost": "low",
+      "force_rewrite_detection": "no if sole ref is rewound"
+    },
+    "dual_ref_separate_rest_non_force": {
+      "expected_completion_time": "medium",
+      "success_probability": "high for compliant stale-writer rejection plus one-ref divergence detection",
+      "conflict_duplication_risk": "shared data-ref serialization remains; second anchor adds a second ref and torn-update recovery requirement",
+      "integration_cost": "medium",
+      "force_rewrite_detection": "conditional if at least one ref survives",
+      "status": "best tested conditional pattern in this slice"
+    },
+    "graphql_atomic_updateRefs_with_beforeOid": {
+      "expected_completion_time": "medium",
+      "success_probability": "potentially higher for protocol atomicity",
+      "conflict_duplication_risk": "explicit expected-old-state preconditions and atomic all-or-none multi-ref update",
+      "integration_cost": "medium",
+      "quota_fragility": "no hosted compute/storage implied by public API semantics, but execution-surface availability is unverified",
+      "status": "next zero-quota candidate; not accepted yet"
+    },
+    "branch_protection_or_external_transparency": {
+      "integration_cost": "higher",
+      "authority_or_quota_fragility": "requires protected/admin authority or separate retention/service assumptions",
+      "status": "outside this slice's accepted zero-protected-authority route"
+    }
+  },
+  "source_basis": [
+    {
+      "source": "GitHub Docs — REST API endpoints for Git references",
+      "url": "https://docs.github.com/en/rest/git/refs",
+      "observed_contract": "Update-a-reference accepts a target SHA and force boolean; omitting force or setting false requires a fast-forward update, while force=true permits a non-fast-forward move."
+    },
+    {
+      "source": "GitHub Docs — GraphQL Git reference",
+      "url": "https://docs.github.com/en/graphql/reference/git",
+      "observed_contract": "updateRefs applies multiple ref updates atomically; RefUpdate.beforeOid is an expected-current-value precondition; RefUpdate.afterOid is the target; force=true permits non-fast-forward update."
+    }
+  ],
+  "tested_scope": "One bounded CLEAN architecture/concurrency model over two Git refs D/A, two protocol-compliant concurrent writers sharing D0/A0, one stale divergent writer, one separate-REST torn-update case, and one actor able to force-move either or both refs. Evidence used only frozen current CLEAN controls, own r270 LATEST/checkpoint, and public GitHub documentation. No live ref mutation, O/downstream/other-worker semantics, protected/admin authority, hosted compute/storage add-ons, external model/API execution, finite monthly/trial/paid quota consumption, manual execution, scheduler mutation, same-run retry/wait/poll/backoff, or optional second semantic leaf was used.",
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": "CONDITIONAL_PROTOCOL_PATTERN_ONLY"
+  },
+  "conflict_check": "Exactly one bounded CLEAN Phase-1 child was executed. Exact-blob two-pass DESIRED_STATE/config authority matched. Only own role-local state and own receipt namespaces were mutated; no scheduler or protected authority mutation occurred.",
+  "frontier": [
+    "Non-force fast-forward ref updates are sufficient to reject a stale divergent sibling writer under protocol compliance; they do not remove the shared ref serialization point.",
+    "A second cross-linked ref gives O(1) conditional detection when only one mutable ref is rewritten, but separate REST updates create a torn-update recovery problem.",
+    "Two refs do not solve exact historical rollback detection when a force-capable actor can coherently rewind both refs.",
+    "Atomic multi-ref expected-old-state CAS is the highest-value next alternative for protocol atomicity, but it still cannot make two mutable refs historically immutable against an actor that can force-rewrite both."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r271 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test the public GitHub GraphQL updateRefs candidate as an atomic two-ref protocol with beforeOid on both refs and force=false. Model W1/W2 simultaneous expected heads, one accepted atomic transition and one rejected stale transition, then model the same force-capable dual-rewrite adversary. Determine whether atomic multi-ref CAS removes the torn-update and duplicate/partial-commit class for protocol participants while leaving only the independent-monotonic-authority impossibility boundary; separately classify whether a callable scheduled-Chat path is actually exposed without protected/admin authority or finite quota, and fail closed if execution-surface availability is unverified.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
