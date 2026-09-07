@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-07T22:30:01+09:00",
+  "timestamp": "2026-09-07T23:23:27+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
-    "manifest_control_revision": 120,
-    "manifest_blob": "952f02aea8e6a5061f2b9361b759cc57d15610a5",
+    "manifest_control_revision": 121,
+    "manifest_blob": "408645be36fd26fc2ed9051eb0bdc367525fab9e",
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "desired_state_control_revision": 27,
@@ -22,32 +22,47 @@
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "9c7138b5ef401467cf3202be6d8a1b0212fd5466",
-  "predecessor_slice_id": "reasoning-20260907T2126+0900-crash-window-stage-p-v1",
-  "slice_id": "reasoning-20260907T2230+0900-idempotency-stage-q-v1",
-  "selected_leaf": "Validate an exact-match publication witness, then model a repeated identical publication request after a durable role-local consumed-witness marker is present; require the first request to count once and the repeated request to be rejected without increasing the count.",
+  "predecessor_state_blob": "78164b9ef2ed996da5fd07adf96bb1cdcf41fc51",
+  "predecessor_slice_id": "reasoning-20260907T2230+0900-idempotency-stage-q-v1",
+  "slice_id": "reasoning-20260907T232327+0900-crash-window-stage-r-v1",
+  "selected_leaf": "Test whether ordering alone can guarantee exactly-once publication when a valid unconsumed witness authorizes a non-idempotent publication and the durable consumed-witness marker is stored separately, with a crash allowed between the two durable effects.",
   "bounded_leaf_result": {
-    "status": "exact_match_first_publication_counted_once_repeated_consumed_witness_rejected_in_exact_fixture",
-    "fixture_witness_sha256": "cbe0292445186e6acb7c67b29b81240b2f9809971c25a81f8e8f80227c87ef9f",
-    "attempt_record_sha256": "3da7a8aa697e83f13a8420721ca499771c4ce70c29340183744cd33dc6b6e634",
-    "consumed_witness_marker_sha256": "25cfbd554a82a66813cb2167e6972b1c8972a9d16b36142fc8cbdd7a8dd3fe3d",
-    "predecessor_matches_witness": true,
-    "logical_key_matches_witness": true,
-    "payload_matches_witness": true,
-    "attempt_nonce_matches_witness": true,
-    "first_request_eligible_before_consumed_marker": true,
-    "publication_count_after_first_request": 1,
-    "repeated_request_identical_to_first": true,
-    "consumed_marker_present_before_repeated_request": true,
-    "repeated_request_eligible": false,
-    "publication_count_after_repeated_request": 1,
-    "arbitration_rule": "A witness-bound publication is eligible only while that successful witness is unconsumed. After the same witness is durably marked consumed, an identical repeat is rejected and the modeled publication count remains one.",
-    "semantic_claim": "In this exact role-local deterministic fixture, full witness matching plus a durable consumed-witness marker represents one accepted publication and rejects an identical repeat while keeping the count at one.",
+    "status": "separate_non_idempotent_publication_and_consumed_marker_have_unavoidable_crash_window_under_ordering_alone",
+    "tested_scope": "Deterministic two-effect state machine with one valid unconsumed witness W, one non-idempotent externally visible publication P, one separately durable consumed marker M, and fail-stop crash/restart allowed after either durable effect. Retry reconstructs state only from durable role-local marker state and the unchanged witness.",
+    "initial_state": {"publication_count": 0, "consumed_marker": false},
+    "ordering_tests": [
+      {
+        "ordering": "P_then_M",
+        "crash_window": "after P before M",
+        "durable_state_after_crash": {"publication_count": 1, "consumed_marker": false},
+        "retry_observation": "Witness still appears unconsumed, so an identical retry remains eligible under marker-only reconstruction.",
+        "retry_result": {"publication_count": 2, "exactly_once": false},
+        "failure_class": "duplicate_publication"
+      },
+      {
+        "ordering": "M_then_P",
+        "crash_window": "after M before P",
+        "durable_state_after_crash": {"publication_count": 0, "consumed_marker": true},
+        "retry_observation": "Witness appears consumed, so retry suppresses publication.",
+        "retry_result": {"publication_count": 0, "exactly_once": false},
+        "failure_class": "lost_publication"
+      },
+      {
+        "ordering": "prepare_intent_then_P_then_M",
+        "crash_window": "after P before M",
+        "retry_observation": "A durable prepare intent proves an attempt was authorized but does not distinguish whether non-idempotent P durably happened unless P itself exposes an idempotent lookup/key or shares the transaction.",
+        "retry_result": {"exactly_once": false},
+        "failure_class": "ambiguous_commit_without_target_dedup_or_atomic_fusion"
+      }
+    ],
+    "direct_architecture_conclusion": "No ordering of two separately durable effects can guarantee both no duplicate and no loss across the crash window. Exactly-once requires an additional primitive that collapses the ambiguity: either target-side idempotency keyed by the witness/attempt identity, a readable publication receipt that uniquely proves the effect, or atomic fusion of publication and consumed-marker state in one transactional/CAS commit.",
+    "chat_native_zero_cost_zero_finite_quota_ordering_alone_sufficient": false,
+    "unresolved_capability": "A zero-cost, zero-finite-quota Chat-capable atomicity primitive binding externally visible publication to witness consumption, or equivalent target-side idempotency/readback semantics. Without one, generic external non-idempotent publication remains unresolved.",
+    "semantic_claim": "Within the exact deterministic fixture, ordering alone cannot remove the crash window: publication-first admits duplication; marker-first admits loss; adding a prepare record does not disambiguate whether publication committed.",
     "not_proven": [
-      "atomicity between a real publication and durable consumed-marker persistence",
-      "arbitrary repository layouts",
-      "cross-path global idempotency",
-      "network-partition recovery",
+      "impossibility for targets that natively support idempotency keys",
+      "impossibility when publication and marker can be fused into one repository transaction",
+      "arbitrary distributed protocols with stronger target readback semantics",
       "scheduler persistence",
       "Phase-1 acceptance"
     ]
@@ -77,5 +92,5 @@
     "hard_runtime_boundary_reached": false,
     "continuation_nonempty": true
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260907T2230+0900-idempotency-stage-q-v1. Execute exactly one bounded Stage R leaf: test the remaining gap where a publication is counted after a valid unconsumed witness but the consumed-witness marker is not yet durably recorded. Determine whether a Chat-native zero-cost zero-finite-quota ordering can prevent a later identical repeat; otherwise persist that exact atomicity gap as unresolved. Do not claim scheduler persistence or Phase-1 acceptance."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260907T232327+0900-crash-window-stage-r-v1. Execute exactly one bounded Stage S leaf: test a same-store fused-CAS architecture in which the publication artifact and consumed-witness marker are committed atomically under one witness-bound compare-and-swap, and determine the exact scope in which that removes the Stage R ambiguity without richer-mode/protected/manual execution, finite monthly quota, or incremental cost. Do not generalize the result to external targets lacking atomic fusion or idempotency-key semantics, and do not claim scheduler persistence or Phase-1 acceptance."
 }
