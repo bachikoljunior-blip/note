@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 273,
+  "updated_at": "2026-09-07T22:27:44+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 120,
+    "manifest_blob_sha": "952f02aea8e6a5061f2b9361b759cc57d15610a5",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "sha_only_exact_authority_two_pass",
+    "frozen_main_sha": "fc900311998b87fc2048d0651d319f048626cc2b",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "cce1c33bbd03b75116b3aa5eca7d1c484d45648b",
+  "slice": {
+    "probe": "Test the current scheduled-Chat-exposed single-ref transaction-record protocol: encode logical state, prior-link, idempotency key and witness metadata in one Git commit, then advance exactly one mutable branch ref with force=false. Model W1/W2 from a common head, exact and semantic duplicate replay, and a force-capable rewind; classify which failure classes disappear and whether rollback evidence is independently recoverable without protected/admin authority, manual execution, or finite quota.",
+    "source_refs": [
+      {
+        "kind": "public_primary_documentation",
+        "url": "https://docs.github.com/en/rest/git/refs",
+        "claim": "GitHub's Update a reference endpoint points one ref at a SHA; force omitted/false enforces a fast-forward update and avoids overwriting work."
+      },
+      {
+        "kind": "public_primary_documentation",
+        "url": "https://docs.github.com/en/rest/git/commits",
+        "claim": "GitHub exposes creation of a Git commit from a tree plus parent commit SHAs."
+      },
+      {
+        "kind": "public_primary_documentation",
+        "url": "https://docs.github.com/en/rest/git/trees",
+        "claim": "GitHub exposes creation of a tree from explicit entries and an optional base tree."
+      },
+      {
+        "kind": "current_connector_capability_discovery",
+        "claim": "The current GitHub connector exposes create_blob, create_tree, create_commit, fetch/fetch_commit/fetch_blob, and singular update_ref with force default false, so the single-ref protocol is callable from scheduled Chat without GraphQL, hosted compute, or a manual executor."
+      }
+    ],
+    "protocol_record": {
+      "immutable_commit_fields": ["logical_state_or_digest", "transaction_id", "idempotency_key", "previous_transaction_commit", "previous_transaction_digest", "witness_metadata"],
+      "mutable_commit_point": "one branch ref only",
+      "advance_rule": "create immutable blob/tree/commit with parent=current tip; reread/verify expected current tip as needed; call update_ref(force=false) only when the transaction/idempotency key is not already represented in current state",
+      "rollback_rule": "protocol participants never use force=true"
+    },
+    "model": {
+      "initial": {"ref": "C0", "record": "T0"},
+      "writer_W1": {"parent": "C0", "candidate": "C1(T1)", "transaction_id": "tx-1", "force": false},
+      "writer_W2_stale": {"parent": "C0", "candidate": "C2(T2)", "transaction_id": "tx-2", "force": false},
+      "stale_sibling_result": "If W1 advances C0->C1 first, C2 is not a descendant of C1. A subsequent force=false ref update to C2 is non-fast-forward and is rejected, so the stale sibling does not become committed protocol state.",
+      "exact_duplicate_replay": "If the same candidate C1/tx-1 is replayed after the ref already equals C1, a read-before-write equality check makes the operation a protocol no-op. The protocol does not depend on undocumented behavior for an update-to-identical-SHA call.",
+      "semantic_duplicate_from_old_parent": "A newly constructed duplicate C1_prime carrying tx-1 but parent C0 is a stale sibling after C1 and is rejected by force=false. This blocks duplicate durable state even if the commit SHA differs because of metadata/timestamps.",
+      "semantic_duplicate_from_current_parent": "A newly constructed tx-1 duplicate on top of C1 would be a valid fast-forward, so fast-forward alone is insufficient for idempotency. The current transaction record must carry transaction_id/idempotency_key state, and the writer must reject an already-recorded key before constructing/advancing another commit.",
+      "force_capable_actor": {"before": "C1", "after": "C0", "force": true, "result": "A force-capable actor can rewind the sole mutable ref to an older valid commit. The branch tip and its internally cross-linked record then expose only the older chain; the removed newer transaction cannot be inferred from that ref alone."}
+    },
+    "failure_classification": {
+      "two_ref_torn_update": "eliminated_by_single_mutable_ref",
+      "partial_state_vs_witness_commit": "eliminated_when_both are encoded in the same committed tree/commit",
+      "prepared_but_uncommitted_object": "possible but not protocol-visible; a commit object may be created before a failed ref advance and remain unreachable",
+      "stale_sibling_commit": "eliminated_for_compliant writers by force=false fast-forward enforcement",
+      "exact_duplicate_replay": "eliminated by current-tip equality/idempotency check",
+      "semantic_duplicate_replay": "requires transaction-id/idempotency-key membership in the committed state; fast-forward enforcement alone is insufficient",
+      "coherent_force_rewind": "not eliminated",
+      "independent_rollback_recovery": "not established"
+    },
+    "rollback_evidence_analysis": [
+      "The transaction hash chain is self-authenticating only relative to the currently reachable tip. After a coherent force rewind, the older tip is internally valid and contains no evidence that a later transaction once existed.",
+      "An unreachable commit might remain retrievable by a previously known SHA, but a scheduled cross-run protocol cannot rely on ephemeral knowledge of that SHA, and no durable retention guarantee for unreachable objects was established as an independently monotonic witness.",
+      "Persisting the newer SHA in another mutable ref or same-authority repository file restores a second witness location but not an independently monotonic authority; a force-capable same-authority actor can coherently rewind both.",
+      "Branch protection/rules, administrative audit authority, a separately controlled witness, manual attestation, or external retained storage could strengthen rollback evidence, but each introduces protected/admin/manual/external-authority assumptions outside the current accepted zero-residual-dependency route unless independently eliminated."
+    ],
+    "result": "CURRENT_CHAT_CALLABLE_SINGLE_REF_PROTOCOL_ELIMINATES_TORN_PARTIAL_AND_STALE_SIBLING_CLASSES_BUT_FORCE_REWIND_REMAINS_UNDETECTABLE_WITHOUT_INDEPENDENT_MONOTONIC_WITNESS",
+    "findings": [
+      "Unlike the prior GraphQL updateRefs candidate, every primitive needed for the single-ref commit-and-advance path is exposed in the current scheduled-Chat GitHub connector.",
+      "Collapsing logical state and witness metadata into one immutable commit and using one mutable ref removes the multi-ref torn-update class rather than merely narrowing its window.",
+      "force=false provides a useful concurrency gate but is not a complete idempotency mechanism; transaction identity must be part of the committed state.",
+      "The protocol remains fail-closed for full Phase-1 acceptance because a same-authority force rewind can erase branch-visible knowledge of a newer transaction and no independently monotonic rollback witness has been established within the zero-protected/zero-manual/zero-finite-quota constraints."
+    ],
+    "candidate_comparison": {
+      "single_ref_transaction_record_force_false": {"current_chat_callability": "exposed", "torn_update_risk": "eliminated_for_protocol_state", "stale_writer_rejection": "strong_for_old-parent_siblings", "idempotency": "strong_only_with_transaction-id ledger/check", "force_rewind_detection": "absent_without_independent_witness", "quota_fragility": "none_identified", "incremental_cost": 0, "integration_cost": "low_to_medium"},
+      "graphql_updateRefs_beforeOid_force_false": {"current_chat_callability": "unavailable", "torn_update_risk": "eliminated_for_participating_refs", "stale_writer_rejection": "strong_atomic", "force_rewind_detection": "absent_without_independent_witness", "quota_fragility": "none_identified", "incremental_cost": 0, "integration_cost": "low_if_surface_existed"},
+      "dual_ref_separate_rest_non_force": {"current_chat_callability": "exposed_per_ref", "torn_update_risk": "present", "stale_writer_rejection": "strong_per_ref", "force_rewind_detection": "absent_without_independent_witness", "integration_cost": "medium"}
+    },
+    "tested_scope": "One bounded CLEAN protocol/concurrency model using public GitHub Git-database/ref semantics and current connector capability discovery: one mutable ref, immutable commit record, W1/W2 common-parent contention, exact and semantic duplicate replay, and one force-capable rewind. No live protocol-branch mutation, O/downstream/other-worker semantic input, protected/admin mutation, hosted compute/storage add-on, external model/API execution, finite monthly/trial/paid quota, manual execution, scheduler mutation, same-run retry, or optional second leaf.",
+    "phase1_constraints": {
+      "residual_richer_mode_protected_or_manual_execution_dependency": "unresolved_independent_monotonic_rollback_witness_child",
+      "finite_monthly_trial_paid_quota_dependency": 0,
+      "incremental_monetary_cost": 0,
+      "candidate_phase1_acceptance": "FAIL_CLOSED_RESIDUAL_ROLLBACK_EVIDENCE_GAP"
+    },
+    "conflict_check": "Exactly one bounded CLEAN Phase-1 child; frozen exact authority remained valid, own LATEST was unchanged at r272 before mutation, and only own role-local checkpoint/LATEST and immutable own receipt namespaces are mutated."
+  },
+  "frontier": [
+    "The single-ref transaction-record design is current-Chat-callable and removes the separate-ref torn/partial protocol state class.",
+    "force=false rejects stale old-parent sibling commits but does not itself reject a semantic duplicate built on the current tip; committed transaction-id state is required.",
+    "The remaining decisive gap is not commit atomicity but independently monotonic knowledge that a newer transaction existed before a force-capable coherent rewind.",
+    "The unavailable GraphQL multi-ref atomic path remains an alternative, but it shares the same monotonic-witness gap and is no longer the highest-value immediate route."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r273 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test whether any currently Chat-readable GitHub-native provider-controlled event or immutable-object surface can serve as an independently retained rollback witness for the single-ref transaction protocol without branch protection/rules administration, organization audit-log authority, manual attestation, hosted compute/storage, external service execution, finite monthly/trial/paid quota, or incremental cost. Distinguish mere post-hoc object retrievability from a durable monotonic record that a specific newer transaction existed; model force-rewind detection and retention/visibility failure. Preserve the single-ref transaction protocol as the current callable baseline and fail closed if the witness is mutable, permission-gated, retention-limited without durable guarantee, or requires another execution authority.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
