@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 263,
+  "updated_at": "2026-09-07T12:15:13+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "245f32021ad134cc4c8803bbb605a6ac1d3987a7",
+  "probe": "Can a standards-level retry/redelivery bound justify finite deletion-safe tombstone retention, and what clock-free condition is required when a wall-clock expiry cannot be trusted?",
+  "public_sources": [
+    "https://www.rfc-editor.org/rfc/rfc7252.html#section-4.4",
+    "https://www.rfc-editor.org/rfc/rfc7252.html#section-4.8.2",
+    "https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2",
+    "https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3"
+  ],
+  "tested_scope": "Documentation-level architectural falsification using only frozen CLEAN authority, own role-local LATEST state, RFC 7252 and RFC 9110. No external effect, hosted compute, paid/trial API, protected authority, O/downstream/other-worker semantics, manual execution, scheduler mutation, or quota-bearing service.",
+  "result": "FINITE_TOMBSTONE_RETENTION_CONDITIONALLY_JUSTIFIED_ONLY_BY_CLOSED_RETRY_HORIZON",
+  "evidence": {
+    "coap_finite_protocol_horizon": "RFC 7252 binds CoAP Message ID non-reuse to EXCHANGE_LIFETIME; with default transmission parameters the derived lifetime is 247 seconds. This is a genuine finite duplicate-detection horizon for the exact CoAP message-identity layer under the RFC's latency/retransmission assumptions.",
+    "coap_scope_limit": "The bound is not a universal application-operation replay bound. A higher layer can issue a new request or a sender can create a new logical operation identity after the CoAP exchange lifetime. Therefore a deletion tombstone may expire at the CoAP horizon only when the application effect identity is atomically bound to that protocol identity and all higher-layer retries that could recreate the same logical effect are also proven closed by the same horizon.",
+    "http_no_general_finite_horizon": "RFC 9110 permits retry of idempotent requests after communication failure and defines Retry-After as a minimum delay, but it does not define a maximum elapsed retry horizon for a logical operation. HTTP semantics therefore do not justify a general finite deletion-tombstone TTL.",
+    "clock_free_condition": "A finite time TTL is safe only with a trusted monotonic elapsed-time mechanism or a protocol-equivalent authoritative epoch transition that proves every sender's retry right for the logical operation has expired. If neither elapsed time nor a closed epoch can be proven, the safe clock-free rule is indefinite non-reuse/reservation of the operation identity. A generation namespace is sufficient only when old generations cannot be replayed into the same effect domain and used identities remain reserved across generation rollover.",
+    "safety_margin_rule": "Where a finite standards bound exists, retention must cover the specification's full duplicate-arrival horizon plus any implementation-specific processing/clock uncertainty not already included in that bound. A nominal protocol timer must not be shortened merely because observed delivery is faster.",
+    "hidden_side_effect_rule": "Protocol duplicate suppression protects only effects atomically coupled to the deduplicated operation. Logging, notifications, billing-like actions, or other hidden/non-resource effects need their own idempotence or the same atomic completion marker."
+  },
+  "candidate_comparison": {
+    "finite_horizon_tombstone": {
+      "expected_completion_time": "low when the transport/application retry universe is explicitly closed",
+      "duplicate_safety": "high only under exact identity binding, complete retry-horizon proof, and trustworthy expiry/epoch semantics",
+      "integration_cost": "medium",
+      "quota_fragility": "none in the architectural pattern",
+      "verdict": "conditional"
+    },
+    "indefinite_nonreuse_tombstone": {
+      "expected_completion_time": "low",
+      "duplicate_safety": "highest without needing a retry-time proof",
+      "integration_cost": "low-to-medium depending on unbounded metadata growth",
+      "quota_fragility": "none in the architectural pattern",
+      "verdict": "default-safe when replay horizon is unproven"
+    },
+    "generation_namespace_with_epoch_proof": {
+      "expected_completion_time": "medium",
+      "duplicate_safety": "high if epoch advancement is authoritative and old identities cannot re-enter the effect domain",
+      "integration_cost": "medium-to-high",
+      "quota_fragility": "none in the architectural pattern",
+      "verdict": "clock-free alternative only with strong old-generation exclusion"
+    }
+  },
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "hosted_compute_consumed": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": "CONDITIONAL_TRANSVERSAL_PATTERN_FINITE_RETENTION_ONLY_WITH_CLOSED_RETRY_HORIZON_AND_ATOMIC_IDENTITY_BINDING"
+  },
+  "conflict_check": "Exactly one bounded CLEAN Phase-1 child from r262 continuation; own role-local state plus public standards only; no scheduler mutation, wait/poll/backoff/retry, or optional second leaf.",
+  "frontier": [
+    "r259 established atomic sink-idempotency boundary.",
+    "r260 reduced full response replay to durable completion evidence plus authoritative read under atomic binding.",
+    "r261 showed deterministic resource identity can replace a separate idempotency registry while the exact effect resource persists.",
+    "r262 established deletion-safe minimum identity retention: durable non-reuse reservation/tombstone must outlive the replay horizon; namespace alone is insufficient.",
+    "r263 establishes that finite tombstone retention is justified only by a closed, standards-bounded retry universe; CoAP supplies such a bound for its exact Message ID layer, whereas HTTP supplies no general logical-operation retry horizon.",
+    "Without trustworthy elapsed time, use an authoritative closed epoch or indefinite identity non-reuse; hidden side effects still require atomic coupling or independent idempotence."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r263 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test the storage-growth side of indefinite identity non-reuse without introducing finite hosted-storage quota dependency. Compare compact cryptographic/structural reservation schemes, append-only exact identity sets, and epoch-compacted representations for false-positive/false-negative duplicate safety, collision assumptions, deletion/replay behavior, zero-quota operation, integration cost, and hidden-side-effect coverage. Use public specifications or papers only if needed; preserve exact tested scope and do not start more than one leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
