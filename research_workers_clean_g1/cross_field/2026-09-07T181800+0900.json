@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 269,
+  "updated_at": "2026-09-07T18:18:00+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "f63c37adb063209f8f43542243de7d5f4ef3beb0",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "cebe01433cb2076bcaf66e0eab221b6ae7c4c496",
+  "probe": "Falsify r268's append-only deterministic-terminal-path pattern against two concurrent Chat writers for the same effect_id plus authority drift and unrelated authoritative-ref movement, without a central lock or same-run retry.",
+  "result": "CONDITIONAL_SURVIVAL_ONLY: deterministic create-only terminal paths suppress duplicate committed records under concurrent writers if the path key commits to the frozen authority tuple and effect descriptor, but exact no-silent-loss safety is not unconditional. A stable-ref monotonic-retention invariant is necessary; if a terminal path may be deleted or removed by force-rewrite/reset, a later 404 cannot distinguish never-created from previously-created-then-erased using O(1) role-local active state alone.",
+  "model": {
+    "deterministic_key": "H(role || phase || root || task || frozen_manifest_blob || frozen_desired_blob || frozen_role_blob || effect_id || canonical_pre_effect_descriptor)",
+    "same_authority_same_effect_race": [
+      "Both writers derive the same terminal path from the same frozen authority and effect descriptor.",
+      "Both use create-only semantics; the repository can expose at most one final path identity at that deterministic path, while the losing/ambiguous writer must not switch to overwrite semantics.",
+      "A writer without confirmed success performs one exact deterministic-path readback. A matching terminal record means the effect is terminalized; a mismatching record is a conflict; a 404 is unresolved rather than permission to recreate in-run."
+    ],
+    "authority_drift": [
+      "A change to any frozen authority blob changes the deterministic key/path, so an old-authority terminal cannot satisfy a new-authority invocation.",
+      "Every terminal record embeds the frozen authority tuple and is valid evidence only for that tuple; later consumers compare the embedded tuple to their current frozen authority before acceptance."
+    ],
+    "unrelated_ref_movement": [
+      "Unrelated additive movement is safe if every later state of the authoritative ref preserves the terminal path and blob.",
+      "A force-reset, rewrite, or delete that removes the terminal path creates a false-absence state. With only current-path lookup and O(1) active role-local state, that false 404 is observationally indistinguishable from true never-created absence."
+    ],
+    "minimal_retention_invariant": [
+      "Use one stable authoritative repository ref for terminal lookup.",
+      "Once terminal path P appears, every later accepted state of that ref preserves exactly the same blob at P; no delete, overwrite, force-rewrite, or history reset may remove or alter P.",
+      "Terminal writes are create-only and keyed by frozen authority plus canonical effect identity.",
+      "Ambiguous write plus 404 remains unresolved across invocations; never recreate from that 404 in the same invocation.",
+      "If monotonic retention cannot be trusted or mechanically evidenced, exact duplicate/no-silent-loss safety requires a stronger retained anchor and therefore cannot be claimed from r268's minimal structure alone."
+    ]
+  },
+  "candidate_comparison": {
+    "authority_bound_deterministic_path_plus_monotonic_ref_retention": {
+      "expected_completion_time": "lowest",
+      "conflict_risk": "low under invariant",
+      "integration_cost": "low",
+      "shared_CAS_hotspot": false,
+      "status": "best conditional transversal pattern"
+    },
+    "rolling_terminal_manifest": {
+      "expected_completion_time": "higher",
+      "conflict_risk": "shared mutable CAS hotspot",
+      "integration_cost": "higher",
+      "status": "not preferred"
+    },
+    "stronger_per_effect_anchor_or_hash_chain": {
+      "expected_completion_time": "medium",
+      "conflict_risk": "lower detection ambiguity if retained",
+      "integration_cost": "medium",
+      "status": "next alternative to test when monotonic retention is not independently trustworthy"
+    }
+  },
+  "source_basis": "Current connected GitHub contents-API capability contract exposes create-new-path semantics, replacement only with current blob SHA, and exact path fetch/readback; no protected/admin branch-retention mechanism is assumed.",
+  "tested_scope": "One bounded CLEAN architecture/information-flow falsification using frozen current controls, own r268 LATEST state, and current GitHub connector capability contracts only. No O/downstream/other-worker semantics, protected authority, hosted compute/storage add-ons, external model/API execution, finite monthly/trial/paid quota consumption, manual execution, scheduler mutation, same-run wait/poll/backoff/retry, or optional second leaf.",
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": "CONDITIONAL_TRANSVERSAL_PATTERN_ONLY"
+  },
+  "frontier": [
+    "r268's Omega(K) system-wide terminal-information lower bound remains unchanged.",
+    "Concurrent same-effect writers do not require a central lock if they share an authority-bound deterministic path and use create-only plus exact readback semantics.",
+    "Authority drift must be part of the deterministic key; otherwise stale-authority terminal records can collide with current work.",
+    "The decisive unresolved condition is monotonic terminal-record retention on the authoritative ref; without it, current-path 404 cannot prove absence after rewrite/deletion."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r269 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test whether an O(1)-active-state hash-chain/retained-anchor scheme can mechanically detect authoritative-ref rewrite or terminal deletion without branch-protection/admin authority, finite quota, hosted compute, or a shared rolling CAS hotspot. Model one retained predecessor digest, one rewrite that removes a terminal path, and one later recurrence; distinguish detection from prevention and determine whether exact duplicate/no-silent-loss safety can be recovered or remains conditional on repository retention.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
