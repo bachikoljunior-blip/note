@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 265,
+  "started_at": "2026-09-07T14:20:50+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "frozen_main_sha": "3f494dc6a69e5bf7b2bdb3d7620f7811ecb5031f",
+    "transport_mode": "sha_exact_head_double_read",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "8e0eec87fd456e772e232e4c222b6869d197f9fc",
+  "probe": "Can the serialized-prefix high-water-mark pattern preserve useful concurrency without reintroducing an arbitrary exact identity set? Compare shared CAS allocation, disjoint writer ranges, Lamport-style tuples, and closed-epoch range leasing for gap handling, retry identity stability, stale-writer exclusion, atomic effect binding, and zero-optional-quota operation.",
+  "result": "SHARED_CAS_COMMIT_PRESERVES_COMPACT_EXACTNESS_WITH_OPTIMISTIC_CONCURRENCY;_BOUNDED_EPOCH_LEASE_FRONTIERS_CAN_ADD_PARALLELISM_WITH_O(K)_STATE;_LAMPORT_TUPLES_OR_UNBOUNDED_RANGES_DO_NOT_COLLAPSE_TO_ONE_EXACT_HIGH_WATER_MARK",
+  "public_sources": [
+    "https://www.postgresql.org/docs/18/functions-sequence.html",
+    "https://etcd.io/docs/v3.7/learning/api/",
+    "https://lamport.azurewebsites.net/pubs/pubs.html",
+    "https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/",
+    "https://zookeeper.apache.org/doc/r3.1.2/zookeeperProgrammers.html"
+  ],
+  "tested_scope": "Documentation-level architectural falsification using only frozen CLEAN authority, own role-local LATEST/r264 state, public primary technical sources, and direct reasoning. No O/downstream/other-worker semantics, protected authority, external effect, hosted runner, Codespaces, artifact/LFS/package service, paid/trial API/model, manual execution, scheduler mutation, same-run wait/poll/backoff/retry, or optional second leaf.",
+  "source_observations": {
+    "postgresql_sequences": "PostgreSQL documents that nextval is atomic and multiuser-safe, but values are not reclaimed after abort and therefore gaps are expected. This is a direct counterexample to assuming that concurrency-safe allocation alone preserves a dense committed prefix.",
+    "etcd_transactions": "etcd documents atomic compare-guarded transactions and a single revision increment per modifying transaction, supporting the feasibility of an optimistic shared compare-and-swap commit frontier when identity advancement and durable effect-state mutation share one atomic transaction.",
+    "lamport_ordering": "Lamport logical clocks establish an ordering relation and can extend to a total order with tie-breaking, but ordering does not imply density of the set of actually issued identities; sparse tuples therefore cannot be represented exactly by one scalar membership high-water mark.",
+    "lease_and_fencing_pattern": "Chubby and ZooKeeper provide public evidence for lease/lock ownership, ordered transaction identities, and monotone sequence mechanisms; these support fencing stale writers but do not by themselves eliminate gap/accounting state for parallel preallocation."
+  },
+  "direct_proof": {
+    "shared_cas_atomic_commit": "Let H be the largest semantically terminal identity. A proposer may prepare work concurrently, but commit must atomically compare H=h and write identity h+1, its terminal effect/evidence, and H=h+1. Exactly one concurrent proposer wins a given h; stale writers fail the comparison. The used/terminal identity set remains the dense prefix [0,H], so reservation membership remains exact in O(log H) state. Useful concurrency survives in preparation and optimistic contention, while the commit frontier is serialized.",
+    "allocation_without_atomic_effect_binding": "If identity allocation is committed before the effect and the process crashes, a permanent hole appears. PostgreSQL's documented non-rollback sequence gaps instantiate this pattern. A scalar H can then mean only 'reserved at or below H', not 'effect successfully completed at or below H'. Exact duplicate non-reuse may remain conservative, but exact completion/replay semantics require extra terminal-status evidence or an independently idempotent deterministic sink.",
+    "disjoint_writer_ranges": "Parallel ranges [a,b] make the global used set non-prefix while ranges are partially consumed. Exact membership then needs at least per-range progress/gap state. If K simultaneously active ranges is a fixed bound and each writer consumes only a contiguous local prefix, state can be O(K log H) rather than an arbitrary per-identity set. Unbounded writer/range concurrency makes K grow and loses the bounded-frontier property.",
+    "lamport_tuples": "A Lamport tuple (clock,writer) supplies order and retry-stable identity if persisted, but the issued tuples are sparse. One global maximum cannot distinguish an issued tuple from a never-issued tuple below the maximum. Exact membership therefore needs a set, or a fixed writer universe with one contiguous high-water mark per writer, which is O(W) state and ceases to be bounded if writer identities churn without authoritative epoch closure.",
+    "closed_epoch_range_leasing": "A bounded epoch may lease at most K disjoint ranges, fence each lease by epoch/generation, and require each writer to advance only a local contiguous prefix. While open, persist K lease descriptors/local high-water marks. After every range becomes semantically terminal through success or authoritative burn/closure, collapse the whole epoch to one global H and discard per-lease state. This preserves exact no-false-negative non-reuse with O(K log H) active state and O(log H) closed state. Exact success-vs-burn replay still requires a durable terminal distinction unless burned identities are defined as permanently consumed and retries must acquire a new identity.",
+    "stale_writer_exclusion": "CAS revision checks or epoch/fencing tokens are sufficient to prevent a writer holding an old lease from advancing the current frontier, provided every sink mutation validates the current fence. A lease timeout alone is insufficient when a paused client can later resume against a sink that does not verify the fence.",
+    "atomic_side_effect_boundary": "No compact identity allocator can make a non-transactional hidden side effect exactly-once by itself. Either the side effect must be in the same atomic commit as frontier advancement, expose a deterministic idempotency/resource key, or leave an unresolved child requiring additional durable outcome evidence."
+  },
+  "candidate_comparison": {
+    "single_shared_cas_frontier": {
+      "identity_state": "O(log H)",
+      "exact_no_false_negative_duplicate_safety": true,
+      "exact_fresh_identity_acceptance": true,
+      "useful_concurrency": "medium: concurrent preparation, serialized optimistic commit",
+      "gap_handling": "no committed gaps if effect and frontier advance are atomic",
+      "retry_identity_stability": "strong when retry reuses the candidate identity/operation digest",
+      "stale_writer_exclusion": "strong via CAS/fence validation",
+      "integration_cost": "low-to-medium",
+      "zero_optional_quota_fit": "strong"
+    },
+    "unbounded_disjoint_ranges": {
+      "identity_state": "grows with active ranges/gaps",
+      "exact_no_false_negative_duplicate_safety": true,
+      "exact_fresh_identity_acceptance": "requires range/gap accounting",
+      "useful_concurrency": "high",
+      "gap_handling": "unresolved without per-range terminal state or conservative burning",
+      "retry_identity_stability": "medium",
+      "stale_writer_exclusion": "requires fencing",
+      "integration_cost": "medium",
+      "zero_optional_quota_fit": "storage-bound unless concurrency/frontier is bounded"
+    },
+    "lamport_tuple_identity": {
+      "identity_state": "one scalar is insufficient; exactness requires set or fixed-writer vector",
+      "exact_no_false_negative_duplicate_safety": "possible with conservative max rejection or per-writer vector, but one scalar loses exact fresh acceptance",
+      "exact_fresh_identity_acceptance": false,
+      "useful_concurrency": "high",
+      "gap_handling": "sparse by construction",
+      "retry_identity_stability": "strong only if tuple is durably reused",
+      "stale_writer_exclusion": "needs separate epoch/fence",
+      "integration_cost": "low for ordering, high for exact membership repair",
+      "zero_optional_quota_fit": "strong computationally, weak for unbounded membership state"
+    },
+    "bounded_closed_epoch_range_leases": {
+      "identity_state": "O(K log H) while K leases are open; collapses to O(log H) after authoritative epoch closure",
+      "exact_no_false_negative_duplicate_safety": true,
+      "exact_fresh_identity_acceptance": "true within per-lease contiguous prefixes if terminal success/burn semantics are explicit",
+      "useful_concurrency": "high up to bounded K",
+      "gap_handling": "epoch cannot collapse until every leased position is terminal; conservative burn is safe for non-reuse but changes replay/liveness semantics",
+      "retry_identity_stability": "strong within live lease/epoch; closed/burned retry needs explicit terminal rule",
+      "stale_writer_exclusion": "strong with epoch fencing checked at sink",
+      "integration_cost": "medium-to-high",
+      "zero_optional_quota_fit": "strong when K is a fixed local/control bound and state rides existing lightweight repository transport"
+    }
+  },
+  "semantic_conclusion": "The serialized-prefix escape hatch can preserve useful concurrency, but only by keeping the exact membership frontier structurally bounded. The strongest compact baseline is a shared CAS/transactional high-water mark: preparation may be parallel, while effect commit is serialized and atomically advances H. More commit parallelism is possible with a bounded number K of fenced epoch leases, each constrained to a local contiguous prefix; this uses O(K) frontier state and can collapse to one H after authoritative closure. Arbitrary disjoint ranges or Lamport-style sparse tuples do not preserve exact fresh-membership semantics with one scalar and reintroduce growing set/vector/gap state. Therefore concurrency itself is not the blocker; unbounded sparse concurrency is. No allocator removes the separate requirement that hidden side effects be atomically bound, deterministically idempotent, or represented by durable terminal evidence.",
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "hosted_compute_consumed": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": "CONDITIONAL_TRANSVERSAL_PATTERN_SHARED_CAS_OR_BOUNDED_FENCED_EPOCH_FRONTIER_FOR_COMPACT_EXACT_NONREUSE"
+  },
+  "conflict_check": "Exactly one bounded CLEAN Phase-1 child from r264 continuation; own role-local state plus public sources only; LATEST was re-read at predecessor blob 8e0eec87fd456e772e232e4c222b6869d197f9fc immediately before persistence; no scheduler mutation, same-run wait/poll/backoff/retry, or optional second leaf.",
+  "frontier": [
+    "r259 established the atomic sink-idempotency boundary.",
+    "r260 reduced full response replay to durable completion evidence plus authoritative read under atomic binding.",
+    "r261 showed deterministic resource identity can replace a separate idempotency registry while the exact effect resource persists.",
+    "r262 established deletion-safe minimum identity retention: non-reuse reservation must outlive replay horizon.",
+    "r263 established finite retention only with a closed retry horizon or authoritative closed epoch.",
+    "r264 proved exact arbitrary indefinite non-reuse requires growing state and identified the serialized-prefix high-water-mark escape hatch.",
+    "r265 proves useful concurrency can coexist with compact exact non-reuse when the commit frontier is serialized by CAS or the number of fenced sparse frontiers is explicitly bounded.",
+    "r265 falsifies a single-scalar exact solution for arbitrary disjoint ranges or Lamport-style sparse tuples; those require growing gap/set/vector state or conservative rejection semantics.",
+    "r265 identifies bounded closed-epoch range leasing as the higher-concurrency conditional alternative: O(K) active frontier state, collapsible to O(1) frontier count after complete fenced closure."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r265 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test the remaining atomic-effect boundary for the bounded-frontier design. Compare (a) same-transaction effect+frontier commit, (b) deterministic sink resource/idempotency key plus compact completion certificate, (c) transactional outbox/inbox-style two-step delivery, and (d) conservative burned identities after crash. Determine the minimum durable state needed to preserve exact no-false-negative duplicate safety, distinguish success from burn when replay usefulness requires it, exclude stale fenced writers, and remain zero optional quota/cost without a hidden external executor. Do not read other-worker semantics and do not start more than one leaf.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
