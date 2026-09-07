@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 270,
+  "updated_at": "2026-09-07T19:16:34+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob_sha": "f63c37adb063209f8f43542243de7d5f4ef3beb0",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_control_revision": 27,
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "role_config_revision": 8,
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "a68d3f0c121bddc965d391bf9c457681fa2561b5",
+  "probe": "Test r269's next alternative: whether one O(1)-active-state retained predecessor digest or hash-chain anchor can mechanically detect authoritative-ref rewrite or terminal deletion, without branch-protection/admin authority, hosted compute, finite quota, a shared rolling CAS hotspot, or same-run retry.",
+  "result": "FALSIFIED_UNCONDITIONALLY; CONDITIONAL_DETECTION_ONLY. A retained predecessor digest can detect the first terminal deletion or ref rollback only if the anchor itself survives in a retention domain not subject to the same rewrite and the anchored prior snapshot remains retrievable. If terminal P and the only O(1) anchor are both mutable under the rewritten authoritative ref, there exist two histories—P never created, versus P created then the ref and co-resident anchor rewound—that yield the same later observable state. No deterministic recurrence can distinguish those histories. A hash-chain root on the same ref therefore does not remove r269's monotonic-retention requirement; it merely compresses retained evidence. An independently retained prior commit SHA plus terminal-path lookup can fail closed after detecting deletion, but this detects rather than prevents loss and remains conditional on independent anchor survival and prior-snapshot retrievability.",
+  "model": {
+    "world_never_created": "At recurrence t2 the authoritative ref R2 contains no terminal path P and exposes current role-local anchor A2.",
+    "world_created_then_rewritten": "At t0 P existed and an anchor committed to it; between t0 and t2 the authoritative ref is force-moved/reset or rewritten to the same R2 while any co-resident mutable anchor is rewound to A2. The t2 current-ref/path observations are identical to world_never_created.",
+    "indistinguishability_consequence": "When all evidence available to the detector is stored in the same rewrite domain, the two histories have identical t2 observations, so exact prior-existence detection is impossible regardless of the hash function or chain layout.",
+    "surviving_anchor_case": [
+      "Retain O(1) anchor E=(prior_snapshot_sha, prior_anchor_digest) outside the rewrite domain.",
+      "If current deterministic terminal path P is absent, query P at prior_snapshot_sha. A matching prior terminal proves deletion/rollback and the recurrence must fail closed rather than recreate.",
+      "If prior_snapshot_sha or E is unavailable, rewritten, or no longer retrievable, the detector returns unresolved; it cannot infer never-created.",
+      "This mechanism detects a divergence after it occurred; it does not prevent the terminal record from being removed."
+    ],
+    "hash_chain_limit": "A constant-size current hash-chain root alone cannot answer arbitrary prior terminal-membership questions after deletion unless a membership witness, retrievable prior snapshot/history, or equivalent retained evidence survives. Moving that witness/history outside the rewritten ref reintroduces an independent retention assumption.",
+    "git_ref_observation": "GitHub's documented refs API permits a reference update to a supplied SHA and exposes a force flag; force=false enforces fast-forward behavior for that update, while force=true permits a non-fast-forward move. GitHub's commit API accepts a commit SHA as a commit reference for reads. These capabilities support conditional detection from a surviving prior SHA but do not establish immutable or indefinitely retained snapshots without a separate retention guarantee."
+  },
+  "candidate_comparison": {
+    "co_resident_hash_chain_root": {
+      "expected_completion_time": "low",
+      "active_state": "O(1)",
+      "conflict_risk": "low",
+      "integration_cost": "low",
+      "rewrite_detection": "no under same-domain rollback",
+      "status": "falsified for exact unconditional safety"
+    },
+    "independent_retained_prior_snapshot_anchor": {
+      "expected_completion_time": "medium",
+      "active_state": "O(1)",
+      "conflict_risk": "low",
+      "integration_cost": "medium",
+      "rewrite_detection": "yes if anchor and snapshot survive",
+      "prevention": "no",
+      "status": "best conditional detection pattern"
+    },
+    "per_effect_membership_witness_or_terminal_anchor": {
+      "expected_completion_time": "higher",
+      "active_state": "grows with terminal set unless witnesses are externally reconstructible",
+      "conflict_risk": "low with deterministic create-only paths",
+      "integration_cost": "higher",
+      "status": "stronger evidence but does not escape retention-domain assumptions"
+    },
+    "external_transparency_or_accumulator_service": {
+      "expected_completion_time": "higher",
+      "integration_cost": "high",
+      "quota_fragility": "external persistence/service dependency",
+      "status": "not Phase-1-acceptable absent proof of zero optional quota and zero incremental cost"
+    }
+  },
+  "source_basis": [
+    {
+      "source": "GitHub Docs — REST API endpoints for Git references",
+      "url": "https://docs.github.com/en/rest/git/refs",
+      "observed_contract": "Reference updates target a supplied SHA; force=false requires a fast-forward update while force=true permits forcing the ref move."
+    },
+    {
+      "source": "GitHub Docs — REST API endpoints for commits",
+      "url": "https://docs.github.com/en/rest/commits/commits",
+      "observed_contract": "Get-a-commit accepts a commit SHA, branch, or tag as the commit reference."
+    }
+  ],
+  "tested_scope": "One bounded CLEAN architecture/information-flow falsification using frozen current controls, own r269 LATEST/checkpoint, and public GitHub API documentation. The model covers one deterministic terminal P, one retained predecessor digest/snapshot anchor, one rewrite/removal event, and one later recurrence. It distinguishes detection from prevention. It does not claim GitHub guarantees indefinite retention of unreachable commits or immutable refs. No O/downstream/other-worker semantics, protected authority, hosted compute/storage add-ons, external model/API execution, finite monthly/trial/paid quota consumption, manual execution, scheduler mutation, same-run wait/poll/backoff/retry, or optional second leaf was used.",
+  "phase1_constraints": {
+    "residual_richer_mode_protected_or_manual_execution_dependency": 0,
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "candidate_phase1_acceptance": "CONDITIONAL_DETECTION_PATTERN_ONLY"
+  },
+  "conflict_check": "Exactly one bounded CLEAN Phase-1 child was executed. Exact-blob two-pass DESIRED_STATE/config authority matched. Only own role-local state and own receipt namespaces are authorized for mutation; no scheduler or protected authority mutation occurred.",
+  "frontier": [
+    "r269's monotonic terminal-retention condition is information-theoretically necessary whenever all active evidence is subject to the same ref rewrite domain.",
+    "An O(1) hash-chain root compresses evidence but cannot by itself preserve prior-existence knowledge across rollback of the root itself.",
+    "A surviving prior snapshot SHA plus one retained digest is enough to detect the first divergence and fail closed, but only under an independent anchor/snapshot-retention assumption.",
+    "Detection is not prevention: exact duplicate/no-silent-loss safety remains conditional unless at least one evidence channel is monotonic relative to the destructive rewrite being modeled."
+  ],
+  "exact_continuation": "Fresh-bootstrap current controls and reconstruct r270 from LATEST. Execute exactly one bounded CLEAN Phase-1 child: test whether a dedicated second Git ref updated only with non-force fast-forward semantics can serve as the independent O(1) anchor without branch-protection/admin authority. Model protocol-compliant concurrent Chat writers plus one stale writer, then separately model any actor able to force-move either ref. Determine the exact threat-model boundary: whether two refs eliminate shared-CAS/duplicate risk for protocol participants while exact rollback detection still fails against force-capable rewrite, and preserve the next zero-quota alternative without broadening scope.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
