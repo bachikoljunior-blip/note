@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-07T23:23:27+09:00",
+  "timestamp": "2026-09-08T00:25:00+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -22,47 +22,56 @@
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "78164b9ef2ed996da5fd07adf96bb1cdcf41fc51",
-  "predecessor_slice_id": "reasoning-20260907T2230+0900-idempotency-stage-q-v1",
-  "slice_id": "reasoning-20260907T232327+0900-crash-window-stage-r-v1",
-  "selected_leaf": "Test whether ordering alone can guarantee exactly-once publication when a valid unconsumed witness authorizes a non-idempotent publication and the durable consumed-witness marker is stored separately, with a crash allowed between the two durable effects.",
+  "predecessor_state_blob": "783589df70e552b49ee5bc2836b983bf8f46e37c",
+  "predecessor_slice_id": "reasoning-20260907T232327+0900-crash-window-stage-r-v1",
+  "slice_id": "reasoning-20260908T002500+0900-fused-cas-stage-s-v1",
+  "selected_leaf": "Test the Stage R direct alternative: fuse the publication artifact and consumed-witness marker into one same-store witness-bound compare-and-swap, and determine the exact crash/concurrency scope in which that removes duplicate/loss ambiguity.",
   "bounded_leaf_result": {
-    "status": "separate_non_idempotent_publication_and_consumed_marker_have_unavoidable_crash_window_under_ordering_alone",
-    "tested_scope": "Deterministic two-effect state machine with one valid unconsumed witness W, one non-idempotent externally visible publication P, one separately durable consumed marker M, and fail-stop crash/restart allowed after either durable effect. Retry reconstructs state only from durable role-local marker state and the unchanged witness.",
-    "initial_state": {"publication_count": 0, "consumed_marker": false},
-    "ordering_tests": [
+    "status": "same_store_fused_cas_removes_stage_r_ambiguity_within_atomic_publication_scope",
+    "tested_scope": "Deterministic single-store state machine where the externally visible publication artifact P and consumed-witness marker M are fields of the same durable object, one valid witness W authorizes exactly one transition, the store supports atomic whole-object compare-and-swap from exact predecessor blob b0 to successor blob b1, and fail-stop crash/restart may occur before commit, after commit before acknowledgement/readback, or after readback. No separate external side effect is permitted in this tested scope.",
+    "direct_architecture": {
+      "pre_state": {"witness_id": "W", "consumed": false, "publication_present": false, "publication_identity": null},
+      "single_atomic_transition": {"compare": "current_blob == b0 and witness_id == W and consumed == false", "swap": {"witness_id": "W", "consumed": true, "publication_present": true, "publication_identity": "W"}},
+      "publication_identity_rule": "The publication artifact is keyed by the same witness identity W inside the atomically replaced object; it is not emitted by a second side-effecting call."
+    },
+    "crash_tests": [
       {
-        "ordering": "P_then_M",
-        "crash_window": "after P before M",
-        "durable_state_after_crash": {"publication_count": 1, "consumed_marker": false},
-        "retry_observation": "Witness still appears unconsumed, so an identical retry remains eligible under marker-only reconstruction.",
-        "retry_result": {"publication_count": 2, "exactly_once": false},
-        "failure_class": "duplicate_publication"
+        "crash_point": "before_atomic_commit",
+        "durable_state": "b0",
+        "retry_result": "Retry may safely re-propose the same b0->b1 transition because neither publication nor consumed marker exists durably.",
+        "duplicate_or_loss": false
       },
       {
-        "ordering": "M_then_P",
-        "crash_window": "after M before P",
-        "durable_state_after_crash": {"publication_count": 0, "consumed_marker": true},
-        "retry_observation": "Witness appears consumed, so retry suppresses publication.",
-        "retry_result": {"publication_count": 0, "exactly_once": false},
-        "failure_class": "lost_publication"
+        "crash_point": "after_atomic_commit_before_ack_or_readback",
+        "durable_state": "b1 containing both publication artifact and consumed marker",
+        "retry_result": "A retry using stale predecessor b0 cannot satisfy the compare; after reconstruction b1 already proves W consumed and publication W present, so no second publication is eligible.",
+        "duplicate_or_loss": false
       },
       {
-        "ordering": "prepare_intent_then_P_then_M",
-        "crash_window": "after P before M",
-        "retry_observation": "A durable prepare intent proves an attempt was authorized but does not distinguish whether non-idempotent P durably happened unless P itself exposes an idempotent lookup/key or shares the transaction.",
-        "retry_result": {"exactly_once": false},
-        "failure_class": "ambiguous_commit_without_target_dedup_or_atomic_fusion"
+        "crash_point": "after_readback",
+        "durable_state": "b1",
+        "retry_result": "Reconstruction observes the completed witness-bound transition and suppresses duplicate publication.",
+        "duplicate_or_loss": false
       }
     ],
-    "direct_architecture_conclusion": "No ordering of two separately durable effects can guarantee both no duplicate and no loss across the crash window. Exactly-once requires an additional primitive that collapses the ambiguity: either target-side idempotency keyed by the witness/attempt identity, a readable publication receipt that uniquely proves the effect, or atomic fusion of publication and consumed-marker state in one transactional/CAS commit.",
-    "chat_native_zero_cost_zero_finite_quota_ordering_alone_sufficient": false,
-    "unresolved_capability": "A zero-cost, zero-finite-quota Chat-capable atomicity primitive binding externally visible publication to witness consumption, or equivalent target-side idempotency/readback semantics. Without one, generic external non-idempotent publication remains unresolved.",
-    "semantic_claim": "Within the exact deterministic fixture, ordering alone cannot remove the crash window: publication-first admits duplication; marker-first admits loss; adding a prepare record does not disambiguate whether publication committed.",
+    "concurrency_test": {
+      "setup": "Two contenders reconstruct the same predecessor b0 and attempt the identical witness-bound transition.",
+      "result": "Under atomic CAS semantics at most one contender can replace b0; every stale contender fails the compare and therefore cannot create a second same-store publication artifact.",
+      "exactly_once_within_scope": true
+    },
+    "observed_transport_fit": "The role-local repository write surface accepts an exact current blob SHA as a write precondition and replaces the whole STATE object in one write call; this invocation used that same-store CAS form to durably bind the Stage S result and continuation in one state transition.",
+    "sufficient_conditions": [
+      "publication artifact and consumed marker are committed in the same atomic object/transaction",
+      "the compare binds the exact predecessor state and witness identity",
+      "publication visibility is the committed artifact itself or derives only from that committed object",
+      "retry reconstructs from the durable successor and does not perform an independent side effect"
+    ],
+    "direct_architecture_conclusion": "Within the exact same-store scope, atomic fusion collapses the Stage R ambiguous crash window: a crash leaves either neither effect or both effects, and concurrent stale attempts cannot both commit. This is a valid zero-Work-dependency direct architecture for repository-native publication artifacts.",
+    "unresolved_capability": "Generic external non-idempotent targets remain unresolved. If publication requires a second API call, message send, deployment, payment, or any effect outside the fused atomic store, Stage R ambiguity returns unless the target supplies witness-keyed idempotency, a uniquely readable commit receipt, or cross-system transactional atomicity.",
     "not_proven": [
-      "impossibility for targets that natively support idempotency keys",
-      "impossibility when publication and marker can be fused into one repository transaction",
-      "arbitrary distributed protocols with stronger target readback semantics",
+      "exactly-once delivery to external targets outside the fused store",
+      "cross-system atomicity",
+      "targets without atomic CAS/transaction semantics",
       "scheduler persistence",
       "Phase-1 acceptance"
     ]
@@ -92,5 +101,5 @@
     "hard_runtime_boundary_reached": false,
     "continuation_nonempty": true
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260907T232327+0900-crash-window-stage-r-v1. Execute exactly one bounded Stage S leaf: test a same-store fused-CAS architecture in which the publication artifact and consumed-witness marker are committed atomically under one witness-bound compare-and-swap, and determine the exact scope in which that removes the Stage R ambiguity without richer-mode/protected/manual execution, finite monthly quota, or incremental cost. Do not generalize the result to external targets lacking atomic fusion or idempotency-key semantics, and do not claim scheduler persistence or Phase-1 acceptance."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260908T002500+0900-fused-cas-stage-s-v1. Execute exactly one bounded Stage T leaf: test a witness-keyed target-side idempotency architecture for an external publication target, distinguishing duplicate suppression from proof of successful delivery and requiring readable target evidence after an acknowledgement-loss crash. Keep the tested scope zero-Work-dependency, zero finite monthly/trial/paid quota, zero incremental cost, and do not generalize to targets that lack idempotency keys or readable commit receipts. Do not claim scheduler persistence or Phase-1 acceptance."
 }
