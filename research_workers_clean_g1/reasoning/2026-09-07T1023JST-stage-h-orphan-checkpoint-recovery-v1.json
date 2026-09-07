@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "role": "reasoning",
+  "timestamp": "2026-09-07T10:23:10+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-reasoning-direct-architecture",
+  "mode": "persistence_recovery_micro_slice",
+  "recovery_epoch": "2026-09-04T22:59:28+09:00",
+  "bootstrap_valid": true,
+  "transport_mode": "sha_only_main_ref",
+  "authority": {
+    "frozen_main_sha": "86111722ecac14de9da6d70f8b0a684dba7c7bf7",
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 119,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_control_revision": 3,
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_control_revision": 27,
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "reasoning_role_path": "automation_control/roles/reasoning.json",
+    "reasoning_role_control_revision": 11,
+    "reasoning_config_revision": 8,
+    "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409"
+  },
+  "source_state": {
+    "path": "research_workers_clean_g1/reasoning/STATE.json",
+    "blob": "ad72f909c627d9d034cabdd40310806e3f722a87",
+    "slice_id": "reasoning-20260907T0721+0900-crash-window-stage-g-v1",
+    "checkpoint_path": "research_workers_clean_g1/reasoning/2026-09-07T0721JST-stage-g-crash-recovery-v1.json",
+    "checkpoint_blob": "5b6f0c0f2be1938548066f722113c81d1e7539c3"
+  },
+  "selected_leaf": "Stage H orphan-checkpoint recovery across the crash window after immutable checkpoint readback but before STATE meta-publication.",
+  "fixture": {
+    "stale_state_projection": {
+      "state_blob": "ed1704f76e26446cb389a943d8de79a7daa84f5d",
+      "slice_id": "reasoning-20260907T0525+0900-crash-window-stage-f-v1",
+      "checkpoint_blob": "6d0af08986a8d567d7d644bbd108ec31398bcc68"
+    },
+    "durable_orphan_candidate": {
+      "path": "research_workers_clean_g1/reasoning/2026-09-07T0721JST-stage-g-crash-recovery-v1.json",
+      "blob": "5b6f0c0f2be1938548066f722113c81d1e7539c3",
+      "source_state_blob_matches_stale_projection": true,
+      "authority_tuple_matches_frozen_phase_root_task": true,
+      "checkpoint_exact_readback_observed_this_slice": true,
+      "idempotency_key_sha256": "43825bcd116293bbc30b5b4901b6076b3c41a5884a134a13d298e7603b1a90f1",
+      "canonical_payload_sha256": "91b29647b5fea27c6ae0809b12352b20bf5bf4a62c69e65bdee8f99498b71f40",
+      "canonical_retry_decision": "idempotent_equivalent_no_second_effect",
+      "canonical_retry_effect_write_attempted": false,
+      "contradictory_retry_decision": "reject_key_payload_conflict_no_overwrite",
+      "contradictory_retry_effect_write_attempted": false
+    }
+  },
+  "deterministic_recovery_rule": {
+    "preconditions": [
+      "STATE is stale at the exact predecessor blob named by the candidate checkpoint.",
+      "The candidate checkpoint is immutable and exact-readback-valid.",
+      "The candidate binds the same frozen Phase-1 root/task authority tuple.",
+      "The candidate carries the durable idempotency key, payload digest, and resolved replay decision."
+    ],
+    "action": "Publish only the meta-state pointer to the already-durable candidate checkpoint; do not execute or re-execute the externally visible effect during orphan-checkpoint recovery.",
+    "duplicate_effect_guard": "Because recovery is metadata-only and the candidate records same-key/same-payload as idempotent-equivalent with effect_write_attempted=false, repeating recovery after another crash cannot emit a second effect in this exact fixture. Same-key/different-payload remains conflict-rejected with no overwrite.",
+    "publication_safety": "Use current-blob CAS for STATE publication. A stale-writer CAS failure is diagnostic and must not trigger an effect replay or same-run retry in persistence-recovery mode."
+  },
+  "bounded_leaf_result": {
+    "status": "single_orphan_checkpoint_recovery_rule_passed_within_exact_role_local_fixture",
+    "semantic_claim": "Within the exact role-local repository-transport fixture, the post-checkpoint/pre-STATE crash window can be recovered without a duplicate effect by treating an exact-readback-valid Stage G checkpoint as the durable outcome and making recovery metadata-only: advance STATE by CAS to that checkpoint, while the durable idempotency decision suppresses same-payload replay and rejects conflicting-payload replay.",
+    "recovery_requires_richer_mode_protected_or_manual_execution": false,
+    "recovery_requires_finite_monthly_trial_paid_quota": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_only": true
+  },
+  "tested_scope": "A single exact-readback-valid orphan Stage G checkpoint whose source_state blob exactly names the stale Stage F STATE projection and whose authority/idempotency tuple is internally consistent. No arbitrary candidate discovery or multi-candidate arbitration is claimed.",
+  "not_proven": [
+    "safe arbitration when multiple orphan checkpoints claim the same predecessor",
+    "generic orphan discovery under arbitrary naming/layout",
+    "cross-record atomic commit",
+    "repository-enforced global uniqueness across unrelated paths",
+    "exactly-once semantics for arbitrary external side effects",
+    "scheduler persistence",
+    "Phase-1 acceptance"
+  ],
+  "assessment": {
+    "residual_richer_mode_protected_or_manual_execution_dependency_within_tested_scope": false,
+    "finite_monthly_trial_paid_quota_dependency_within_tested_scope": false,
+    "incremental_monetary_cost_within_tested_scope": 0,
+    "phase1_acceptance": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true
+  },
+  "conflict_check": {
+    "other_worker_or_downstream_semantics_consumed": false,
+    "legacy_semantics_consumed": false,
+    "shared_ledger_consumed": false,
+    "scheduler_mutation_by_worker": false,
+    "protected_or_manual_execution_used": false,
+    "public_web_or_external_research_used": false,
+    "optional_second_leaf_started": false
+  },
+  "termination": "persistence_recovery_micro_slice_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring Stage H as predecessor. Execute exactly one bounded Stage I leaf: test ambiguity safety when two immutable orphan checkpoints claim the same predecessor STATE. Define a deterministic role-local arbitration rule that rejects incomparable/conflicting candidates rather than selecting one by filename or recency alone, and verify that rejection cannot emit a duplicate effect. Keep the claim scoped to repository transport and preserve zero richer-mode/protected/manual dependency, zero finite quota, and zero incremental cost."
+}
