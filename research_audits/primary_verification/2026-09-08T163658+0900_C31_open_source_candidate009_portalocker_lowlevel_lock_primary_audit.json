@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "audited_at": "2026-09-08T16:36:58+09:00",
+  "bootstrap_valid": true,
+  "frozen_control": {
+    "instruction_manifest_revision": 126,
+    "run_lifecycle_revision": 3,
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "desired_state_revision": 27,
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "downstream_state_revision": 37,
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "role_config_revision": 10
+  },
+  "candidate_identity": {
+    "wave_id": "clean-g1-wave-c31-20260828T165940JST-91a943b0",
+    "row_index": 24,
+    "identity_row": ["open_source", "62e7a5057a86151d8b8454d2e1c89b7100fb5859", "candidate009"],
+    "decision_relevance": "high",
+    "novelty": "partially_tested",
+    "c31_evidence_status": "not_assessed"
+  },
+  "claim_under_test": "With a Portalocker >=4.2 dependency floor, the proposed event-authority primitive can retain a raw os.open file descriptor and call low-level exclusive non-blocking portalocker locking; contention is distinguishable as AlreadyLocked from other permanent lock failures. Suppressing cleanup-only unlock failure after an already-canonical durable append is a caller policy, not a Portalocker atomicity guarantee.",
+  "primary_sources": [
+    {
+      "title": "portalocker.portalocker module - official documentation",
+      "url": "https://portalocker.readthedocs.io/en/latest/api/portalocker.portalocker.html",
+      "observed_version": "4.3.0 docs",
+      "verified_points": [
+        "lock accepts a raw integer file descriptor or fileno provider",
+        "EXCLUSIVE plus NON_BLOCKING is a valid combination",
+        "contention raises AlreadyLocked while other lock failures raise LockException",
+        "unlock accepts the same raw descriptor forms and reports unlock failure as LockException"
+      ]
+    },
+    {
+      "title": "Platform Behaviour - official portalocker documentation",
+      "url": "https://portalocker.readthedocs.io/en/latest/platforms.html",
+      "observed_version": "4.3.0 docs",
+      "verified_points": [
+        "Windows msvcrt locking is normalized to byte zero for raw file descriptors",
+        "the byte-zero raw-descriptor correction is documented as a 4.0.0 fix",
+        "bundled lockers distinguish contention from permanent failures so only contention is retryable"
+      ]
+    },
+    {
+      "title": "portalocker constants - official documentation",
+      "url": "https://portalocker.readthedocs.io/en/latest/api/portalocker.constants.html",
+      "observed_version": "4.3.0 docs",
+      "verified_points": [
+        "LOCK_EX/LockFlags.EXCLUSIVE selects exclusive locking",
+        "LOCK_NB/LockFlags.NON_BLOCKING makes contention fail immediately with AlreadyLocked"
+      ]
+    },
+    {
+      "title": "portalocker 4.2.0 package release",
+      "url": "https://pypi.org/project/portalocker/4.2.0/",
+      "release_date": "2026-08-22",
+      "verified_points": ["Portalocker 4.2.0 is an actual published release"]
+    }
+  ],
+  "verified": [
+    "The candidate's low-level raw-descriptor shape is supported by the current official Portalocker API: a bare int descriptor is accepted by lock/unlock.",
+    "Exclusive non-blocking acquisition is supported directly by EXCLUSIVE|NON_BLOCKING / LOCK_EX|LOCK_NB.",
+    "The proposed failure classification is source-supported: contention is AlreadyLocked and other bundled-locker failures are LockException, so retrying contention while propagating permanent acquire failures is consistent with Portalocker's documented contract.",
+    "The worker's concern about old Windows raw-descriptor positioning is source-supported, but the official current platform documentation dates the byte-zero fix to 4.0.0, not 4.2.0. Therefore candidate009 does not itself require 4.2 merely to obtain byte-zero raw-descriptor locking.",
+    "Portalocker 4.2.0 exists as a published release; this bounded audit did not independently re-establish every separate 4.2-specific Windows correctness fix cited by Candidate012."
+  ],
+  "scope_corrections": [
+    {
+      "claim": "Portalocker >=4.2 is required specifically so candidate009 can safely pass a raw os.open descriptor and obtain byte-zero Windows locking.",
+      "status": "overstated_for_this_specific_property",
+      "correction": "Official Portalocker documentation attributes raw-descriptor byte-zero normalization to 4.0.0. A >=4.2 floor may still be justified by other 4.2-specific correctness fixes, but those are Candidate012 evidence and were not necessary to verify candidate009's raw-descriptor API shape."
+    },
+    {
+      "claim": "Suppressing unlock errors after a canonical append is guaranteed safe by Portalocker.",
+      "status": "design_policy_not_primary_source_guarantee",
+      "correction": "Portalocker documents unlock error reporting/cleanup behavior, but whether an append is already canonical and durable enough to make cleanup failure non-authoritative is an Argus protocol invariant that must be proved in Argus implementation/tests."
+    }
+  ],
+  "status": "primary_api_verified_with_dependency_floor_and_cleanup_scope_corrections",
+  "tested_scope": "Portalocker public API/platform semantics and the exact C31 open_source candidate009 identity; no Argus patch execution, Windows CI run, filesystem fault injection, or independent verification of every Candidate012 >=4.2 rationale.",
+  "phase1_gates": {
+    "residual_work_or_protected_primary_dependency_proved_zero": false,
+    "finite_monthly_trial_paid_quota_dependency_proved_zero": false,
+    "incremental_monetary_cost_proved_zero": true,
+    "phase1_acceptance_claimed": false
+  },
+  "worker_feedback_written": false,
+  "continuation": "For the next highest-value unverified route, prefer a candidate whose exact dependency-elimination claim can be checked against primary Chat/repository evidence; for candidate009 specifically, verify the Argus implementation/regressions before treating cleanup suppression or the full >=4.2 floor as accepted."
+}
