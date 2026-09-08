@@ -2,9 +2,9 @@
   "schema_version": 1,
   "generation": "clean_g1",
   "worker": "scientist_agents",
-  "updated_at": "2026-09-08T23:35:42+09:00",
-  "current_checkpoint": "STATE.json:inline:p1-sa-425",
-  "previous_checkpoint": "STATE.json:inline:p1-sa-424",
+  "updated_at": "2026-09-09T01:31:48+09:00",
+  "current_checkpoint": "STATE.json:inline:p1-sa-426",
+  "previous_checkpoint": "STATE.json:inline:p1-sa-425",
   "control_revision": 126,
   "config_revision": 6,
   "phase_id": "phase_1_chat_parity",
@@ -24,7 +24,7 @@
     "role_control_revision": 9,
     "role_config_revision": 6,
     "role_config_blob": "4f2177f5164ecf7880d4d07485811db1673b2e9e",
-    "frozen_note_main_sha": "419f78bafdcc98e80854ef484c9a6dc9b69392bd",
+    "frozen_note_main_sha": "23ec935d75ff2d63dbafc19e77815aaad1c5dd7e",
     "two_matching_sha_only_ref_observations": true,
     "transport_mode": "sha_only_ref_freeze",
     "bootstrap_valid": true,
@@ -32,43 +32,43 @@
     "independence_class": "clean_exploration"
   },
   "source_state_refs": {
-    "prior_state_blob": "53d658002f300496ff5abfe2b4e3a33511d1724b",
-    "prior_checkpoint": "STATE.json:inline:p1-sa-424",
-    "prior_semantic_finding_id": "p1-sa-424"
+    "prior_state_blob": "9fb7f72b1b1d1b2de41708a45aef6e5ea818feef",
+    "prior_checkpoint": "STATE.json:inline:p1-sa-425",
+    "prior_semantic_finding_id": "p1-sa-425"
   },
   "latest_semantic_finding": {
-    "id": "p1-sa-425",
-    "kind": "official_chatgroq_custom_endpoint_refines_remote_provider_inference_but_keeps_executor_dependency_open",
-    "candidate_scope": "official LangChain langchain-groq ChatGroq implementation in libs/partners/groq/langchain_groq/chat_models.py at pinned langchain-ai/langchain commit db613a96050bc6e594fdcd618af7532264dcceb8 (file blob 81357271fbc832baa8fb9ffcd2270ed62f40d112), interpreted only with own prior p1-sa-424 state",
+    "id": "p1-sa-426",
+    "kind": "official_groq_sdk_client_requires_api_key_before_endpoint_choice_and_keeps_custom_base_url_on_http_client_path",
+    "candidate_scope": "official groq/groq-python src/groq/_client.py at pinned commit 55066d94acca028c3cb74e050f2711b80ade6298, interpreted only with own prior p1-sa-425 state",
     "public_source_ids": [
-      "github:langchain-ai/langchain:db613a96050bc6e594fdcd618af7532264dcceb8:libs/partners/groq/langchain_groq/chat_models.py:81357271fbc832baa8fb9ffcd2270ed62f40d112"
+      "github:groq/groq-python:55066d94acca028c3cb74e050f2711b80ade6298:src/groq/_client.py"
     ],
-    "observation": "The official pinned ChatGroq source defines groq_api_key from GROQ_API_KEY and groq_api_base/base_url from GROQ_API_BASE. Its own documentation says base_url may be used for a proxy or service emulator. validate_environment passes api_key (or None) and base_url into groq.Groq/groq.AsyncGroq and binds .chat.completions; generation then calls self.client.create(). The file contains no in-process model inference implementation.",
-    "inference": "This official artifact narrows p1-sa-424: ChatGroq is not necessarily bound to a Groq-hosted endpoint because it explicitly supports a custom base_url/service emulator. However, ChatGroq still delegates generation through the Groq SDK chat-completions client and does not itself provide provider-free or in-process local inference. A proxy/service emulator would therefore remain a separate execution backend and cannot by itself satisfy the zero-residual-executor scheduled-Chat gate. In the prior candidate, not passing base_url explicitly does not prove Groq-hosted routing because ChatGroq can source GROQ_API_BASE from environment. The candidate's explicit settings.GROQ_API_KEY remains observed, but whether that credential can be dummy/optional for a custom emulator is not established by this artifact.",
-    "uncertainty": "Only this one official ChatGroq source file was used as the new semantic artifact. Groq Python SDK internals, default endpoint resolution, whether api_key=None is accepted, custom-endpoint authentication behavior, actual candidate environment variables, quota/pricing terms, runtime traces and candidate-wide alternate providers remain uninspected. Therefore credential-free operation, finite-quota independence, incremental cost, hidden-executor absence, replayability and useful-outcome parity remain unverified.",
+    "observation": "In both Groq and AsyncGroq constructors, api_key is first taken from the explicit argument or GROQ_API_KEY and construction raises GroqError if it is still None. Only after that check does the client resolve base_url from the explicit argument, GROQ_BASE_URL, or the default https://api.groq.com. The same constructors accept httpx.Client/httpx.AsyncClient and pass base_url plus that HTTP client into SyncAPIClient/AsyncAPIClient. auth_headers always derives Authorization: Bearer <api_key> from the stored key.",
+    "inference": "Within this exact SDK client file, choosing a custom base_url does not remove the SDK-level API-key requirement: a non-None key is required before endpoint selection and a bearer authorization header is defined from it. The custom endpoint remains configured through the SDK's httpx-oriented client path rather than exposing an in-process inference path in this file. This strengthens the unresolved hidden-executor/credential dependency from p1-sa-425, but does not by itself prove how the base client transmits requests or whether a custom emulator validates the bearer value.",
+    "uncertainty": "Only src/groq/_client.py at the pinned official commit was used as the new semantic artifact. src/groq/_base_client.py, request transport internals, server-side/custom-emulator authentication semantics, whether an arbitrary dummy non-None key is accepted by a custom endpoint, pricing/quota terms, runtime traces, and alternate providers were not inspected. Therefore actual HTTP request execution, credential validity requirements at a custom endpoint, finite-quota independence, incremental cost, replayability and useful-outcome parity remain unverified.",
     "semantic_progress_claimed": true
   },
   "phase1_gates": {
-    "residual_execution_dependency": "unresolved and not passing: official ChatGroq supports a configurable API endpoint but still delegates completion to groq.Groq/AsyncGroq chat.completions; no provider-free or in-process inference path is implemented in the tested file, and a proxy/service emulator would be a separate execution backend",
+    "residual_execution_dependency": "unresolved and not passing: the tested SDK client configures completion access through a base_url plus httpx-oriented client and contains no in-process inference path",
     "finite_monthly_trial_paid_quota_dependency": "unverified and therefore not passing",
     "incremental_monetary_cost": "unverified and therefore not passing",
-    "hidden_executor_absence": "not established; execution remains behind a Groq-SDK chat-completions endpoint even when base_url is custom",
+    "hidden_executor_absence": "not established; custom base_url still routes through SDK client plumbing and actual base-client transport was not inspected",
+    "credential_dependency": "SDK construction requires a non-None API key independent of base_url choice; whether a custom endpoint accepts an arbitrary/dummy key is unverified",
     "accepted_route": false
   },
-  "conflict_check": "CLEAN isolation preserved: sanitized manifest/lifecycle/root/config, own scientist_agents STATE, one SHA-only metadata lookup for the official repository head, and exactly one pinned official LangChain ChatGroq source file used semantically; no O, downstream, other-worker, comparator, integrator, index/feed, legacy, shared-ledger or other-role receipt/config semantics used.",
+  "conflict_check": "CLEAN isolation preserved: sanitized manifest/lifecycle/root/config, own scientist_agents STATE, SHA-only metadata lookups for note and the official Groq repository, and exactly one pinned official Groq SDK source file used semantically; no O, downstream, other-worker, comparator, integrator, index/feed, legacy, shared-ledger or other-role receipt/config semantics used.",
   "run_audit": {
-    "start": "2026-09-08T23:35:42+09:00",
+    "start": "2026-09-09T01:31:48+09:00",
     "actions": [
       "bootstrapped INSTRUCTION_CONTROL_MANIFEST control126 and RUN_LIFECYCLE control3",
-      "obtained two matching SHA-only note main-ref observations at 419f78bafdcc98e80854ef484c9a6dc9b69392bd before substantive semantic work",
+      "obtained two matching SHA-only note main-ref observations at 23ec935d75ff2d63dbafc19e77815aaad1c5dd7e before substantive semantic work",
       "refetched and froze DESIRED_STATE control27 and scientist_agents control9/config6 at the frozen SHA",
-      "reconstructed own STATE p1-sa-424",
-      "resolved the official langchain-ai/langchain master SHA mechanically",
-      "inspected only the pinned official ChatGroq source file and established custom base_url/service-emulator support plus continued delegation through Groq SDK chat.completions with no in-process inference implementation"
+      "reconstructed own STATE p1-sa-425",
+      "resolved official groq/groq-python main SHA 55066d94acca028c3cb74e050f2711b80ade6298 mechanically",
+      "inspected only pinned official src/groq/_client.py and established API-key construction requirement independent of base_url plus custom base_url/httpx client wiring"
     ],
     "outputs": [
-      "STATE.json:inline:p1-sa-425",
-      "automation_control/receipts/scientist_agents/receipt_2026-09-08T233542_JST_p1-sa-425.json"
+      "STATE.json:inline:p1-sa-426"
     ],
     "blocker": null
   },
@@ -80,5 +80,5 @@
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
   "next_invocation_resumes_exact_continuation": true,
-  "exact_next_action": "Next invocation perform a fresh valid authority freeze and reconstruct p1-sa-425. Use exactly one official primary artifact from the Groq Python SDK at a pinned official commit (prefer the client implementation that constructs the synchronous/asynchronous HTTP client) as the sole new semantic artifact to determine only whether custom base_url still uses an HTTP endpoint and whether an API key is mandatory independent of endpoint choice. Do not inspect pricing/quota material, issues, runtime traces, another candidate, or a second semantic artifact in the same invocation; if that exact official SDK artifact cannot be fetched, record the missing capability as the sole bounded diagnostic."
+  "exact_next_action": "Next invocation perform a fresh valid authority freeze and reconstruct p1-sa-426. Use exactly one pinned official primary artifact from groq/groq-python, src/groq/_base_client.py, as the sole new semantic artifact to determine only whether SyncAPIClient/AsyncAPIClient actually construct/send requests through httpx to base_url and whether any non-HTTP or in-process transport path is exposed there. Do not inspect pricing/quota material, issues, runtime traces, another candidate, or a second semantic artifact in the same invocation; if that exact official SDK artifact cannot be fetched, record the missing capability as the sole bounded diagnostic."
 }
