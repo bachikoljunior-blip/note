@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "audited_at": "2026-09-08T20:33:08+09:00",
+  "bootstrap_valid": true,
+  "phase": "phase1_chat_parity_dependency_elimination",
+  "effect_chain": "candidate009_current_argus_implementation_primary_check",
+  "frozen_control": {
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_revision": 126,
+    "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
+    "run_lifecycle_revision": 3,
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "desired_state_revision": 27,
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "downstream_state_revision": 37,
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "role_config_revision": 10
+  },
+  "predecessor": {
+    "path": "research_audits/primary_verification/2026-09-08T163658+0900_C31_open_source_candidate009_portalocker_lowlevel_lock_primary_audit.json",
+    "blob": "1391932fd4fe5c0ac02965e74c346723c97b0169",
+    "candidate_identity_row": ["open_source", "62e7a5057a86151d8b8454d2e1c89b7100fb5859", "candidate009"],
+    "prior_status": "primary_api_verified_with_dependency_floor_and_cleanup_scope_corrections"
+  },
+  "tested_scope": {
+    "candidate": "C31 open_source candidate009 shared canonical event-authority primitive",
+    "primary_repository": "lbx154/Argus",
+    "primary_repository_main": "30545a8e099ec99af63df6c3c976abc1885390bf",
+    "files": [
+      {
+        "path": "argus_skill/life/event_log.py",
+        "blob": "8b387bf97eb861a69662d4979cce35e8e6e9a4c5"
+      },
+      {
+        "path": "argus_skill/adapters/agent_cli_backend/_io_log.py",
+        "blob": "8bb2281d9e4ba2b2d7f099ebb9021f59ad884e8a"
+      },
+      {
+        "path": "pyproject.toml",
+        "blob": "e8e798627c05a01708f84bed9028943d0cfcc5ca"
+      }
+    ],
+    "proposed_path_probe": "argus_skill/core/event_store.py"
+  },
+  "observations": [
+    "Argus main 30545a8e099ec99af63df6c3c976abc1885390bf still implements JsonlEventSink canonical append with a process-local threading.Lock plus POSIX fcntl flock on events.lock; the inspected sink does not call Portalocker or a shared core event-authority helper.",
+    "AgentIOLogger still writes through _jsonl_append under an instance-local threading.Lock and does not acquire the JsonlEventSink events.lock authority in the inspected implementation.",
+    "The proposed argus_skill/core/event_store.py path is absent at this exact main commit.",
+    "Argus pyproject.toml currently declares portalocker>=3, not a >=4.0 or >=4.2 floor. Therefore the project dependency contract does not guarantee the raw-descriptor Windows byte-zero behavior that the earlier primary audit found documented from Portalocker 4.0.0 onward.",
+    "These first-party source observations are sufficient to show that candidate009's proposed shared canonical event-authority implementation is not present in the inspected current main under the proposed design shape."
+  ],
+  "inference": "Candidate009 remains not cleared as a dependency-elimination route. The Portalocker low-level API shape was previously source-verified, but current Argus main does not yet provide the proposed shared authority across the inspected canonical writers, and its dependency floor remains too broad to guarantee the documented 4.x raw-descriptor Windows behavior. This is an implementation/provenance gap, not evidence that the design is impossible.",
+  "uncertainty": [
+    "This bounded slice inspected the two primary canonical-writer surfaces named by the candidate and the dependency declaration; it did not exhaustively search every Argus file for a differently named equivalent abstraction.",
+    "No runtime Windows contention test, crash-tail fault injection, migration-contention test, or post-commit unlock-failure test was executed in this primary-source-only slice.",
+    "Absence of the proposed file path alone is not proof that no equivalent implementation exists elsewhere; the stronger negative here is that both inspected writer implementations still visibly use their prior independent locking paths."
+  ],
+  "gates": {
+    "primary_source_identity_validated": true,
+    "primary_source_provenance_validated": true,
+    "shared_event_authority_implementation_validated": false,
+    "portalocker_dependency_floor_sufficiently_constrained": false,
+    "residual_work_or_protected_primary_dependency_proved_zero": false,
+    "finite_monthly_trial_paid_quota_dependency_proved_zero": false,
+    "incremental_monetary_cost": 0,
+    "route_cleared": false,
+    "enabled_desired": true,
+    "phase1_completion_claimed": false,
+    "global_completion": false,
+    "scheduler_mutation_by_worker": false
+  },
+  "continuation": "On the next invocation, re-read current controls and candidate provenance. For candidate009, verify a later Argus main only if it introduces a shared event-authority implementation across JsonlEventSink and AgentIO canonical writes (and migration if in scope), with a dependency floor that guarantees the required Portalocker semantics plus regression evidence for contention, tail isolation and cleanup behavior. Otherwise select the next exact high-value dependency-elimination candidate whose primary implementation evidence is available; preserve exact scope and fail closed.",
+  "termination": "bounded_slice_complete_recurring_open"
+}
