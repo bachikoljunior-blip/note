@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "worker": "cross_field",
+  "generation": "clean_g1",
+  "logical_revision": 294,
+  "created_at": "2026-09-08T21:18:25+09:00",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 126,
+    "manifest_blob_sha": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_control_revision": 3,
+    "run_lifecycle_blob_sha": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "desired_path": "automation_control/DESIRED_STATE.json",
+    "desired_control_revision": 27,
+    "desired_blob_sha": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "role_path": "automation_control/roles/cross_field.json",
+    "role_control_revision": 17,
+    "role_config_revision": 8,
+    "role_blob_sha": "fd9bcd6e7ffe06fe5b854e08af6158279c80fffc",
+    "transport_mode": "exact_blob_two_pass",
+    "bootstrap_valid": true,
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-cross-field-transversal-solutions",
+  "predecessor_latest_blob_sha": "e9880b64f748c2b70305873a01b5de286f76c137",
+  "slice": {
+    "leaf": "Audit the OpenTimestamps public-calendar submission protocol for the minimum unauthenticated immediate timestamp-creation contract, retry/idempotency behavior, quota/cost properties, and scheduled-Chat transport fit without submitting anything.",
+    "action": "Public-primary-source protocol audit only; no timestamp submission, plugin installation/connection, protected/manual execution, scheduler mutation, O/downstream/other-worker semantic read, or external paid/quota-bearing compute was used.",
+    "sources": [
+      {
+        "source": "OpenTimestamps official website",
+        "url": "https://opentimestamps.org/",
+        "observation": "Public calendar servers are described as free to use and requiring no registration or API key; default calendars are exposed for timestamp creation.",
+        "retrieved_at": "2026-09-08T21:18:25+09:00"
+      },
+      {
+        "source": "opentimestamps/python-opentimestamps opentimestamps/calendar.py",
+        "url": "https://github.com/opentimestamps/python-opentimestamps/blob/master/opentimestamps/calendar.py",
+        "blob_sha": "c5686d63b0c16989fcdf7a9d2d6c8d45bcb22b5c",
+        "observation": "RemoteCalendar.submit constructs an HTTP request to <calendar>/digest with the raw digest as request body, headers Accept: application/vnd.opentimestamps.v1 and User-Agent, requires HTTP 200, reads at most 10000 response bytes, and deserializes the response as a Timestamp committing to the submitted digest. No authentication parameter or API key is part of this client contract."
+      },
+      {
+        "source": "opentimestamps/opentimestamps-server otsserver/rpc.py",
+        "url": "https://github.com/opentimestamps/opentimestamps-server/blob/master/otsserver/rpc.py",
+        "blob_sha": "4556cd0739f70c9c9390bd3be94423e9222972cb",
+        "observation": "POST /digest accepts Content-Length convertible to an integer from 0 through 64 inclusive, reads exactly that many raw bytes, submits them to the aggregator, and on success returns HTTP 200 application/octet-stream containing the serialized timestamp. Invalid length returns HTTP 400."
+      },
+      {
+        "source": "opentimestamps/opentimestamps-server otsserver/calendar.py",
+        "url": "https://github.com/opentimestamps/opentimestamps-server/blob/master/otsserver/calendar.py",
+        "blob_sha": "8c6be68c14dd5f1231cbf81647144e9453d8a61e",
+        "observation": "Aggregator.submit wraps each submitted message with nonce_timestamp before aggregation; nonce_timestamp uses a fresh 16-byte os.urandom nonce. JournalWriter appends commitments and fsyncs them. Therefore repeating the same digest is not byte-for-byte idempotent: each accepted retry can create a distinct pending proof/commitment path rather than recovering the first lost response."
+      }
+    ],
+    "minimum_submission_contract": {
+      "method": "POST",
+      "path": "/digest relative to an allowed public calendar base URL",
+      "request_body": "raw digest bytes; server accepts 0..64 bytes, while the normal OTS file-hash path uses a cryptographic digest such as SHA-256",
+      "required_client_header_observed": "Accept: application/vnd.opentimestamps.v1",
+      "user_agent_observed": "python-opentimestamps by default; not evidenced as authentication",
+      "authentication": "none in the official client/public-calendar contract",
+      "success_status": 200,
+      "success_content_type": "application/octet-stream",
+      "success_body": "serialized OpenTimestamps Timestamp committing to the submitted digest",
+      "client_response_limit_observed_bytes": 10000
+    },
+    "retry_and_idempotency": {
+      "protocol_idempotency_key": "none observed",
+      "same_digest_retry_semantics": "NOT_IDEMPOTENT_BY_PROOF_BYTES_OR_SERVER_APPEND; a fresh nonce is generated per accepted submission, so a retry may create another valid independent pending timestamp path.",
+      "lost_response_recovery": "No source-qualified endpoint was found that lets a client recover the first submission from only the original digest after losing its serialized response, because the server-side nonce is fresh and not derivable from the digest.",
+      "safe_client_rule": "Treat submission as at-least-once. Persist any successful serialized proof before considering another attempt. If an earlier response is unknown, a later retry should be recorded as a new stamp attempt, not as idempotent replay or proof recovery. Do not same-run retry under RUN_LIFECYCLE."
+    },
+    "candidate_assessment": {
+      "expected_completion_time": "low at protocol level: one small HTTP POST plus local proof persistence; blockchain completion remains asynchronous",
+      "success_probability": "high for protocol simplicity but current scheduled-Chat transport availability is unproven",
+      "conflict_duplication_risk": "medium: raw POST is simple, but retries can create duplicate independent proofs unless client-local idempotency state is enforced",
+      "integration_cost": "low if an already-exposed arbitrary HTTPS binary POST transport exists; otherwise unresolved",
+      "finite_monthly_trial_paid_quota_dependency": "NONE_REQUIRED_BY_DOCUMENTED_PUBLIC_CALENDAR_CONTRACT: official service states free use with no registration/API key. This does not prove unlimited availability or absence of operational rate limiting.",
+      "incremental_monetary_cost": 0,
+      "residual_richer_mode_protected_or_manual_execution_dependency": "UNRESOLVED_FOR_IMMEDIATE_CREATION because this scheduled-Chat run exposes no proven arbitrary HTTPS POST surface to the calendar endpoint.",
+      "candidate_phase1_acceptance": "FAIL_CLOSED"
+    },
+    "tested_scope": "Only the public OpenTimestamps calendar HTTP submission contract and its source-visible retry/idempotency semantics were audited. No live calendar request was sent and no claim is made about current calendar uptime, hidden service limits, or a currently exposed Chat transport beyond the tools actually observed in this run.",
+    "conflict_check": "CLEAN boundary preserved; only public primary sources and cross_field own state/control were consumed. No O, downstream, other-worker semantics, aggregate ledger, or other-role receipts were read."
+  },
+  "frontier": [
+    "OpenTimestamps now has a source-qualified minimal unauthenticated submission contract: raw digest POST to /digest, HTTP 200 binary serialized proof response, no registration/API key in the documented public-calendar path.",
+    "The public-calendar contract is documented as free with no account/API-key requirement, so no finite monthly/trial/paid quota is required by that contract and incremental monetary cost is zero; operational rate limits/availability are not proven away.",
+    "Submission is at-least-once rather than idempotent: repeated same-digest POSTs can produce distinct proof paths because the aggregator adds a fresh random nonce per submission.",
+    "Immediate independent-witness creation remains unresolved only at the scheduled-Chat transport layer: this run did not expose a generic arbitrary HTTPS binary POST capability to the public calendar."
+  ],
+  "exact_continuation": "Fresh-bootstrap current manifest/lifecycle/root/config and reconstruct r294 from LATEST. Execute exactly one bounded CLEAN child: audit currently installable/connected Chat-capable generic HTTP or webhook transports for an unauthenticated binary POST primitive that can send a 32-byte digest to an allowlisted OpenTimestamps calendar and return raw response bytes, without finite monthly/trial/paid quota, incremental cost, protected authority, or manual-user execution. Do not install/connect anything and do not submit a real digest. If no qualifying transport contract is discoverable, persist the exact missing transport capability and keep OpenTimestamps protocol-level candidate unresolved rather than treating it as impossible.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false
+}
