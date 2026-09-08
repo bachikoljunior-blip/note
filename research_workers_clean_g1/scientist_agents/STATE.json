@@ -2,9 +2,9 @@
   "schema_version": 1,
   "generation": "clean_g1",
   "worker": "scientist_agents",
-  "updated_at": "2026-09-09T02:31:19+09:00",
-  "current_checkpoint": "STATE.json:inline:p1-sa-427",
-  "previous_checkpoint": "STATE.json:inline:p1-sa-426",
+  "updated_at": "2026-09-09T05:34:07+09:00",
+  "current_checkpoint": "STATE.json:inline:p1-sa-428",
+  "previous_checkpoint": "STATE.json:inline:p1-sa-427",
   "control_revision": 126,
   "config_revision": 6,
   "phase_id": "phase_1_chat_parity",
@@ -24,7 +24,7 @@
     "role_control_revision": 9,
     "role_config_revision": 6,
     "role_config_blob": "4f2177f5164ecf7880d4d07485811db1673b2e9e",
-    "frozen_note_main_sha": "55a9e48411e2c1c6d4966d9976577b5a33db06e3",
+    "frozen_note_main_sha": "7d2bf75774afe54747ba97a7aedb9b58d1479fbb",
     "two_matching_sha_only_ref_observations": true,
     "transport_mode": "sha_only_ref_freeze",
     "bootstrap_valid": true,
@@ -32,52 +32,52 @@
     "independence_class": "clean_exploration"
   },
   "source_state_refs": {
-    "prior_state_blob": "c963d0035cf4ad485428890d24ba40b4f5a30d0c",
-    "prior_checkpoint": "STATE.json:inline:p1-sa-426",
-    "prior_semantic_finding_id": "p1-sa-426"
+    "prior_state_blob": "b0f50b7a55dd5a1456f49f60b7c00c289ed8db2a",
+    "prior_checkpoint": "STATE.json:inline:p1-sa-427",
+    "prior_semantic_finding_id": "p1-sa-427"
   },
   "latest_semantic_finding": {
-    "id": "p1-sa-427",
-    "kind": "official_groq_sdk_base_client_builds_base_url_http_requests_and_sends_them_via_http_client",
-    "candidate_scope": "official groq/groq-python src/groq/_base_client.py at pinned commit 55066d94acca028c3cb74e050f2711b80ade6298, interpreted only with own prior p1-sa-426 state",
+    "id": "p1-sa-428",
+    "kind": "official_groq_sdk_tests_exercise_inprocess_custom_mock_transport_for_raw_response_path",
+    "candidate_scope": "official groq/groq-python tests/test_client.py at pinned commit 55066d94acca028c3cb74e050f2711b80ade6298, interpreted only with own prior p1-sa-427 state",
     "public_source_ids": [
-      "github:groq/groq-python:55066d94acca028c3cb74e050f2711b80ade6298:src/groq/_base_client.py"
+      "github:groq/groq-python:55066d94acca028c3cb74e050f2711b80ade6298:tests/test_client.py:blob:3da59ad95170e704b561e641e10509db4128a60b"
     ],
-    "observation": "The inspected BaseClient stores base_url as an httpx URL and _prepare_url merges relative request paths onto that base_url. SyncAPIClient is typed as BaseClient[httpx.Client, Stream[Any]] with _client: httpx.Client. Its request execution path calls self._client.send(request, ...), and the asynchronous path calls await self._client.send(request, ...). The same file defines the default synchronous client as an httpx.Client subclass and exposes an aiohttp-backed alternative through HTTP-client adapter plumbing.",
-    "inference": "For this exact SDK base-client artifact, ordinary Groq SDK execution is network/request-client oriented: requests are built against base_url and dispatched through an HTTP client rather than executing model inference inside the SDK base client. No model-inference implementation or direct non-request execution path was identified in the inspected file. This materially strengthens the residual hidden-executor finding from p1-sa-426. However, because the SDK accepts a caller-supplied HTTP client, this file alone does not rule out an in-process custom/mock transport that replays prepackaged responses without an external endpoint.",
-    "uncertainty": "Only src/groq/_base_client.py at the pinned official commit was used as the new semantic artifact. Custom httpx transports, official tests exercising mock/in-process transports, response-package completeness, whether replayed responses can preserve the useful outcome, custom endpoint authentication semantics, pricing/quota terms, runtime traces and alternate providers were not inspected. Therefore an in-process replay transport remains unresolved, and finite-quota independence, incremental cost, replayability and useful-outcome parity remain unverified.",
+    "observation": "The official test file defines a MockTransport implementing both httpx.BaseTransport and httpx.AsyncBaseTransport; its request handlers return httpx.Response objects directly. The synchronous and asynchronous binary-upload tests instantiate Groq/AsyncGroq with caller-supplied httpx clients whose transport is that MockTransport, then call client.post and receive the transport-produced response. The test fixture uses a dummy API key string.",
+    "inference": "For the exact raw-response test path, the Groq SDK demonstrably supports an injected in-process transport that can satisfy the SDK request path without an external endpoint, so the ordinary HTTP dispatch identified in p1-sa-427 is not intrinsically tied to hosted network execution. The custom handler also does not validate bearer credentials, although the SDK constructor still requires a non-None key string. This removes the specific uncertainty about whether caller-supplied in-process transport is actually exercised by the SDK. It does not establish that a packaged high-level chat/completions response can be replayed through the same mechanism with full typed parsing or useful-outcome parity.",
+    "uncertainty": "Only tests/test_client.py at the pinned official commit was used as the new semantic artifact. The observed custom-transport cases replay raw upload responses cast to httpx.Response rather than a high-level model response. No chat/completions fixture, response-package completeness, typed parsing, stream replay, semantic useful-outcome equivalence, production credential behavior, alternate provider, pricing/quota terms, or runtime trace was inspected. Therefore useful-outcome replayability and full Phase-1 acceptance remain unresolved.",
     "semantic_progress_claimed": true
   },
   "phase1_gates": {
-    "residual_execution_dependency": "not passing for the ordinary SDK path: base_url requests are dispatched through an HTTP client; whether a caller-supplied in-process replay transport can eliminate the external executor is unresolved",
-    "finite_monthly_trial_paid_quota_dependency": "unverified and therefore not passing",
-    "incremental_monetary_cost": "unverified and therefore not passing",
-    "hidden_executor_absence": "not established for the ordinary path; actual request dispatch is through an HTTP client to a prepared base_url, while custom in-process transport injection remains untested",
-    "credential_dependency": "carried from own p1-sa-426: SDK construction requires a non-None API key independent of base_url choice; current leaf did not test whether an in-process/custom transport can ignore bearer validity",
+    "residual_execution_dependency": "partially reduced but not passing globally: the exact raw-response path can be satisfied by an in-process custom transport with no external endpoint, but high-level useful-outcome replay through such a transport is not yet established",
+    "finite_monthly_trial_paid_quota_dependency": "the source-defined in-process mock path itself does not invoke a hosted service, but useful-outcome parity for a quota-zero accepted route remains unverified and therefore not passing",
+    "incremental_monetary_cost": "the source-defined in-process mock path itself has no evidenced external paid-service step, but a complete useful-outcome route remains unverified and therefore the global gate is not passing",
+    "hidden_executor_absence": "established only for the exact custom MockTransport raw-response path; not established for a complete high-level useful outcome",
+    "credential_dependency": "for the exact custom-transport test path a dummy API key string is accepted and the in-process handler performs no bearer validation; the SDK still syntactically requires a non-None key string, and high-level replay remains untested",
     "accepted_route": false
   },
   "problem_accounting": {
     "forecast_active_children_before_slice": 5,
-    "actual_active_children_after_slice": 5,
+    "actual_active_children_after_slice": 4,
     "forecast_exceeded": false,
-    "bounded_leaf": "determine whether the Groq SDK base client actually dispatches through HTTP to base_url and whether this artifact exposes an in-process inference path",
-    "method": "direct official-source audit of exactly one pinned artifact plus inseparable same-artifact symbol verification",
+    "bounded_leaf": "determine whether caller-supplied http_client is actually exercised with an in-process/mock transport and whether that mechanism can satisfy an SDK request without an external endpoint",
+    "method": "direct official-source audit of exactly one pinned artifact plus inseparable same-artifact symbol/context verification",
     "alternative_method_switch": false
   },
-  "conflict_check": "CLEAN isolation preserved: sanitized manifest/lifecycle/root/config, own scientist_agents STATE, SHA-only note-main identity, and exactly one pinned official Groq SDK source file used semantically; no O, downstream, other-worker, comparator, integrator, index/feed, legacy, shared-ledger or other-role receipt/config semantics used.",
+  "conflict_check": "CLEAN isolation preserved: sanitized manifest/lifecycle/root/config, own scientist_agents STATE, SHA-only note-main identity, and exactly one pinned official Groq SDK test file used semantically; no O, downstream, other-worker, comparator, integrator, index/feed, legacy, shared-ledger or other-role receipt/config semantics used.",
   "run_audit": {
-    "start": "2026-09-09T02:31:19+09:00",
+    "start": "2026-09-09T05:34:07+09:00",
     "actions": [
       "bootstrapped current INSTRUCTION_CONTROL_MANIFEST control126 and RUN_LIFECYCLE control3",
-      "obtained and froze note main SHA 55a9e48411e2c1c6d4966d9976577b5a33db06e3 with matching pre-semantic ref observations",
+      "obtained and froze note main SHA 7d2bf75774afe54747ba97a7aedb9b58d1479fbb with matching pre-semantic ref observations",
       "refetched and froze DESIRED_STATE control27 and scientist_agents control9/config6 at the frozen SHA",
-      "reconstructed own STATE p1-sa-426",
-      "followed the exact p1-sa-426 continuation and inspected only pinned official groq/groq-python src/groq/_base_client.py at 55066d94acca028c3cb74e050f2711b80ade6298",
-      "verified same-artifact symbols showing base_url URL preparation, SyncAPIClient httpx typing and sync/async _client.send request dispatch"
+      "resolved role-local continuation through STATE p1-sa-427 after LATEST was absent",
+      "followed the exact p1-sa-427 continuation and inspected only pinned official groq/groq-python tests/test_client.py at 55066d94acca028c3cb74e050f2711b80ade6298",
+      "verified same-artifact MockTransport definition and sync/async Groq custom-http-client uses returning in-process httpx.Response objects"
     ],
     "outputs": [
-      "STATE.json:inline:p1-sa-427",
-      "automation_control/receipts/scientist_agents/receipt_2026-09-09T023119_JST_p1-sa-427.json"
+      "STATE.json:inline:p1-sa-428",
+      "automation_control/receipts/scientist_agents/receipt_2026-09-09T053407_JST_p1-sa-428.json"
     ],
     "blocker": null
   },
@@ -89,5 +89,5 @@
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
   "next_invocation_resumes_exact_continuation": true,
-  "exact_next_action": "Next invocation perform a fresh valid authority freeze and reconstruct p1-sa-427. Use exactly one pinned official primary artifact from groq/groq-python, tests/test_client.py at the same pinned commit if still source-qualified and current for this continuation, as the sole new semantic artifact to determine only whether caller-supplied http_client is exercised with an in-process/mock transport and whether that transport can replay a packaged API response without an external endpoint. Do not inspect pricing/quota material, runtime service traces, another candidate, or a second semantic artifact in the same invocation. If the exact artifact cannot be fetched, record the missing capability as the sole bounded diagnostic."
+  "exact_next_action": "Next invocation perform a fresh valid authority freeze and reconstruct p1-sa-428. Use exactly one pinned official primary artifact from groq/groq-python that exercises a high-level parsed chat/completions response path; prefer a source-qualified test file that calls client.chat.completions.create or equivalent and can be combined with caller-supplied MockTransport without opening a second semantic artifact. Determine only whether a packaged API JSON response can be replayed entirely in-process while preserving SDK typed parsing/useful response structure. Do not inspect pricing/quota material, runtime service traces, another provider, or a second semantic artifact in the same invocation. If no such single artifact can be source-qualified, record that exact evidence gap as the sole bounded diagnostic."
 }
