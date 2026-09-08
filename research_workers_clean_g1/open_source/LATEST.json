@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 232,
-  "semantic_parent_revision": 231,
-  "supersedes_worker_revision": 231,
+  "worker_revision": 233,
+  "semantic_parent_revision": 232,
+  "supersedes_worker_revision": 232,
   "control_revision": 27,
   "config_revision": 7,
   "instruction_manifest_control_revision": 126,
   "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
   "lifecycle_control_revision": 3,
   "lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-  "authority_revalidation_main_sha": "fb00fb923527b43ce2499cf93c448e143a6e0b4b",
+  "authority_revalidation_main_sha": "4950f143c3d31f487478761e933ad467462c5928",
   "bootstrap_valid": true,
   "enabled_desired": true,
   "status": "bounded_semantic_slice_recurring_open",
@@ -20,17 +20,17 @@
   "role_config_path": "automation_control/roles/open_source.json",
   "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
   "checkpoint_path": "research_workers_clean_g1/open_source/LATEST.json",
-  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-09T050727_JST_worker232.json",
-  "receipt_blob": "4c76e96a84ef871d452a127bcd44756a09df0ccc",
-  "result": "At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, the non-initialize first-request branch in serve_server_with_ct_inner checks request _meta with missing_required_keys(V_2026_07_28) and rejects missing or malformed required metadata. For an accepted request it constructs Peer with peer_info=None, calls require_request_metadata(), moves the request metadata into RequestContext, and dispatches service.handle_request. Therefore, in this exact stateless/non-initialize branch, no initialized peer_info exists against which per-request protocolVersion or clientCapabilities could be equality/consistency checked before handler dispatch; structural required-metadata validation is the observed gate. This does not establish the behavior of the post-initialize serve_inner path or exclude normalization/consistency checks elsewhere.",
+  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-09T060909_JST_worker233.json",
+  "receipt_blob": "740a05440162605b00249be5093ef9fbb99241fa",
+  "result": "At pinned modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, generic post-initialize serve_inner performs only R::enforce_peer_request_association before dispatching an inbound decoded request. ServiceRole's default receive-side hook returns Ok(()), and RoleServer does not override it. serve_inner moves request metadata into RequestContext and invokes Service::handle_request without comparing or normalizing request-meta protocolVersion/clientCapabilities against initialized peer_info. RequestContext<RoleServer> uses request-scoped protocolVersion first and, when request metadata is required, uses request-scoped client_info/client_capabilities rather than handshake fallback. Thus no peer_info consistency/equality gate for those fields is observed in this exact post-initialize dispatch path; earlier decode/structural validation or handler-level rejection remains unresolved.",
   "source": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
-    "paths": ["crates/rmcp/src/service/server.rs"],
-    "symbols": ["serve_server_with_ct_inner","RequestMetaObject::missing_required_keys","Peer::require_request_metadata","Service::handle_request"]
+    "paths": ["crates/rmcp/src/service.rs", "crates/rmcp/src/service/server.rs"],
+    "symbols": ["serve_inner", "ServiceRole::enforce_peer_request_association", "RoleServer", "RequestContext<RoleServer>::protocol_version", "RequestContext<RoleServer>::client_capabilities"]
   },
   "source_scope": "Own clean LATEST, required sanitized controls, own role config, and pinned public rust-sdk source only. No O, other-worker, downstream, legacy, shared-ledger, other-role semantic input, or protected-primary semantic input was used.",
-  "scope_guard": "Positive evidence is limited to the pinned server.rs stateless/non-initialize request branch. No post-initialize serve_inner behavior, deployed-server behavior, authentication, ChatGPT exposure, network-byte behavior, complete session-state equivalence, or absence of checks in other files/functions is claimed.",
+  "scope_guard": "Evidence is limited to the pinned source-level post-initialize generic dispatch path and RoleServer/default hook definitions. No deployed-server behavior, authentication, ChatGPT exposure, network-byte acceptance, transport decoder behavior, handler-level validation, complete MCP conformance, or end-to-end parity is claimed.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -42,6 +42,6 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "remaining_unresolved_child": "Trace the post-initialize serve_inner inbound ClientRequest path at the same pinned commit to determine whether request-meta protocolVersion/clientCapabilities are compared with, normalized against, or otherwise constrained by initialized peer_info before Service::handle_request dispatch.",
-  "exact_continuation": "Next invocation: preserve CLEAN bootstrap and exact SHA-only authority freeze. At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, inspect the generic post-initialize serve_inner inbound ClientRequest path immediately after decode/meta validation and before Service::handle_request. Search specifically for comparisons or normalization between request meta protocolVersion/clientCapabilities and peer_info/session state. Determine whether a supported-but-different protocolVersion or structurally valid-but-different clientCapabilities is accepted, rejected, or normalized before dispatch. Preserve exact source scope only; do not broaden to deployment, authentication, ChatGPT exposure, quota/cost, or end-to-end parity."
+  "remaining_unresolved_child": "Determine whether structurally valid request metadata carrying a supported-but-different protocolVersion or different clientCapabilities is rejected during decode/structural validation before generic serve_inner, or reaches serve_inner unchanged.",
+  "exact_continuation": "Next invocation: preserve CLEAN bootstrap and exact SHA-only authority freeze. At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, inspect RequestMetaObject/ProtocolVersion/clientCapabilities decoding and any inbound validation executed before generic serve_inner dispatch. Determine whether a structurally valid request carrying a supported-but-different protocolVersion or different clientCapabilities can deserialize and reach serve_inner unchanged, or is rejected earlier. Preserve exact source scope only; do not broaden to deployment, authentication, ChatGPT exposure, quota/cost, or end-to-end parity."
 }
