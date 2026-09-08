@@ -1,14 +1,15 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-08T10:23:18+09:00",
+  "timestamp": "2026-09-08T20:26:18+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
-    "manifest_control_revision": 125,
-    "manifest_blob": "989c257bed82571211af0d3d5f4012ba3064f162",
+    "main_sha": "363305401e940067cf0fe4b98584dcf0653fc75b",
+    "manifest_control_revision": 126,
+    "manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "desired_state_control_revision": 27,
@@ -16,47 +17,79 @@
     "reasoning_role_control_revision": 11,
     "reasoning_config_revision": 8,
     "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
-    "transport_mode": "exact_blob_two_pass",
+    "transport_mode": "main_sha_exact",
     "bootstrap_valid": true,
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "e2b27a4322fec93623fa9cbabab2a5780398d19d",
-  "predecessor_slice_id": "reasoning-20260908T052139+0900-stage-t-witness-idempotency-v1",
-  "slice_id": "reasoning-20260908T102318+0900-stage-t-evidence-verifier-contract-v1",
-  "selected_leaf": "Derive the minimal abstract verifier contract for target evidence E(w) that distinguishes target-authoritative durable commit proof from cached, local, stale-negative, or ambiguous evidence, without public web or external research.",
+  "predecessor_state_blob": "26e227ec971b45c34bbd83093ef4981e3b717149",
+  "predecessor_slice_id": "reasoning-20260908T102318+0900-stage-t-evidence-verifier-contract-v1",
+  "slice_id": "reasoning-20260908T202618+0900-stage-t-commit-attempt-protocol-v1",
+  "selected_leaf": "Derive the minimal abstract commit-attempt protocol that uses the frozen Stage T evidence verifier to decide among initial commit, same-witness retry, conflict, and unresolved observation without creating a second externally visible effect.",
   "bounded_leaf_result": {
-    "status": "semantic_stage_t_minimal_evidence_verifier_contract_derived",
-    "tested_scope": "Abstract targets satisfying the predecessor Stage T semantics: a unique logical-effect witness w, immutable target-side binding from w to intended payload digest d after commit, and some target-side read surface. No claim is made for concrete products or targets whose read surface is not target-authoritative, whose witness binding is mutable/reusable, or whose commit state is not durably queryable.",
-    "minimal_evidence_fields": {
-      "target_scope": "Stable target namespace/resource identity sufficient to prevent validating evidence from the wrong target.",
-      "witness": "Exact logical-effect witness w; the verifier requires equality with the intended witness.",
-      "payload_digest": "Exact digest d or equivalent canonical committed contents; the verifier requires equality with the intended payload.",
-      "commit_state": "A target-produced state asserting the effect is durably committed, not merely accepted, queued, attempted, or locally acknowledged.",
-      "commit_ref": "A stable target-side object/version/receipt identifier r that is durably bound to the committed witness mapping.",
-      "authority_provenance": "Evidence that the read came from the target-authoritative durable-state path rather than a client-local cache, speculative mirror, or local write response."
-    },
-    "verifier": {
-      "pass": "Return COMMIT_PROVEN_IN_SCOPE only when authority_provenance is target-authoritative, target_scope matches, witness == w, payload_digest == d (or canonical committed contents match), commit_state is durably committed, and commit_ref is present and bound to that evidence.",
-      "conflict": "Return CONFLICT when target-authoritative evidence for witness w is durably bound to a different payload digest or incompatible target scope. Never reinterpret this as a safe duplicate.",
-      "unverifiable_source": "Return UNRESOLVED_UNVERIFIABLE_SOURCE for local acknowledgements, client caches, mirrors without target authority, retry rejection alone, or evidence lacking a target-side durable commit reference.",
-      "absence_or_stale_negative": "Return UNRESOLVED_NOT_PROOF for missing/absent evidence, timeouts, or a possibly stale negative read unless the target contract independently guarantees that this read is current enough to prove non-commit. Absence is not commit failure proof under eventual consistency.",
-      "ambiguous": "Return UNRESOLVED_AMBIGUOUS for evidence that omits any required binding among target_scope, witness, payload, durable commit state, commit_ref, or authority provenance."
-    },
-    "freshness_rule": "Freshness is asymmetric. A target-authoritative positive read of an immutable, non-reusable witness binding to the exact payload remains valid commit evidence even if the observation is not the newest view, because later states cannot legally rebind that witness. By contrast, absence or other negative evidence from a possibly stale/eventually-consistent view cannot prove non-commit and must remain unresolved unless the target exposes a current/linearizable nonexistence guarantee.",
-    "minimality_argument": [
-      "Without target_scope, correct evidence from another target can be misapplied.",
-      "Without witness and payload binding, a prior or different effect can be mistaken for the intended effect.",
-      "Without durable commit_state, acceptance or acknowledgement can be mistaken for persistence.",
-      "Without commit_ref, the verifier cannot distinguish a durable target record from an ephemeral/local assertion.",
-      "Without authority_provenance, cached or local evidence can masquerade as target state."
+    "status": "semantic_stage_t_minimal_commit_attempt_protocol_derived",
+    "tested_scope": "Abstract targets satisfying the predecessor verifier scope and exposing either (a) a target-authoritative atomic idempotent/conditional commit operation keyed by immutable logical-effect witness w and payload digest d, or (b) a target-authoritative current/linearizable nonexistence proof followed by an atomic create-if-absent binding w to d. No concrete product/API is claimed to satisfy these semantics in this slice.",
+    "protocol_preconditions": [
+      "Freeze target_scope T, witness w, and intended payload digest d before any externally visible attempt; never rotate w because an observation is ambiguous.",
+      "The target must durably bind w to at most one committed payload within T, and that binding must be immutable/non-reusable for the protocol lifetime.",
+      "A commit attempt is permitted only if the target can collapse repeated same-(T,w,d) attempts into one logical effect, or if a target-authoritative current nonexistence proof plus atomic create-if-absent makes a first attempt unique.",
+      "Local acknowledgement, timeout, retry rejection, queue acceptance, or cached state is never commit proof; only the frozen verifier contract can classify durable target evidence."
     ],
-    "result": "Within the tested abstract scope, the smallest useful verifier is an exact binding check over {target_scope, witness, payload_digest-or-canonical-contents, durable commit_state, stable commit_ref, authority_provenance} with fail-closed classifications. This verifier separates duplicate suppression from commit proof and treats stale/negative ambiguity as unresolved rather than as success or failure.",
+    "state_machine": {
+      "VERIFY_BEFORE_ATTEMPT": "Read target-authoritative evidence E(w) and apply the frozen verifier.",
+      "COMMITTED": "If verifier returns COMMIT_PROVEN_IN_SCOPE for exact T,w,d, perform no commit and treat the logical effect as durably present in tested scope.",
+      "CONFLICT": "If verifier returns CONFLICT, perform no commit or retry; preserve the conflicting target binding as unresolved conflict evidence.",
+      "SAFE_ATTEMPT": "If commit is not proven and the target contract supplies atomic same-witness idempotence, one same-(T,w,d) commit attempt is safe even when the preceding negative/absence observation is stale. If idempotence is absent, SAFE_ATTEMPT requires a target-authoritative current nonexistence proof plus atomic create-if-absent.",
+      "VERIFY_PENDING": "After any attempt that is accepted, times out, returns an ambiguous transport result, or otherwise lacks target-authoritative durable proof, do not create another witness or alternate effect. Persist T,w,d and require verifier re-observation before any later decision.",
+      "SAME_WITNESS_RETRY": "On a later recurrence, a retry may repeat only exact T,w,d and only when the target contract guarantees same-witness idempotence/conditional collapse. The retry itself is not proof and returns to VERIFY_PENDING until target-authoritative evidence passes the verifier.",
+      "UNRESOLVED_UNSAFE": "If evidence is unresolved and neither atomic same-witness idempotence nor current-nonexistence-plus-create-if-absent is available, perform no commit. The missing target semantic is an unresolved child rather than a handoff solution."
+    },
+    "decision_table": [
+      {
+        "verifier_class": "COMMIT_PROVEN_IN_SCOPE",
+        "allowed_action": "no-op; committed in tested scope",
+        "new_external_effect_allowed": false
+      },
+      {
+        "verifier_class": "CONFLICT",
+        "allowed_action": "stop this logical effect as conflict; no retry",
+        "new_external_effect_allowed": false
+      },
+      {
+        "verifier_class": "UNRESOLVED_UNVERIFIABLE_SOURCE|UNRESOLVED_NOT_PROOF|UNRESOLVED_AMBIGUOUS",
+        "target_has_atomic_same_witness_idempotence": true,
+        "allowed_action": "at most one exact same-(T,w,d) attempt in the bounded invocation, then VERIFY_PENDING",
+        "new_external_effect_allowed": "logically no second effect under the stated target contract"
+      },
+      {
+        "verifier_class": "UNRESOLVED_UNVERIFIABLE_SOURCE|UNRESOLVED_NOT_PROOF|UNRESOLVED_AMBIGUOUS",
+        "target_has_atomic_same_witness_idempotence": false,
+        "current_nonexistence_plus_atomic_create_if_absent": true,
+        "allowed_action": "one create-if-absent attempt bound to T,w,d, then VERIFY_PENDING",
+        "new_external_effect_allowed": "one first logical effect only under the stated atomicity contract"
+      },
+      {
+        "verifier_class": "UNRESOLVED_UNVERIFIABLE_SOURCE|UNRESOLVED_NOT_PROOF|UNRESOLVED_AMBIGUOUS",
+        "target_has_atomic_same_witness_idempotence": false,
+        "current_nonexistence_plus_atomic_create_if_absent": false,
+        "allowed_action": "no commit; UNRESOLVED_UNSAFE",
+        "new_external_effect_allowed": false
+      }
+    ],
+    "crash_window_invariant": "At every crash/restart boundary, durable local continuation must retain exact T,w,d and protocol state. Until COMMIT_PROVEN_IN_SCOPE or CONFLICT is observed, no transition may mint a new witness for the same intended logical effect. Therefore an ambiguous post-attempt crash can cause only verifier replay or an idempotent same-witness retry, not a second logical effect.",
+    "proof_sketch": [
+      "If target evidence proves exact T,w,d committed, the protocol performs no further mutation.",
+      "If target evidence proves w bound incompatibly, the protocol performs no mutation.",
+      "If evidence is ambiguous, mutation is allowed only under a target primitive that atomically collapses exact same-witness attempts or under current nonexistence plus create-if-absent.",
+      "All post-attempt uncertain outcomes transition to VERIFY_PENDING with the same witness, so transport uncertainty cannot authorize witness rotation.",
+      "Consequently, within the tested abstract scope, repeated invocations can produce at most one logical target effect for the frozen witness; any target lacking the required atomic/idempotent semantic remains unresolved."
+    ],
+    "result": "A minimal safe commit-attempt architecture is verifier-first plus a frozen witness and a target-side atomic single-witness commit primitive. The verifier decides proven-commit/conflict; ambiguity never authorizes a new witness. Initial attempt and retry share the exact same T,w,d, and every unproven attempt returns to VERIFY_PENDING. Without target-authoritative idempotence or current-nonexistence-plus-create-if-absent, the protocol must fail closed rather than risk a second externally visible effect.",
     "unresolved_conditions": [
-      "Concrete targets must expose semantics strong enough to establish authority_provenance and durable commit_ref; otherwise commit proof remains unresolved.",
-      "Targets that allow witness reuse or mutable witness-to-payload rebinding remain unresolved because stale positive evidence can become unsafe.",
-      "Targets with eventually-consistent reads but no current/nonexistence guarantee cannot use absent evidence to prove non-commit."
+      "Concrete targets must be audited for true atomic same-witness idempotence or equivalent create-if-absent semantics; client-generated idempotency labels without target enforcement are insufficient.",
+      "Concrete targets must expose the target-authoritative evidence fields required by the predecessor verifier; an idempotent write primitive without durable readback is insufficient for commit proof.",
+      "The next local proof obligation is to specify the minimal durable checkpoint fields/state transitions that preserve T,w,d and forbid witness rotation across restart before COMMIT_PROVEN_IN_SCOPE or CONFLICT."
     ],
     "positive_phase1_evidence_from_this_slice": true,
     "prior_scientific_result_preserved": true
@@ -88,5 +121,5 @@
     "continuation_nonempty": true,
     "diagnostic_only": false
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260908T102318+0900-stage-t-evidence-verifier-contract-v1. Execute exactly one bounded next Stage T leaf: derive the minimal commit-attempt protocol that uses the verifier contract to decide among initial commit, same-witness retry, conflict, and unresolved observation without creating a second externally visible effect. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260908T202618+0900-stage-t-commit-attempt-protocol-v1. Execute exactly one bounded next Stage T leaf: derive the minimal durable checkpoint schema and transition guard that preserves exact target_scope T, witness w, payload digest d, protocol state, and last verifier classification across restart, and prove that no restart path can rotate w or authorize a second logical effect before COMMIT_PROVEN_IN_SCOPE or CONFLICT. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
 }
