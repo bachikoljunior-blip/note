@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "role": "reasoning",
+  "created_at": "2026-09-08T11:25:13+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "phase1-clean-reasoning-direct-architecture",
+  "mode": "persistence_recovery_micro_slice",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "exact_blob_two_pass",
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_control_revision": 125,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_control_revision": 27,
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "role_config_path": "automation_control/roles/reasoning.json",
+    "role_control_revision": 11,
+    "role_config_revision": 8,
+    "role_config_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
+    "authority_match": true
+  },
+  "slice": {
+    "leaf": "crash-window ordering between Chat-native checkpoint/CAS readback and an externally visible effect",
+    "method": "direct architecture/falsification analysis only; no public-web call, no O/downstream/other-worker semantic input",
+    "tested_scope": "A recurring Chat actor can write role-local repository state through the GitHub contents surface and can exact-read it back before taking a later effect. The test asks what this ordering alone proves about an arbitrary externally visible effect across crashes.",
+    "architecture_tested": [
+      "1. Persist intent/checkpoint with an idempotency key in role-local repository state.",
+      "2. Exact-read back the committed checkpoint before any externally visible effect.",
+      "3. Perform the externally visible effect using the same idempotency key when the effect surface supports it.",
+      "4. Persist an effect receipt after observing effect success."
+    ],
+    "verified_result": "Repository checkpoint readback can enforce the one-way safety property 'no externally visible effect is attempted before durable checkpoint success'. It does not, by itself, prove exactly-once execution for an arbitrary external effect: a crash after the effect succeeds but before the effect receipt is durable leaves the next invocation unable to distinguish 'effect happened' from 'effect did not happen' unless the effect surface itself provides an idempotent/queryable transaction keyed by the durable idempotency key, or the externally visible outcome is itself derived from the committed repository state.",
+    "direct_architecture_consequence": "A zero-Work, zero-finite-quota, zero-cost Chat-native architecture can close this crash window only for effect classes that are either (a) repository-state-derived/observer-consumed, or (b) exposed through a Chat-capable idempotent or queryable effect API. For arbitrary non-idempotent external effects, the exact missing capability remains cross-surface atomicity or effect-side idempotency/queryability; packaging a manual/protected/richer-mode executor as a handoff is not a solution.",
+    "falsification_condition": "This result would be falsified by a Chat-capable zero-cost effect surface that provides atomic commit with the repository checkpoint, or an effect-side idempotency/query API sufficient to resolve the post-effect/pre-receipt crash window without richer-mode, protected-primary, manual-user, or finite-quota execution.",
+    "scientific_progress_credit": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "dependency_assessment": {
+    "residual_richer_mode_protected_manual_execution_dependency": "0 for repository-derived effects; unresolved for arbitrary non-idempotent external effects",
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "conflict_check": "role-local write only; no scheduler, O, downstream, other-role, or protected-primary mutation"
+  },
+  "lifecycle": {
+    "enabled_desired": true,
+    "scheduler_mutation_by_worker": false,
+    "termination": "persistence_recovery_micro_slice_recurring_open",
+    "hard_runtime_boundary_reached": false,
+    "continuation_nonempty": true
+  },
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning LATEST/STATE or the newest source-qualified role-local checkpoint, then execute exactly one bounded reasoning leaf: test the observer-consumed repository-state variant against duplicate consumer reads and stale checkpoint versions, proving whether versioned CAS plus an idempotency key is sufficient for at-most-once materialization without any external transaction service. Persist exact tested scope and any remaining unresolved capability; do not start a second leaf."
+}
