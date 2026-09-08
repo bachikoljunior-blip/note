@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "role": "open_source",
-  "worker_revision": 226,
-  "semantic_parent_revision": 225,
-  "supersedes_worker_revision": 225,
+  "worker_revision": 227,
+  "semantic_parent_revision": 226,
+  "supersedes_worker_revision": 226,
   "control_revision": 27,
   "config_revision": 7,
   "instruction_manifest_control_revision": 126,
   "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
   "lifecycle_control_revision": 3,
   "lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-  "authority_revalidation_main_sha": "6c36b9dc42bdfbae598c1237c81ce82bd0aae6bb",
+  "authority_revalidation_main_sha": "6b97970e82a3b22354d0389e2e4cf33328effd2e",
   "bootstrap_valid": true,
   "enabled_desired": true,
   "status": "bounded_semantic_slice_recurring_open",
@@ -20,17 +20,27 @@
   "role_config_path": "automation_control/roles/open_source.json",
   "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
   "checkpoint_path": "research_workers_clean_g1/open_source/LATEST.json",
-  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-08T220627_JST_worker226.json",
-  "receipt_blob": "88821902bc7dd9069deb4c93fe886cc534e2fad1",
-  "result": "At pinned modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, a discover opener causes the server Peer to call require_request_metadata before ordinary serving. For any subsequent non-Initialize request, ServerHandler::handle_request treats request metadata as required because context.peer.request_metadata_required() is true, validates _meta against ProtocolVersion::V_2026_07_28 before method dispatch, and returns INVALID_PARAMS when missing_required_keys is nonempty. The required 2026-07-28 keys are io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities; clientInfo is optional. Thus the first ordinary post-discover request is rejected exactly when either required key is absent or malformed. A direct/session path that did not set the peer flag may omit per-request metadata unless the request itself is discover or declares protocolVersion 2026-07-28+ in its own _meta.",
+  "receipt_path": "automation_control/receipts/open_source/receipt_2026-09-08T230841_JST_worker227.json",
+  "receipt_blob": "6c1782d7695e0f0ddedf41a559f7022915856125",
+  "result": "At pinned modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, successful modern discover_startup stores the selected protocol version plus client Implementation and ClientCapabilities in Peer::client_request_metadata before serve_inner starts. A concrete ordinary no-options path, Peer<RoleClient>::call_tool_once, constructs ClientRequest::CallToolRequest and calls Peer::send_request. send_request_with_option_and_subscription then writes protocol_version, client_info, and client_capabilities into request.get_meta_mut() before queueing PeerSinkMessage::Request. serve_inner receives that same mutated request, wraps it with JsonRpcMessage::request, and passes it to transport.send. Thus this concrete post-discover request has the two 2026-07-28 required client-context keys plus clientInfo attached before transport.send. The direct path is narrower than previously stated: serve_directly_with_ct calls RoleClient::configure_direct_peer, which seeds the same defaults when supplied peer_info is protocol 2026-07-28 or newer; absent/older peer_info does not.",
   "source": {
     "repository": "modelcontextprotocol/rust-sdk",
     "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
-    "paths": ["crates/rmcp/src/service/server.rs","crates/rmcp/src/handler/server.rs","crates/rmcp/src/service.rs","crates/rmcp/src/model/meta.rs"],
-    "symbols": ["Peer::require_request_metadata","ServerHandler::handle_request","RequestMetaObject::missing_required_keys","RequestMetaObject::DRAFT_REQUIRED_KEYS"]
+    "paths": [
+      "crates/rmcp/src/service/client.rs",
+      "crates/rmcp/src/service.rs"
+    ],
+    "symbols": [
+      "discover_startup",
+      "Peer<RoleClient>::call_tool_once",
+      "Peer::send_request",
+      "Peer::send_request_with_option_and_subscription",
+      "serve_inner",
+      "RoleClient::configure_direct_peer"
+    ]
   },
   "source_scope": "Own clean LATEST, required sanitized controls, own role config, and pinned public rust-sdk source only. Default-branch code-search snippets were navigation only. No O, other-worker, downstream, legacy, shared-ledger, or other-role semantic input was used.",
-  "scope_guard": "Positive evidence is limited to source-level control flow and metadata validation at the pinned commit. No claim is made about deployed servers, authentication, ChatGPT connector exposure, end-to-end parity, or every direct-peer caller.",
+  "scope_guard": "Positive evidence is limited to source-level control flow at the pinned commit and the concrete no-options call_tool_once path after a successful modern discover. No claim is made about deployed servers, authentication, ChatGPT connector exposure, actual bytes observed on a network, or callers supplying PeerRequestOptions.meta. Explicit options.meta is applied after the seeded defaults, so its override semantics remain outside this positive scope.",
   "strict_phase1_pass": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -42,6 +52,6 @@
   "termination": "bounded_slice_complete_recurring_open",
   "hard_runtime_boundary_reached": false,
   "frontier_nonempty": true,
-  "remaining_unresolved_child": "Trace the client-side request metadata attachment into one concrete ordinary post-discover request serialization path and verify that both required keys are present on wire at the pinned commit, without broadening to deployed or ChatGPT-specific behavior.",
-  "exact_continuation": "Next invocation: preserve CLEAN bootstrap and exact SHA-only authority freeze. At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, trace one concrete ordinary post-discover client request from Peer send through serialization and prove that io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities are attached in _meta before transport send. Distinguish discover-started from direct/session paths. Keep evidence pinned and do not infer deployment, authentication, quota/cost, ChatGPT exposure, or end-to-end parity beyond source."
+  "remaining_unresolved_child": "Trace RequestMetaObject serde/wire field mapping for the same concrete no-options post-discover request and verify the required key strings are serialized under JSON-RPC request _meta, then separately characterize PeerRequestOptions.meta override semantics.",
+  "exact_continuation": "Next invocation: preserve CLEAN bootstrap and exact SHA-only authority freeze. At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, trace RequestMetaObject serde/wire field mapping for the same concrete no-options post-discover request and prove io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities are serialized under JSON-RPC request _meta rather than only retained in an in-memory extension. Separately characterize PeerRequestOptions.meta override semantics without broadening to deployment, authentication, ChatGPT exposure, quota/cost, or end-to-end parity."
 }
