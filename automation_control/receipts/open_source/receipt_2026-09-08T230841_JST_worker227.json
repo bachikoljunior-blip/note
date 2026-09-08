@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "worker_revision": 227,
+  "semantic_parent_revision": 226,
+  "created_at": "2026-09-08T23:08:41+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "authority": {
+    "note_main_sha": "6b97970e82a3b22354d0389e2e4cf33328effd2e",
+    "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "instruction_manifest_control_revision": 126,
+    "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
+    "lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "lifecycle_control_revision": 3,
+    "lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_control_revision": 27,
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_control_revision": 14,
+    "config_revision": 7,
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d"
+  },
+  "slice": {
+    "kind": "pinned_public_source_control_flow_trace",
+    "question": "For one ordinary post-discover client request, are the 2026-07-28 client-context metadata defaults attached to the request before transport.send at the pinned rust-sdk commit?",
+    "source_repository": "modelcontextprotocol/rust-sdk",
+    "source_commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "source_paths": [
+      "crates/rmcp/src/service/client.rs",
+      "crates/rmcp/src/service.rs"
+    ],
+    "source_symbols": [
+      "discover_startup",
+      "Peer<RoleClient>::call_tool_once",
+      "Peer::send_request",
+      "Peer::send_request_with_option_and_subscription",
+      "serve_inner",
+      "RoleClient::configure_direct_peer"
+    ]
+  },
+  "verified": {
+    "discover_success_seeds_peer_defaults": "discover_startup stores the selected protocol version plus the client's Implementation and ClientCapabilities in Peer::client_request_metadata before returning Modern and before serve_inner begins.",
+    "concrete_ordinary_request": "Peer<RoleClient>::call_tool_once constructs ClientRequest::CallToolRequest with default extensions and calls Peer::send_request, so its default path uses PeerRequestOptions::no_options().",
+    "metadata_attached_before_queue": "send_request_with_option_and_subscription mutates the request before queueing it: when client_request_metadata is present it calls set_protocol_version, set_client_info, and set_client_capabilities on request.get_meta_mut(); only afterward does it send PeerSinkMessage::Request through the peer channel.",
+    "same_mutated_request_reaches_transport": "serve_inner receives PeerSinkMessage::Request { request, id, ... }, wraps that same request in JsonRpcMessage::request, and immediately passes it to transport.send.",
+    "default_post_discover_result": "Therefore the no-options call_tool_once request after successful modern discover carries io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities, plus clientInfo, in request metadata before transport.send. This is source-level pre-transport proof at the pinned commit.",
+    "direct_path_refinement": "serve_directly_with_ct invokes RoleClient::configure_direct_peer; when supplied peer_info is protocol 2026-07-28 or newer, that path also seeds the same client_request_metadata defaults. With absent or older peer_info, it does not."
+  },
+  "scope_guard": "Positive evidence is limited to source-level control flow at the pinned commit and the concrete no-options call_tool_once path after a successful modern discover. It does not prove deployed-server behavior, authentication, ChatGPT connector exposure, actual bytes observed on a network, or callers that supply PeerRequestOptions.meta. Because explicit options.meta is extended after defaults, override behavior remains outside this positive scope.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "residual_richer_mode_protected_or_user_execution_dependency_for_verified_source_path": 0,
+  "finite_monthly_quota_credit_dependency_for_verified_source_path": 0,
+  "incremental_monetary_cost": 0,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "Next invocation: preserve CLEAN bootstrap and exact SHA-only authority freeze. At pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, trace RequestMetaObject serde/wire field mapping for the same concrete no-options post-discover request and prove the two required key strings are serialized under JSON-RPC request _meta rather than only retained in an in-memory extension. Separately characterize PeerRequestOptions.meta override semantics without broadening to deployment, authentication, ChatGPT exposure, quota/cost, or end-to-end parity."
+}
