@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "created_at": "2026-09-08T22:37:57+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-primary-verify",
+  "bootstrap": {
+    "valid": true,
+    "instruction_manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "control_revision": 126, "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d"},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "control_revision": 3, "blob": "560024d46b6c26ea63ab58137be9d48863cab941"},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "control_revision": 27, "blob": "0eee15a94c23400653d84506da1f795081a6ef24"},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "control_revision": 37, "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3", "primary_source_verifier_config_revision": 10}
+  },
+  "candidate": {
+    "source_role": "open_source",
+    "source_path": "research_workers_clean_g1/open_source/LATEST.json",
+    "source_blob": "d8793e87a175df126b4bae4bbf3ec17522089b5f",
+    "source_worker_revision": 226,
+    "identity": "open_source/rust-sdk-discover-request-metadata@4a738b9dd99eaca418b614afa433a0cbdaf8d056",
+    "exact_claim_tested": "At modelcontextprotocol/rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056, a successful discover lifecycle stores client request metadata and the generic client send path attaches protocolVersion, clientInfo and clientCapabilities to subsequent ordinary requests before transport send; the 2026-07-28 server inline lifecycle requires protocolVersion and clientCapabilities, with clientInfo optional, and rejects missing or malformed required metadata with INVALID_PARAMS. Legacy initialize/session paths may omit per-request metadata."
+  },
+  "primary_sources": [
+    {"kind": "official_repository", "repository": "modelcontextprotocol/rust-sdk", "commit": "4a738b9dd99eaca418b614afa433a0cbdaf8d056", "paths": ["crates/rmcp/src/service/client.rs", "crates/rmcp/src/service.rs", "crates/rmcp/src/service/server.rs", "crates/rmcp/src/handler/server.rs", "crates/rmcp/src/model/meta.rs"]},
+    {"kind": "official_spec_release_blog", "url": "https://blog.modelcontextprotocol.io/posts/2026-07-28/", "published": "2026-07-28"}
+  ],
+  "observations": [
+    "discover_startup constructs the discover request with RequestMetaObject::with_client_context(candidate protocol version, clientInfo, clientCapabilities). On a successful DiscoverResult it selects a mutually supported version and stores ClientRequestMetadata containing selected protocol version, clientInfo and clientCapabilities on the Peer.",
+    "Peer::send_request_with_option_and_subscription reads stored ClientRequestMetadata and writes protocolVersion, clientInfo and clientCapabilities into the request metadata before optional caller metadata, progressToken insertion and the PeerSinkMessage::Request transport send.",
+    "RequestMetaObject::DRAFT_REQUIRED_KEYS contains exactly io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities. clientInfo is documented and implemented as optional. missing_required_keys treats absent or type-malformed required values as missing for protocol versions >= 2026-07-28.",
+    "When the server's first non-Initialize request has valid 2026-07-28 request metadata, serve_server_with_ct_inner creates the Peer and calls require_request_metadata. ServerHandler::handle_request then requires metadata for later inline-lifecycle requests and returns invalid_params when either required key is absent or malformed.",
+    "The official 2026-07-28 MCP release describes the stateless lifecycle: initialize/initialized and protocol sessions are retired, per-request protocol/client context moves into _meta, and server/discover is available for capability discovery.",
+    "For direct peers, RoleClient::configure_direct_peer installs per-request client metadata only for server protocol >= 2026-07-28. The handler explicitly preserves the legacy initialize/session model where per-request metadata may be omitted."
+  ],
+  "verdict": {
+    "status": "primary_verified_source_level_discover_metadata_attachment_and_rejection_contract",
+    "worker_claim_supported": true,
+    "material_correction": false,
+    "strict_phase1_pass": false,
+    "reason_strict_pass_false": "This verifies the pinned SDK source-level lifecycle and metadata contract only. It does not prove deployed ChatGPT connector exposure, authentication behavior, transport interoperability, useful outcome parity, or the full dependency-elimination route.",
+    "residual_work_protected_primary_or_manual_user_execution_dependency_for_verified_source_path": 0,
+    "finite_monthly_trial_paid_quota_dependency_for_verified_source_path": 0,
+    "incremental_monetary_cost_for_verified_source_path": 0
+  },
+  "scope_guard": "Positive evidence is limited to the named rust-sdk commit and official 2026-07-28 MCP lifecycle semantics. No claim is made about later commits, deployed MCP servers, ChatGPT connectors, authorization, full transport conformance, or end-to-end Phase-1 parity.",
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "continuation_nonempty": true,
+  "exact_continuation": "Next invocation: preserve the same authority bootstrap and choose one current non-conflicting Phase-1 verification leaf. Highest-value adjacent unresolved child for this candidate is the exact on-wire serialization/transport boundary at pinned rust-sdk commit 4a738b9dd99eaca418b614afa433a0cbdaf8d056: verify that RequestMetaObject stored in request Extensions is serialized as params._meta on one ordinary post-discover request and check any 2026-07-28 transport-header requirements from official source/spec. Do not infer ChatGPT exposure, authentication, quota/cost, or end-to-end parity from source-level metadata attachment alone.",
+  "termination": "bounded_slice_complete_recurring_open"
+}
