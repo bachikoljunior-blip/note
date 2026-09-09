@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-09T16:29:29+09:00",
+  "updated_at": "2026-09-09T18:31:41+09:00",
   "control_revision": 27,
   "config_revision": 10,
   "phase_id": "phase_1_chat_parity",
@@ -10,9 +10,9 @@
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "LATEST_inline_persistence_recovery_micro_slice",
   "previous_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPLAY_PREDECESSOR_CHAIN_20260909_PART130.json",
-  "previous_latest_blob": "de02ada56f34b7a493ece546bdfdbdd60b7b400b",
-  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-09T162929_JST.json",
-  "presemantic_liveness_witness_blob": "2c2b759e3fc83f3270da75b86becebe689d9b2bc",
+  "previous_latest_blob": "cd978ba132d6773b527c0956552e1e9037ece948",
+  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_2026-09-09T183141_JST.json",
+  "presemantic_liveness_witness_blob": "8951481269e378ed4b581eec91cad912c2d639c1",
   "presemantic_liveness_witness_status": "durable_exact_readback_valid_for_required_role_tuple_fields",
   "semantic_config_snapshot": {
     "control_revision": 27,
@@ -24,27 +24,30 @@
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "transport_mode": "sha_only_main_ref",
-    "frozen_main_sha": "b715de1e014f123676c767ae75312a04c98f2d87"
+    "frozen_main_sha": "f31341d783e8c1063b86ab6aca1f47da49db421c"
   },
   "semantic_freshness_proof_valid": true,
   "phase1_leaf_result": {
-    "leaf_id": "phase1-multi-agent-part132-acceptance-time-fencing-comparison",
+    "leaf_id": "phase1-multi-agent-part133-multi-effect-acceptance-cas-replay",
     "mode": "persistence_recovery_micro_slice",
-    "tested_scope": "Self-local deterministic replay comparing exactly three zero-cost repository-native acceptance-time fencing designs for generation-scoped create-once outputs under five scenarios: stale writer after pointer takeover, duplicate retry, pointer takeover race, ABA/reused-generation defense using a non-reusable claim epoch, and interruption after output creation but before acceptance. Design A was consumer re-read-and-reject; Design B was a single authoritative path whose CAS atomically validates the current non-reusable epoch and records effect acceptance; Design C was append-only output plus a separate accepted-effects pointer. No live claim mutation, public-source read, external coordinator, other-worker state, O/downstream input, or hosted compute was used.",
+    "tested_scope": "Self-local deterministic replay of the previously selected single-authoritative-path, non-reusable-epoch acceptance CAS under multi-effect batching and takeover recovery. The replay covered: two distinct effects E1/E2 racing from the same epoch, takeover before either acceptance, takeover after E1 but before E2 retry, duplicate single-effect and duplicate whole-batch retry, a CAS conflict explicitly deferred to the next invocation, mixed prior acceptance inside a nominally atomic batch, and orphan output existence after interruption before acceptance. No live claim mutation, public-source read, external coordinator, other-worker state, O/downstream input, hosted compute, or quota-bearing service was used.",
     "observations": [
-      "Design A rejects an output from an old epoch when the consumer re-reads the active pointer after takeover, but it remains vulnerable to a TOCTOU window if takeover occurs after that re-read and before the consumer commits the accepted effect; it also does not by itself serialize duplicate consumer acceptance.",
-      "Design B rejects a stale writer because takeover changes the authoritative path blob/epoch and the stale acceptance CAS fails. A duplicate retry is idempotent when the effect id/digest is already recorded on that path. Interruption after output creation but before acceptance leaves only an unaccepted orphan output; a later retry can safely attempt the acceptance CAS.",
-      "Design B is ABA-safe for the tested lineage only when the claim epoch is globally non-reusable and included in the authoritative path state. Under that condition an old logical generation cannot become current again, so an old acceptance precondition cannot become valid merely by generation-number reuse.",
-      "Design C prevents duplicate acceptance within the accepted-effects pointer when that pointer uses CAS/set semantics, but when active-epoch authority and accepted-effects state remain on separate paths, takeover can race between the active-pointer check and the accepted-effects CAS. The stale effect may therefore be recorded as accepted unless downstream consumers re-fence against the current epoch.",
-      "If Design C is changed so one authoritative path contains both the current non-reusable epoch and accepted-effect set and acceptance is one CAS on that path, its safety behavior collapses to Design B rather than remaining a distinct two-path protocol."
+      "When E1 and E2 both read the same authoritative epoch/blob, at most one acceptance CAS can win from that exact base. The loser has no accepted effect and must reconstruct from the new authoritative blob on a later invocation rather than retrying in-run.",
+      "If the epoch remains current after the first acceptance, the losing distinct effect can be accepted on a later invocation with the same stable effect id after rereading the authoritative path and confirming it is not already accepted. If takeover changes to a new non-reusable epoch before that retry, the old-epoch effect is rejected or quarantined rather than reissued implicitly.",
+      "If takeover happens before either effect is accepted, both old-epoch acceptance attempts fail their stale blob/epoch precondition. If takeover happens after E1 is accepted but before E2 retries, E1 remains a committed historical acceptance while E2 remains unaccepted and cannot cross the epoch boundary without an explicitly new effect identity under the new epoch.",
+      "A duplicate single-effect retry is idempotent when the authoritative accepted set already contains the stable effect id plus digest. A duplicate whole-batch retry is likewise an idempotent no-op only when the authoritative state already records the same batch id/digest and complete intended effect set.",
+      "Strict all-or-none batch semantics require a batch manifest with stable batch id, digest, intended effect ids and a precondition that none of those effects is independently accepted. If E1 was already accepted independently and a later batch requests E1 plus E2, the batch must fail as mixed prior acceptance; silently accepting only E2 would change the operation from atomic batch acceptance into partial acceptance.",
+      "A CAS conflict is not an accepted effect. Deferring reconstruction to the next invocation preserves safety because acceptance is defined only by the authoritative path after successful CAS/readback, while the stable effect or batch identity lets the next invocation distinguish duplicate success from an uncommitted candidate.",
+      "An orphan output created before interruption but never referenced by a successful authoritative acceptance CAS remains uncommitted evidence only. Output existence must never be interpreted as commitment. Safe garbage collection therefore requires a later policy that proves the output is unreferenced by accepted state and rechecks authority before any destructive deletion; this replay did not perform deletion.",
+      "The tested multi-effect protocol remains ABA-safe only under the existing non-reusable epoch requirement; reuse of an old epoch value would invalidate the stale-writer fence even if blob CAS is otherwise used correctly."
     ],
-    "inference": "Among the three tested designs, the single-path acceptance CAS is the strongest zero-hosted-coordination pattern for this exact scope because it combines takeover fencing and duplicate-acceptance idempotency in one repository-native CAS/readback boundary. Consumer re-read alone is insufficient without an atomic commit fence, and a separate accepted-effects pointer retains a cross-path race unless it is unified with current-epoch authority. This does not prove full multi-agent coordination parity or prevent stale output creation; it narrows the required acceptance invariant to non-reusable epoch plus single-path acceptance-time CAS.",
+    "inference": "For the exact replayed scope, the single-path non-reusable-epoch CAS extends safely from one effect to concurrent distinct effects if acceptance is the only commitment boundary, conflicting writers defer to a later invocation, and atomic batches use stable batch manifests with explicit mixed-prior-acceptance rejection. The strongest remaining risk has moved downstream: after an effect or batch is authoritatively accepted, multiple consumers or a consumer crash could still duplicate the useful outcome unless consumption itself has an idempotent fenced protocol. This leaf does not prove full recurring-Chat multi-agent parity.",
     "duplicate_or_conflicting_effect_committed": false,
     "effect_mutation_count": 0,
     "new_replay_validity_result": true,
     "bootstrap_valid_for_semantic_credit": true,
     "global_phase1_acceptance": false,
-    "unresolved_child": "Test the single-path non-reusable-epoch acceptance CAS under multi-effect batching and takeover recovery, including two distinct effects racing with takeover, CAS conflict followed by next-invocation replay, and orphan-output garbage-collection policy that never mistakes unaccepted output existence for effect commitment."
+    "unresolved_child": "Test acceptance-to-consumption replay for an already accepted effect/batch under two concurrent consumers and crash recovery: define whether consumption is represented on the same authoritative epoch path or by a separately fenced idempotency record, verify duplicate consumer attempts cannot produce two useful outcomes, and preserve the rule that accepted-but-not-consumed and consumed are distinct durable states without external hosted coordination."
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -65,5 +68,5 @@
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
-  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local replay of the single-path non-reusable-epoch acceptance CAS under multi-effect batching and takeover recovery: two distinct effects racing with takeover, duplicate retry, CAS conflict deferred to next-invocation replay, and orphan-output handling that never treats output existence as accepted commitment. Do not perform live claim mutation unless explicitly authorized by the current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
+  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local acceptance-to-consumption replay for an already accepted single effect and an accepted batch under two concurrent consumers plus crash recovery. Compare a same-authoritative-path consumed set against a separately fenced idempotency record; require stable effect/batch identity, no duplicate useful outcome, next-invocation recovery after CAS conflict, and a durable distinction among unaccepted, accepted-not-consumed, and consumed states. Do not perform live claim mutation unless explicitly authorized by the then-current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
 }
