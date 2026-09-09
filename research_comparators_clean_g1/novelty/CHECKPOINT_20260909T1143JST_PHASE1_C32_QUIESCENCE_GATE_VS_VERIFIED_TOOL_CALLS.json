@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "role": "o_novelty_comparator",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-dedup-mechanisms",
+  "observed_at": "2026-09-09T11:43:08+09:00",
+  "checkpoint_kind": "bounded_c32_single_cell_tested_scope_dedup_delta",
+  "bootstrap": {
+    "valid": true,
+    "transport_mode": "exact_blob_two_pass",
+    "instruction_manifest": {
+      "path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+      "control_revision": 126,
+      "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d"
+    },
+    "run_lifecycle": {
+      "path": "automation_control/RUN_LIFECYCLE.json",
+      "control_revision": 3,
+      "blob": "560024d46b6c26ea63ab58137be9d48863cab941"
+    },
+    "root_control": {
+      "path": "automation_control/DESIRED_STATE.json",
+      "control_revision": 27,
+      "blob": "0eee15a94c23400653d84506da1f795081a6ef24"
+    },
+    "downstream_control": {
+      "path": "automation_control/DOWNSTREAM_STATE.json",
+      "control_revision": 37,
+      "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+      "role_config_revision": 19
+    }
+  },
+  "predecessor_checkpoint": {
+    "path": "research_comparators_clean_g1/novelty/CHECKPOINT_20260909T0839JST_PHASE1_C32_VERIFIED_TOOL_CALLS_VS_AID_GUARD.json",
+    "blob": "59530fd363ae3c835cf0b6bdf86c3d6885702a6c"
+  },
+  "sealed_c32_identity": {
+    "raw_identity_manifest_path": "research_comparators_clean_g1/novelty/RAW_IDENTITY_MANIFEST_C32_20260828T2043JST_SCHEMA3.json",
+    "raw_identity_manifest_blob": "797334baec6f96026cb907aacb14ba2f59fe233e",
+    "candidate_set_digest": "44d3231f6b48f45529a4c3b4f7fd5a204487da8e9fc2da5f31bf022094f96ab6",
+    "assessment_count": 36
+  },
+  "inspected_cell": {
+    "row_index": 16,
+    "namespace": "multi_agent",
+    "source_artifact_blob": "72d9dcaf7688a4a3c0a9ad4362a9e9da076d5e5f",
+    "source_local_candidate_id": "quiescence_gate",
+    "comparison_reference": {
+      "row_index": 15,
+      "source_local_candidate_id": "Verified Tool Calls",
+      "source_artifact_blob": "e72e8caf1682558f6e4489902105ac31f0313fc6",
+      "reference_checkpoint_path": "research_comparators_clean_g1/novelty/CHECKPOINT_20260909T0839JST_PHASE1_C32_VERIFIED_TOOL_CALLS_VS_AID_GUARD.json",
+      "reference_checkpoint_blob": "59530fd363ae3c835cf0b6bdf86c3d6885702a6c",
+      "reference_reassessed_this_invocation": false
+    },
+    "scope": "Only C32 row 16 quiescence_gate was reassessed against the already-durable row 15 Verified Tool Calls characterization. The quiescence_gate evidence is the bounded synthetic A->{B,C} repair lattice with one unresolved writer to irreversible C; Verified Tool Calls is the sealed medium-fault three-cell retry/verification ablation plus a separate hidden LLM-client retry locus. No row 17 or second unresolved candidate, public web, moving-latest source substitution, CLEAN steering, protected-O mutation or scheduler mutation was used."
+  },
+  "finding": {
+    "classification": "distinct_but_composable_with_narrow_behavioral_overlap",
+    "identity_change_claimed": false,
+    "tested_scope_delta": {
+      "quiescence_gate_scope": "In the exact synthetic repair lattice, quiescence_gate blocks terminalization while any writer is unresolved. At action budget 2 it terminalizes 120/352 worlds (34.09%) with 0 unsafe terminal claims in that bounded model, using 0.1818 expected incremental actions per world and 0.0568 irreversible-C retries per world. The safety statement is limited to the modeled state/action semantics and is not a general production proof.",
+      "verified_tool_calls_scope": "Medium-fault LLM-agent tool-use ablation comparing retry-only, verification-only and verify-before-retry; the sealed evidence is a three-cell partial interaction and separately includes up-to-five retries of rate-limited LLM-client responses outside the agent-visible tool retry budget.",
+      "overlap": "Both mechanisms can suppress unsafe or misleading retry/termination when the outcome of a prior action is not yet trustworthy. In the narrow case where verification-before-retry is implemented as 'do not reissue while the prior writer may still complete', the observable behavior overlaps with quiescence gating.",
+      "separation": "quiescence_gate is a concurrency/termination-authority condition: it reasons about unresolved writers and forbids terminalization or rollback authority until mutation quiescence is established, even when a fresh snapshot currently shows no effect. Verified Tool Calls is an evidence-use/retry-policy interaction: it tests whether verification is performed before retry and exposes hidden retry loci, but it does not itself certify that all older writers are quiescent or unable to cross an irreversible boundary. Conversely quiescence_gate does not verify task postconditions, system-of-record correctness, semantic success, or retry-topology behavior after writers settle.",
+      "composition": "Use quiescence as a lower-level concurrency precondition for any terminal or replacement decision, then apply verification-before-retry to the settled effect/system-of-record state before deciding whether an otherwise admissible retry/recovery action should occur. A verification read taken before quiescence cannot substitute for the gate because an older writer can complete after the read; quiescence alone cannot substitute for verification because a settled writer may have produced an incorrect or incomplete effect."
+    },
+    "hidden_retry_locus_effect": "The separate LLM-client retry loop in Verified Tool Calls strengthens the separation. quiescence_gate addresses whether an unresolved effect writer may still mutate shared state; hidden client/SDK/gateway retries determine whether supposedly quiescent or recovery-OFF execution actually contains another writer/reissue locus. The two checks should therefore be composed rather than deduplicated.",
+    "dedup_effect": "retain_both_rows_distinct_with_composition_edge",
+    "candidate_count_change": 0,
+    "novelty_status_change": "none",
+    "relevance_change": "none",
+    "phase1_fit_change": "none",
+    "phase1_acceptance_change": "none",
+    "reason": "Collapsing quiescence_gate into Verified Tool Calls would lose the unresolved-writer/irreversible-branch termination authority and the explicit fresh-snapshot-is-not-rollback-authority result. Collapsing Verified Tool Calls into quiescence_gate would lose verification/postcondition semantics and hidden retry-topology evidence. Their strongest relationship is layered composition with a narrow overlapping 'do not retry an uncertain in-flight action' behavior."
+  },
+  "scope_and_gate_notes": {
+    "quiescence_gate_evidence_scope": "Exact proportions come from a deliberately balanced synthetic 352-world-per-budget lattice over A->{B,C} with C set-like irreversible and abstract certified retry/compensation capabilities. Duplicate amount-bearing irreversible writes, partial effects, fees, disputes, provider settlement semantics and arbitrary distributed executions remain out of scope.",
+    "verified_tool_calls_evidence_scope": "Only the three medium-fault ablation arms and separate client retry loop are sealed here; the verification-OFF/recovery-OFF cell remains missing.",
+    "phase1_acceptance_effect": "none",
+    "zero_quota_zero_cost_acceptance_for_either_candidate_established": false,
+    "acceptance_note": "This novelty/dedup comparison does not establish a zero-monthly-quota scheduled-Chat parity pass for either candidate. Any quota-backed provider/test-mode dependency, unavailable execution surface, hidden external executor or unmodeled retry locus remains unresolved for Phase-1 acceptance."
+  },
+  "phase1_gate_effect": {
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "comparator_run_residual_work_or_protected_primary_or_manual_user_execution_dependency": 0,
+    "comparator_run_finite_monthly_trial_paid_quota_dependency": 0,
+    "comparator_run_incremental_monetary_cost": 0,
+    "protected_o_mutated": false,
+    "clean_exploration_steered": false,
+    "scheduler_mutated": false
+  },
+  "continuation_nonempty": true,
+  "exact_next_action": "On the next invocation, after fresh manifest/lifecycle/root/downstream validation and role-local continuation reconstruction, keep C32 rows 15 Verified Tool Calls and 16 quiescence_gate distinct with a composition edge unless either sealed source identity changes. Read exactly C32 row 17 identity from sealed raw identity manifest blob 797334baec6f96026cb907aacb14ba2f59fe233e and inspect only that one row's sealed source artifact. Compare it against the durable row 16 quiescence_gate characterization by exact identity/tested scope, preserving zero-dependency/zero-quota/zero-cost gates. Do not inspect row 18 or any second unresolved candidate, use public web, mutate scheduler/protected O, steer CLEAN exploration, or claim Phase-1 acceptance.",
+  "termination": "bounded_slice_complete_recurring_open",
+  "enabled_desired": true
+}
