@@ -1,13 +1,15 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-09T02:26:20+09:00",
+  "timestamp": "2026-09-09T15:24:50+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
+    "main_sha": "cbd1380e10a6504e768a4c068c810afc58bd9f0a",
     "manifest_control_revision": 126,
+    "manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "desired_state_path": "automation_control/DESIRED_STATE.json",
@@ -17,91 +19,55 @@
     "reasoning_role_control_revision": 11,
     "reasoning_config_revision": 8,
     "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
-    "transport_mode": "exact_blob_two_pass",
+    "transport_mode": "sha_pinned_exact_main",
     "bootstrap_valid": true,
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "9281d539aeb38c1a427e1d099877ede59416c1e9",
-  "predecessor_slice_id": "reasoning-20260908T202618+0900-stage-t-commit-attempt-protocol-v1",
-  "slice_id": "reasoning-20260909T022620+0900-stage-t-restart-checkpoint-guard-v1",
-  "selected_leaf": "Derive the minimal durable checkpoint schema and transition guard that preserves exact target_scope T, witness w, payload digest d, protocol state, and last verifier classification across restart, and prove that no restart path can rotate w or authorize a second logical effect before COMMIT_PROVEN_IN_SCOPE or CONFLICT.",
+  "predecessor_state_blob": "74cfdd4f17a148ff5d1d0aac6711b2365bbee0cd",
+  "predecessor_slice_id": "reasoning-20260909T022620+0900-stage-t-restart-checkpoint-guard-v1",
+  "slice_id": "reasoning-20260909T152450+0900-stage-t-stale-checkpoint-target-precedence-v1",
+  "selected_leaf": "Derive a verifier-compatible recovery algorithm for a stale role-local checkpoint versus newer target-authoritative evidence, specify precedence when local state lags COMMIT_PROVEN_IN_SCOPE or CONFLICT, and prove reconciliation cannot authorize a second logical effect.",
   "bounded_leaf_result": {
-    "status": "semantic_stage_t_restart_checkpoint_guard_derived",
-    "tested_scope": "Abstract recurring-Chat protocols using the predecessor Stage T verifier and commit-attempt protocol, where a role-local checkpoint can be durably CAS-written/read back before a target-side attempt and the target provides either atomic same-witness idempotence or atomic create-if-absent for exact (T,w,d). No concrete product/API is claimed to satisfy these semantics.",
-    "minimal_checkpoint_schema": {
-      "logical_effect_id": "immutable identifier for the one intended logical effect; binds every restart to the same unresolved effect",
-      "target_scope_T": "immutable exact target scope or canonical digest",
-      "witness_w": "immutable target-enforced witness/idempotency key",
-      "payload_digest_d": "immutable canonical digest of the intended payload",
-      "protocol_state": "one of VERIFY_BEFORE_ATTEMPT, ATTEMPT_ARMED, VERIFY_PENDING, COMMITTED, CONFLICT, UNRESOLVED_UNSAFE",
-      "last_verifier_class": "one of NONE, COMMIT_PROVEN_IN_SCOPE, CONFLICT, UNRESOLVED_UNVERIFIABLE_SOURCE, UNRESOLVED_NOT_PROOF, UNRESOLVED_AMBIGUOUS",
-      "target_commit_semantics": "one of ATOMIC_SAME_WITNESS_IDEMPOTENT, ATOMIC_CREATE_IF_ABSENT, NONE",
-      "attempt_may_have_occurred": "boolean; true in ATTEMPT_ARMED or VERIFY_PENDING after an attempt boundary may have been crossed",
-      "checkpoint_revision": "monotonic role-local CAS revision used only to reject stale checkpoint replacement; it never authorizes witness rotation"
-    },
-    "minimality_argument": [
-      "logical_effect_id is required to distinguish continuation of the same unresolved effect from a genuinely new effect after terminal resolution.",
-      "T,w,d are required because restart safety is defined for exact target scope, witness and payload; losing any one can silently broaden scope or change effect identity.",
-      "protocol_state is required to distinguish pre-attempt verification, an attempt that may have crossed the crash boundary, pending verification, and terminal outcomes.",
-      "last_verifier_class is required because only target-authoritative COMMIT_PROVEN_IN_SCOPE or CONFLICT may terminally resolve the effect; cached/local success is insufficient.",
-      "target_commit_semantics is required to decide whether exact same-witness retry can be safe; without it an ambiguous restart must fail closed.",
-      "attempt_may_have_occurred is the one-bit crash-window memory that makes ATTEMPT_ARMED conservative: after restart the protocol assumes the mutation may already have happened.",
-      "checkpoint_revision is required only for stale-local-state rejection under CAS; no timestamp, retry counter, queue id, or transport acknowledgement is needed for the safety invariant."
+    "status": "semantic_stage_t_stale_checkpoint_target_precedence_derived",
+    "tested_scope": "Abstract recurring-Chat Stage T protocols preserving one immutable logical_effect_id and exact (T,w,d), with a role-local CAS checkpoint and a target-authoritative verifier that can produce COMMIT_PROVEN_IN_SCOPE or CONFLICT for exact (T,w,d). A target observation counts as newer only when the target itself exposes an immutable or monotonic order/freshness witness sufficient to prove it supersedes the checkpoint's last consumed target evidence. No concrete product/API is claimed to supply that witness.",
+    "recovery_algorithm": [
+      "Load the current role-local checkpoint C and freeze logical_effect_id,T,w,d. Never infer a new witness from target state.",
+      "Run only the frozen target-authoritative verifier for exact T,w,d and obtain observation V plus its target-authoritative evidence identity/order witness q. If V cannot be bound to exact T,w,d or q cannot establish the required freshness relation, classify UNRESOLVED_UNSAFE and permit no mutation.",
+      "If C is nonterminal and fresh V=COMMIT_PROVEN_IN_SCOPE for exact T,w,d, target terminal evidence has precedence: reconcile C to COMMITTED, record q and the verifier evidence locator, and set mutation_permitted=false.",
+      "If C is nonterminal and fresh V=CONFLICT for exact T,w,d or for an exact target exclusivity condition that proves this intended effect cannot commit, target terminal evidence has precedence: reconcile C to CONFLICT, record q and the verifier evidence locator, and set mutation_permitted=false.",
+      "If C is already COMMITTED or CONFLICT, no nonterminal target observation, absence result, timeout, transport acknowledgement, or older evidence may regress it. A consistent fresh terminal observation may strengthen evidence only; it never re-arms mutation.",
+      "If a fresh target terminal observation contradicts an already-terminal local classification, reconcile to UNRESOLVED_UNSAFE with both evidence identities preserved and mutation_permitted=false. Do not choose either side by timestamp alone.",
+      "If V is unresolved/nonterminal while C is ATTEMPT_ARMED or VERIFY_PENDING, preserve the crash-conservative local state and attempt_may_have_occurred=true. Do not fall back to VERIFY_BEFORE_ATTEMPT and do not mint a replacement witness.",
+      "Persist the reconciled checkpoint only with role-local CAS against the exact predecessor checkpoint blob/revision. A CAS mismatch ends this reconciliation attempt without target mutation; the next recurrence must reload the winner and re-run the verifier rather than spin or reuse a stale local plan."
     ],
-    "transition_guard": {
-      "immutable_binding_guard": "While logical_effect_id is nonterminal, every transition must preserve exact T,w,d. Any proposed transition with different T, w or d is rejected before target mutation.",
-      "arm_before_effect_guard": "A target mutation may be attempted only after an ATTEMPT_ARMED checkpoint containing exact logical_effect_id,T,w,d,target_commit_semantics has been durably written and exact-read back. ATTEMPT_ARMED means the effect may already have happened even if the process crashes immediately afterward.",
-      "restart_guard": "On restart from ATTEMPT_ARMED or VERIFY_PENDING, never mint or substitute a witness. First re-run the frozen verifier for exact T,w,d. COMMIT_PROVEN_IN_SCOPE -> COMMITTED; CONFLICT -> CONFLICT; unresolved evidence remains nonterminal.",
-      "retry_guard": "If restart verification is unresolved, exact same-(T,w,d) retry is permitted only when target_commit_semantics=ATOMIC_SAME_WITNESS_IDEMPOTENT. For ATOMIC_CREATE_IF_ABSENT, a new create attempt is permitted only when the target supplies the protocol's required current authoritative nonexistence precondition and atomic create-if-absent still binds exact w,d. With NONE, no mutation is permitted.",
-      "terminal_guard": "Witness rotation for the same logical_effect_id is permanently forbidden. A different witness may appear only under a distinct new logical_effect_id after the prior effect is terminally COMMITTED or CONFLICT and a later recurrence selects a genuinely new logical effect.",
-      "stale_checkpoint_guard": "A checkpoint whose CAS predecessor/revision is stale may be read as historical evidence but cannot replace the current checkpoint or authorize target mutation. The current durable checkpoint wins mechanically; no same-run CAS spin is required."
+    "precedence_rule": {
+      "highest": "fresh target-authoritative COMMIT_PROVEN_IN_SCOPE or CONFLICT bound to exact T,w,d may terminally resolve a nonterminal local checkpoint",
+      "middle": "an already-terminal local COMMITTED/CONFLICT classification is monotonic against nonterminal, absent, transport-level, or older target evidence",
+      "contradiction": "fresh contradictory terminal evidence versus a local terminal classification yields UNRESOLVED_UNSAFE, never a mutation authorization",
+      "lowest": "local timestamps, retry counters, cached success, transport acknowledgements, and unresolved verifier results never override target-authoritative terminal evidence or re-arm a terminal checkpoint"
     },
-    "restart_state_table": [
-      {
-        "restart_state": "VERIFY_BEFORE_ATTEMPT",
-        "allowed": "verifier read only; if mutation is eventually safe, persist/readback ATTEMPT_ARMED first",
-        "witness_rotation": false
-      },
-      {
-        "restart_state": "ATTEMPT_ARMED",
-        "allowed": "treat attempt as possibly executed; verifier-first; same-witness mutation only under the retry guard",
-        "witness_rotation": false
-      },
-      {
-        "restart_state": "VERIFY_PENDING",
-        "allowed": "verifier-first; same-witness mutation only under the retry guard",
-        "witness_rotation": false
-      },
-      {
-        "restart_state": "COMMITTED",
-        "allowed": "no mutation for this logical_effect_id",
-        "witness_rotation": false
-      },
-      {
-        "restart_state": "CONFLICT",
-        "allowed": "no mutation for this logical_effect_id",
-        "witness_rotation": false
-      },
-      {
-        "restart_state": "UNRESOLVED_UNSAFE",
-        "allowed": "no mutation; preserve unresolved child",
-        "witness_rotation": false
-      }
+    "reconciliation_invariants": [
+      "Identity invariant: logical_effect_id,T,w,d remain byte-for-byte unchanged during reconciliation.",
+      "Terminal monotonicity: reconciliation never transitions COMMITTED or CONFLICT back to a mutation-capable protocol state.",
+      "Crash conservatism: ATTEMPT_ARMED/VERIFY_PENDING never regress to VERIFY_BEFORE_ATTEMPT merely because the target verifier is unresolved.",
+      "Target-terminal dominance over stale local nonterminal state: fresh exact-scope COMMIT_PROVEN_IN_SCOPE or CONFLICT is consumed as terminal evidence before any future mutation decision.",
+      "CAS isolation: a stale role-local checkpoint cannot overwrite a newer checkpoint and cannot authorize a target mutation after losing CAS."
     ],
-    "safety_proof_sketch": [
-      "Before the first possible target mutation, the exact effect identity (logical_effect_id,T,w,d) is already durable in ATTEMPT_ARMED, so a crash cannot erase or replace the witness identity used by that attempt.",
-      "Every nonterminal restart transition has immutable_binding_guard, therefore no restart path can rotate w or change d/T for the same intended effect.",
-      "If an attempt crossed the crash window, restart from ATTEMPT_ARMED/VERIFY_PENDING must verify exact T,w,d before mutation. Proven commit and conflict are terminal no-mutation states.",
-      "If verification is unresolved, any permitted retry uses the same T,w,d and is allowed only under a target atomicity contract that collapses same-witness attempts or guarantees create-if-absent uniqueness. Therefore a retry cannot create a second logical effect within the tested abstract contract.",
-      "If the target lacks the required atomicity contract, unresolved restart paths permit no mutation. Thus the protocol fails closed rather than creating a duplicate effect.",
-      "Consequently, for the tested abstract scope, crash/restart can cause verifier replay or a target-collapsed same-witness retry, but cannot authorize witness rotation or a second logical target effect before COMMIT_PROVEN_IN_SCOPE or CONFLICT."
+    "no_second_effect_proof_sketch": [
+      "Reconciliation itself performs no target mutation; its only possible write is the role-local CAS checkpoint.",
+      "Every path freezes the same logical_effect_id,T,w,d and explicitly forbids witness rotation, so reconciliation cannot create a new effect identity.",
+      "When fresh target-authoritative COMMIT_PROVEN_IN_SCOPE or CONFLICT exists, the algorithm moves a nonterminal local checkpoint to a terminal no-mutation state before any future action. Thus a stale local ATTEMPT_ARMED or VERIFY_PENDING state cannot trigger a second logical effect after the target has already resolved the first.",
+      "When target evidence is unresolved or its freshness/order cannot be proven, mutation_permitted remains false for the reconciliation step and crash-conservative local state is preserved. Ambiguity therefore fails closed rather than reopening the effect.",
+      "When local and fresh target terminal classifications contradict, the result is UNRESOLVED_UNSAFE with no mutation authorization, so contradiction cannot be converted into a retry.",
+      "If the local CAS loses, no target mutation follows from the stale plan. Reload-and-reverify on a later recurrence preserves single-effect safety without same-run spinning.",
+      "Therefore, within the tested abstract scope, a stale role-local checkpoint can be advanced by newer target-authoritative terminal evidence but cannot regress terminality, rotate the witness, or authorize a second logical target effect."
     ],
     "unresolved_conditions": [
-      "A concrete target must be audited to verify that its idempotency/create-if-absent primitive is target-enforced and atomic over the exact effect scope; client-only labels are insufficient.",
-      "A concrete target must expose target-authoritative durable evidence sufficient for the predecessor verifier after crash; write idempotence without trustworthy readback remains unresolved.",
-      "The next local proof obligation is to derive a verifier-compatible recovery algorithm for stale checkpoint versus newer target evidence, including the exact precedence rule when local checkpoint state lags a target-authoritative COMMIT_PROVEN_IN_SCOPE observation."
+      "A concrete target must expose a target-authoritative immutable or monotonic evidence identity/order witness sufficient to distinguish newer terminal evidence from stale or replayed observations; local wall-clock timestamps are not enough.",
+      "A concrete verifier must prove exact binding to T,w,d and distinguish true target CONFLICT from transient absence or transport failure.",
+      "The next local proof obligation is to derive the minimal target-evidence freshness/order witness and comparison rule that prevents stale target observations from regressing ATTEMPT_ARMED, VERIFY_PENDING, COMMITTED, or CONFLICT checkpoints."
     ],
     "positive_phase1_evidence_from_this_slice": true,
     "prior_scientific_result_preserved_by_predecessor_reference": true
@@ -133,5 +99,5 @@
     "continuation_nonempty": true,
     "diagnostic_only": false
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260909T022620+0900-stage-t-restart-checkpoint-guard-v1. Execute exactly one bounded next Stage T leaf: derive a verifier-compatible recovery algorithm for a stale role-local checkpoint versus newer target-authoritative evidence, specifying precedence when local state lags COMMIT_PROVEN_IN_SCOPE or CONFLICT and proving that reconciliation cannot authorize a second logical effect. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260909T152450+0900-stage-t-stale-checkpoint-target-precedence-v1. Execute exactly one bounded next Stage T leaf: derive the minimal target-authoritative freshness/order witness and comparison rule needed to distinguish genuinely newer verifier evidence from stale/replayed target observations, and prove that stale target evidence cannot regress ATTEMPT_ARMED, VERIFY_PENDING, COMMITTED, or CONFLICT or authorize a second logical effect. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
 }
