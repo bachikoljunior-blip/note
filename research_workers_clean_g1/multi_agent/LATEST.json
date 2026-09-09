@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-09T15:31:44+09:00",
+  "updated_at": "2026-09-09T16:29:29+09:00",
   "control_revision": 27,
   "config_revision": 10,
   "phase_id": "phase_1_chat_parity",
@@ -10,8 +10,9 @@
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "LATEST_inline_persistence_recovery_micro_slice",
   "previous_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPLAY_PREDECESSOR_CHAIN_20260909_PART130.json",
-  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-09T153144_JST.json",
-  "presemantic_liveness_witness_blob": "2461f967c252923fb8625fac19e00e353d111b4f",
+  "previous_latest_blob": "de02ada56f34b7a493ece546bdfdbdd60b7b400b",
+  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-09T162929_JST.json",
+  "presemantic_liveness_witness_blob": "2c2b759e3fc83f3270da75b86becebe689d9b2bc",
   "presemantic_liveness_witness_status": "durable_exact_readback_valid_for_required_role_tuple_fields",
   "semantic_config_snapshot": {
     "control_revision": 27,
@@ -22,33 +23,35 @@
     "instruction_manifest_revision": 126,
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-    "transport_mode": "exact_blob_two_pass"
+    "transport_mode": "sha_only_main_ref",
+    "frozen_main_sha": "b715de1e014f123676c767ae75312a04c98f2d87"
   },
   "semantic_freshness_proof_valid": true,
   "phase1_leaf_result": {
-    "leaf_id": "phase1-multi-agent-part131-generation-scoped-output-active-pointer-aba-takeover-replay",
+    "leaf_id": "phase1-multi-agent-part132-acceptance-time-fencing-comparison",
     "mode": "persistence_recovery_micro_slice",
-    "tested_scope": "Self-local deterministic replay of generation-scoped deterministic create-once effect outputs on independent paths plus an active-generation pointer updated by path-blob CAS/readback. Tested four interleavings only: normal takeover rejection, late stale output creation after takeover, ABA/reused-generation pointer return, and consumer read-before-takeover then accept-after-takeover without an atomic acceptance-time pointer guard. No live claim mutation, public-source read, external coordinator, or forbidden semantic input was used.",
+    "tested_scope": "Self-local deterministic replay comparing exactly three zero-cost repository-native acceptance-time fencing designs for generation-scoped create-once outputs under five scenarios: stale writer after pointer takeover, duplicate retry, pointer takeover race, ABA/reused-generation defense using a non-reusable claim epoch, and interruption after output creation but before acceptance. Design A was consumer re-read-and-reject; Design B was a single authoritative path whose CAS atomically validates the current non-reusable epoch and records effect acceptance; Design C was append-only output plus a separate accepted-effects pointer. No live claim mutation, public-source read, external coordinator, other-worker state, O/downstream input, or hosted compute was used.",
     "observations": [
-      "With active pointer g7, B successfully CAS-updates the pointer to g8, and A then creates a previously absent g7 output on its independent create-once path, the stale output can still exist durably because pointer CAS does not fence creation on the independent path.",
-      "If consumers determine acceptance from the current pointer at acceptance time and generations are never reused, a g7 output observed after the pointer is g8 is rejected; this prevents stale effect acceptance even though it does not prevent stale output creation.",
-      "If the active-generation identifier can ABA back from g7 to g8 to g7, an old or late g7 output can again satisfy a generation-equality acceptance check, so generation equality alone is not ABA-safe.",
-      "If a consumer reads pointer g7 before B's takeover and later accepts g7 output after the pointer moved to g8 without rechecking or atomically binding acceptance to the pointer epoch/blob, stale acceptance remains possible despite monotonic generations."
+      "Design A rejects an output from an old epoch when the consumer re-reads the active pointer after takeover, but it remains vulnerable to a TOCTOU window if takeover occurs after that re-read and before the consumer commits the accepted effect; it also does not by itself serialize duplicate consumer acceptance.",
+      "Design B rejects a stale writer because takeover changes the authoritative path blob/epoch and the stale acceptance CAS fails. A duplicate retry is idempotent when the effect id/digest is already recorded on that path. Interruption after output creation but before acceptance leaves only an unaccepted orphan output; a later retry can safely attempt the acceptance CAS.",
+      "Design B is ABA-safe for the tested lineage only when the claim epoch is globally non-reusable and included in the authoritative path state. Under that condition an old logical generation cannot become current again, so an old acceptance precondition cannot become valid merely by generation-number reuse.",
+      "Design C prevents duplicate acceptance within the accepted-effects pointer when that pointer uses CAS/set semantics, but when active-epoch authority and accepted-effects state remain on separate paths, takeover can race between the active-pointer check and the accepted-effects CAS. The stale effect may therefore be recorded as accepted unless downstream consumers re-fence against the current epoch.",
+      "If Design C is changed so one authoritative path contains both the current non-reusable epoch and accepted-effect set and acceptance is one CAS on that path, its safety behavior collapses to Design B rather than remaining a distinct two-path protocol."
     ],
-    "inference": "Generation-scoped create-once outputs plus an active-generation CAS pointer can prevent stale effect acceptance, but only under stronger conditions than the basic pattern: generation/epoch identifiers must be globally non-reusable for the claim lineage, and effect acceptance must validate the current pointer epoch at acceptance/commit time or use an equivalent atomic fence. The pattern does not itself prevent stale output creation. Path-blob CAS/readback linearizes pointer updates but does not atomically couple independent output creation or a prior consumer read to that pointer.",
+    "inference": "Among the three tested designs, the single-path acceptance CAS is the strongest zero-hosted-coordination pattern for this exact scope because it combines takeover fencing and duplicate-acceptance idempotency in one repository-native CAS/readback boundary. Consumer re-read alone is insufficient without an atomic commit fence, and a separate accepted-effects pointer retains a cross-path race unless it is unified with current-epoch authority. This does not prove full multi-agent coordination parity or prevent stale output creation; it narrows the required acceptance invariant to non-reusable epoch plus single-path acceptance-time CAS.",
     "duplicate_or_conflicting_effect_committed": false,
     "effect_mutation_count": 0,
     "new_replay_validity_result": true,
     "bootstrap_valid_for_semantic_credit": true,
     "global_phase1_acceptance": false,
-    "unresolved_child": "Test a zero-cost repository-native acceptance protocol that binds each effect to a non-reusable claim epoch and current pointer blob at acceptance time, comparing (a) consumer re-read plus reject, (b) single-path acceptance CAS, and (c) append-only output plus accepted-effects pointer, while preserving create-once idempotency and avoiding hosted coordination."
+    "unresolved_child": "Test the single-path non-reusable-epoch acceptance CAS under multi-effect batching and takeover recovery, including two distinct effects racing with takeover, CAS conflict followed by next-invocation replay, and orphan-output garbage-collection policy that never mistakes unaccepted output existence for effect commitment."
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
     "finite_monthly_trial_paid_quota_dependency": false,
     "optional_hosted_compute_or_storage_quota_dependency_added": false,
     "richer_mode_protected_manual_execution_dependency": "none for this bounded self-local replay",
-    "repository_api_role": "lightweight state/evidence transport only; not external compute",
+    "repository_api_role": "lightweight state/evidence transport and path-blob CAS model only; not external compute",
     "accepted_external_hosted_coordination": false
   },
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
@@ -62,5 +65,5 @@
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
-  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local replay comparing three acceptance-time fencing designs for generation-scoped create-once outputs: consumer re-read-and-reject, single-path acceptance CAS, and append-only output plus accepted-effects pointer. Test stale writer, duplicate retry, pointer takeover, ABA/reused-generation defense via non-reusable epoch, and interruption between output creation and acceptance. Do not perform live claim mutation unless explicitly authorized by the current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
+  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local replay of the single-path non-reusable-epoch acceptance CAS under multi-effect batching and takeover recovery: two distinct effects racing with takeover, duplicate retry, CAS conflict deferred to next-invocation replay, and orphan-output handling that never treats output existence as accepted commitment. Do not perform live claim mutation unless explicitly authorized by the current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
 }
