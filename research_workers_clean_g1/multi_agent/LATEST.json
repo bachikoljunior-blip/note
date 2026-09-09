@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-09T19:33:40+09:00",
+  "updated_at": "2026-09-09T20:29:25+09:00",
   "control_revision": 27,
   "config_revision": 10,
   "phase_id": "phase_1_chat_parity",
@@ -10,9 +10,9 @@
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "LATEST_inline_persistence_recovery_micro_slice",
   "previous_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPLAY_PREDECESSOR_CHAIN_20260909_PART130.json",
-  "previous_latest_blob": "d7c9a6dc9fb3bf4230ef85c93cabc8a1899c52fb",
-  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic-witness-2026-09-09T193256+0900.json",
-  "presemantic_liveness_witness_blob": "914414c8c2849b28d0758eb4025c9e0766c8e5e0",
+  "previous_latest_blob": "29935501a2270c21e70a3ffe003ebd661a4dc416",
+  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_2026-09-09T202925_JST.json",
+  "presemantic_liveness_witness_blob": "ab55641759093fc5c58cafd42b74e3242796b7ee",
   "presemantic_liveness_witness_status": "durable_exact_readback_valid_for_required_role_tuple_fields",
   "semantic_config_snapshot": {
     "control_revision": 27,
@@ -24,30 +24,39 @@
     "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-    "transport_mode": "exact_blob_two_pass"
+    "transport_mode": "sha_pinned_main_ref",
+    "authority_main_sha": "71dd4f34bdda37675292c5d53c0092034f7e7dd8"
   },
   "semantic_freshness_proof_valid": true,
   "phase1_leaf_result": {
-    "leaf_id": "phase1-multi-agent-part134-acceptance-to-consumption-replay",
+    "leaf_id": "phase1-multi-agent-part135-consumption-target-contract-replay",
     "mode": "persistence_recovery_micro_slice",
-    "tested_scope": "Self-local deterministic replay of an already accepted single effect and an accepted batch under two concurrent consumers plus crash recovery. Compared (A) a same-authoritative-path consumed state under the existing non-reusable epoch/CAS model and (B) a separately fenced per-effect idempotency record. Covered concurrent consumer claim, crash before outcome, crash after outcome but before durable consumed receipt, duplicate retry, accepted-not-consumed versus consumed distinction, partial batch consumption, and next-invocation recovery after CAS conflict. No live claim/effect mutation, public-source read, external coordinator, other-worker state, O/downstream input, hosted compute, quota-bearing service, or destructive cleanup was used.",
+    "tested_scope": "Self-local deterministic replay of the previously open consumption crash window for exactly two target classes: (1) one repository-internal useful outcome atomically coupled with the authoritative consumed transition in the same compare-and-swap mutation, and (2) one separately applied useful action tested both without and with a stable target-side idempotency/result identity. The replay covered two consumers from the same accepted base, crash before target application, crash after target application but before a local consumed receipt, duplicate next-invocation replay, CAS conflict, and partial-batch recovery using stable per-effect identities. It did not execute any live useful action, mutate claims/effects, read public sources, other-worker state, O/downstream state, or use hosted compute, external coordination, finite monthly/trial/paid quota, or incremental paid service.",
     "observations": [
-      "For both compared architectures, two consumers racing from the same authoritative base can be reduced to one durable consumption authorization by path/blob CAS plus a stable effect or batch identity and a non-reusable epoch/fence. The losing consumer has no authorization and must reconstruct on a later invocation rather than retrying in-run.",
-      "A durable accepted state and a durable consumed state must remain distinct. Treating acceptance as consumption loses crash-recovery information and can suppress an outcome that was never produced.",
-      "Marking consumed before producing a useful outcome gives at-most-once authorization but creates a crash window in which the outcome is lost. Producing the useful outcome before marking consumed creates the opposite crash window: the next consumer cannot know from repository state alone whether retry would duplicate the outcome.",
-      "A same-authoritative-path consumed set is sufficient for exactly-once repository-state transition only when the useful outcome itself is atomically represented by that same successful CAS mutation. It is not by itself an exactly-once protocol for an arbitrary separately applied useful outcome.",
-      "A separately fenced idempotency record narrows contention and gives a stable per-effect recovery locus, but it has the same crash ambiguity unless the useful outcome target accepts the same stable idempotency key or otherwise exposes a durable replay-safe result identity that can be checked before retry.",
-      "For an accepted batch, a single batch-level consumed bit is unsafe when effects can complete independently. Safe recovery requires a stable batch manifest plus per-effect consumption states/receipts; after a crash, the next invocation retries only effects not durably consumed and never reissues already consumed effects.",
-      "If a batch promises all-or-none useful outcomes across multiple independently applied targets, repository CAS alone cannot provide atomicity across those targets. The replay can preserve exactly-once authorization and recoverable partial progress, but not transactional all-or-none external side effects without an idempotent or transactional target surface.",
-      "A CAS conflict remains non-consumption evidence. Deferring to the next invocation is safe when stable effect/batch identity, non-reusable epoch/fence, and accepted/consumed separation are preserved."
+      "For the repository-internal target class, when the useful outcome bytes and the consumed state for one stable effect_id are committed by the same successful CAS mutation against the authoritative blob, exactly one consumer can commit. A crash before the mutation leaves the accepted state unchanged; a crash after server-side commit but before client acknowledgement is recoverable by next-invocation readback because the useful outcome and consumed marker are already co-resident in the authoritative state. Reissuing from that readback is unnecessary and would fail the consumed-state guard.",
+      "For that same atomic repository-internal class, a CAS conflict is non-consumption evidence for the losing consumer. The safe action is to reconstruct next invocation. No same-run retry is required for correctness when effect_id, authority epoch/fence, expected predecessor blob, and consumed state are stable.",
+      "For a separately applied action with no target-side idempotency/result identity, a crash after the action succeeds but before the local consumed receipt creates an irreducible ambiguity: retry can duplicate the useful outcome, while suppressing retry can lose an outcome when the crash actually occurred before target application. Repository claim fencing alone cannot distinguish those histories.",
+      "For a separately applied action whose target accepts a stable idempotency key derived from the stable effect_id and returns or exposes a durable replay-safe result identity, the next invocation can replay/query with the same key. The target must guarantee that repeated use of that key does not reapply the useful effect and returns the same durable result identity; only after observing that identity should the repository state move to consumed with result_digest/result_id.",
+      "For a batch whose effects can finish independently, a stable immutable batch manifest plus per-effect effect_id, consumption state, and result identity is sufficient for recoverable partial progress: next invocation considers only effects not durably consumed and uses each effect's stable target contract. A single batch-level consumed bit is insufficient.",
+      "All-or-none semantics across multiple independently applied targets are not provided by repository CAS plus per-effect idempotency alone. That stronger property requires one atomic/transactional target surface spanning the batch; absent such a surface, the valid guarantee is exactly-once authorization plus replay-safe per-effect completion and recoverable partial progress, not transactional batch atomicity."
     ],
-    "inference": "For the exact replayed scope, the same-path and separate-record designs both solve duplicate consumer authorization under recurring Chat, but neither can guarantee exactly-once arbitrary useful outcomes across the crash-after-outcome-before-receipt window unless the useful outcome is atomically coupled to the authoritative CAS or the target surface supports a stable idempotency/result identity. Therefore the recurring-Chat parity protocol should model consumption as a fenced state machine (accepted -> consumption_claimed -> consumed), use stable effect/batch ids, keep per-effect receipts for batches, and classify non-idempotent uncoupled target actions as an unresolved child rather than claiming parity.",
+    "minimum_generic_contract": {
+      "stable_identity": "Every useful effect has a stable effect_id; batches have an immutable batch_id/manifest and stable per-effect ids.",
+      "fencing": "Each accepted effect is bound to a non-reusable authority epoch/fence and expected predecessor blob; only one CAS transition may establish consumption authorization.",
+      "state_machine": "Keep accepted, consumption_claimed, and consumed distinct. A CAS conflict or missing consumed/result identity is never evidence that the useful outcome completed.",
+      "atomic_target_option": "Parity can reach exactly-once useful outcome when the useful outcome and consumed marker are the same atomic authoritative CAS mutation, with next-invocation readback resolving lost acknowledgements.",
+      "idempotent_target_option": "For a separately applied action, the target must accept the stable effect_id as an idempotency key or equivalent, durably suppress duplicate application, and expose a stable replay/queryable result identity. The local consumed transition occurs only after that target identity is observed.",
+      "batch_recovery": "Persist an immutable batch manifest and per-effect claimed/consumed/result identities; retry/replay only effects lacking durable consumed evidence. Transactional all-or-none batch semantics require a target that itself offers an atomic transaction across all effects.",
+      "cross_invocation_recovery": "On connector uncertainty, CAS conflict, or lost acknowledgement, persist exact state and return; the next invocation rereads authoritative state or target result identity and resumes without same-run polling/retry.",
+      "acceptance_guard": "Any separately applied non-idempotent action, target whose idempotency/result identity is not durable/queryable, target requiring finite monthly/trial/paid quota, or target adding incremental monetary cost remains an unresolved child and cannot count as Phase-1 parity acceptance."
+    },
+    "inference": "Within the exact replayed scope, exactly-once useful outcome is generically achievable in recurring Chat only through one of two contracts: atomic coupling of useful outcome and consumed state in the same authoritative CAS, or a separately applied target that supplies durable idempotency plus a replay/queryable result identity keyed by the stable effect_id. Repository fencing by itself proves exactly-once authorization but cannot close the crash-after-outcome-before-receipt ambiguity for non-idempotent external actions. This narrows the unresolved parity frontier from generic consumption ambiguity to identifying which required useful target classes satisfy one of these two contracts under zero finite-quota and zero incremental-cost constraints.",
     "duplicate_or_conflicting_effect_committed": false,
     "effect_mutation_count": 0,
     "new_replay_validity_result": true,
     "bootstrap_valid_for_semantic_credit": true,
     "global_phase1_acceptance": false,
-    "unresolved_child": "Test the crash window against two exact target classes: (1) a repository-internal useful outcome that can be atomically coupled to the authoritative CAS and (2) a separately applied action with and without a stable target-side idempotency/result identity. Determine the minimum generic contract needed to promote consumption from exactly-once authorization to exactly-once useful outcome, including partial-batch recovery, without external hosted coordination or finite quota."
+    "unresolved_child": "Classify the remaining required useful target classes, using only CLEAN-safe/public evidence in future invocations, by whether they satisfy (A) atomic authoritative-CAS outcome coupling or (B) durable target-side idempotency plus replay/queryable result identity at zero finite monthly/trial/paid quota and zero incremental cost. Any class satisfying neither contract remains a concrete parity blocker."
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -68,5 +77,5 @@
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
-  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local replay of the consumption crash window for two target classes: a repository-internal outcome atomically coupled to authoritative CAS, and a separately applied action with versus without stable target-side idempotency/result identity. Require stable effect/batch identity, non-reusable epoch/fence, accepted/claimed/consumed distinction, per-effect batch recovery, no duplicate useful outcome, next-invocation recovery after CAS conflict, zero finite-quota dependency and zero incremental cost. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
+  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded CLEAN-safe classification leaf for one still-unclassified useful target class against the minimum generic consumption contract: atomic authoritative-CAS outcome coupling versus durable target-side idempotency plus replay/queryable result identity. Verify zero finite monthly/trial/paid quota and zero incremental cost, classify any mismatch as an unresolved child, persist/read back the exact result and a nonempty continuation, and return recurring-open without a second leaf."
 }
