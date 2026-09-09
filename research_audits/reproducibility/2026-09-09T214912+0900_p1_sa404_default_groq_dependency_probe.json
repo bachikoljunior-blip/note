@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "role": "reproducibility_auditor",
+  "created_at": "2026-09-09T21:49:12+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-repro-feasibility",
+  "authority": {
+    "instruction_control_manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "control_revision": 126, "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d"},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "control_revision": 3, "blob": "560024d46b6c26ea63ab58137be9d48863cab941"},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "control_revision": 27, "blob": "0eee15a94c23400653d84506da1f795081a6ef24"},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "control_revision": 37, "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3"},
+    "transport_mode": "exact_blob_two_pass_plus_pinned_public_source",
+    "bootstrap_valid": true
+  },
+  "predecessor": {
+    "path": "research_audits/reproducibility/2026-09-09T174102+0900_p1_sa404_redis_default_health_probe.json",
+    "blob": "1f8b028b893975da76c5bf4e16387c759239cb21",
+    "continuation_resumed": true,
+    "do_not_duplicate_prior_slices": true
+  },
+  "candidate_id": "p1-sa-404",
+  "artifact_provenance": {
+    "public_repository": "smruti-ranjan-sahoo/Multi_agent_with_Backend",
+    "public_commit": "aa3adcaa8f3339f3b4b26c92b5b1040e9831ef63",
+    "public_tree": "bf0f50b1547f61f8cb073050b3ae66a76323ab38",
+    "config_path": "backend/app/core/config.py",
+    "config_blob": "68c22ab9a1cfd88bee66cf40dcadc04738365136",
+    "chat_path": "backend/app/agents/nodes/chat.py",
+    "chat_blob": "0ec8cb62c94f39e23ca55bd33e8dcdba0e3656eb",
+    "llm_factory_path": "backend/app/services/llm/factory.py",
+    "llm_factory_blob": "517a97045703a0c3779d0dab12fad817ba2844f7",
+    "groq_provider_path": "backend/app/services/llm/groq_provider.py",
+    "groq_provider_blob": "03bca50f86dfcad9b084bcdb97b8c04e7fd97b7c"
+  },
+  "tested_scope": "At the exact pinned public commit, mechanically replay only the source-default Basic Chatbot LLM-provider selection/call path. No package installation, external network/API invocation, hosted compute, optional monthly quota, Work/protected-primary execution, scheduler mutation, or manual user execution is used. Redis, database startup, full FastAPI startup, and actual provider authentication/error behavior are outside this slice.",
+  "observations": {
+    "source_default_provider": "groq",
+    "source_default_groq_api_key": "",
+    "factory_supported_providers": ["groq"],
+    "chat_node_provider_resolution": "get_llm_provider(state.get('provider', settings.DEFAULT_LLM_PROVIDER))",
+    "chat_node_llm_call": "await provider.chat(messages, model)",
+    "groq_provider_call_construction": "ChatGroq(api_key=settings.GROQ_API_KEY, model=model)",
+    "groq_provider_network_invocation_surface": "await llm.ainvoke(...) or llm.astream(...) depending on path",
+    "local_zero_provider_fallback_observed": false,
+    "external_provider_call_attempted_in_this_audit": false
+  },
+  "mechanical_replay": "Under source defaults the Basic Chatbot selects the only registered provider, groq. The chat node delegates response generation to that provider, and GroqProvider constructs ChatGroq from settings.GROQ_API_KEY and invokes it. The source-default key is empty and no local/offline provider or deterministic response fallback is registered in the factory. Therefore a successful generated chat response on this exact path requires crossing the external Groq provider boundary; the route is not mechanically reproducible as a zero-external-provider-quota route from the pinned source alone.",
+  "reproduction_status": "reproduced_source_path_has_mandatory_external_groq_generation_dependency",
+  "exact_blocker_or_boundary": "For this exact Basic Chatbot generation path, p1-sa-404 retains an external model-provider execution dependency. At external provider quota=0, the pinned source exposes no local/offline generation fallback that could satisfy the response-generation step. The empty source-default GROQ_API_KEY additionally means the repository does not itself provide credentials. This evidence establishes the dependency boundary only; it does not execute Groq or assert a particular runtime exception, rate-limit value, billing tier, or current provider capacity.",
+  "independent_replication_status": "deterministic_pinned_source_control_flow_replay_only",
+  "evidence_grade": "A_pinned_primary_source_plus_deterministic_control_flow_replay",
+  "uncertainty": "No live Groq request was made, so authentication failure mode, provider availability, current quota policy, and exact runtime exception are untested. This slice does not prove that every repository use case requires Groq; it proves only that the exact source-default Basic Chatbot generation path has no observed local fallback and crosses the Groq provider boundary to generate a response.",
+  "assessment": {
+    "accepted_phase1_route": false,
+    "missing_capability_or_dependency_remains_unresolved": true,
+    "external_api_or_model_dependency_observed": true,
+    "zero_external_provider_quota_replay_pass": false,
+    "work_or_protected_primary_execution_used": false,
+    "manual_user_execution_used": false,
+    "optional_monthly_trial_paid_quota_consumed": false,
+    "incremental_monetary_cost": 0,
+    "scheduler_mutation_by_worker": false,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "enabled_desired": true
+  },
+  "next_exact_artifact": "On the next reproducibility_auditor invocation, reconstruct current authority and latest role-local predecessor, then select exactly one still-unproven current Phase-1 boundary without repeating transport creation/readback, fail-open configuration, denial replay, synthetic 429, optional-monthly-quota-zero replay, duplicate-create, stale-CAS, p1-sa-404 dependency-bundle, Redis-default-health, or this default-Groq dependency probe. Prefer the newest non-conflicting route or one exact p1-sa-404 boundary only if it tests a materially distinct dependency with exposed zero-cost tools.",
+  "continuation": {"nonempty": true},
+  "termination": "bounded_slice_complete_recurring_open"
+}
