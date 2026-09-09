@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-09T13:30:21+09:00",
+  "updated_at": "2026-09-09T15:31:44+09:00",
   "control_revision": 27,
   "config_revision": 10,
   "phase_id": "phase_1_chat_parity",
@@ -10,35 +10,38 @@
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "LATEST_inline_persistence_recovery_micro_slice",
   "previous_checkpoint_path": "research_workers_clean_g1/multi_agent/PHASE1_REPLAY_PREDECESSOR_CHAIN_20260909_PART130.json",
-  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_2026-09-09T133021_JST_config10.json",
-  "presemantic_liveness_witness_blob": "e3dd28967a0d7dee68bd2e83c42aeffa51915013",
+  "presemantic_liveness_witness_path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-09T153144_JST.json",
+  "presemantic_liveness_witness_blob": "2461f967c252923fb8625fac19e00e353d111b4f",
   "presemantic_liveness_witness_status": "durable_exact_readback_valid_for_required_role_tuple_fields",
   "semantic_config_snapshot": {
-    "main_sha_at_freeze": "fa5b57c9e16fb40c4006d446e92164d393d77370",
     "control_revision": 27,
     "root_manifest_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
     "instruction_manifest_revision": 126,
-    "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-    "transport_mode": "preferred_sha_exact"
+    "transport_mode": "exact_blob_two_pass"
   },
   "semantic_freshness_proof_valid": true,
   "phase1_leaf_result": {
-    "leaf_id": "phase1-multi-agent-part130-stale-owner-generation-fence-interleaving",
+    "leaf_id": "phase1-multi-agent-part131-generation-scoped-output-active-pointer-aba-takeover-replay",
     "mode": "persistence_recovery_micro_slice",
-    "tested_scope": "Self-local deterministic replay of A generation 7 exact-read, B generation 8 takeover, then A commit with no atomic commit-time branch-head/fence precondition; no live claim mutation or forbidden semantic input.",
-    "observation": "A_read(7) -> B_takeover(8) -> A_commit is a valid stale post-takeover commit interleaving when the commit is not atomically conditioned on the active fence.",
-    "inference": "Generation/fence plus exact readback alone cannot strictly prevent stale commits. Commit-time atomic fencing is required for that property. Generation-scoped append-only outputs plus an active-generation pointer may prevent stale effect acceptance, but that is a weaker property and remains to be tested for ABA/takeover races.",
+    "tested_scope": "Self-local deterministic replay of generation-scoped deterministic create-once effect outputs on independent paths plus an active-generation pointer updated by path-blob CAS/readback. Tested four interleavings only: normal takeover rejection, late stale output creation after takeover, ABA/reused-generation pointer return, and consumer read-before-takeover then accept-after-takeover without an atomic acceptance-time pointer guard. No live claim mutation, public-source read, external coordinator, or forbidden semantic input was used.",
+    "observations": [
+      "With active pointer g7, B successfully CAS-updates the pointer to g8, and A then creates a previously absent g7 output on its independent create-once path, the stale output can still exist durably because pointer CAS does not fence creation on the independent path.",
+      "If consumers determine acceptance from the current pointer at acceptance time and generations are never reused, a g7 output observed after the pointer is g8 is rejected; this prevents stale effect acceptance even though it does not prevent stale output creation.",
+      "If the active-generation identifier can ABA back from g7 to g8 to g7, an old or late g7 output can again satisfy a generation-equality acceptance check, so generation equality alone is not ABA-safe.",
+      "If a consumer reads pointer g7 before B's takeover and later accepts g7 output after the pointer moved to g8 without rechecking or atomically binding acceptance to the pointer epoch/blob, stale acceptance remains possible despite monotonic generations."
+    ],
+    "inference": "Generation-scoped create-once outputs plus an active-generation CAS pointer can prevent stale effect acceptance, but only under stronger conditions than the basic pattern: generation/epoch identifiers must be globally non-reusable for the claim lineage, and effect acceptance must validate the current pointer epoch at acceptance/commit time or use an equivalent atomic fence. The pattern does not itself prevent stale output creation. Path-blob CAS/readback linearizes pointer updates but does not atomically couple independent output creation or a prior consumer read to that pointer.",
     "duplicate_or_conflicting_effect_committed": false,
     "effect_mutation_count": 0,
     "new_replay_validity_result": true,
     "bootstrap_valid_for_semantic_credit": true,
     "global_phase1_acceptance": false,
-    "unresolved_child": "Test ABA/takeover safety of generation-scoped deterministic create-once outputs plus a CAS/readback active-generation pointer, distinguishing stale commit prevention from stale effect acceptance prevention."
+    "unresolved_child": "Test a zero-cost repository-native acceptance protocol that binds each effect to a non-reusable claim epoch and current pointer blob at acceptance time, comparing (a) consumer re-read plus reject, (b) single-path acceptance CAS, and (c) append-only output plus accepted-effects pointer, while preserving create-once idempotency and avoiding hosted coordination."
   },
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -59,5 +62,5 @@
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
-  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded ABA/takeover replay of generation-scoped deterministic create-once outputs plus an active-generation pointer: test whether stale-generation outputs can ever be accepted after pointer takeover when pointer updates use path-blob CAS/readback but effect outputs are independent paths. Do not perform live claim mutation unless explicitly authorized by the current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
+  "continuation": "Next invocation, bootstrap current INSTRUCTION_CONTROL_MANIFEST and RUN_LIFECYCLE, freeze DESIRED_STATE and multi_agent config at exact authority, and write/read back one config10 role-local presemantic witness before semantic state reads. Then execute exactly one bounded self-local replay comparing three acceptance-time fencing designs for generation-scoped create-once outputs: consumer re-read-and-reject, single-path acceptance CAS, and append-only output plus accepted-effects pointer. Test stale writer, duplicate retry, pointer takeover, ABA/reused-generation defense via non-reusable epoch, and interruption between output creation and acceptance. Do not perform live claim mutation unless explicitly authorized by the current continuation. Persist/read back the exact result and a nonempty continuation, then return recurring-open."
 }
