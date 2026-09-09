@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-09T18:22:25+09:00",
+  "timestamp": "2026-09-10T02:24:22+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
-    "main_sha": "7306f046a0fc50fc5f458f5fcb9c28dc81e53019",
+    "main_sha": "46bb3d2f9a1d520a6456d50d75835ab5bef18a0f",
     "manifest_control_revision": 126,
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
@@ -24,45 +24,45 @@
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "e42fd22e0aa6b75f95eab68f852ef43bd7a125f9",
-  "predecessor_slice_id": "reasoning-20260909T172512+0900-stage-t-minimal-freshness-witness-v1",
-  "slice_id": "reasoning-20260909T182225+0900-stage-t-verifier-consumption-cas-v1",
-  "selected_leaf": "Derive a bounded verifier-consumption state machine that persists q_last=(A,g,n,e), consumes only strictly newer exact-scope terminal evidence under role-local CAS, and prove CAS races cannot consume the same target terminal evidence twice or re-arm mutation.",
+  "predecessor_state_blob": "5291671cd138948a9fb8aa4a025634afbf92a830",
+  "predecessor_slice_id": "reasoning-20260909T182225+0900-stage-t-verifier-consumption-cas-v1",
+  "slice_id": "reasoning-20260910T022422+0900-stage-t-attempt-admission-cas-v1",
+  "selected_leaf": "Derive the Stage T attempt-side admission rule that links one durable pre-attempt checkpoint to one exact logical_effect_id,T,w,d and prove externally visible mutation cannot be admitted from stale, replayed, incomparable, or CAS-losing checkpoint state.",
   "bounded_leaf_result": {
-    "status": "semantic_stage_t_verifier_consumption_cas_gate_derived",
-    "tested_scope": "Abstract recurring-Chat Stage T protocols preserving one immutable logical_effect_id and exact (T,w,d), with role-local compare-and-swap checkpoint state and a target-authoritative verifier exposing q=(A,g,n,e) or a semantically equivalent immutable ordering witness. No concrete product/API capability is claimed.",
-    "checkpoint_state": {
+    "status": "semantic_stage_t_attempt_admission_cas_gate_derived",
+    "tested_scope": "Abstract recurring-Chat Stage T protocols with one role-local CAS-protected checkpoint object, immutable logical_effect_id and exact target tuple (T,w,d), and an external mutation path whose program flow can distinguish the immediate successful CAS-return branch from ordinary read/recovery branches. No concrete product/API capability, target idempotency primitive, or eventual liveness guarantee is claimed.",
+    "pre_attempt_checkpoint": {
+      "required_state": "VERIFY_BEFORE_ATTEMPT",
       "required_fields": ["logical_effect_id", "T", "w", "d", "protocol_state", "mutation_permitted", "q_last", "checkpoint_version"],
-      "q_last_initialization": "If no prior comparable target-authoritative terminal witness has been durably consumed, q_last=null. q_last is advanced only by the CAS-winning consumption transition.",
-      "terminal_protocol_states": ["COMMITTED", "CONFLICT"],
-      "crash_conservative_states": ["ATTEMPT_ARMED", "VERIFY_PENDING"]
+      "required_mutation_permitted_before_admission": false,
+      "immutability": "logical_effect_id,T,w,d are frozen before admission and cannot be synthesized or rotated by recovery logic."
     },
-    "verifier_consumption_transition": [
-      "1. Validate candidate q against the same logical_effect_id,T,w,d, target authority A and terminal verdict. Missing or invalid binding returns UNRESOLVED_UNSAFE with mutation_permitted=false.",
-      "2. Compare q to durable q_last. Same (A,g,n,e) is replay/no-op. Same (A,g,n) with unequal e or verdict is EQUIVOCATION_UNSAFE. Incomparable authority/generation evidence is INCOMPARABLE_UNSAFE. Only target-authoritatively proven strict freshness is admissible.",
-      "3. For a strictly newer exact-scope terminal q, derive C_next from the current durable checkpoint: set q_last=q; preserve logical_effect_id,T,w,d; set mutation_permitted=false; and terminally resolve COMMIT_PROVEN_IN_SCOPE to COMMITTED or a proven conflict to CONFLICT. Reconciliation never transitions to a mutation-capable pre-attempt state.",
-      "4. Persist C_next with one role-local CAS against checkpoint_version/current state blob. The CAS commit is the consumption linearization point. No target mutation occurs in this transition.",
-      "5. If CAS loses, do not consume or retry in-run. A later recurrence rereads the durable winner. If the same q won, it now compares equal/replay and cannot be consumed again; if a strictly newer q won, the losing q is stale and cannot regress q_last.",
-      "6. Across target generations, advance only with target-authoritative successor proof; otherwise keep q_last unchanged and fail closed."
+    "attempt_admission_transition": [
+      "1. Fresh-read one durable checkpoint C and validate exact logical_effect_id,T,w,d plus protocol_state=VERIFY_BEFORE_ATTEMPT and mutation_permitted=false. Missing, stale, replay-only, terminal, or incomparable checkpoint evidence is not admissible.",
+      "2. Derive C_arm from exactly C: preserve logical_effect_id,T,w,d and q_last; set protocol_state=ATTEMPT_ARMED; set mutation_permitted=true; bind admission_parent_version to C.checkpoint_version and bind attempt_witness to the exact tuple (logical_effect_id,T,w,d,admission_parent_version).",
+      "3. Persist C_arm with one role-local CAS against the exact current checkpoint blob/version. The successful CAS commit is the sole admission linearization point. No external target mutation occurs before this CAS succeeds.",
+      "4. Only the immediate control-flow branch that receives that successful CAS result may submit at most one external mutation for the exact attempt_witness. A readback/recovery path that merely observes ATTEMPT_ARMED is never an admission path and must not submit mutation.",
+      "5. If CAS loses, returns ambiguous failure, or authority becomes incomparable, submit no mutation and do not retry in-run. A later recurrence rereads durable state; it cannot reconstruct the immediate successful-CAS branch from an older checkpoint.",
+      "6. After the single permitted submission attempt, the protocol must move toward VERIFY_PENDING with mutation_permitted=false when a safe checkpoint write is available. A crash before that transition leaves ATTEMPT_ARMED as a conservative recovery state: later recurrences verify/reconcile but never re-submit solely from that durable state."
     ],
-    "cas_race_proof": [
-      "All contenders from the same checkpoint version race on one CAS-protected state object, so at most one C_next can commit for that version.",
-      "The winner durably stores q as q_last at the same linearization point that records its terminal interpretation. Therefore any later consumer of the identical q observes equality/replay rather than strict freshness.",
-      "A delayed contender carrying the pre-winner checkpoint version cannot overwrite the winner because its CAS precondition is stale. It performs no target mutation before the CAS and mutation_permitted is false throughout consumption.",
-      "If different strictly ordered terminal witnesses race, only one wins the current version; a later recurrence may consume only a witness strictly newer than the winner. A lower/equal witness cannot regress q_last.",
-      "Thus the same terminal evidence identity e cannot be durably consumed twice under checkpoint CAS races. The property is at-most-once consumption; eventual observation of the newest evidence depends on later recurring invocations and is not claimed by this slice."
+    "non_admission_proof": {
+      "stale_checkpoint": "A stale C carries an obsolete checkpoint_version/blob, so its CAS precondition cannot win against a newer durable state. Because mutation is forbidden before CAS success, stale C cannot cause an external mutation.",
+      "replayed_checkpoint": "Replaying the same pre-attempt C after one admission has already committed observes a changed durable checkpoint version. The replayed CAS loses; ordinary readback of ATTEMPT_ARMED is explicitly non-admitting. Therefore replay cannot produce a second admission.",
+      "incomparable_checkpoint": "If exact logical_effect_id,T,w,d, authority, or checkpoint-version ordering cannot be established, the admission predicate fails before CAS. mutation_permitted remains false and no target call is issued.",
+      "cas_losing_checkpoint": "A contender that loses CAS never reaches the unique successful-CAS control-flow branch. Since target mutation is sequenced strictly after CAS success, the loser cannot submit mutation.",
+      "terminal_or_recovery_state": "COMMITTED, CONFLICT, VERIFY_PENDING and read-observed ATTEMPT_ARMED have no transition into a target-call branch. Verifier consumption from the predecessor slice also never re-arms mutation."
+    },
+    "race_argument": [
+      "All contenders derived from one pre-attempt checkpoint version race on the same CAS-protected role-local state object; at most one can commit C_arm for that version.",
+      "The only target-call edge is dominated by that successful CAS result, so every CAS loser has zero target-call edges.",
+      "After a winner commits C_arm, the predecessor checkpoint is stale. Subsequent recurrences observe ATTEMPT_ARMED through readback, not through the winning CAS-return branch, and therefore cannot re-submit from the durable arm state.",
+      "This proves at-most-one admission from a checkpoint version under the stated program-flow model. It does not yet prove target-side exactly-once effect if a single admitted network submission itself is internally duplicated by the target or transport."
     ],
-    "no_rearm_proof": [
-      "Verifier consumption has no transition to VERIFY_BEFORE_ATTEMPT or any state with mutation_permitted=true.",
-      "ATTEMPT_ARMED and VERIFY_PENDING remain crash-conservative unless strictly newer terminal evidence resolves them to COMMITTED or CONFLICT.",
-      "COMMITTED and CONFLICT remain monotonic terminal states; contradictory strictly newer terminal evidence becomes UNRESOLVED_UNSAFE and preserves mutation_permitted=false rather than reopening execution.",
-      "logical_effect_id,T,w,d are immutable across the consumption transition, so evidence processing cannot synthesize or rotate a second logical effect witness."
-    ],
-    "direct_architecture_contribution": "A scheduled-Chat-native checkpoint-first verifier gate can linearize evidence consumption entirely through lightweight repository CAS/state transport: target evidence is interpreted only after exact-scope verification, and the CAS-winning q_last advance is the sole durable consumption event. This removes any need for richer-mode arbitration in the tested abstract consumption path.",
+    "direct_architecture_contribution": "The attempt side can be made checkpoint-first and CAS-linearized using only lightweight repository state transport: external mutation is unreachable until one exact pre-attempt checkpoint wins CAS, and stale/replayed/incomparable/CAS-losing states are structurally excluded from the mutation branch. This closes the predecessor slice's unresolved admission ordering at the abstract architecture level without richer-mode arbitration.",
     "unresolved_conditions": [
-      "A concrete target must expose q=(A,g,n,e) or equivalent target-authoritative ordering/reset semantics.",
-      "A concrete verifier must prove exact binding to logical_effect_id,T,w,d and terminal verdict.",
-      "A later bounded leaf must derive the attempt-side admission rule that connects this consumption gate to a pre-attempt checkpoint and proves no externally visible mutation can occur unless the durable checkpoint authorizes that exact witness."
+      "A concrete implementation must enforce the control-flow invariant that only the immediate successful-CAS branch can invoke the target mutation and that recovery/readback of ATTEMPT_ARMED cannot invoke it.",
+      "A concrete target/transport must be assessed for duplication inside a single admitted submission; this slice proves admission at-most-once from checkpoint state, not target-side exactly-once application.",
+      "A later bounded leaf must connect the post-submission crash window to VERIFY_PENDING and the q_last verifier-consumption gate, classifying response-loss and target duplication without permitting a second mutation call."
     ],
     "positive_phase1_evidence_from_this_slice": true,
     "prior_scientific_result_preserved_by_predecessor_reference": true
@@ -94,5 +94,5 @@
     "continuation_nonempty": true,
     "diagnostic_only": false
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260909T182225+0900-stage-t-verifier-consumption-cas-v1. Execute exactly one bounded next Stage T leaf: derive the attempt-side admission rule that links a durable pre-attempt checkpoint to one exact logical_effect_id,T,w,d and prove an externally visible mutation cannot be admitted from stale, replayed, incomparable, or CAS-losing checkpoint state. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260910T022422+0900-stage-t-attempt-admission-cas-v1. Execute exactly one bounded next Stage T leaf: derive the post-submission crash-window transition from ATTEMPT_ARMED toward VERIFY_PENDING and integrate it with q_last verifier consumption, proving a lost/ambiguous mutation response cannot authorize a second target call on a later recurrence. Keep the proof abstract and CLEAN, use no public web while persistence_recovery_micro_slice remains active, and preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
 }
