@@ -1,0 +1,109 @@
+{
+  "schema_version": 3,
+  "generation": "clean_g1",
+  "comparator": "evidence_strength",
+  "observed_at": "2026-09-10T00:44:08+09:00",
+  "bootstrap_valid": true,
+  "transport_mode": "sha_tree_two_pass_freeze",
+  "preflight_path": "research_comparators_clean_g1/evidence/2026-09-10T004408+0900__PREFLIGHT__C32_OPEN_SOURCE_CANDIDATE011.json",
+  "preflight_blob": "b6e4479ba8cf29bf03b565c9a202234c88c5241a",
+  "frozen_authority": {
+    "main_tree_sha": "cd0252287feb4713039762264957dc42f609e29b",
+    "manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
+    "manifest_control_revision": 126,
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_control_revision": 3,
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_state_control_revision": 27,
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "downstream_state_control_revision": 37,
+    "evidence_comparator_config_revision": 20
+  },
+  "active_wave": {
+    "wave_id": "clean-g1-wave-c32-20260828T195737JST-3be91469",
+    "raw_identity_manifest_path": "research_comparators_clean_g1/novelty/RAW_IDENTITY_MANIFEST_C32_20260828T2043JST_SCHEMA3.json",
+    "raw_identity_manifest_blob": "797334baec6f96026cb907aacb14ba2f59fe233e",
+    "candidate_set_digest": "44d3231f6b48f45529a4c3b4f7fd5a204487da8e9fc2da5f31bf022094f96ab6"
+  },
+  "candidate_identity_row": ["open_source", "2405043822b199c2d9674527dc925e76c312a9ea", "Candidate011"],
+  "source_artifact_path": "research_workers_clean_g1/open_source/RUN_20260828_1907_EVENT_AUTHORITY_API.md",
+  "source_artifact_blob": "2405043822b199c2d9674527dc925e76c312a9ea",
+  "source_artifact_scope": "Only Candidate011 in the sealed open_source artifact: delimiter/torn-tail isolation before canonical events.jsonl appends and the later byte-stable reader direction. This grade does not merge Candidate011 with event_log_authority or Candidate013 and does not claim implementation, crash-test success, cross-platform regression success, or end-to-end scheduled-Chat parity.",
+  "primary_source_reverification": {
+    "repository": "lbx154/Argus",
+    "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
+    "files_checked": [
+      "argus_skill/life/event_log.py",
+      "argus_skill/adapters/agent_cli_backend/_io_log.py"
+    ],
+    "verified_findings": [
+      "JsonlEventSink._append serializes a JSON object and writes line + newline after optional rotation, but does not inspect or isolate a pre-existing unterminated tail before appending.",
+      "AgentIOLogger._jsonl_append similarly opens the target in text append mode and writes line + newline under an instance-local lock, without checking whether the existing file ends in a newline.",
+      "iter_call_events explicitly skips a row whose raw text does not end in newline, so the current reader already treats an unterminated final row as incomplete rather than valid history.",
+      "Therefore, if a canonical log contains crash-torn bytes without a final newline, a subsequent direct append can concatenate a valid JSON object onto the damaged tail; delimiter isolation before append is a technically grounded repair target."
+    ],
+    "not_reverified_in_this_slice": [
+      "core/usage.py migration append path",
+      "actual crash-torn-tail reproduction",
+      "the proposed isolate_unterminated_tail_unlocked implementation",
+      "byte-stable generation snapshot reader implementation",
+      "Windows/POSIX cross-process regression behavior"
+    ]
+  },
+  "grade": {
+    "evidence_tier": "B",
+    "independent_replication": "primary_source_reverification_of_the_torn_tail_failure_mechanism_only_no_runtime_reproduction_or_patch_validation",
+    "mechanistic_support": "strong_source_level_support_for_the_delimiter_failure_mode_and_repair_location_but_no_executed_crash_reproduction_or_implemented_fix",
+    "phase1_acceptance": "not_established",
+    "usefulness": "material_replay_and_durability_reliability_candidate_but_not_a_complete_dependency_elimination_route"
+  },
+  "observations": [
+    "The exact C32 schema-3 tuple is present in the sealed raw identity manifest and resolves without aliasing to the exact open_source artifact blob.",
+    "The worker artifact places delimiter isolation below all three canonical writers and explicitly separates it from later byte-stable reader recovery.",
+    "Comparator-side inspection of the exact Argus commit confirms two writer implementations that append newline-terminated JSON without first checking the existing file's final byte, and confirms a reader that skips unterminated final rows.",
+    "This independently supports the core failure mechanism: a crash-torn tail can absorb the next otherwise-valid append unless a delimiter boundary is restored first.",
+    "No runtime reproduction, patch, fsync/power-loss experiment, migration-path verification, cross-platform contention test, or stable-reader implementation is attached to this exact tuple.",
+    "Candidate011 is a low-level durability/replay mechanism. It does not itself establish zero residual Work/protected/user execution, zero finite quota dependence, zero incremental cost for a complete route, rate-limit resume, aggregate conflict safety, or Phase-1 acceptance."
+  ],
+  "hard_gate_assessment": {
+    "residual_work_or_protected_or_user_execution": "not established for a complete route; this tuple is a low-level local durability mechanism",
+    "unavailable_capability_only": false,
+    "finite_monthly_trial_paid_quota_dependency": "none evidenced for the local delimiter-isolation mechanism itself, but a complete accepted route is not tested",
+    "incremental_monetary_cost": "none evidenced for the local source-level mechanism itself, but a complete accepted route is not tested",
+    "duplicate_conflict_false_completion_control": "not directly demonstrated; candidate addresses torn-tail replay integrity rather than full duplicate/conflict control",
+    "zero_quota_replay": "not demonstrated end to end",
+    "rate_limit_resume": "not demonstrated and outside this tuple's direct scope",
+    "authority_safety": "exact tuple/source provenance is valid; file-level repair semantics remain unimplemented and untested",
+    "overall_hard_gate_result": "UNRESOLVED"
+  },
+  "scope_and_uncertainty": {
+    "positive_scope": "Primary-source-supported evidence at Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236 that at least two JSONL append paths do not isolate an existing unterminated tail and that one reader skips unterminated rows, making pre-append delimiter isolation a concrete durability/replay candidate.",
+    "excluded_scope": [
+      "complete inventory of every canonical writer",
+      "migration writer behavior",
+      "actual torn-tail reproduction",
+      "implemented delimiter-isolation primitive",
+      "fsync and power-loss durability",
+      "byte-stable reader correctness",
+      "cross-platform concurrency correctness",
+      "complete zero-Work zero-quota zero-cost route",
+      "Phase-1 acceptance or completion"
+    ],
+    "reason_for_tier": "Tier B is assigned because the comparator directly inspected the exact public source commit and independently confirmed the specific writer/reader mechanics that make Candidate011 plausible. It is not Tier A because no crash reproduction, implementation, regression suite, or independent runtime replication was executed."
+  },
+  "boundary": {
+    "legacy_research_workers_used": false,
+    "o_read": false,
+    "clean_worker_writes": false,
+    "exploration_feedback_written": false,
+    "moving_latest_substitution": false,
+    "fuzzy_alias_mapping_used": false,
+    "desired_state_edited": false,
+    "scheduler_mutation": "none"
+  },
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "termination": "bounded_one_candidate_grade_persisted",
+  "exact_next_action": "On the next invocation, grade exact C32 schema-3 identity tuple [open_source,2405043822b199c2d9674527dc925e76c312a9ea,Candidate013]. Preserve exact-tuple subset semantics and treat the remaining 10 C32 candidates as not_assessed until individually graded; do not process a second tuple in this invocation."
+}
