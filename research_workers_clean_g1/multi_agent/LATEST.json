@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-10T11:30:47+09:00",
+  "updated_at": "2026-09-10T14:29:11+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "5bb9d48438200bb47f50da117e16269993df12b7",
+  "previous_latest_blob": "afdf97ea2d6b071fd7ae52fe8397401840a916d9",
   "semantic_config_snapshot": {
     "instruction_manifest_revision": 126,
     "run_lifecycle_revision": 3,
@@ -20,32 +20,33 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_main_ref_exact_authority",
-    "frozen_main_sha": "5f6819006bf8d782e1856b1986f7def170709194"
+    "transport_mode": "sha_exact_main_ref",
+    "frozen_main_sha": "7b2b447a921c1c7d802ea53655655e80b8a7a71d"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T113047_JST_config10.json",
-    "blob": "2c5a6b801dd703d0c123433d417c04261c63bb2e",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T142911_JST_cfg10.json",
+    "blob": "7172148cc477a7826b0c2cdcff19591fa79fe9fe",
     "status": "write_and_exact_readback_valid",
     "durable_readback": true
   },
-  "selected_leaf_id": "phase1-multi-agent-ambiguous-outcome-identity-replay",
-  "tested_scope": "One bounded self-local replay-consistency check using the current exact-readback presemantic witness plus the prior create-only replay-validity evidence. The check evaluates a three-state idempotency decision rule for a single role-local effect identity: committed, proven-uncommitted, and unknown. It does not test simultaneous competing writers, fairness, lease expiry, or a live induced transport timeout.",
+  "selected_leaf_id": "phase1-multi-agent-observed-write-blocker-unknown-replay",
+  "tested_scope": "One bounded replay-classification check over the current multi_agent LATEST plus its immediate role-local predecessor blob 5bb9d48438200bb47f50da117e16269993df12b7. The predecessor records one attempted config10 presemantic role-local create at research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T103054_JST_config10.json that was explicitly blocked by the GitHub/OpenAI write safety gate, with durable_readback=false. No write retry, absence query, simultaneous writer, lease, fairness, external coordinator, or public-source behavior was tested in this leaf.",
   "observations": [
-    "The current presemantic witness was created and exact-read back at blob 2c5a6b801dd703d0c123433d417c04261c63bb2e, providing a concrete committed role-local identity under the frozen authority tuple.",
-    "Prior role-local evidence at blob c9f44f1094a2a6cd87eceb8f6d2942cc87e60c41 established that an already-existing create-only reservation and a fresh absent-then-created reservation can be distinguished by repository path identity plus exact readback without mutating the already-reserved path."
+    "The current invocation's presemantic witness was successfully created and exact-read back at blob 7172148cc477a7826b0c2cdcff19591fa79fe9fe under the frozen authority tuple.",
+    "Immediate predecessor blob 5bb9d48438200bb47f50da117e16269993df12b7 records an attempted create at research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T103054_JST_config10.json with status=write_blocked and durable_readback=false.",
+    "That predecessor does not contain a pinned exact-readback absence proof for the attempted path. Therefore the observed blocked-write trace cannot be promoted to proven_uncommitted solely from the write-blocked status."
   ],
-  "replay_rule": {
-    "committed": "If the idempotency/effect identity has exact durable readback, classify committed and suppress duplicate mutation.",
-    "proven_uncommitted": "If the intended identity is known and absence of the effect is proven at the relevant pinned observation point, classify uncommitted; a later invocation may perform one create-only attempt using the same identity.",
-    "unknown": "If the effect outcome cannot be proven because durable readback is unavailable or transport outcome is indeterminate, classify unknown; do not mutate or retry in the same invocation. Carry the same identity and query before any later mutation."
+  "replay_classification": {
+    "effect_identity": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T103054_JST_config10.json",
+    "classification": "unknown",
+    "reason": "A blocked transport/write result plus durable_readback=false is insufficient to prove either committed or uncommitted state without an observation of the effect identity itself. Fail-closed replay therefore suppresses mutation and carries the exact identity forward for a later read-only resolution check."
   },
-  "inference": "For the exact single-writer role-local replay scope, identity plus exact readback supports a fail-closed three-state replay policy that prevents a known committed effect from being duplicated and prevents an indeterminate outcome from being blindly replayed. The unknown branch is a safety-preserving rule, not empirical proof of behavior under a live connector interruption.",
+  "inference": "Within this exact observed role-local trace, the three-state idempotency rule has a real unknown branch: transport/write failure evidence without exact effect-state readback must not be treated as proof of absence. This supports fail-closed duplicate prevention for ambiguous outcomes, but does not yet prove how the path resolves after a later read-only query or under simultaneous competing writers.",
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Empirically validate the unknown branch against an already-observed role-local transport/write blocker or another safely observable indeterminate outcome without inducing same-run retry.",
+    "Resolve the recorded unknown branch with one later read-only exact-path query of research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T103054_JST_config10.json before any mutation; classify present as committed and confirmed absent at that observation point as proven_uncommitted.",
     "Simultaneous competing-create atomicity/race behavior remains untested."
   ],
   "zero_dependency_zero_quota_assessment": {
@@ -55,7 +56,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight state/evidence transport only; not external compute"
   },
-  "conflict_check": "Only multi_agent role-local state and the sanitized controls were consumed. No O, downstream, other-worker state, shared aggregate ledger, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Only sanitized controls, multi_agent role-local current state, the immediate multi_agent predecessor blob, and the current role-local witness were consumed. No O, downstream, other-worker state, shared aggregate ledger, protected authority, public source, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -68,5 +69,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: bootstrap and freeze current authority, persist/read back exactly one role-local presemantic witness, then read the minimum own predecessor chain containing the existing multi_agent transport/write-blocker evidence and execute one bounded empirical replay check of the unknown branch: preserve the same idempotency/effect identity, verify whether a committed effect can be proven before any mutation, and classify committed/proven-uncommitted/unknown fail-closed. Do not induce a second write, retry, poll, or simultaneous-writer test in the same invocation. Persist exact scope, observations versus inference, zero-cost/zero-quota classification, unresolved remainder, and the next continuation."
+  "continuation": "Next invocation: bootstrap and freeze current authority, persist/read back exactly one role-local presemantic witness, then execute exactly one bounded read-only resolution check for the carried effect identity research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-10T103054_JST_config10.json before any mutation. If present with exact readback, classify committed and suppress replay; if confirmed absent at the observation point, classify proven_uncommitted but do not perform an optional second mutation in that invocation; if the read outcome is indeterminate, retain unknown. Persist exact scope, observation versus inference, zero-cost/zero-quota assessment, unresolved remainder, and a nonempty continuation, then return recurring-open without retry/poll/backoff or a second leaf."
 }
