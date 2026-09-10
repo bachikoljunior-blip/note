@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-10T10:25:13+09:00",
+  "timestamp": "2026-09-10T12:23:38+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -10,7 +10,7 @@
     "manifest_control_revision": 126,
     "run_lifecycle_control_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
-    "frozen_main_sha": "1285b3f4c778b7df2b18fa748d2efa98e825e6fb",
+    "frozen_main_sha": null,
     "desired_state_path": "automation_control/DESIRED_STATE.json",
     "desired_state_control_revision": 27,
     "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
@@ -18,64 +18,65 @@
     "reasoning_role_control_revision": 11,
     "reasoning_config_revision": 8,
     "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
-    "transport_mode": "sha_exact_authority",
+    "transport_mode": "exact_blob_two_pass",
     "bootstrap_valid": true,
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "135322bd51b48869812287799382133fac2ae48a",
-  "predecessor_slice_id": "reasoning-20260910T082232+0900-stage-t-post-submit-crash-window-v1",
-  "slice_id": "reasoning-20260910T102513+0900-stage-t-ambiguity-resolution-capability-lattice-v1",
-  "selected_leaf": "Characterize the minimal concrete target capability set that lets VERIFY_PENDING resolve an ambiguous admitted submission to COMMITTED or CONFLICT without any second target mutation call, comparing read-only effect correlation with target-side idempotency semantics and failing closed when neither suffices.",
+  "predecessor_state_blob": "cc9fc619fbdb5c1a830babb9f8814e8fed1757f7",
+  "predecessor_slice_id": "reasoning-20260910T102513+0900-stage-t-ambiguity-resolution-capability-lattice-v1",
+  "slice_id": "reasoning-20260910T122338+0900-stage-t-verifier-observation-contract-v1",
+  "selected_leaf": "Derive the minimal verifier observation contract for concurrent or eventually-consistent targets so an already ambiguous Stage T effect can be classified as COMMITTED, CONFLICT, or UNKNOWN without any second target mutation call.",
   "bounded_leaf_result": {
-    "status": "semantic_stage_t_minimal_ambiguity_resolution_capability_set_derived",
-    "tested_scope": "Abstract recurring-Chat Stage T protocols continuing from a durable VERIFY_PENDING state for one logical_effect_id and intended target tuple (T,w,d). The protocol forbids any second target mutation call for this logical effect and may use only read-only target observations plus role-local checkpoint/CAS transport. No concrete target API, vendor, availability guarantee, or cross-target generalization is claimed.",
-    "minimal_sufficient_capability_classes": {
-      "effect_correlated_read_surface": {
-        "sufficient_when": [
-          "A read-only observation is authoritative for the exact target object/version relevant to (T,w,d).",
-          "A deterministic predicate can correlate the observation to the intended logical effect, either by logical_effect_id itself or by an effect fingerprint that is injective within the tested target scope.",
-          "The observation can distinguish exact match from exact mismatch; temporary absence or stale visibility is represented as UNKNOWN rather than inferred failure."
-        ],
-        "verifier_transition": "MATCH -> COMMITTED; authoritative MISMATCH -> CONFLICT; stale/partial/unverifiable observation -> remain VERIFY_PENDING/UNKNOWN. mutation_permitted stays false for all outcomes.",
-        "why_minimal": "This directly supplies the missing post-submit fact needed to classify the one already-admitted effect without reconstructing an admission token or issuing another mutation."
-      },
-      "idempotency_record_read_surface": {
-        "sufficient_when": [
-          "The target exposes a read-only lookup keyed by the stable logical_effect_id or idempotency key used by the admitted request.",
-          "A present record binds the key to an immutable request digest and outcome/status whose authority is target-side rather than client-local.",
-          "A key-absent result is treated as proof of non-application only when the lookup contract is strongly consistent for the relevant admission horizon; otherwise absence remains UNKNOWN."
-        ],
-        "verifier_transition": "Present record with matching request digest and committed-success outcome -> COMMITTED; present record with same key but incompatible request digest or definitive conflicting outcome -> CONFLICT; absent/nonfinal/weakly-consistent record -> VERIFY_PENDING/UNKNOWN.",
-        "why_minimal": "The target's idempotency ledger itself becomes the effect-correlated read-only verifier; no replayed mutation is necessary."
-      }
+    "status": "semantic_stage_t_minimal_verifier_observation_contract_derived",
+    "tested_scope": "Abstract recurring-Chat Stage T protocols continuing from durable VERIFY_PENDING for one logical_effect_id and intended tuple (T,w,d). The verifier is read-only and must tolerate concurrent unrelated writes and eventual visibility. No concrete target API, provider availability, cross-target guarantee, or richer-mode capability is claimed.",
+    "minimal_observation_contract": {
+      "authoritative_target_identity": "Every observation names the exact target object or namespace and is target-authoritative rather than reconstructed solely from client-local acknowledgement or checkpoint state.",
+      "monotone_version_witness": "Every decisive observation carries a target version, event sequence, snapshot epoch, or equivalent monotone witness V that lets the verifier distinguish a newer observation from an older one and bind the observed value to a specific target state frontier.",
+      "freshness_or_coverage_witness": "For negative evidence, V alone is insufficient. The read surface must also expose a coverage/finality fact H establishing which target admissions, events, or object versions are guaranteed to be reflected by this observation. If H cannot be related to the effect's relevant submission/admission horizon, absence remains UNKNOWN.",
+      "effect_correlation_uniqueness": "Positive evidence must bind uniquely to logical_effect_id, or to a target-side key/request digest/effect fingerprint that is injective within the tested namespace. Equality of final object value without unique correlation is not enough because a concurrent unrelated write may coincidentally produce the same value.",
+      "request_digest_binding": "When a target-side idempotency or effect record is used, the record must bind the stable key to the intended request digest d and outcome. Same key plus incompatible digest is decisive conflict evidence; a mutable or client-authored mapping is not authoritative.",
+      "concurrency_disambiguation": "The observation contract must distinguish the correlated effect from unrelated writes, either through per-effect records/event identities or through a versioned object history whose transition can be uniquely attributed to this effect. A latest-value-only read with no attribution cannot prove COMMITTED under concurrency.",
+      "finality_for_negative_claims": "Absence may become decisive only when the target contract says the relevant observation is complete for the effect's admissible application window and later application of that same admitted effect is impossible without a new mutation. Eventual-consistency delay, asynchronous queues, or an open processing horizon keep absence at UNKNOWN."
     },
-    "insufficient_capability_classes": {
-      "write_only_idempotency_key_without_lookup": "A target that accepts an idempotency key on mutation but exposes no authoritative read-only key status or effect observation does not resolve an already ambiguous submission without a second mutation call. It can make a retry safer in a different protocol, but that retry is outside this leaf's no-second-call contract and therefore is not sufficient here.",
-      "generic_read_surface_without_exact_correlation": "A read API that cannot bind observed state to logical_effect_id or an equivalent exact effect fingerprint cannot distinguish this effect from coincidentally equal state and is insufficient for positive COMMITTED evidence.",
-      "client_local_ack_or_checkpoint_only": "A client-side acknowledgement, q_last value, or role-local checkpoint cannot prove target application after the post-submit crash window because the crash may occur before that evidence is durably written.",
-      "neither_verifier_nor_idempotency_record": "Remain VERIFY_PENDING/UNKNOWN indefinitely or until a future authorized capability appears. Do not retry the target mutation, and do not substitute richer-mode, protected, manual-user, finite-quota, or paid execution."
+    "decision_rules": {
+      "COMMITTED": [
+        "An authoritative observation at version/frontier V contains a uniquely correlated effect record or uniquely attributable transition for logical_effect_id.",
+        "The correlation binds the intended request digest d and reports a committed/success outcome, or the target contract makes the uniquely attributable transition itself definitive.",
+        "Concurrent unrelated writes do not erase this proof because the witness is effect-correlated rather than inferred from present value alone."
+      ],
+      "CONFLICT": [
+        "An authoritative target-side record for the same stable effect/idempotency key binds to an incompatible request digest or a definitive conflicting outcome; or",
+        "A complete/final observation proves a mutually exclusive target state for the exact effect namespace after a coverage frontier that includes the entire admissible application horizon for this effect, so later appearance of this effect without a new mutation is ruled out by contract.",
+        "A merely different current value, ordinary absence, timeout, or stale read never satisfies CONFLICT by itself."
+      ],
+      "UNKNOWN": [
+        "Observation freshness cannot be related to the relevant effect horizon.",
+        "The read surface is eventually consistent without a completeness/high-water/finality witness.",
+        "Positive state is not uniquely attributable to this effect.",
+        "Absence is visible but asynchronous processing or delayed replication could still make the effect appear later.",
+        "The target-side record is nonfinal, mutable in an unqualified way, weakly consistent, or not bound to d."
+      ]
     },
-    "capability_lattice": [
-      "Level 0: no exact read correlation and no target-side idempotency record lookup -> replay-safe but completion-unresolved.",
-      "Level 1: write-only idempotency key -> can potentially support safe resubmission, but does not satisfy no-second-call ambiguity resolution.",
-      "Level 2A: authoritative effect-correlated read surface -> sufficient for COMMITTED/CONFLICT/UNKNOWN classification without mutation.",
-      "Level 2B: authoritative read-only idempotency record/status surface -> sufficient and is a specialized effect-correlated verifier.",
-      "Level 3: both 2A and 2B -> stronger cross-checking and conflict diagnosis but not minimal for this leaf."
-    ],
-    "absence_rule": "Absence is not automatically a mismatch. A negative observation may produce CONFLICT only when the target's read contract makes that absence definitive for the exact object/version and visibility horizon. Otherwise the protocol preserves UNKNOWN and waits for a later recurrence rather than fabricating certainty.",
-    "direct_architecture_contribution": "The Stage T architecture needs one authoritative read-only effect witness, not necessarily a richer executor. A target-side idempotency ledger qualifies only when its status can itself be read without mutation. This separates the safety property of deduplicating retries from the epistemic property of resolving an already ambiguous submission and prevents a write-only idempotency feature from being misclassified as sufficient outcome evidence.",
+    "minimal_witness_shapes": {
+      "per_effect_record": "R=(key_or_effect_id, request_digest, outcome, record_version, finality). A matching final-success R is sufficient for COMMITTED; an incompatible digest or final conflicting outcome is sufficient for CONFLICT. Missing R is decisive only if the lookup also supplies a coverage/finality witness proving completeness for this effect horizon.",
+      "append_only_log_or_index": "O=(effect_identity, request_digest, outcome, event_version) plus high-water mark H. A matching event at or below H is sufficient for COMMITTED. Absence below H is not sufficient unless the protocol can establish that every possible application of this effect would necessarily have been indexed by H and the effect's processing window is closed.",
+      "versioned_object_history": "O=(object_version, transition_identity, effect_correlation, value). This can prove COMMITTED only when the transition is uniquely correlated to the intended effect. Present-value equality without transition identity is insufficient under concurrent writers."
+    },
+    "absence_soundness_rule": "Negative evidence is sound only when freshness and completeness are both effect-relative. Formally, absence can leave UNKNOWN only if there exists a target-authoritative frontier H such that all applications of the intended effect that can occur from the already-issued submission are guaranteed observable at or before H, the verifier's observation covers through H, and the target contract rules out later application from that same submission. Without all three facts, absence remains UNKNOWN rather than being converted to CONFLICT.",
+    "direct_architecture_contribution": "A safe Stage T verifier needs an epistemic contract, not merely a read endpoint: target authority, monotone versioning, effect-relative coverage/finality, and unique effect correlation. These properties let recurring Chat resolve positive evidence under concurrency and sharply delimit the rare case where absence is decisive, while preserving a no-second-mutation crash-window discipline.",
     "falsification_criteria": [
-      "If the observed read surface is eventually consistent and can return stale absence with no version/freshness witness, it cannot by itself justify CONFLICT.",
-      "If multiple distinct logical effects can produce the same observed fingerprint within tested scope, MATCH is not sufficient for COMMITTED.",
-      "If an idempotency status record is mutable, client-generated only, or not bound to the admitted request digest, it is not authoritative enough to resolve the ambiguity.",
-      "If the only way to learn status is to replay the mutation, the no-second-call leaf remains unresolved."
+      "If V can advance while omitting earlier relevant events with no coverage guarantee, V is not a sufficient freshness witness.",
+      "If two distinct effects can share the same correlation fingerprint in the tested namespace, a positive match does not prove COMMITTED.",
+      "If a target may asynchronously apply the original submission after the verifier's read, absence at that read cannot prove CONFLICT.",
+      "If the target exposes only latest object value and unrelated writers can produce the same value, value equality is not sufficient positive evidence.",
+      "If a negative result depends on timeout duration rather than a target-authoritative completeness/finality contract, it remains UNKNOWN."
     ],
     "unresolved_conditions": [
-      "Concrete target APIs must be checked separately for read consistency, exact effect correlation, idempotency-record authority and quota/cost characteristics before any target-specific positive claim.",
-      "Exactly-once application under transport-level duplication of a single admitted network send still requires target-side deduplication or a transport guarantee; this leaf only resolves the client's post-submit uncertainty without a second mutation call.",
-      "A later bounded reasoning leaf should derive a verifier contract that carries target version/freshness evidence so MATCH/MISMATCH/UNKNOWN classification remains sound under eventual consistency and concurrent unrelated writes."
+      "The next abstract leaf must derive the minimal coupling between the submission/admission horizon and verifier coverage witness needed to make effect-relative negative evidence decidable without assuming a target-specific API.",
+      "Concrete target APIs require separate source-qualified checks for consistency, correlation, finality, quota and cost before target-specific claims.",
+      "Transport-level duplicate application of the one admitted network send remains outside this leaf unless the target supplies deduplication/idempotency semantics."
     ],
     "positive_phase1_evidence_from_this_slice": true,
     "phase1_acceptance_from_this_slice": false
@@ -106,5 +107,5 @@
     "continuation_nonempty": true,
     "diagnostic_only": false
   },
-  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260910T102513+0900-stage-t-ambiguity-resolution-capability-lattice-v1. Execute exactly one bounded next Stage T leaf: derive the minimal verifier observation contract for concurrent/eventually-consistent targets, including target version/freshness witness, effect-correlation uniqueness, and rules for when absence may soundly classify CONFLICT versus remain UNKNOWN. Keep the slice abstract and CLEAN while persistence_recovery_micro_slice remains active; preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
+  "continuation": "Fresh-bootstrap next invocation, exact-read reasoning STATE requiring slice_id=reasoning-20260910T122338+0900-stage-t-verifier-observation-contract-v1. Execute exactly one bounded next Stage T leaf: derive the minimal coupling between the already-issued submission/admission horizon and an authoritative verifier coverage/finality witness that can soundly move negative evidence from UNKNOWN to CONFLICT without any second target mutation. Keep the slice abstract and CLEAN while persistence_recovery_micro_slice remains active; preserve zero Work/protected/manual dependency, zero finite quota, zero incremental cost, global_completion=false and phase1_completion_claimed=false."
 }
