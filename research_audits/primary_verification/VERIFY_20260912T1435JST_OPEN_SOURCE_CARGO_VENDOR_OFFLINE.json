@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "role": "primary_source_verifier",
+  "created_at": "2026-09-12T14:35:35+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-primary-verify",
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "authority": {
+    "transport_mode": "sha_only_ref_object",
+    "h1": "6d2e277f93cd12bf560a02e932826171cf2ae600",
+    "h2": "6d2e277f93cd12bf560a02e932826171cf2ae600",
+    "bootstrap_valid": true,
+    "manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d", "control_revision": 126},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "blob": "560024d46b6c26ea63ab58137be9d48863cab941", "control_revision": 3},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "blob": "0eee15a94c23400653d84506da1f795081a6ef24", "control_revision": 27},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3", "control_revision": 37, "role_config_revision": 10}
+  },
+  "candidate": {
+    "source_role": "open_source",
+    "source_pointer_path": "research_workers_clean_g1/open_source/LATEST.json",
+    "source_pointer_blob": "ecdaee3c30eca49470f95faddb33de57091fb8ab",
+    "source_worker_revision": 301,
+    "canonical_artifact": "research_workers_clean_g1/open_source/OS-293-cargo-directory-checksum-fail-closed-2026-09-12T140431+0900.json",
+    "canonical_artifact_blob": "69cb2162b42ce22248a5ea2bd34ce3c1483c18a7",
+    "route": "Cargo vendored/local directory-source dependency reuse with source replacement and offline use-time behavior",
+    "audited_claim_scope": "Primary-source verification of local directory-source behavior, offline/use-time network avoidance, initial population requirements, checksum scope, and the Phase-1 hidden-executor/quota/cost gates. No Cargo command was executed and no end-to-end build outcome was tested."
+  },
+  "primary_sources": [
+    {
+      "kind": "official_documentation",
+      "identity": "Cargo Book / Source Replacement, current stable",
+      "url": "https://doc.rust-lang.org/cargo/reference/source-replacement.html",
+      "verified_points": [
+        "Directory sources are local-filesystem vendored sources and may be checked into source control.",
+        "Directory sources are primarily managed by cargo vendor.",
+        ".cargo-checksum.json protects against accidental modifications and is explicitly not a security mechanism."
+      ]
+    },
+    {
+      "kind": "official_documentation",
+      "identity": "Cargo Book / cargo vendor, current stable",
+      "url": "https://doc.rust-lang.org/cargo/commands/cargo-vendor.html",
+      "verified_points": [
+        "cargo vendor vendors all crates.io and git dependencies for the project into a local directory.",
+        "The command emits the Cargo source-replacement configuration needed to use the vendored directory."
+      ]
+    },
+    {
+      "kind": "official_documentation",
+      "identity": "Cargo Book / cargo command offline semantics, current stable",
+      "url": "https://doc.rust-lang.org/cargo/commands/cargo.html",
+      "verified_points": [
+        "--offline restricts Cargo to locally available dependency data and the docs advise fetching dependencies before going offline.",
+        "--frozen combines --locked and --offline."
+      ]
+    },
+    {
+      "kind": "official_source",
+      "identity": "rust-lang/cargo src/sources/directory.rs @ 7941be6fb416b4cd9666aef7b858dfea25587a8c",
+      "url": "https://github.com/rust-lang/cargo/blob/7941be6fb416b4cd9666aef7b858dfea25587a8c/src/sources/directory.rs",
+      "verified_points": [
+        "DirectorySource was designed for cargo vendor and loads packages from the local source root.",
+        "download returns an already-local package and finish_download states there are no downloads to do for this source.",
+        "verify iterates only entries in checksum.files; this routine contains no check rejecting extra on-disk files absent from checksum.files."
+      ]
+    }
+  ],
+  "findings": {
+    "use_time_network_avoidance": "verified_with_scope: once an exact vendored directory and source replacement are already present, DirectorySource itself serves local packages and performs no remote download; Cargo offline mode is documented to avoid network access.",
+    "initial_population": "not_eliminated: official cargo vendor documentation describes an active Cargo subcommand that gathers crates.io and git dependencies into the vendor directory. The current Chat run exposes repository/web tools but no Cargo process execution surface, and no pre-existing complete vendor set for a concrete target was verified here.",
+    "actual_build_or_check_execution": "not_eliminated: this audit did not identify a Chat-native Cargo execution surface, so any route requiring cargo build/check/fetch/vendor remains an unresolved executor child rather than a completed dependency-elimination route.",
+    "checksum_integrity_scope": "verified_narrowly: missing/unparsable checksum metadata can block loading and listed-file mismatches are checked, but the official docs say the checksum file is not a security mechanism. The source-level verify routine checks only checksum.files entries. Extra-file influence on compilation was not established in this slice.",
+    "scope_correction": "Do not upgrade the worker's open question 'extra on-disk files absent from checksum.files can influence package contents' to a verified claim. This slice verifies only non-rejection by DirectorySource::verify, not downstream compiler influence.",
+    "hidden_executor_gate": "fail_open_as_unresolved: the route still contains an execution requirement for initial vendoring and for any actual Cargo command outcome unless a separate Chat-native executor is independently verified.",
+    "finite_monthly_trial_paid_quota_dependency": "No finite monthly/trial/paid quota was identified in the scoped Cargo local-directory/offline mechanism itself. Initial remote population is an external-network dependency, not evidence of a monthly quota. This does not rescue the route because the executor gate fails.",
+    "incremental_monetary_cost": "No Cargo licensing or command fee was identified in the scoped primary sources. Incremental cost is not the failing gate in this slice.",
+    "protected_primary_or_manual_user_dependency": "No protected O authority was used or mutated. A manual/user or richer execution step would still be required if Cargo commands cannot be executed inside the scheduled Chat tool surface; therefore that residual dependency remains unresolved."
+  },
+  "verdict": {
+    "status": "primary_verified_partial_route_rejected_for_phase1_hidden_executor",
+    "strict_phase1_pass": false,
+    "positive_phase1_acceptance_evidence": false,
+    "reason": "The local-directory/offline portion is real, but primary sources do not eliminate the initial cargo-vendor/fetch execution step or the Cargo command execution needed for an actual build/check outcome. Under the current zero-residual-executor gate this remains an unresolved child, not a pass."
+  },
+  "scope_guard": "No Cargo command execution, no concrete dependency repository inspection, no compiler behavior test, no coordinator/O mutation, no CLEAN feedback write, and no claim beyond the exact primary-source properties above.",
+  "continuation": "Next invocation: bootstrap the current manifest, RUN_LIFECYCLE, DESIRED_STATE and DOWNSTREAM_STATE with fresh authority; reconstruct the current coordinator-owned Phase-1 verification frontier; select exactly one current proposed dependency-elimination route not already resolved by this Cargo audit and verify its exact hidden-executor, zero-finite-quota and zero-cost claims against primary/source evidence. Do not re-open this Cargo route unless a new exact claim or Chat-native Cargo execution mechanism is proposed.",
+  "continuation_nonempty": true,
+  "scheduler_mutation_by_worker": false,
+  "termination": "bounded_slice_complete_recurring_open"
+}
