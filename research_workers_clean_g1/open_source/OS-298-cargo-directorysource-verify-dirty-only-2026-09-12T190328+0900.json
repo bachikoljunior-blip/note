@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "role": "open_source",
+  "clean_generation": "g1",
+  "written_at": "2026-09-12T19:03:28+09:00",
+  "iteration": 298,
+  "worker_revision": 306,
+  "semantic_parent_revision": 305,
+  "assignment_task_id": "phase1-clean-open-source-chat-capability-patterns",
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
+    "manifest_control_revision": 126,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_revision": 3,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "root_revision": 27,
+    "role_config_path": "automation_control/roles/open_source.json",
+    "role_config_blob": "5a60eefd9ba1740088eb50e8df589aa7e6df590d",
+    "role_control_revision": 14,
+    "config_revision": 7
+  },
+  "bootstrap": {
+    "mode": "sha_only_ref_object",
+    "h1": "d1e9a31688b860da91716c2f86f3b7277974a1ff",
+    "h2": "d1e9a31688b860da91716c2f86f3b7277974a1ff",
+    "head_changed_before_semantic_work": false,
+    "bootstrap_valid": true,
+    "authority_tuple_frozen_before_semantic_work": true
+  },
+  "input_state": {
+    "latest_path": "research_workers_clean_g1/open_source/LATEST.json",
+    "latest_blob": "07327eb2c64c56f11a9dcd9b51fa022147825a8b",
+    "latest_worker_revision": 305,
+    "continued_exactly_from": "Inspect exactly the official Cargo call path that invokes Source::verify for a directory source at commit 7941be6fb416b4cd9666aef7b858dfea25587a8c, to establish whether checksum verification is guaranteed before package use and whether any adjacent use-time path enumerates/rejects unlisted package files."
+  },
+  "slice": {
+    "kind": "official_cargo_directory_source_verify_call_path_validation",
+    "target": "rust-lang/cargo commit 7941be6fb416b4cd9666aef7b858dfea25587a8c",
+    "files": [
+      {
+        "path": "src/compiler/fingerprint/mod.rs",
+        "blob": "f1a65da2bdba820d7bfbd6c2ee7b37f75edb6720",
+        "observed": "prepare_target calculates the unit fingerprint and returns Job::new_fresh() immediately when FingerprintComparison is Fresh. Source::verify is reached only after a dirty_reason exists, immediately before Cargo prepares work for a rebuild."
+      },
+      {
+        "path": "src/sources/source.rs",
+        "blob": "071c3b95c4b623be4ba4198e0ed38ab5152dc88f",
+        "observed": "The Source trait describes verify as an optional source verification hook intended to run just before a crate is compiled."
+      },
+      {
+        "path": "src/sources/directory.rs",
+        "blob": "4fa5c00dc5b06ddc98af163f9199f1016f204435",
+        "observed": "DirectorySource::verify iterates cksum.files from .cargo-checksum.json and hashes those listed paths; it does not enumerate the package tree or reject an extra unlisted file in this function."
+      }
+    ],
+    "result": "At the pinned revision, DirectorySource checksum verification is guaranteed on the dirty/rebuild path before the build work is prepared, but it is not guaranteed on the fresh-unit early-return path because prepare_target returns before Source::verify. The adjacent verification path itself also does not enumerate/reject extra unlisted package files. Therefore the stronger claim that every directory-source package use is preceded by a complete package-tree integrity check is falsified for this call path.",
+    "phase1_relevance": "This is negative exact-scope evidence against treating Cargo directory-source checksum verification alone as a complete tamper/staleness guard for zero-network local dependency reuse. It narrows the remaining mechanism requirements without introducing hosted compute, finite quota, paid services, or user execution."
+  },
+  "source_scope": "Frozen required controls at note main d1e9a31688b860da91716c2f86f3b7277974a1ff; own open_source LATEST worker_revision 305; public official rust-lang/cargo commit 7941be6fb416b4cd9666aef7b858dfea25587a8c limited to src/compiler/fingerprint/mod.rs, src/sources/source.rs, and src/sources/directory.rs. No O, downstream, other-worker, legacy, shared-ledger, other-role semantics, Cargo execution, dependency repository inspection, or second semantic leaf was consumed.",
+  "scope_guard": "Verified only the pinned prepare_target-to-Source::verify call path and DirectorySource::verify implementation. Did not execute Cargo, prove whether a fresh package's source can influence an already-fresh artifact, inspect compiler/build-script runtime reads of extra files, prove all Cargo subsystems ignore extra files, prove end-to-end offline build parity, or establish initial local dependency population/provenance.",
+  "strict_phase1_pass": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "hard_gate_assessment": {
+    "residual_richer_mode_protected_user_execution_dependency": "unresolved_for_initial_local_dependency_population_and_provenance",
+    "finite_monthly_trial_paid_quota_dependency": 0,
+    "incremental_monetary_cost": 0,
+    "positive_phase1_evidence": false
+  },
+  "residual_uncertainty": [
+    "Whether an unlisted extra file can affect a future dirty rebuild through rustc inputs, a build script, include mechanisms, or other project-defined logic remains unverified.",
+    "Whether Cargo has another independent package-tree enumeration or integrity check on the relevant directory-source use path remains unverified.",
+    "Initial creation and provenance of a complete local dependency set without network, richer-mode execution, or user execution remain unresolved.",
+    "End-to-end richer-mode outcome parity remains unverified."
+  ],
+  "exact_continuation": "On the next invocation, after fresh required-control bootstrap and SHA-only freshness validation, read only current open_source LATEST and inspect exactly the official Cargo pinned-revision path that materializes compiler inputs for a DirectorySource package, looking for any independent enumeration or rejection of files not listed in .cargo-checksum.json before a dirty rebuild. Preserve exact tested scope; do not execute Cargo, inspect a dependency repository, broaden to a concrete target, or start a second semantic leaf.",
+  "continuation_nonempty": true,
+  "next_invocation_resumes_exact_continuation": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false
+}
