@@ -1,13 +1,12 @@
 {
   "schema_version": 1,
   "role": "reasoning",
-  "timestamp": "2026-09-13T00:24:18+09:00",
+  "timestamp": "2026-09-13T07:26:27+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "clean_exploration": true,
   "control_snapshot": {
-    "main_ref_sha": "e4f934ded81f26a17879f80f1ebcf4faceefe38f",
     "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
     "manifest_control_revision": 126,
     "manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
@@ -21,16 +20,16 @@
     "reasoning_role_control_revision": 11,
     "reasoning_config_revision": 8,
     "reasoning_role_blob": "1a2b52910d962241b031bd1d10d67008eb2ce409",
-    "transport_mode": "sha_pinned_main_ref",
+    "transport_mode": "exact_blob_two_pass",
     "bootstrap_valid": true,
     "phase_id": "phase_1_chat_parity",
     "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
     "task_id": "phase1-clean-reasoning-direct-architecture"
   },
-  "predecessor_state_blob": "a05178230e1fda8b7ea4d9cd0f36d3645a985998",
-  "predecessor_slice_id": "reasoning-20260912T202136+0900-synthetic-target-qualification-dry-run-v1",
-  "slice_id": "reasoning-20260913T002418+0900-ab-three-observation-witness-schema-v1",
-  "selected_leaf": "Derive the minimum three-observation local witness schema needed to establish A and B for the frozen generation-keyed idempotent effect API class, including the observation that fires the duplicate-effect falsifier; no public source fetch or target call in persistence-recovery mode.",
+  "predecessor_state_blob": "5b5e21a2d60fa574af64bfb824c306bc6de83696",
+  "predecessor_slice_id": "reasoning-20260913T002418+0900-ab-three-observation-witness-schema-v1",
+  "slice_id": "reasoning-20260913T072627+0900-ab-verdict-table-v1",
+  "selected_leaf": "Execute the exact continuation from the predecessor STATE by deriving a deterministic four-case verdict table for the frozen generation-keyed idempotent effect API class using only the already-derived O1/O2/O3 witness schema; no public source fetch or target call in persistence-recovery mode.",
   "preserved_prior_findings": {
     "stage_x_refined_formula": "B AND (A OR (C AND D AND E))",
     "A": "target-side same-logical-effect idempotent replay/correlation or target-enforced exclusive fencing",
@@ -39,54 +38,70 @@
     "D": "attempt-generation identity/freshness preventing stale B/C witnesses from affecting another generation",
     "E": "durable pre-attempt ARMED_k reservation plus exact readback before any non-idempotent launch; recovered ARMED/LAUNCH_CLAIMED remains UNKNOWN-equivalent until matching B(k) or C(k)",
     "stage_z2_result": "A durable repository-only LAUNCH_CLAIMED_k(owner_nonce) shifts but does not remove the crash window; repository-only relaunch remains disproven for arbitrary non-idempotent effects.",
-    "target_qualification_matrix": "A future concrete primitive qualifies only within exact tested scope when authoritative B is present together with either target-side A, or target-side C plus D and E. Timeout or missing B never substitutes for C.",
     "frozen_target_primitive_class": "generation-keyed idempotent effect API with generation-correlated authoritative committed-effect visibility",
+    "ab_witness_schema": {
+      "O1": "authoritative pre-replay committed-effect visibility reports one terminal committed E_k bound to generation k, establishing B",
+      "O2": "same-generation replay correlates to E_k or the same target idempotency record rather than allocating a distinct logical effect",
+      "O3": "after target-defined terminality/finality, authoritative committed-effect view remains singleton {E_k}; a distinct E2 or cardinality above one fires the duplicate-effect falsifier"
+    },
     "first_falsifier": "Replaying the same logical generation after an ambiguous transport/crash can create a second logical effect; if observed, A is false for that primitive and B alone cannot qualify recovery safety."
   },
   "bounded_leaf_result": {
-    "status": "local_three_observation_ab_witness_schema_derived",
+    "status": "deterministic_four_case_ab_verdict_table_derived",
     "tested_scope": "Deterministic local reasoning over the exact role-local predecessor STATE only. No public source, target mutation, protected authority, manual execution, hosted compute, quota-bearing feature, O/downstream/other-worker semantic input, shared ledger, or legacy research was used.",
-    "minimum_three_observation_witness_schema": [
+    "verdict_table": [
       {
-        "observation_id": "O1_authoritative_pre_replay_commit",
-        "requirement": "After the first attempt for logical generation k, with the transport response allowed to be lost or ignored, an authoritative committed-effect view reports one terminal committed logical effect E_k explicitly bound to generation k.",
-        "establishes": "B within the exact tested target scope; the witness must come from authoritative positive committed-effect visibility rather than from a request acknowledgement, timeout, repository intent record, or ownership nonce."
+        "case": "clean_singleton_replay",
+        "observations": "O1=true; O2 correlates replay to E_k; O3 after target-defined finality shows authoritative singleton {E_k} with unchanged relevant side-effect cardinality.",
+        "verdict": "A_and_B_established_within_exact_finality_scope",
+        "duplicate_effect_falsifier": "not_fired",
+        "reason": "B is grounded by authoritative committed-effect visibility and A is supported by same-generation replay correlation plus authoritative singleton persistence after finality. This is only a schema-level qualification rule until a concrete target is source-qualified and tested."
       },
       {
-        "observation_id": "O2_same_generation_replay_correlation",
-        "requirement": "Replay the exact same logical generation k. The target returns or exposes a replay correlation/effect identity matching E_k (or the same target idempotency record) rather than allocating a distinct logical effect E2.",
-        "establishes": "Direct target-side evidence for A, but not sufficient by itself because a response could alias while a duplicate side effect is still created asynchronously."
+        "case": "response_alias_with_duplicate_effect",
+        "observations": "O1=true; O2 may return the same response/effect alias, but O3 authoritative post-replay view contains a distinct E2 or relevant effect cardinality exceeds one.",
+        "verdict": "A_false_branch_rejected",
+        "duplicate_effect_falsifier": "fired",
+        "reason": "Response-level correlation cannot override authoritative duplicate-effect evidence. B may still be true for visibility, but the A+B branch fails because replay is not same-logical-effect idempotent in the tested scope."
       },
       {
-        "observation_id": "O3_authoritative_post_replay_singleton",
-        "requirement": "After target-defined terminality/finality for the replay, query the authoritative committed-effect view again and observe that the committed logical-effect set for generation k is still the singleton {E_k} and the relevant side-effect cardinality has not increased.",
-        "establishes": "A within the exact tested finality scope when combined with O2. If a distinct E2 appears or the relevant effect cardinality exceeds one, the duplicate-effect falsifier fires and A=false. If the target exposes no authoritative terminal/finality condition, this observation cannot close delayed-duplicate risk and A remains unestablished."
+        "case": "delayed_duplicate_before_authoritative_finality",
+        "observations": "An early nonfinal snapshot may still show singleton {E_k}; before target-defined finality a delayed duplicate appears, and the required O3 final authoritative view therefore shows E2 or cardinality above one.",
+        "verdict": "A_false_once_final_authoritative_duplicate_is_observed; unresolved_before_finality",
+        "duplicate_effect_falsifier": "fired_at_final_O3; not_permitted_to_pass_on_pre_final_snapshot",
+        "reason": "A pre-final singleton cannot close delayed-duplicate risk. If finality has not yet been reached the case remains unresolved; once final O3 exposes the duplicate, A is false."
+      },
+      {
+        "case": "missing_authoritative_B_or_finality",
+        "observations": "Either O1 lacks authoritative committed-effect visibility bound to generation k, or the target exposes no authoritative terminal/finality condition needed to make O3 conclusive.",
+        "verdict": "unresolved_not_qualified",
+        "duplicate_effect_falsifier": "not_necessarily_fired",
+        "reason": "Absence of a required witness is not negative closure and cannot be replaced by timeout, acknowledgement, repository ownership state, response-only idempotency, or a nonterminal singleton snapshot. The A+B branch therefore cannot qualify."
       }
     ],
-    "decision_rule": "For the frozen A+B branch, later concrete qualification requires O1=true, O2=same-generation same-effect correlation, and O3=authoritative singleton after target-defined finality. Missing authoritative B, response-only idempotency, timeout, repository ownership state, or a nonterminal snapshot cannot substitute for any required witness.",
-    "nonredundancy_note": "O1 separates committed-effect truth from transport acknowledgement; O2 probes the target's generation-key replay semantics; O3 detects response aliasing or delayed duplicate creation. The third observation is therefore required for this operational schema whenever replay can have asynchronous or externally visible effects.",
+    "precommitted_decision_rule": "PASS the frozen A+B branch only for clean_singleton_replay with O1 authoritative B, O2 same-generation same-effect correlation, and O3 authoritative singleton after target-defined finality. FAIL A when authoritative post-replay evidence shows a second logical effect or cardinality above one. Otherwise remain UNRESOLVED; missing B, missing finality, timeout, response alias alone, or a pre-final singleton never passes.",
     "phase1_acceptance_from_this_slice": false,
     "semantic_completion": false
   },
   "provenance": {
-    "authority": "manifest126/lifecycle3/desired27/reasoning-config8 at main_ref_sha e4f934ded81f26a17879f80f1ebcf4faceefe38f",
+    "authority": "manifest126/lifecycle3/desired27/reasoning-config8 via exact_blob_two_pass",
     "semantic_source": "exact role-local predecessor STATE plus deterministic local reasoning only",
     "public_sources_used_in_valid_slice": false,
     "other_role_semantics_used": false,
     "legacy_research_used": false
   },
   "uncertainty_axes": {
-    "schema_internal_consistency": {
+    "verdict_table_internal_consistency": {
       "status": "low",
-      "basis": "Each observation maps to a distinct failure ambiguity in the preserved A/B branch and the duplicate-effect falsifier is explicit."
+      "basis": "Each case is decided solely by the precommitted O1/O2/O3 schema and the duplicate-effect falsifier."
     },
     "concrete_target_capability": {
       "status": "high",
       "basis": "Persistence-recovery mode permits no public/external research, so no concrete target, documented finality condition, or real replay behavior was source-qualified."
     },
-    "delayed_duplicate_after_observation": {
-      "status": "high_without_target_finality",
-      "basis": "A nonterminal snapshot cannot rule out a later duplicate; any future positive test must bind O3 to a target-defined authoritative finality condition."
+    "missing_finality_behavior": {
+      "status": "resolved_as_fail_closed_rule",
+      "basis": "Without authoritative target-defined finality, delayed-duplicate risk cannot be closed and the branch remains unresolved rather than passing."
     }
   },
   "assessment": {
@@ -115,5 +130,5 @@
     "continuation_nonempty": true,
     "diagnostic_only": false
   },
-  "continuation": "Fresh-bootstrap next invocation and exact-read reasoning STATE requiring slice_id=reasoning-20260913T002418+0900-ab-three-observation-witness-schema-v1. Preserve Stage-Z2, B AND (A OR (C AND D AND E)), the frozen generation-keyed idempotent effect API class, and O1/O2/O3. If persistence_recovery_micro_slice remains active and public/external research is still forbidden, execute exactly one bounded local source-free verification leaf: derive a deterministic verdict table for four cases—clean singleton replay, response alias with duplicate effect, delayed duplicate before authoritative finality, and missing authoritative B/finality—and precommit which case fires the duplicate-effect falsifier or remains unresolved. Do not fetch a source or call a target. If recovery mode has been retired and public-source work is permitted, source-qualify exactly one concrete primitive in the frozen class and test O1/O2/O3 with the duplicate-effect falsifier before any positive claim. Keep enabled_desired=true, global_completion=false and phase1_completion_claimed=false."
+  "continuation": "Fresh-bootstrap next invocation and exact-read reasoning STATE requiring slice_id=reasoning-20260913T072627+0900-ab-verdict-table-v1. Preserve Stage-Z2, B AND (A OR (C AND D AND E)), the frozen generation-keyed idempotent effect API class, O1/O2/O3, and the four-case PASS/FAIL/UNRESOLVED verdict table. If persistence_recovery_micro_slice remains active and public/external research is still forbidden, execute exactly one bounded local source-free verification leaf: derive a monotone evidence-state transition checker that maps partial O1/O2/O3 sequences to PASS, FAIL, or UNRESOLVED and proves that late authoritative duplicate evidence can only demote PASS candidates before finality, never be ignored after finality. Do not fetch a source or call a target. If recovery mode has been retired and public-source work is permitted, source-qualify exactly one concrete primitive in the frozen class and test O1/O2/O3 plus this verdict table before any positive claim. Keep enabled_desired=true, global_completion=false and phase1_completion_claimed=false."
 }
