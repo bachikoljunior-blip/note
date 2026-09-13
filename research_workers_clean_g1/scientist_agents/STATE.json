@@ -3,14 +3,14 @@
   "generation": "clean_g1",
   "worker": "scientist_agents",
   "role": "scientist_agents",
-  "updated_at": "2026-09-14T05:31:18+09:00",
-  "current_checkpoint": "STATE.json:inline:p1-sa-508",
-  "previous_checkpoint": "STATE.json:inline:p1-sa-507",
+  "updated_at": "2026-09-14T06:30:54+09:00",
+  "current_checkpoint": "STATE.json:inline:p1-sa-509",
+  "previous_checkpoint": "STATE.json:inline:p1-sa-508",
   "phase_id": "phase_1_chat_parity",
   "assignment_task_id": "phase1-clean-scientist-agents-evidence-handoff",
   "frontier_exhausted": false,
   "work_status": "ACTIVE_RECURRING_OPEN",
-  "revision": "p1-sa-508",
+  "revision": "p1-sa-509",
   "frozen_authority": {
     "instruction_manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
     "instruction_manifest_blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d",
@@ -25,30 +25,29 @@
     "role_config_blob": "4f2177f5164ecf7880d4d07485811db1673b2e9e",
     "role_control_revision": 9,
     "role_config_revision": 6,
-    "main_ref_commit": "31a3729b134da24238d54c313f327fcd9647227e",
+    "main_ref_commit": "12858ae657c240826176caa3558347ebe7dd1a49",
     "transport_mode": "sha_only_ref_freeze",
     "bootstrap_valid": true,
     "independence_class": "clean_exploration"
   },
   "source_state_refs": {
-    "prior_state_blob": "9bfce7d5b4d8e039df90934cba7a1f090865ba50",
-    "prior_checkpoint": "STATE.json:inline:p1-sa-507",
-    "prior_latest_blob": "068df9affa64964498c745ed0f416d75bf916b79",
+    "prior_state_blob": "076beca84cae678f91b0440a8c668eea3c2e1fb7",
+    "prior_checkpoint": "STATE.json:inline:p1-sa-508",
+    "prior_latest_blob": "53d519f583700fdc40c9d62e6ceb8d2adc3bb431",
     "public_source_repository": "pydantic/pydantic",
     "public_source_ref": "v1.9.0",
     "public_source_path": "pydantic/main.py",
     "public_source_blob": "eea8abcbbe84ffc2aa48e8762e7a657fb4a82819"
   },
   "latest_semantic_finding": {
-    "id": "p1-sa-508",
-    "kind": "bounded_pinned_official_pydantic_v1_parse_semantics_inspection",
-    "tested_action": "Inspected exactly one pinned official pydantic/pydantic artifact, pydantic/main.py at tag v1.9.0 (blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819), limited to BaseModel.parse_obj, BaseModel.__init__, and validate_model behavior directly relevant to alias lookup and __fields_set__ construction.",
+    "id": "p1-sa-509",
+    "kind": "bounded_pinned_official_pydantic_v1_serialization_semantics_inspection",
+    "tested_action": "Inspected exactly one pinned official pydantic/pydantic artifact, pydantic/main.py at tag v1.9.0 (blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819), limited to BaseModel.dict, _iter, and _calculate_keys behavior governing by_alias and exclude_unset/__fields_set__ serialization.",
     "observed": {
-      "parse_obj_path": "BaseModel.parse_obj coerces a non-dict mapping candidate with dict(obj) and then returns cls(**obj).",
-      "constructor_path": "BaseModel.__init__ calls validate_model on the input mapping, stores returned values in __dict__, and stores returned fields_set in __fields_set__.",
-      "alias_lookup": "validate_model looks up field.alias first; only when missing, allow_population_by_field_name is true, and field.alt_alias is true does it fall back to field.name.",
-      "field_set_behavior": "When an input value is present, validate_model adds the canonical field name to fields_set, regardless of whether the consumed input key was the alias or the field name.",
-      "internal_value_keying": "Validated field values are stored in the values mapping under the canonical field name.",
+      "dict_delegation": "BaseModel.dict returns dict(self._iter(...)) and passes by_alias plus exclude_unset directly into _iter.",
+      "exclude_unset_filter": "_iter delegates allowed-key selection to _calculate_keys; when exclude_unset is true, _calculate_keys begins from a copy of self.__fields_set__ rather than all __dict__ keys.",
+      "serialization_key_selection": "For each canonical field_key in __dict__, _iter emits self.__fields__[field_key].alias when by_alias is true and the key is a declared field; otherwise it emits field_key itself.",
+      "alias_input_interaction": "Combined with p1-sa-508's pinned finding that alias-populated inputs add the canonical field name to __fields_set__ and store values under canonical field names, exclude_unset retains such a populated field while by_alias independently controls whether its output key is the canonical name or configured alias.",
       "provider_or_network_inference_call_made_by_this_worker": false,
       "live_api_key_used": false,
       "package_installation_performed": false,
@@ -58,46 +57,47 @@
       "optional_second_leaf_started": false,
       "scheduler_mutation_by_worker": false
     },
-    "inferred": "At the supported Pydantic 1.x lower-bound endpoint v1.9.0, parse_obj delegates into normal model construction rather than a separate parser, and model construction canonicalizes consumed input onto field names while preserving presence in __fields_set__ as canonical field names. Thus an alias-key input can populate a field and mark that field as set, but exact later serialized key choice and parse/serialize/parse equality still depend on serialization options and model-specific configuration not inspected in this slice.",
-    "uncertainty": "This invocation did not inspect BaseModel.dict/_iter/json serialization options, the Groq model's exact alias configuration for tool_calls, or any runtime replay. It therefore does not establish whether the serialized populated ChatCompletionMessage.tool_calls representation uses aliases, whether exclude_unset changes emitted content, or whether end-to-end parse/serialize/parse is exactly equal.",
-    "exact_claim": "In pydantic/pydantic v1.9.0 pydantic/main.py blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819, BaseModel.parse_obj returns cls(**obj); validate_model reads field.alias first with conditional field-name fallback, records present inputs in fields_set using canonical field names, and stores validated values under canonical field names.",
+    "inferred": "For Pydantic 1.9.0 itself, an alias-key input that was accepted during validation can survive exclude_unset filtering because set-membership is tracked by canonical field name; serialization then emits the canonical field name with by_alias=false or the configured alias with by_alias=true. This resolves the targeted Pydantic-1 serialization mechanism but does not establish which option or alias configuration the target Groq replay package actually uses.",
+    "uncertainty": "This invocation did not inspect the Groq model's exact alias declaration/configuration, the replay package's exact dict/json call options, the Pydantic 2.x branch, or any runtime replay. End-to-end parse/serialize/parse equality therefore remains unresolved.",
+    "exact_claim": "In pydantic/pydantic v1.9.0 pydantic/main.py blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819, BaseModel.dict delegates to _iter with by_alias and exclude_unset; _calculate_keys uses __fields_set__ when exclude_unset=true; and _iter emits a declared field's alias only when by_alias=true, otherwise its canonical field key.",
     "evidence_strength": "direct pinned official-source implementation inspection",
     "semantic_progress_claimed": true,
     "scientific_progress_credit": true
   },
   "evidence_refs": [
-    "STATE.json:inline:p1-sa-507",
+    "STATE.json:inline:p1-sa-508",
     "public:pydantic/pydantic@v1.9.0:pydantic/main.py#blob=eea8abcbbe84ffc2aa48e8762e7a657fb4a82819"
   ],
   "classification": {
     "supported": [
-      "Pydantic v1.9.0 BaseModel.parse_obj feeds its normalized mapping into normal BaseModel construction via cls(**obj).",
-      "Pydantic v1.9.0 validate_model consumes a field alias first, conditionally falls back to the canonical field name, stores validated values under canonical field names, and records provided fields in __fields_set__ using canonical field names.",
-      "This exact source-inspection slice required no provider execution, credentials, package installation, finite hosted quota, incremental monetary cost, same-run retry, second semantic leaf, or scheduler mutation."
+      "Pydantic v1.9.0 BaseModel.dict passes by_alias and exclude_unset into _iter.",
+      "With exclude_unset=true, _calculate_keys filters from __fields_set__; with by_alias=true, _iter substitutes the declared alias for a model field's canonical key.",
+      "Together with p1-sa-508, alias-based population is compatible with exclude_unset retention because the canonical field name is what validation records in __fields_set__.",
+      "This exact read-only source-inspection slice required no provider execution, credentials, package installation, finite hosted quota, incremental monetary cost, same-run retry, second semantic leaf, or scheduler mutation."
     ],
     "ambiguous": [
-      "Whether Pydantic v1.9.0 serialization of the target Groq model emits canonical names or aliases for tool_calls under the serialization path actually used by the replay package.",
-      "Whether exclude_unset or related serialization options preserve the populated tool_calls structure needed for exact replay.",
-      "Whether end-to-end parse/serialize/parse yields exact equality for the populated tool_calls case."
+      "The exact alias configuration of the target Groq ChatCompletionMessage.tool_calls field.",
+      "Whether the target replay package serializes with by_alias=true or false and whether it uses exclude_unset.",
+      "Whether end-to-end parse/serialize/parse yields exact equality for populated tool_calls across all supported dependency branches."
     ],
     "rejected": [
-      "Treating parse_obj alias lookup alone as proof of serialization or replay equality.",
-      "Inferring Groq model-specific alias configuration without inspecting that model/configuration.",
-      "Starting the Pydantic 2.x branch or a serialization leaf in this invocation."
+      "Treating Pydantic's by_alias mechanism alone as proof that the target Groq package uses aliases in its replay representation.",
+      "Treating exclude_unset compatibility as proof of end-to-end replay equality.",
+      "Starting Groq-model inspection, Pydantic 2.x inspection, provider calls, or package execution as a second semantic leaf in this invocation."
     ]
   },
   "graph_coverage": {
-    "unit": "one pinned official Pydantic 1.9.0 parse/model-construction implementation inspection",
-    "edge": "p1-sa-507 identified Pydantic 1.x/2.x delegated parser branches -> v1.9.0 parse_obj uses cls(**obj) -> validate_model resolves aliases and canonical fields_set/value keys",
-    "status": "pydantic_v1_lower_bound_parse_semantics_resolved_serialization_replay_unresolved",
-    "result": "next frontier narrows to Pydantic 1.9.0 serialization semantics for canonical-vs-alias output and fields_set/exclude_unset interaction"
+    "unit": "one pinned official Pydantic 1.9.0 serialization implementation inspection",
+    "edge": "p1-sa-508 canonicalized alias input and fields_set -> v1.9.0 dict/_iter/_calculate_keys show exclude_unset retention and by_alias output-key switching",
+    "status": "pydantic_v1_lower_bound_parse_and_serialization_semantics_resolved_target_model_and_end_to_end_replay_unresolved",
+    "result": "next frontier narrows to the target Groq model/replay package's exact alias configuration and serialization-option usage before any runtime replay claim"
   },
-  "claim_scope": "Current frozen controls, own p1-sa-507 state, and exactly one pinned official public source artifact: pydantic/pydantic pydantic/main.py at tag v1.9.0, blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819. No second public artifact, repository discovery search, O/O-derived input, downstream input, other-worker input, provider execution, credentials, package installation, optional second semantic leaf, protected-primary action, manual-user execution, wait/poll/backoff/retry, or scheduler mutation was used.",
-  "open_uncertainty": "Validated parse/serialize/parse equality for a populated ChatCompletionMessage.tool_calls value remains unresolved because the Pydantic 1.9.0 serialization path and the Pydantic 2.x branch have not yet been inspected under pinned official source.",
-  "continuation": "Next invocation re-bootstrap and freeze current authority, reconstruct p1-sa-508, then inspect exactly one pinned official pydantic/pydantic artifact at tag v1.9.0: pydantic/main.py, limited to BaseModel.dict and the directly delegated _iter behavior governing by_alias and exclude_unset/__fields_set__ serialization. Record only exact implementation facts needed to determine whether a field populated through an alias can be serialized under a canonical name or alias while preserving set-field filtering. If that bounded inspection is unavailable or cannot resolve the targeted behavior, persist the exact limitation and choose no second semantic leaf. Do not inspect the Pydantic 2.x branch, Groq model definitions, run provider calls or package installs, broaden repositories, wait/retry, or hand execution to a user/protected mode in the same invocation.",
+  "claim_scope": "Current frozen controls, own p1-sa-508 state, and exactly one pinned official public-source artifact: pydantic/pydantic pydantic/main.py at tag v1.9.0, blob eea8abcbbe84ffc2aa48e8762e7a657fb4a82819. No second public repository, O/O-derived input, downstream input, other-worker input, provider execution, credentials, package installation, optional second semantic leaf, protected-primary action, manual-user execution, wait/poll/backoff/retry, or scheduler mutation was used.",
+  "open_uncertainty": "Validated end-to-end evidence-package replay for populated ChatCompletionMessage.tool_calls remains unresolved because the target Groq model/configuration and replay package serialization options have not yet been inspected under a pinned official source, and the Pydantic 2.x branch also remains open.",
+  "continuation": "Next invocation re-bootstrap and freeze current authority, reconstruct p1-sa-509, then inspect exactly one pinned official Groq source artifact for the target ChatCompletionMessage/tool_calls model and its directly relevant model configuration already bound by the scientist_agents predecessor chain. Determine only the exact field alias declaration/configuration and any directly local serialization option needed to connect the resolved Pydantic 1.9.0 semantics to the target replay representation. If the predecessor chain does not expose a source-qualified Groq pin/path or the single artifact cannot resolve those facts, persist that exact limitation and choose no second semantic leaf. Do not inspect Pydantic 2.x, run provider calls or package installs, broaden repositories, wait/retry, or hand execution to a user/protected mode in the same invocation.",
   "continuation_detail": {
-    "next_action": "Inspect pydantic/pydantic v1.9.0 pydantic/main.py as the single next semantic leaf, limited to BaseModel.dict and directly delegated _iter semantics for by_alias and exclude_unset/__fields_set__.",
-    "next_unresolved_item": "Pydantic 1.9.0 serialization key selection and set-field filtering after alias-based parse",
+    "next_action": "Inspect one source-qualified pinned official Groq ChatCompletionMessage/tool_calls model artifact from the existing scientist_agents predecessor chain, limited to alias/configuration facts needed to connect p1-sa-509 to replay serialization.",
+    "next_unresolved_item": "target Groq model alias/configuration and replay serialization-option binding",
     "refresh_inputs_on_resume": true,
     "dirty": false,
     "phase1_open": true,
