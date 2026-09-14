@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-15T00:31:54+09:00",
+  "updated_at": "2026-09-15T01:29:04+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "7aba39278ae43f6023f6e6048bef870583b641c7",
+  "previous_latest_blob": "92e36eb5daa16cb6c1c2b0133d619018fc15c676",
   "semantic_config_snapshot": {
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
@@ -19,22 +19,23 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "exact_blob_two_pass"
+    "authority_commit": "a14e1ce9dc713dde1cd18907e0c8b23e8c8a352f",
+    "transport_mode": "exact_sha_pinned_main"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-15T003154+0900.json",
-    "blob": "ce4424ee18e9ef5129ec85079ff02c71c247439c",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-15T012904+0900.json",
+    "blob": "8ed98b44a86b3cc3b41a9861a406e6f684568783",
     "status": "write_and_exact_readback_valid",
     "durable_readback": true
   },
-  "selected_leaf_id": "phase1-multi-agent-canonical-null-absent-type-drift-control",
-  "tested_scope": "Exactly one bounded deterministic self-local canonicalization control over the current pending logical-effect identity {effect_predecessor_blob=367ca5df716754407ebf85457f34e1244def075e, effect_key=phase1-multi-agent-claim-effect-v1, claimant_witness_blob=a2762b860594a603b08652c58f7eb7f055c80fbf, recovery_status=UNKNOWN_RESULT}. The control tests only null-versus-absent and primitive type drift for already-participating semantic fingerprint fields. It does not test Unicode normalization, schema migration compatibility, real parser behavior, repository transport mutation, stale-CAS rejection, create-if-absent races, simultaneous writers, public sources, other roles, O/downstream state, scheduler state, external coordination, richer-mode execution, or an optional second leaf.",
-  "claim_epoch": 27,
+  "selected_leaf_id": "phase1-multi-agent-unicode-nfc-canonicalization-control",
+  "tested_scope": "Exactly one bounded deterministic self-local canonicalization control over the current pending logical-effect identity {effect_predecessor_blob=367ca5df716754407ebf85457f34e1244def075e, effect_key=phase1-multi-agent-claim-effect-v1, claimant_witness_blob=a2762b860594a603b08652c58f7eb7f055c80fbf, recovery_status=UNKNOWN_RESULT}. The control tests NFC normalization only for already-participating string fingerprint fields while preserving typed presence tags and no primitive coercion. It does not test NFKC/NFKD compatibility folding, locale-sensitive case mapping, schema migration compatibility, real parser behavior, repository transport mutation, stale-CAS rejection, create-if-absent races, simultaneous writers, public sources, other roles, O/downstream state, scheduler state, external coordination, richer-mode execution, or an optional second leaf.",
+  "claim_epoch": 28,
   "claim_epoch_derivation": {
-    "immediate_predecessor_blob": "7aba39278ae43f6023f6e6048bef870583b641c7",
-    "predecessor_explicit_claim_epoch": 26,
-    "next_claim_epoch": 27,
+    "immediate_predecessor_blob": "92e36eb5daa16cb6c1c2b0133d619018fc15c676",
+    "predecessor_explicit_claim_epoch": 27,
+    "next_claim_epoch": 28,
     "rule": "Mechanical role-local checkpoint lineage only; logical-effect admission remains governed by the pending-resolution state machine."
   },
   "pending_identity": {
@@ -63,61 +64,63 @@
       "insignificant_whitespace"
     ]
   },
-  "canonical_null_absent_type_drift_control": {
-    "precommitted_normalization_rule": "For every participating semantic field, canonical fingerprint input is a typed presence-tagged value. ABSENT, NULL, STRING(x), NUMBER(x), BOOLEAN(x), OBJECT(x), and ARRAY(x) are distinct tokens. No implicit string/number/boolean coercion is permitted. Therefore missing versus present-null and primitive type drift are semantic differences under a fixed record_key and must fail closed as same-key collisions rather than deduplicate.",
+  "typed_presence_rule_preserved": "For every participating semantic field, canonical fingerprint input remains a typed presence-tagged value. ABSENT, NULL, STRING(x), NUMBER(x), BOOLEAN(x), OBJECT(x), and ARRAY(x) are distinct tokens; no implicit primitive coercion is permitted.",
+  "unicode_nfc_canonicalization_control": {
+    "precommitted_rule": "For participating STRING values only, apply Unicode NFC before constructing the typed presence-tagged canonical fingerprint. NFC-equivalent strings are treated as the same semantic string. No compatibility folding, case folding, invisible-character removal, script-confusable mapping, or locale-specific transformation is permitted.",
     "fixtures": [
       {
-        "id": "evidence_digest_absent_vs_null",
-        "base": "R{key=commit-a,identity=I,outcome=COMMITTED,evidence=<ABSENT>,schema=NUMBER(1)}",
-        "variant": "R2{key=commit-a,identity=I,outcome=COMMITTED,evidence=NULL,schema=NUMBER(1)}",
+        "id": "composed_vs_decomposed_e_acute",
+        "base": "evidence_digest=STRING(é)",
+        "variant": "evidence_digest=STRING(e + COMBINING ACUTE ACCENT)",
+        "expected_same_normalized_fingerprint": true,
+        "decision": "deduplicate_only_if_all_other_participating_fields_match"
+      },
+      {
+        "id": "compatibility_circled_one_vs_ascii_one",
+        "base": "evidence_digest=STRING(①)",
+        "variant": "evidence_digest=STRING(1)",
         "expected_same_normalized_fingerprint": false,
         "decision": "UNKNOWN_RESULT_same_key_collision"
       },
       {
-        "id": "evidence_digest_string_vs_number",
-        "base": "R{key=commit-a,identity=I,outcome=COMMITTED,evidence=STRING(1),schema=NUMBER(1)}",
-        "variant": "R2{key=commit-a,identity=I,outcome=COMMITTED,evidence=NUMBER(1),schema=NUMBER(1)}",
+        "id": "latin_o_vs_greek_omicron",
+        "base": "effect_key=STRING(o)",
+        "variant": "effect_key=STRING(ο)",
         "expected_same_normalized_fingerprint": false,
         "decision": "UNKNOWN_RESULT_same_key_collision"
       },
       {
-        "id": "schema_version_number_vs_string",
-        "base": "R{key=commit-a,identity=I,outcome=COMMITTED,evidence=STRING(e1),schema=NUMBER(1)}",
-        "variant": "R2{key=commit-a,identity=I,outcome=COMMITTED,evidence=STRING(e1),schema=STRING(1)}",
+        "id": "plain_ab_vs_a_zero_width_joiner_b",
+        "base": "record_key=STRING(ab)",
+        "variant": "record_key=STRING(a + ZERO WIDTH JOINER + b)",
         "expected_same_normalized_fingerprint": false,
-        "decision": "UNKNOWN_RESULT_same_key_collision"
-      },
-      {
-        "id": "terminal_outcome_null_vs_absent",
-        "base": "R{key=commit-a,identity=I,outcome=NULL,evidence=STRING(e1),schema=NUMBER(1)}",
-        "variant": "R2{key=commit-a,identity=I,outcome=<ABSENT>,evidence=STRING(e1),schema=NUMBER(1)}",
-        "expected_same_normalized_fingerprint": false,
-        "decision": "UNKNOWN_RESULT_same_key_collision"
+        "decision": "distinct_canonical_record_key_not_collapsed"
       }
     ],
     "result": {
-      "null_and_absent_are_distinct_in_model": true,
-      "primitive_type_drift_is_distinct_in_model": true,
-      "implicit_coercion_allowed": false,
+      "canonical_equivalence_collapses_nfc_equivalent_strings": true,
+      "compatibility_folding_performed": false,
+      "script_confusable_mapping_performed": false,
+      "invisible_character_removal_performed": false,
       "pending_recovery_status_after_control": "UNKNOWN_RESULT",
       "fresh_same_effect_claim_allowed": false
     },
-    "newly_verified_invariant": "Within the tested deterministic typed presence-tagged model, a same-key record cannot silently deduplicate across null-versus-absent or tested primitive type drift in participating fields; each tested mismatch changes normalized content and fails closed to UNKNOWN_RESULT.",
+    "newly_verified_invariant": "Within the tested deterministic NFC model, canonically equivalent composed/decomposed Unicode strings do not create duplicate semantic records, while tested compatibility, script-confusable, and invisible-character differences are not silently collapsed. Same-key mismatches remain fail-closed; distinct canonical record keys remain distinct.",
     "empirical_parser_transport_or_exactly_once_tested": false
   },
   "observations": [
-    "Current authority froze to DESIRED_STATE control27 blob 0eee15a94c23400653d84506da1f795081a6ef24, multi_agent config10/control13 blob 37a44cd0a2556a782247210bdd2c557ee58fe133, and RUN_LIFECYCLE revision3 blob 560024d46b6c26ea63ab58137be9d48863cab941 using exact_blob_two_pass.",
+    "Current authority froze to DESIRED_STATE control27 blob 0eee15a94c23400653d84506da1f795081a6ef24 and multi_agent config10/control13 blob 37a44cd0a2556a782247210bdd2c557ee58fe133 at main commit a14e1ce9dc713dde1cd18907e0c8b23e8c8a352f, with RUN_LIFECYCLE revision3 blob 560024d46b6c26ea63ab58137be9d48863cab941.",
     "The required config10 role-local presemantic witness was written and exact-read back before the semantic LATEST read.",
-    "The predecessor checkpoint explicitly left null-versus-absent and type drift open while preserving UNKNOWN_RESULT for the pending identity.",
-    "The current bounded control fixed a typed presence-tagged normalization rule before fixture evaluation and did not use implicit primitive coercion.",
-    "All four tested same-key mismatches changed normalized content and therefore failed closed to UNKNOWN_RESULT in the deterministic model."
+    "The predecessor checkpoint explicitly left Unicode normalization open while preserving UNKNOWN_RESULT for the pending identity.",
+    "The current bounded control fixed NFC-only normalization before fixture evaluation and preserved typed presence tags with no primitive coercion.",
+    "The NFC-equivalent composed/decomposed fixture normalized identically; compatibility, script-confusable, and zero-width-joiner fixtures did not collapse under NFC."
   ],
-  "inference": "The local model narrows canonicalization ambiguity by requiring explicit presence and primitive-type tags for decision-relevant fingerprint fields. This blocks two classes of accidental duplicate collapse in the tested fixtures, but it does not establish how any real JSON parser, connector, repository API, or external implementation canonicalizes values.",
+  "inference": "The deterministic claim/idempotency model now has an explicit Unicode canonicalization boundary: NFC may safely collapse canonical-equivalent spellings in participating string fields, while stronger compatibility or confusable folding is deliberately absent and therefore cannot silently merge the tested distinctions. This is a local model result only and does not establish behavior of any real parser, connector, repository API, or external implementation.",
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Test Unicode normalization behavior for participating string fields without widening the tested scope.",
     "Test semantic_schema_version transition compatibility and fail-closed behavior across explicitly supported versus unsupported versions.",
+    "Test NFKC/NFKD or other stronger normalization only if a future leaf explicitly requires compatibility semantics; do not infer it from this NFC result.",
     "Empirically test intentional stale-CAS rejection only if a future authorized lifecycle budget leaves one guaranteed checkpoint write after the transport attempt.",
     "Empirically test create-if-absent duplicate rejection under the same guaranteed post-attempt checkpoint-capacity condition.",
     "Actual simultaneous competing writers, real rate-limit interruption, fairness, lease expiry/reclamation, and exactly-once effect commitment remain untested."
@@ -142,5 +145,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current authority, satisfy the current multi_agent presemantic witness contract, then resolve only current multi_agent LATEST. Preserve the exact-record equivalence rule, fingerprint participation partition, and typed presence-tagged no-coercion rule. If the active lifecycle still leaves only one semantic checkpoint write after the mandatory witness, execute exactly one deterministic Unicode-normalization/schema-transition control for participating fields. If a newer authorized lifecycle leaves a guaranteed extra write after a transport attempt, prefer one intentional stale-CAS rejection probe on a role-local disposable/non-destructive fixture. Persist and exact-read back one semantic checkpoint, keep UNKNOWN_RESULT unless stronger exact-scope evidence resolves it, and return recurring-open without a second leaf or scheduler mutation."
+  "continuation": "Next invocation: fresh-bootstrap current authority, satisfy the current multi_agent presemantic witness contract, then resolve only current multi_agent LATEST. Preserve the exact-record equivalence rule, fingerprint participation partition, typed presence-tagged no-coercion rule, and NFC-only string canonicalization boundary. If the active lifecycle still leaves only one semantic checkpoint write after the mandatory witness, execute exactly one deterministic semantic_schema_version transition-compatibility control that distinguishes explicitly supported upgrades from unsupported or ambiguous transitions and keeps UNKNOWN_RESULT on mismatch. If a newer authorized lifecycle instead leaves a guaranteed extra write after a transport attempt, prefer one intentional stale-CAS rejection probe on a role-local disposable/non-destructive fixture. Persist and exact-read back one semantic checkpoint, keep UNKNOWN_RESULT unless stronger exact-scope evidence resolves it, and return recurring-open without a second leaf or scheduler mutation."
 }
