@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "artifact_type": "phase1_primary_source_verification",
+  "role": "primary_source_verifier",
+  "written_at": "2026-09-14T20:38:49+09:00",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-primary-verify",
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "scheduler_mutation_by_worker": false,
+  "authority": {
+    "manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d", "control_revision": 126},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "blob": "560024d46b6c26ea63ab58137be9d48863cab941", "control_revision": 3},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "blob": "0eee15a94c23400653d84506da1f795081a6ef24", "control_revision": 27},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3", "control_revision": 37, "role_config_revision": 10},
+    "bootstrap_valid": true
+  },
+  "frontier_reconstruction": {
+    "primary_verifier_latest": {"path": "research_audits/primary_verification/LATEST.json", "observed_updated_at": "2026-09-12T14:35:35+09:00", "exact_next_action_excludes_reopening_cargo_without_new_execution_mechanism": true},
+    "coordinator_precheck": {"path": "research_index_clean_g1/INTEGRATOR_PRECHECK_2026-09-14T094450Z.json", "blob": "762cfaba8b4ed81762bda61b33bf8d181672cafd", "status": "current triple drift verification; coordinator mutation withheld on mismatch"},
+    "selected_non_cargo_route": {"source_role": "reasoning", "checkpoint_path": "research_workers_clean_g1/reasoning/2026-09-01T0724JST_phase1_repository_effect_admission_checkpoint.json", "checkpoint_blob": "c7ead2cd8122c5478dcb993038cce3d78925a957", "current_state_path": "research_workers_clean_g1/reasoning/STATE.json", "current_state_blob": "398b6fa66b52754d7da598bcf5803f8691a20ae1", "route_identity": "repository-effect-admission-single-cas-v1"},
+    "selection_note": "Cargo was not reopened because the current primary-verifier continuation forbids doing so absent a new exact Chat-native Cargo execution mechanism. The selected reasoning route is a distinct unresolved dependency-elimination architecture and was consumed only for downstream audit; no CLEAN state was mutated or steered."
+  },
+  "candidate_claim_scope": {
+    "prepared_record": "Create an immutable candidate record containing payload hash, actor, owner generation and predecessor canonical HEAD identity; record creation is PREPARED only.",
+    "canonical_head": "One mutable canonical HEAD stores owner/generation, sequence/revision and committed record tip.",
+    "effect_commit": "Acceptance occurs only when one CAS from the exact predecessor canonical HEAD succeeds and actor/generation matches the predecessor owner/generation.",
+    "handoff_commit": "Ownership transfer is another immutable record plus one canonical HEAD CAS.",
+    "accepted_effect_domain": "repository-visible effects whose semantics are defined by canonical committed HEAD-chain membership",
+    "excluded_domain": "arbitrary non-repository external side effects and cross-service atomicity"
+  },
+  "primary_sources": [
+    {
+      "source": "GitHub REST API repository contents documentation",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "observed_2026_09_14": "Create-or-update requires the current blob SHA when replacing a file and documents 409 Conflict; concurrent content mutations must be serialized."
+    },
+    {
+      "source": "GitHub REST API Git references documentation",
+      "url": "https://docs.github.com/en/rest/git/refs",
+      "observed_2026_09_14": "Update-a-reference accepts the new SHA plus force/fast-forward policy, but exposes no expected-old-ref SHA parameter for a strict compare-and-swap against a specific prior branch ref."
+    },
+    {
+      "source": "GitHub REST API rate limits documentation",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "observed_2026_09_14": "REST access is governed by per-window primary and secondary rate limits; authenticated requests commonly have hourly request budgets."
+    }
+  ],
+  "exact_chat_repository_surface": {
+    "create_file": "Current connected GitHub create_file action can create a new UTF-8 repository file on an existing branch.",
+    "update_file": "Current connected GitHub update_file action requires the current blob SHA of the file being replaced and returns resulting commit/content identity.",
+    "fetch_file": "Current connected GitHub fetch_file action returns exact file blob SHA for readback.",
+    "scope_guard": "These exposed actions support a designated canonical HEAD file with blob-SHA guarded replacement. They do not expose a strict expected-old branch-ref CAS parameter."
+  },
+  "verification_result": {
+    "status": "primary_verified_with_material_canonical_head_scope_correction",
+    "supported": [
+      "An immutable PREPARED record can be represented as a normal repository file while protocol semantics reserve acceptance for canonical-head membership.",
+      "A single designated canonical HEAD file can be guarded by the GitHub Contents API current-file blob SHA and exact-read back after the write.",
+      "409 Conflict plus later exact readback provides a viable repository-local conflict/recovery signal; per-window rate limits can be handled across invocations without a monthly/trial/paid quota dependency."
+    ],
+    "material_correction": "The GitHub Contents API sha guard is a compare against the blob SHA of the target file, not against the entire repository branch HEAD commit. Therefore the reasoning architecture is supported only when 'canonical HEAD' means the designated mutable head file and 'exact predecessor HEAD identity' means that file's exact predecessor blob/content identity. It is not source-verified as a CAS on the Git branch HEAD or as a transaction over unrelated repository paths. The Git-reference update endpoint also lacks an expected-old-ref SHA argument, so it does not independently supply strict branch-ref CAS semantics on this surface.",
+    "lost_ack_scope": "Primary-source semantics are compatible with the proposed lost-ack recovery pattern for repository-visible effects: after an uncertain update, the next invocation can read the canonical head file and exact candidate identity. Distinguishing 'landed then later advanced' requires the immutable committed chain to preserve the candidate, not merely the current tip.",
+    "external_effect_boundary": "No primary source turns an arbitrary external side effect into a transactionally conditional consequence of the repository CAS. The architecture remains unresolved outside repository-visible effects."
+  },
+  "hard_gate_assessment": {
+    "repository_visible_effect_subclass": {
+      "residual_work_protected_primary_manual_user_executor": false,
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost_identified": 0,
+      "rate_limit_dependency": "per-window only; must checkpoint/resume rather than wait in-run",
+      "phase1_route_pass": "partial_scope_only"
+    },
+    "global_route": {
+      "residual_work_protected_primary_manual_user_executor": "unresolved for arbitrary non-repository external effects",
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "incremental_monetary_cost_identified": 0,
+      "phase1_route_pass": false
+    },
+    "cost_scope_note": "No per-call endpoint fee or monthly/trial compute/storage quota was identified for the exact lightweight repository-transport operations in scope. This does not assert plan-independent access outside the already connected repository permission surface."
+  },
+  "tested_scope": "Primary-source and exact exposed-tool audit only. No destructive CAS race experiment, hosted runner, Codespaces, Actions, external compute, protected O mutation, CLEAN mutation, scheduler mutation, or arbitrary external side effect was executed.",
+  "continuation": "On the next primary_source_verifier invocation, fresh-bootstrap current authority and exact-read this artifact. Do not reopen the Cargo route absent a new Chat-native Cargo execution claim. For this reasoning route, treat the canonical head strictly as a designated CAS-guarded file, not Git branch HEAD. Verify exactly one remaining unresolved primary-source leaf: whether the documented repository content/update semantics plus immutable chain are sufficient to classify lost acknowledgement into (a) candidate is current committed tip, (b) candidate committed and is preserved as an ancestor after a later authorized head-file advance, or (c) candidate never committed, without relying on any external executor. If that leaf is already source-resolved by a newer audit, select one other current non-Cargo dependency-elimination route. Preserve zero monthly/trial/paid quota, zero incremental cost, no protected/manual executor, exact scope, and recurring-open status.",
+  "continuation_nonempty": true,
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false
+}
