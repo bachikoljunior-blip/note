@@ -64,6 +64,17 @@ def assess(facts: dict, now: str) -> dict:
     except (KeyError, TypeError, ValueError):
         reasons.append("prior_full_hold_time_unknown")
 
+    # A monitor-observed local consume can race ahead of the last durable
+    # authoritative state.  Neither source may silently win: consuming again
+    # risks replay, while assuming the monitor claim is durable can strand a
+    # valid published response.  Require exact reconciliation evidence first.
+    consumption_state_conflict = bool(
+        facts.get("reported_external_response_consumed") is True
+        and facts.get("authoritative_state_response_consumed") is False
+    )
+    if consumption_state_conflict:
+        reasons.append("consumption_state_conflict")
+
     action_key = facts.get("blocked_action_key")
     notice = facts.get("notification", {})
     emission = notice.get("emission", {})
@@ -84,6 +95,8 @@ def assess(facts: dict, now: str) -> dict:
         next_step = "query_existing_operation_before_any_relaunch"
     elif facts.get("separate_owner_substantive_progress_verified"):
         next_step = "preserve_owner_and_recheck_bound_progress"
+    elif consumption_state_conflict:
+        next_step = "reconcile_exact_consumption_proof_before_any_resume"
     elif facts.get("consumed_response_successor_unpublished"):
         if not facts.get("frozen_native_objects_verified"):
             next_step = "restore_exact_objects_without_semantic_replay"
@@ -100,6 +113,8 @@ def assess(facts: dict, now: str) -> dict:
         "notification_due": notice_due,
         "notification_emission_verified": valid_emission,
         "delivery_verified": bool(valid_emission and emission.get("kind") == "platform_delivery_ack"),
+        "consumption_state_conflict": consumption_state_conflict,
+        "consumption_proof_reconciled": not consumption_state_conflict,
         "next_step": next_step,
         "native_resume_authorized": False,
         "publication_authorized": False,

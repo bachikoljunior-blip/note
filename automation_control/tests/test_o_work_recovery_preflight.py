@@ -106,6 +106,38 @@ class RecoveryPreflightTests(unittest.TestCase):
         self.assertFalse(result["native_resume_authorized"])
         self.assertFalse(result["publication_authorized"])
 
+    def test_reported_consume_conflicting_with_authoritative_state_fails_closed(self):
+        f = self.facts()
+        f.update(reported_external_response_consumed=True,
+                 authoritative_state_response_consumed=False,
+                 consumed_response_successor_unpublished=True,
+                 frozen_native_objects_verified=False)
+        result = self.evaluate(f)
+        self.assertTrue(result["full_refresh_required"])
+        self.assertIn("consumption_state_conflict", result["full_refresh_reasons"])
+        self.assertTrue(result["consumption_state_conflict"])
+        self.assertFalse(result["consumption_proof_reconciled"])
+        self.assertEqual(
+            result["next_step"],
+            "reconcile_exact_consumption_proof_before_any_resume",
+        )
+        self.assertFalse(result["native_resume_authorized"])
+        self.assertFalse(result["publication_authorized"])
+
+    def test_matching_consumed_sources_keep_exact_object_recovery_path(self):
+        f = self.facts()
+        f.update(reported_external_response_consumed=True,
+                 authoritative_state_response_consumed=True,
+                 consumed_response_successor_unpublished=True,
+                 frozen_native_objects_verified=False)
+        result = self.evaluate(f)
+        self.assertFalse(result["consumption_state_conflict"])
+        self.assertTrue(result["consumption_proof_reconciled"])
+        self.assertEqual(
+            result["next_step"],
+            "restore_exact_objects_without_semantic_replay",
+        )
+
     def test_pending_operation_is_queried_before_another_launch(self):
         f = self.facts(); f.update(accepted_pending_operation=True, consumed_response_successor_unpublished=True)
         self.assertEqual(self.evaluate(f)["next_step"], "query_existing_operation_before_any_relaunch")
