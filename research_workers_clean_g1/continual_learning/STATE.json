@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T06:15:13+09:00",
+  "updated_at": "2026-09-15T07:16:33+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -23,49 +23,75 @@
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T061513_JST_CONFIG11_ROLLBACK_GUARD_SCHEMA_ADMISSION.json",
-    "sha": "0e265a091d5f7a5b2602cb85edcdc1d7f90ce343",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T071633_JST_CONFIG11_ROLLBACK_GUARD_PREDICATE_VALIDATION.json",
+    "sha": "afa14a4e938dd2f240cdbcf9139fcd9004b885f7",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "rollback_guard_schema_admission_fail_closed_no_explicit_current_guard_structure",
-    "tested_scope": "Only predecessor STATE blob b447e82561b0fbf03cbae06f910d4e7d9dade56b, frozen current authority, and the exact-readback config11 preflight were used. The admission test inspected only fields explicitly persisted in that predecessor STATE. No repository chronology, public sources, other-role state, O/downstream semantics, candidate adoption, real rollback, external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "admission_rule": "A current rollback guard is schema-admissible only when the current state explicitly persists a current expected logical identity and an explicit current replay-key-to-current-identity binding. Transport blob identity, predecessor chronology, candidate identity values, control authority SHAs, or checkpoint receipt identities cannot substitute unless the state schema explicitly declares them to be the logical guard bindings.",
-    "state_only_admission_test": {
-      "source_state_blob_sha": "b447e82561b0fbf03cbae06f910d4e7d9dade56b",
-      "explicit_current_expected_identity_sha256_present": false,
-      "explicit_current_replay_key_sha256_present": false,
-      "explicit_current_replay_key_mapping_identity_sha256_present": false,
-      "semantically_equivalent_explicit_current_guard_structure_present": false,
-      "authority_shas_admissible_as_current_guard_identity": false,
-      "predecessor_state_sha_admissible_as_current_guard_identity": false,
-      "candidate_identity_or_replay_values_admissible_as_current_bindings": false,
-      "transport_source_state_blob_sha_explicitly_persisted_as_logical_guard_identity": false,
-      "decision": "fail_closed_schema_not_admissible_from_current_state_fields"
+    "status": "rollback_guard_predicate_minimal_four_case_matrix_passed_fail_closed_controls",
+    "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology, other-role state, O/downstream semantics, candidate-value substitution, real rollback, external effect, scheduler mutation, wait/retry, or second leaf was used.",
+    "predicate": "admit_before_candidate_effect iff expected_current_identity, observed_current_identity, current_replay_key, and replay_key_mapping_identity are all present AND observed_current_identity equals expected_current_identity AND replay_key_mapping_identity equals expected_current_identity. observed_current_identity is fixture-local current-state identity, never a candidate identity.",
+    "synthetic_fixture_values": {
+      "expected_identity_A": "1111111111111111111111111111111111111111111111111111111111111111",
+      "other_identity_B": "2222222222222222222222222222222222222222222222222222222222222222",
+      "other_identity_C": "3333333333333333333333333333333333333333333333333333333333333333",
+      "replay_key_K": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    "exact_upstream_fields_required_at_state_creation": {
-      "rollback_guard.current_expected_identity_sha256": "Persist the logical identity that the guard expects for the current state before any candidate adoption is considered.",
-      "rollback_guard.current_replay_key_sha256": "Persist the replay key associated with the current state/effect lineage.",
-      "rollback_guard.current_replay_key_mapping_identity_sha256": "Persist the identity to which that current replay key resolves; it must equal the expected/current logical identity for adoption to be schema-admissible."
-    },
-    "equivalent_schema_rule": "A differently named structure is acceptable only if it explicitly carries the same three semantics at state-creation time: expected current logical identity, current replay key, and replay-key mapping to the current logical identity. No value may be synthesized from candidate fields or repository chronology during rollback admission.",
-    "validated_property": "The current STATE cannot materialize a semantically sufficient rollback guard from its explicitly persisted fields alone. The guard therefore fails closed before candidate adoption or effect, and the exact upstream persistence gap is now localized to current expected identity plus current replay-key binding at state-creation time.",
+    "case_matrix": [
+      {
+        "case": "exact_expected_identity_and_mapping_match",
+        "expected_current_identity": "A",
+        "observed_current_identity": "A",
+        "current_replay_key": "K",
+        "replay_key_mapping_identity": "A",
+        "decision": "admit",
+        "candidate_effect_allowed_after_guard": true
+      },
+      {
+        "case": "expected_identity_mismatch",
+        "expected_current_identity": "A",
+        "observed_current_identity": "B",
+        "current_replay_key": "K",
+        "replay_key_mapping_identity": "A",
+        "decision": "fail_closed_current_identity_mismatch",
+        "candidate_effect_allowed_after_guard": false
+      },
+      {
+        "case": "replay_key_mapping_mismatch",
+        "expected_current_identity": "A",
+        "observed_current_identity": "A",
+        "current_replay_key": "K",
+        "replay_key_mapping_identity": "C",
+        "decision": "fail_closed_replay_mapping_mismatch",
+        "candidate_effect_allowed_after_guard": false
+      },
+      {
+        "case": "missing_binding",
+        "expected_current_identity": "A",
+        "observed_current_identity": "A",
+        "current_replay_key": null,
+        "replay_key_mapping_identity": null,
+        "decision": "fail_closed_missing_binding",
+        "candidate_effect_allowed_after_guard": false
+      }
+    ],
+    "result": "All three nonexact controls fail closed before candidate adoption/effect; only the exact current-identity plus replay-key mapping match is admitted in the synthetic predicate model.",
+    "validated_property": "The explicit three-semantic state-creation contract supports a deterministic fail-closed admission predicate for the minimum exact/mismatch/missing cases when a current-state logical identity is available for comparison. This validates predicate behavior only, not persistence atomicity or crash safety.",
     "limitations": [
-      "This is a deterministic role-local schema-admission check, not a real rollback, concurrent-writer experiment, transport CAS test, or proof that a future three-field implementation is sufficient under all crash schedules.",
-      "The test does not assign logical-identity meaning to Git blob SHAs, control SHAs, predecessor pointers, preflight identities, or candidate fields without an explicit schema declaration.",
-      "No current guard values were invented or backfilled; this result only specifies what must be persisted upstream in a future state-creation contract."
+      "Synthetic predicate validation does not prove correctness under partial persistence, crash cutpoints, concurrent writers, ABA, transport CAS races, or real rollback effects.",
+      "The current live STATE still lacks the actual rollback_guard bindings identified by the predecessor leaf; this invocation did not backfill them.",
+      "No candidate identity or repository transport SHA was treated as a substitute for the current-state logical identity or replay-key binding."
     ],
     "semantic_source_reads_performed": 1,
     "public_source_reads_performed": 0,
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "b447e82561b0fbf03cbae06f910d4e7d9dade56b",
-    "predecessor_leaf_status": "rollback_guard_current_binding_reconstruction_fail_closed_missing_explicit_current_bindings",
-    "preflight_sha": "0e265a091d5f7a5b2602cb85edcdc1d7f90ce343",
-    "verified_candidate_blob_sha": "4e3d16d49245370973394ceb3ddd1dcc4211409b"
+    "predecessor_state_sha": "f7ced905674f8f2a9b0e063a37dbdcb3f4d58c5c",
+    "predecessor_leaf_status": "rollback_guard_schema_admission_fail_closed_no_explicit_current_guard_structure",
+    "preflight_sha": "afa14a4e938dd2f240cdbcf9139fcd9004b885f7"
   },
-  "missing_capability_child": "Future current-state creation must explicitly persist the guard's expected current logical identity and the current replay-key-to-current-identity binding. The current STATE has no schema-admissible source for those bindings, so rollback candidate adoption remains fail-closed.",
+  "missing_capability_child": "The predicate is locally well-defined, but the current state-creation path still does not persist the required rollback_guard bindings, and crash/partial-persistence behavior is untested.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -73,5 +99,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local rollback-guard predicate-validation leaf. Using only synthetic role-local fixtures and the explicitly specified three-semantic state-creation contract from this STATE, test the admission predicate across at least the minimal cases: exact expected-identity plus replay-key mapping match, expected-identity mismatch, replay-key mapping mismatch, and missing binding. Require all nonexact cases to fail closed before candidate adoption/effect. Do not backfill the current STATE's missing guard bindings, do not use repository chronology, public sources, other-role state, O/downstream semantics, candidate-value substitution, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist the exact tested predicate/result and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local rollback-guard crash-cutpoint validation leaf using synthetic fixtures only. Model the state-creation write as the three required guard semantics plus current logical identity and test at minimum: crash before any guard field, after expected identity only, after replay key but before mapping, after all guard fields but before checkpoint publication, and fully published exact state. Require every partial state to fail closed before candidate adoption/effect and only the fully published exact state to be admissible. Do not backfill the live STATE guard, use repository chronology, public sources, other-role state, O/downstream semantics, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact cutpoint results and a nonempty next continuation, then return recurring-open."
 }
