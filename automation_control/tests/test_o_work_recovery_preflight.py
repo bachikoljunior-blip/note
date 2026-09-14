@@ -67,6 +67,27 @@ class RecoveryPreflightTests(unittest.TestCase):
         f = self.facts(); f["notification"] = self.emitted(); f["human_monitor"].pop("main_sha")
         self.assertTrue(self.evaluate(f)["full_refresh_required"])
 
+    def test_null_observation_times_require_refresh_without_crashing_or_authority(self):
+        for field, reason in (("human_monitor", "human_monitor_time_unknown"),
+                              ("prior_full_observed_at", "prior_full_hold_time_unknown")):
+            with self.subTest(field=field):
+                f = self.facts()
+                f["notification"] = self.emitted()
+                f.update(consumed_response_successor_unpublished=True,
+                         frozen_native_objects_verified=False)
+                if field == "human_monitor":
+                    f[field]["observed_at"] = None
+                else:
+                    f[field] = None
+                result = self.evaluate(f)
+                self.assertTrue(result["full_refresh_required"])
+                self.assertIn(reason, result["full_refresh_reasons"])
+                self.assertEqual(result["next_step"], "restore_exact_objects_without_semantic_replay")
+                self.assertFalse(result["native_resume_authorized"])
+                self.assertFalse(result["publication_authorized"])
+                self.assertFalse(result["notification_due"])
+                self.assertFalse(result["delivery_verified"])
+
     def test_incomplete_fingerprint_cannot_reuse_hold(self):
         f = self.facts(); f["notification"] = self.emitted()
         f.pop("hold_fingerprint_complete_and_unchanged")

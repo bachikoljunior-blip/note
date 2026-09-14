@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 def instant(value: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError("timestamp must be a string")
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         raise ValueError("timestamp must have a timezone")
