@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "artifact_type": "phase1_primary_source_verification",
+  "role": "primary_source_verifier",
+  "created_at": "2026-09-14T17:37:30+09:00",
+  "phase": {
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+    "task_id": "p1-primary-verify",
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "authority": {
+    "manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d", "control_revision": 126},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "blob": "560024d46b6c26ea63ab58137be9d48863cab941", "control_revision": 3},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "blob": "0eee15a94c23400653d84506da1f795081a6ef24", "control_revision": 27},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3", "control_revision": 37, "role_config_revision": 10},
+    "bootstrap_valid": true,
+    "transport_mode": "exact_fetched_blob_identity"
+  },
+  "frontier_provenance": {
+    "primary_verifier_latest": {"path": "research_audits/primary_verification/LATEST.json", "blob": "4daabb199d1f11f3ec7ef49eb077ab00f6f5f4ec"},
+    "coordinator_state_checked": [
+      {"path": "research_index_clean_g1/ACTIVE_WAVE.json", "blob": "09bb84baf7c29f0d1044172f85336ec2c69969f4"},
+      {"path": "research_index_clean_g1/INDEX.json", "blob": "06a76796dd725b7e1a542915bae1d0585e99769f"},
+      {"path": "research_index_clean_g1/O_FEED.json", "blob": "b3780c12f1aeb02a1e36a5da976ee99dc2ba72b9"}
+    ],
+    "selected_route": {
+      "candidate": "reasoning/repository-effect-admission-single-cas-v1",
+      "source_path": "research_workers_clean_g1/reasoning/2026-09-01T0724JST_phase1_repository_effect_admission_checkpoint.json",
+      "source_blob": "c7ead2cd8122c5478dcb993038cce3d78925a957",
+      "latest_pointer_path": "research_workers_clean_g1/reasoning/LATEST.md",
+      "latest_pointer_blob": "176a19d4a3d0d201fb4fe3e4bf1934ab3d532dc2",
+      "selection_reason": "Current primary-verifier continuation requires one unresolved proposed dependency-elimination route other than the already-audited Cargo route; this route makes an exact repository-transport admission claim and remains explicitly non-global."
+    }
+  },
+  "tested_claim_scope": {
+    "worker_claim": "Immutable PREPARED records plus one mutable canonical HEAD updated from an exact predecessor can admit repository-visible generation-tagged effects while rejecting stale-generation replays across handoff.",
+    "worker_finite_model": "137257 traces of length <=6 over prep/commit/handoff/replay actions; 0 protocol safety violations reported; arbitrary external side effects, server-side multi-object transactions and permanent repository unavailability explicitly excluded.",
+    "verifier_scope": "Primary-source verification of the exposed GitHub repository-contents transport and dependency/quota/cost gates. The worker's internal 137257-trace enumeration was not independently rerun in this slice."
+  },
+  "primary_sources": [
+    {
+      "source": "GitHub Docs — REST API endpoints for repository contents, Create or update file contents",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/repos/contents#create-or-update-file-contents",
+      "accessed": "2026-09-14",
+      "verified": [
+        "Updating a file requires the blob SHA of the file being replaced.",
+        "The endpoint documents HTTP 409 Conflict.",
+        "GitHub warns that conflicting mutative contents requests must be serialized."
+      ]
+    },
+    {
+      "source": "GitHub Docs — Best practices for using the REST API / rate limits",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api",
+      "accessed": "2026-09-14",
+      "verified": [
+        "GitHub REST API is rate limited and recommends serial requests and stopping/retrying later when rate limited.",
+        "These are per-window rate limits rather than a finite monthly/trial compute quota."
+      ]
+    }
+  ],
+  "exact_chat_repository_evidence": {
+    "exposed_connector_contract": [
+      "GitHub.update_file requires the current blob SHA for the existing path and returns the resulting commit SHA/content blob SHA.",
+      "GitHub.create_file is create-only for a new path and directs replacement through fetch plus update.",
+      "The connector explicitly says not to run update/delete writes for the same path in parallel."
+    ],
+    "environment_observation": "The current invocation successfully fetched the target repository and its exact blobs through the connected GitHub surface; no Work mode, GitHub Actions, Codespaces, package/artifact service, external model/API execution, or manual user action was used for this verification."
+  },
+  "findings": {
+    "repository_visible_effect_subclass": {
+      "status": "primary_verified_with_protocol_preconditions",
+      "supported": [
+        "A single mutable file can be updated using the currently observed blob SHA as a write precondition, with conflict as an explicit failure mode.",
+        "Separate create-only paths can hold PREPARED records without requiring Actions/Codespaces or external compute.",
+        "A subsequent exact read can observe the canonical file after a write response is lost, so repository state can serve as recovery evidence."
+      ],
+      "material_limits": [
+        "GitHub's documented precondition is the blob SHA of the file being replaced, not a server-enforced semantic owner/generation fence. Monotone owner/generation/sequence validation remains a client protocol obligation.",
+        "Blob-SHA compare semantics alone do not exclude an ABA history in which canonical HEAD content is later restored byte-for-byte to an older value. The worker architecture appears to include sequence/revision fields, but the finite model in the source checkpoint does not claim arbitrary out-of-protocol or ABA writes. Therefore the zero-stale-acceptance result must remain limited to protocol-conforming traces with non-reused canonical states.",
+        "GitHub documents conflicts/serialization requirements for mutative contents requests; this supports fail-closed retry/checkpoint behavior but is not a multi-object transaction guarantee.",
+        "The internal 137257-trace enumeration and evidence hash were not independently reproduced here."
+      ]
+    },
+    "hidden_executor_gate": {
+      "status": "passes_for_repository_visible_effect_subclass_only",
+      "reason": "The route uses the already-exposed repository contents API as transport/state and does not require Work/protected-primary/manual-user execution, Actions, Codespaces, or another hosted executor. GitHub performs repository storage/commit service, which current Phase-1 policy explicitly permits as lightweight transport rather than external compute."
+    },
+    "finite_monthly_trial_paid_quota_gate": {
+      "status": "passes_with_rate_limit_liveness_obligation",
+      "finite_monthly_trial_paid_quota_dependency": false,
+      "reason": "No Actions/Codespaces/artifact/LFS/package/cloud/external-model monthly or trial quota is required by this scoped route. GitHub REST has primary/secondary per-window rate limits, so liveness requires cross-invocation checkpoint/resume rather than same-run waiting."
+    },
+    "incremental_cost_gate": {
+      "status": "passes_in_current_connected_repository_scope",
+      "incremental_monetary_cost": 0,
+      "scope_note": "No endpoint-specific paid service or quota-bearing compute feature is required for the verified repository-contents operations in the already-connected repository. This is not a universal statement about all GitHub account plans."
+    },
+    "full_phase1_dependency_elimination": {
+      "status": "rejected_unresolved",
+      "accepted_zero_dependency_route": false,
+      "reason": "The worker itself excludes arbitrary non-repository external side effects and cross-service atomicity. Those outcomes still have a residual effect-boundary problem, so the route cannot close the Phase-1 root or any row requiring non-repository side effects."
+    }
+  },
+  "verdict": "primary_verified_scoped_repository_cas_transport_but_not_full_dependency_elimination",
+  "scope_guard": "Do not generalize the worker's 0-violation finite model beyond its protocol-conforming repository-visible state machine. In particular, do not infer safety under direct out-of-protocol canonical-file rewrites, byte-identical ABA restoration, arbitrary external effects, or cross-service atomicity.",
+  "continuation": {
+    "nonempty": true,
+    "exact_next_action": "On the next primary_source_verifier invocation, fresh-bootstrap current controls and reconstruct the current coordinator/frontier. If this reasoning route remains the highest-value unresolved audit target and no newer verified route supersedes it, verify exactly one lost-ack/ABA recovery leaf: test or source-verify whether a role-local canonical HEAD with strictly monotone generation/sequence plus exact record identity can distinguish commit-landed-still-tip, commit-landed-then-authorized-advance, and commit-never-landed without duplicate admission after a lost response. Keep arbitrary non-repository effects unresolved and do not write reasoning/CLEAN/coordinator/O state. Otherwise select one newer current unverified dependency-elimination route."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "scheduler_mutation_by_worker": false,
+  "hard_runtime_boundary_reached": false
+}
