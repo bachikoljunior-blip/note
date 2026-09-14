@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "generation": "clean_g1",
+  "role": "primary_source_verifier",
+  "directive_revision": "p1-primary-verify-v10",
+  "created_at": "2026-09-15T01:35:20+09:00",
+  "candidate": "open_source/ArgusAgent-transition-authority-455da6c",
+  "status": "primary_verified_with_invocation_capability_gap",
+  "tested_scope": {
+    "upstream_claim": "research_workers_clean_g1/open_source/RUN_20260826_0101.md Refinement B",
+    "repository": "microsoft/ArgusAgent",
+    "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+    "questions": [
+      "Does the normal Manager decision-model path mediate stage transitions and derive allow_early_completion from host-authoritative workflow state rather than trusting a model-supplied boolean?",
+      "Does the Engineer containment sandbox revoke direct invocation of stage-machine mutation primitives, or does it primarily protect filesystem paths from writes?"
+    ]
+  },
+  "primary_provenance": [
+    {
+      "path": "argus_skill/manager/_stage_ops.py",
+      "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "evidence": "_StageDecisionMixin is documented as the Manager's sole stage-transition authority; the Manager model is invoked with dangerous_yolo=False and sandbox_mode=read-only; host code computes _allow_early_completion = (not open_ended and resolve_workflow_mode(root) == direct); _apply_stage_decision_to_disk imports and calls stage-machine mutation primitives."
+    },
+    {
+      "path": "argus_skill/manager/stage_decider.py",
+      "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "evidence": "The parser is fail-closed to HOLD for malformed/illegal verdicts and describes the Manager as the sole authority over pipeline stage transitions."
+    },
+    {
+      "path": "tests/test_engineer_sandbox.py",
+      "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "evidence": "Engineer containment is gated by ARGUS_SKILL_ENGINEER_SANDBOX and default-OFF. With the gate enabled for Codex, builder calls are converted to workspace-write, dangerous_yolo is disabled, the package/gate brain/.codex/active venv are excluded from writable roots, while the working directory remains the writable workspace. The tests assert write containment and credential scrubbing, not import/call denial for stage-machine functions."
+    },
+    {
+      "path": "argus_skill/skills/stage_machine.py",
+      "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "evidence": "complete_final_stage has caller-controlled completed_by and allow_early_completion parameters. Its own documentation says the guard is 'a lock, not a signature' and that a determined caller can still pass the argument; the primitive ultimately calls _set_stage, which writes pipeline state."
+    },
+    {
+      "path": "argus_skill/core/pipeline_state.py",
+      "commit": "455da6cb2fe10e9fbaeab5126f2f3b363237cf57",
+      "evidence": "The authoritative state path is project_root/.argus/PIPELINE_STATE.json and write_pipeline_state atomically writes there."
+    }
+  ],
+  "result": {
+    "manager_mediation": "verified",
+    "manager_scope": "The normal Manager decision-model path is mediated: model output is parsed/validated by host code, allow_early_completion is host-derived from open-ended/direct-workflow state, and host code invokes the mutation primitive. This verifies the upstream claim for that path, not a global unforgeable authority boundary.",
+    "engineer_capability_revocation": "not_verified_and_source_contract_indicates_gap",
+    "engineer_scope": "The filesystem sandbox is an integrity/write-containment boundary, not a demonstrated revocation of Python-level transition capability. Read-only package/source protection does not itself make imported functions uncallable, the project workspace containing .argus/PIPELINE_STATE.json is writable under workspace-write, and complete_final_stage explicitly acknowledges that a determined caller able to import argus_skill can still supply the early-completion argument. Therefore package immutability must not be reported as proof that Engineer cannot directly invoke stage-machine mutation primitives.",
+    "scope_correction": "Preserve two distinct claims: (1) normal Manager transition decisions are host-mediated and fail-closed; (2) Engineer safe-mode containment protects privileged code paths from modification but does not, from the inspected primary source, establish unforgeable call authority or import denial for project-state mutation primitives."
+  },
+  "gates": {
+    "work_calls": 0,
+    "finite_quota_calls": 0,
+    "paid_api_cost": 0,
+    "zero_cost_evidence_only": true
+  },
+  "control_invariants": {
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false,
+    "clean_exploration_steered": false,
+    "protected_O_mutated": false,
+    "scheduler_mutated": false
+  },
+  "continuation": "Next primary-verifier slice: stay on the same clean open_source candidate and trace ArgusAgent commit 455da6cb2fe10e9fbaeab5126f2f3b363237cf57 reset/replacement and other non-forward transition surfaces (including reset_stage_for_replacement_intent and persist_vertical(force_replacement=...)) for the same mediator/capability property. Preserve the distinction between normal Manager mediation and callable primitives; do not feed findings back into CLEAN exploration."
+}
