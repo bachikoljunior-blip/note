@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T09:14:06+09:00",
+  "updated_at": "2026-09-15T10:12:19+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -23,63 +23,74 @@
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T091406_JST_CONFIG11_ROLLBACK_GUARD_CRASH_CUTPOINT.json",
-    "sha": "0f9274cf41eb2ed2dca5897a26246d26abe646db",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T101219_JST_CONFIG11_ABA_REPLAY_ROTATION.json",
+    "sha": "955b9d19184101dfd7dd16ae0922725158f4ff14",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "rollback_guard_crash_cutpoint_publication_gate_passed_fail_closed_partials",
+    "status": "aba_replay_rotation_generation_binding_matrix_passed_fail_closed_stale_or_ambiguous_bindings",
     "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology, other-role state, O/downstream semantics, live rollback-guard backfill, real rollback, external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "model": "A candidate effect is admissible only from a published checkpoint whose current logical identity, expected-current identity, replay key, and replay-key mapping identity are all present, with current logical identity equal to expected-current identity and replay-key mapping identity equal to expected-current identity. checkpoint_published is a required final publication gate and is never inferred merely from guard-field presence.",
-    "synthetic_fixture_values": {
-      "current_logical_identity": "1111111111111111111111111111111111111111111111111111111111111111",
-      "expected_current_identity": "1111111111111111111111111111111111111111111111111111111111111111",
-      "current_replay_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "replay_key_mapping_identity": "1111111111111111111111111111111111111111111111111111111111111111"
+    "model": "Candidate effect admission requires checkpoint_published=true plus complete current, expected and replay-map bindings for both logical identity and logical generation. Logical identity equality alone is insufficient after ABA; the replay mapping must match the exact current generation.",
+    "synthetic_generations": {
+      "A_generation_1": "A:g1",
+      "B_generation_2": "B:g2",
+      "A_generation_3": "A:g3",
+      "stale_replay_key": "K1",
+      "fresh_replay_key": "K2"
     },
-    "admission_predicate": "admit_before_candidate_effect iff checkpoint_published=true AND current_logical_identity, expected_current_identity, current_replay_key, and replay_key_mapping_identity are all present AND current_logical_identity=expected_current_identity AND replay_key_mapping_identity=expected_current_identity.",
-    "crash_cutpoint_matrix": [
+    "admission_predicate": "admit_before_candidate_effect iff checkpoint_published=true AND current_identity,current_generation,expected_identity,expected_generation,current_replay_key,replay_mapping_identity,replay_mapping_generation are all present AND current_identity=expected_identity=replay_mapping_identity AND current_generation=expected_generation=replay_mapping_generation.",
+    "case_matrix": [
       {
-        "cutpoint": "crash_before_any_guard_field",
-        "present": ["current_logical_identity"],
-        "checkpoint_published": false,
-        "decision": "fail_closed_missing_guard_and_unpublished",
-        "candidate_effect_allowed": false
-      },
-      {
-        "cutpoint": "crash_after_expected_identity_only",
-        "present": ["current_logical_identity", "expected_current_identity"],
-        "checkpoint_published": false,
-        "decision": "fail_closed_missing_replay_binding_and_unpublished",
-        "candidate_effect_allowed": false
-      },
-      {
-        "cutpoint": "crash_after_replay_key_before_mapping",
-        "present": ["current_logical_identity", "expected_current_identity", "current_replay_key"],
-        "checkpoint_published": false,
-        "decision": "fail_closed_missing_mapping_and_unpublished",
-        "candidate_effect_allowed": false
-      },
-      {
-        "cutpoint": "crash_after_all_guard_fields_before_checkpoint_publication",
-        "present": ["current_logical_identity", "expected_current_identity", "current_replay_key", "replay_key_mapping_identity"],
-        "checkpoint_published": false,
-        "decision": "fail_closed_unpublished_even_with_complete_guard",
-        "candidate_effect_allowed": false
-      },
-      {
-        "cutpoint": "fully_published_exact_state",
-        "present": ["current_logical_identity", "expected_current_identity", "current_replay_key", "replay_key_mapping_identity"],
+        "case": "exact_published_A_generation_1_K1",
+        "current": "A:g1",
+        "expected": "A:g1",
+        "replay_binding": "K1->A:g1",
         "checkpoint_published": true,
-        "decision": "admit_exact_published_state",
+        "decision": "admit_exact_current_generation",
         "candidate_effect_allowed": true
+      },
+      {
+        "case": "advance_to_B_generation_2_with_stale_K1",
+        "current": "B:g2",
+        "expected": "B:g2",
+        "replay_binding": "K1->A:g1",
+        "checkpoint_published": true,
+        "decision": "fail_closed_stale_identity_and_generation",
+        "candidate_effect_allowed": false
+      },
+      {
+        "case": "identity_returns_to_A_generation_3_with_stale_K1",
+        "current": "A:g3",
+        "expected": "A:g3",
+        "replay_binding": "K1->A:g1",
+        "checkpoint_published": true,
+        "decision": "fail_closed_ABA_generation_mismatch_despite_identity_match",
+        "candidate_effect_allowed": false
+      },
+      {
+        "case": "fresh_K2_bound_to_new_A_generation_3",
+        "current": "A:g3",
+        "expected": "A:g3",
+        "replay_binding": "K2->A:g3",
+        "checkpoint_published": true,
+        "decision": "admit_exact_new_generation",
+        "candidate_effect_allowed": true
+      },
+      {
+        "case": "missing_generation_discriminator",
+        "current": "A:g3",
+        "expected": "A:g3",
+        "replay_binding": "K1->A:missing_generation",
+        "checkpoint_published": true,
+        "decision": "fail_closed_generation_ambiguous",
+        "candidate_effect_allowed": false
       }
     ],
-    "result": "All four partial/crashed states fail closed before candidate adoption/effect. The only admitted fixture is the fully published exact state with complete matching guard bindings.",
-    "validated_property": "The rollback-guard predicate remains fail-closed across the required synthetic state-creation crash cutpoints when checkpoint publication is an explicit final admission gate. Complete guard fields without publication are insufficient for effect admission.",
+    "result": "The synthetic matrix distinguishes ordinary stale replay from ABA. Stale K1 fails after A->B and still fails after B->A because generation g1 does not equal current generation g3. Fresh K2 bound to A:g3 is admitted. A replay binding without a generation discriminator fails closed.",
+    "validated_property": "A replay-rotation guard that binds replay keys to a non-reused logical generation, not merely a reusable logical identity, blocks the modeled ABA stale-replay path before candidate adoption/effect while preserving exact published current-generation replay.",
     "limitations": [
-      "This synthetic model does not prove that a concrete repository/storage path can order or atomically persist the publication gate after all guard fields.",
-      "It does not test concurrent writers, ABA/current-identity reuse, transport CAS races, torn writes beyond the modeled cutpoints, or real rollback effects.",
+      "This is a local synthetic model and does not prove how a concrete repository/storage path allocates non-reused generations or atomically publishes them with replay mappings.",
+      "It does not test concurrent writers, CAS races, generation-allocation crashes, wraparound/reuse, or real rollback effects.",
       "The live STATE still does not contain an operational rollback_guard binding structure for real candidate-effect admission; this leaf intentionally did not backfill one."
     ],
     "semantic_source_reads_performed": 1,
@@ -87,11 +98,11 @@
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "fb9abe358b4714cf7c9c51738be557c8d550d492",
-    "predecessor_leaf_status": "rollback_guard_predicate_minimal_four_case_matrix_passed_fail_closed_controls",
-    "preflight_sha": "0f9274cf41eb2ed2dca5897a26246d26abe646db"
+    "predecessor_state_sha": "b11ac416f28e027a5c427846812c44f9991c86ff",
+    "predecessor_leaf_status": "rollback_guard_crash_cutpoint_publication_gate_passed_fail_closed_partials",
+    "preflight_sha": "955b9d19184101dfd7dd16ae0922725158f4ff14"
   },
-  "missing_capability_child": "Crash-cutpoint behavior is fail-closed only under an explicit publication gate in the local model. A concrete state-creation mechanism that persists the guard bindings and publication gate with verifiable ordering/atomicity remains unresolved, as do ABA/concurrent-writer semantics.",
+  "missing_capability_child": "The synthetic ABA guard requires a non-reused logical generation and an exact replay-key-to-generation binding. A concrete zero-quota state-creation mechanism that allocates/persists the generation and replay mapping with verifiable publication ordering under crashes and concurrent writers remains unresolved.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -99,5 +110,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local ABA/replay-rotation validation leaf using synthetic fixtures only. Keep the explicit checkpoint_published gate and test at minimum: exact published state at identity A with replay key K1, current identity advances to B while stale K1 maps to A, identity later returns to A with stale K1, fresh K2 correctly maps to the new A generation, and missing generation discriminator. Require stale or generation-ambiguous replay bindings to fail closed before candidate adoption/effect, and admit only an exact published binding to the current logical generation. Do not backfill the live STATE guard, use repository chronology, public sources, other-role state, O/downstream semantics, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local generation-publication crash/interleaving validation leaf using synthetic fixtures only. Model a fresh generation token Gnew and replay key Knew across at minimum: crash before generation allocation is durably recorded, generation recorded but replay mapping absent, replay mapping written but checkpoint_published=false, fully published exact generation+mapping, and a competing writer that changes the current generation before publication. Require every partial or superseded generation to fail closed before candidate adoption/effect and admit only the fully published mapping whose generation still equals current expected generation. Do not backfill the live STATE guard, use repository chronology, public sources, other-role state, O/downstream semantics, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
 }
