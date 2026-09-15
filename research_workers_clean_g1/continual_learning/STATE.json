@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T23:15:55+09:00",
+  "updated_at": "2026-09-16T00:12:33+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -25,111 +25,31 @@
     "conflict_check": "pass_manifest_control127_scheduler_membership_override_applied_mechanically_without_semantic_scope_change"
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T231555_JST_CONFIG11_CONCURRENT_INTERLEAVING.json",
-    "sha": "f5d1346fdba4c94333e6455d365c4f151eeef581",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260916T001233_JST_CONFIG11_TRANSPORT_CAS.json",
+    "sha": "ddd95047812e0e064270eb7238dd64d503df0dc1",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "two_contender_migration_claim_cas_interleavings_preserve_single_binding_and_at_most_one_effect",
-    "tested_scope": "Deterministic role-local synthetic two-contender state machine derived only from prior own STATE and frozen sanitized controls. The transition relation was append-only migration binding -> append-only claim -> idempotent effect commit. Cases covered stale reads, simultaneous same-binding contenders, an altered-binding loser, and an ABA-like replacement attempt. No public sources, other-role/O/downstream semantics, repository chronology beyond own STATE, real external effects, scheduler mutation, wait/retry, or second leaf were used.",
-    "canonical_identity": {
-      "legacy_fingerprint": "89fa969475d2f848929f470ec56f94594a8781bc45739340f339ddf706a8c0ab",
-      "new_fingerprint": "0b9018713b84712563678e6b709e0432d730b94c848f73d695f3a0ace1805eb4",
-      "migration_record_sha256": "5d5e94a38453344f19dae1d186f227b8718f8a5de4cfd5389d86dcb30d840822",
-      "payload_v1_sha256": "771a3a881c4104aa7b68e06ea7808cf14a9d3c2e4069c49155cc4341d3b1e027",
-      "payload_v2_conflict_sha256": "86208aa390093d5ace41a02e627f5920cbccf4d679b0c1209ddb296370ba76aa",
-      "altered_candidate_new_fingerprint": "8886b123d1b763aaaf013e673574102474aec3aa02c1a349fddabeb7d4d07bc8"
+    "status": "transport_cas_probe_deferred_by_current_recovery_write_call_cap",
+    "tested_scope": "Authority freeze, own-state continuation reconstruction, lifecycle write-budget arithmetic, and required post-authority preflight durability only. No public sources, other-role/O/downstream semantics, scheduler mutation, transport test-file mutation, wait/retry, or second leaf were used.",
+    "observed": {
+      "persistence_recovery_repository_write_call_cap": 2,
+      "mandatory_preflight_write_calls": 1,
+      "mandatory_terminal_checkpoint_write_calls": 1,
+      "additional_write_calls_required_by_inherited_transport_probe": 3,
+      "probe_executed": false,
+      "reason": "Executing create + advancing update + stale-SHA update after the mandatory preflight would exceed the current RUN_LIFECYCLE persistence-recovery write-call cap before the required terminal checkpoint could be persisted."
     },
-    "transition_rules": {
-      "migration_binding": "create-once CAS from absent to one legacy->new binding; existing identical binding is observed idempotently, existing different binding rejects the contender; no delete or replace transition is admitted",
-      "claim": "create-once CAS from absent to new_fingerprint+payload hash; existing same-key/same-payload is idempotent, existing same-key/different-payload rejects",
-      "effect_commit": "first matching claimed key/payload changes committed=false to committed=true; later same-key/same-payload commits are no-ops; conflicting payload is rejected before effect mutation",
-      "aba_guard": "because migration and claim records are append-only in the accepted transition relation, an observed existing record can never legally cycle through replacement/deletion back to the same visible value; a replace attempt is rejected even when it names the current record as expected-old"
-    },
-    "interleavings": [
-      {
-        "case": "stale_read_split_winners",
-        "steps": [
-          "C1 and C2 both read migration absent",
-          "C1 migration CAS(absent->canonical) succeeds",
-          "C2 stale migration CAS(absent->canonical) fails then observes identical canonical binding",
-          "C1 and C2 both read claim absent",
-          "C2 claim CAS(absent->key+payload_v1) succeeds",
-          "C1 stale claim CAS fails then observes identical key+payload_v1 claim",
-          "C1 commits effect once; C2 same-key/same-payload commit is idempotent no-op",
-          "same-key/payload_v2 conflict probe rejects"
-        ],
-        "durable_migration_binding_count": 1,
-        "accepted_claim_count": 1,
-        "effect_commit_count": 1,
-        "conflicting_payload_rejected": true,
-        "classification": "pass"
-      },
-      {
-        "case": "simultaneous_same_binding",
-        "steps": [
-          "both contenders propose the identical canonical migration binding from absent",
-          "C1 wins migration CAS; C2 loses expected-absent CAS and validates the identical durable binding",
-          "C2 wins claim CAS; C1 loses and validates the identical key+payload_v1 claim",
-          "C2 commits effect; C1 replay is idempotent no-op",
-          "same-key/payload_v2 conflict probe rejects"
-        ],
-        "durable_migration_binding_count": 1,
-        "accepted_claim_count": 1,
-        "effect_commit_count": 1,
-        "conflicting_payload_rejected": true,
-        "classification": "pass"
-      },
-      {
-        "case": "altered_binding_loser",
-        "steps": [
-          "C1 migration CAS(absent->canonical) succeeds",
-          "C2 stale expected-absent CAS for legacy->altered_new fails",
-          "C2 observes canonical binding mismatch and is rejected before claim",
-          "C1 claims payload_v1 and commits effect once",
-          "same-key/payload_v2 conflict probe rejects"
-        ],
-        "durable_migration_binding_count": 1,
-        "accepted_claim_count": 1,
-        "effect_commit_count": 1,
-        "altered_binding_accepted": false,
-        "conflicting_payload_rejected": true,
-        "classification": "pass_fail_closed_mapping_conflict"
-      },
-      {
-        "case": "aba_like_replace_attempt",
-        "steps": [
-          "C1 creates canonical migration binding",
-          "C2 observes canonical record and attempts canonical->altered replacement using the current canonical record as expected-old",
-          "append-only transition guard rejects replacement before migration state mutation",
-          "no delete/reinsert transition exists, so visible canonical value cannot complete an ABA cycle",
-          "canonical claim and effect commit proceed once",
-          "same-key/payload_v2 conflict probe rejects"
-        ],
-        "durable_migration_binding_count": 1,
-        "accepted_claim_count": 1,
-        "effect_commit_count": 1,
-        "replacement_accepted": false,
-        "aba_cycle_reachable": false,
-        "conflicting_payload_rejected": true,
-        "classification": "pass_fail_closed_append_only_aba_guard"
-      }
-    ],
-    "validated_property": "Within this exact synthetic two-contender scope, create-once CAS for the migration binding and claim, identical-record idempotent observation, same-key/different-payload rejection, and an append-only no-replacement transition relation yield exactly one durable migration binding and at most one committed effect across all tested stale-read, same-binding, altered-binding and ABA-like schedules.",
-    "unresolved_conditions": [
-      "The CAS outcomes were modeled deterministically rather than exercised against a concrete role-local transport with stale blob SHAs.",
-      "The append-only ABA guard is an application transition invariant; transport-level protection against an unauthorized replace path remains untested.",
-      "A concrete external sink with durable idempotency and same-key/different-payload rejection at zero optional monthly/trial/paid quota remains unverified."
-    ],
-    "semantic_frontier_advanced": true,
+    "classification": "bounded_blocker_preserve_exact_continuation",
+    "semantic_frontier_advanced": false,
     "public_source_reads_performed": 0
   },
   "history_tail": {
-    "predecessor_state_sha": "7c0d3e96aec8446d0b96667c2863f527c54c30a0",
-    "predecessor_leaf_status": "crash_boundary_migration_replay_is_restart_idempotent_under_unique_binding_and_fails_closed_on_stale_or_conflicting_identity",
-    "preflight_sha": "f5d1346fdba4c94333e6455d365c4f151eeef581"
+    "predecessor_state_sha": "c66d5c95d30f8e5ff539ccb8f6187a79a7cace40",
+    "predecessor_leaf_status": "two_contender_migration_claim_cas_interleavings_preserve_single_binding_and_at_most_one_effect",
+    "preflight_sha": "ddd95047812e0e064270eb7238dd64d503df0dc1"
   },
-  "missing_capability_child": "Synthetic concurrency now passes for the tested transition relation, but actual transport-level stale-CAS rejection and no-replacement enforcement remain unverified. The next child is one disposable role-local CAS probe that creates an immutable record, attempts one update using a stale expected blob identity, and verifies that the stale write is rejected while the canonical record remains unchanged; then separately classify whether an application-level no-replace guard is still required.",
+  "missing_capability_child": "Current persistence-recovery lifecycle permits only two repository write calls, both consumed by the mandatory role-local preflight and terminal checkpoint. The inherited transport stale-CAS probe requires three additional write calls to create, advance, and attempt one stale-SHA update, so performing it in this invocation would violate current lifecycle authority.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -137,5 +57,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one bounded role-local transport CAS leaf on a disposable file inside research_workers_clean_g1/continual_learning/. Create one canonical immutable test record, retain its blob identity, perform exactly one authorized update that advances the record, then attempt exactly one update with the now-stale prior blob identity and require transport rejection plus exact readback of the advanced canonical record. Do not test deletion, do not mutate scheduler or other namespaces, do not use public sources or second leaf, and do not treat transport stale-CAS rejection as proof of application-level no-replace semantics. Persist exact observed result, zero-cost/quota classification, and a nonempty continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then reevaluate the active RUN_LIFECYCLE write-call cap before any semantic mutation. If the authoritative budget permits the full single leaf plus terminal checkpoint, execute exactly one bounded role-local transport CAS probe on a disposable file inside research_workers_clean_g1/continual_learning/: create one canonical test record, retain its blob identity, perform exactly one authorized update that advances the record, then attempt exactly one update with the now-stale prior blob identity and require transport rejection plus exact readback of the advanced canonical record. Do not test deletion, do not mutate scheduler or other namespaces, do not use public sources or second leaf, and do not treat transport stale-CAS rejection as proof of application-level no-replace semantics. If the write-call cap still makes that sequence impossible, preserve this exact leaf unchanged, persist the smallest role-local budget blocker allowed by current lifecycle authority, and return recurring-open."
 }
