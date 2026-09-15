@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T15:41:38+09:00",
+  "updated_at": "2026-09-15T16:25:54+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -23,94 +23,146 @@
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T154138_JST_CONFIG11_EFFECT_ONCE_CRASH_WINDOW.json",
-    "sha": "4f67e9afc0faf897ca0507475fc816aaec978879",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T162554_JST_CONFIG11_SINK_IDEMPOTENCY_VS_ATOMIC_OUTBOX.json",
+    "sha": "c81e1fda8d9304d4e82ca7cdcc225a6edbc7d819",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "effect_once_crash_window_non_idempotent_sink_ambiguity_fail_closed",
-    "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, live rollback/effect-guard backfill, real external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "publication_record": {
+    "status": "stable_sink_idempotency_restores_cross_domain_safety_liveness_atomic_coupling_restores_only_when_final_effect_is_same_domain",
+    "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, real external effect, scheduler mutation, wait/retry, or second leaf was used.",
+    "inherited_publication_record": {
       "expected_predecessor": "P:g4",
       "generation_token": "Gsame:g5x",
       "replay_key": "K1",
       "attempt_identity": "A1"
     },
-    "effect_guard_model": {
-      "key": "attempt_identity/replay_key",
-      "states": ["EMPTY", "CLAIMED", "COMPLETED"],
-      "admission_rule": "Only the exact publication owner may CAS EMPTY to CLAIMED. A distinct attempt whose full publication record does not match current publication is ineligible even if its generation token matches.",
-      "effect_rule": "A non-idempotent effect may be attempted only by the invocation that has just established EMPTY->CLAIMED and still holds the exact same publication identity. Any later observation of CLAIMED is ambiguous and may not authorize reissue.",
-      "completion_rule": "COMPLETED may be written only after the effect call returns success in the same invocation. Because guard persistence is not atomic with the external effect, a crash between the effect and COMPLETED leaves CLAIMED ambiguous."
+    "redesign_A_sink_native_idempotency": {
+      "assumptions": [
+        "The publication winner is still determined by exact full-record identity before any effect call.",
+        "The same logical attempt can reconstruct and reuse the exact stable sink idempotency key attempt_identity/replay_key across restart.",
+        "The sink durably deduplicates repeated submissions under that key and treats reuse with a different payload as invalid rather than as a second effect.",
+        "Sink idempotency is an existing destination capability and does not require richer-mode execution, a finite monthly/trial/paid quota, paid infrastructure, or manual intervention."
+      ],
+      "case_matrix": [
+        {
+          "case": "before_claim",
+          "guard": "EMPTY",
+          "effect_applied": false,
+          "recovery": "retry publication-owner CAS EMPTY->CLAIMED, then submit exact stable sink key A1/K1",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_under_sink_idempotency_assumptions"
+        },
+        {
+          "case": "after_claim_before_effect",
+          "guard": "CLAIMED",
+          "effect_applied": false,
+          "recovery": "re-submit A1/K1 to idempotent sink; first accepted submission applies once, then mark local COMPLETED",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_reissue_is_safe_because_sink_deduplicates"
+        },
+        {
+          "case": "after_effect_before_local_completion",
+          "guard": "CLAIMED",
+          "effect_applied": true,
+          "recovery": "re-submit A1/K1; sink returns/deduplicates prior logical effect, then local COMPLETED may be written",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_crash_window_collapsed_by_sink_key"
+        },
+        {
+          "case": "exact_replay_after_completed",
+          "guard": "COMPLETED",
+          "recovery": "local completion short-circuits; redundant sink submission with A1/K1 would also deduplicate",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_idempotent_duplicate_completion"
+        },
+        {
+          "case": "distinct_loser_same_generation_token",
+          "loser_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
+          "winner_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
+          "full_record_equal": false,
+          "sink_call_authorized": false,
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_loser_excluded_before_sink"
+        }
+      ],
+      "result": "Within the synthetic model, a durable sink-native stable idempotency key removes the CLAIMED ambiguity across separate local/sink commit domains: replay may safely re-submit the same logical effect whether the pre-crash call happened or not, so no-duplicate safety and eventual application can both hold.",
+      "limitation": "The result is conditional on exact stable-key reconstruction and durable sink semantics. This leaf does not prove a concrete zero-quota sink capability or a collision-safe concurrent attempt_identity/replay_key allocation rule."
     },
-    "case_matrix": [
-      {
-        "case": "owner_before_effect_claim",
-        "publication_owner": true,
-        "guard_before": "EMPTY",
-        "transition": "CAS EMPTY->CLAIMED",
-        "non_idempotent_effect_authorized_once": true,
-        "classification": "single_first_attempt_only"
-      },
-      {
-        "case": "crash_after_claim_persistence_before_effect",
-        "guard_after_restart": "CLAIMED",
-        "actual_effect_applied": false,
-        "replay_can_prove_not_applied_from_guard": false,
-        "non_idempotent_effect_reissue_authorized": false,
-        "classification": "fail_closed_liveness_loss"
-      },
-      {
-        "case": "crash_after_effect_before_completion_marker",
-        "guard_after_restart": "CLAIMED",
-        "actual_effect_applied": true,
-        "replay_can_prove_applied_from_guard": false,
-        "non_idempotent_effect_reissue_authorized": false,
-        "classification": "fail_closed_duplicate_prevention_with_unresolved_completion"
-      },
-      {
-        "case": "exact_same_attempt_replay_after_CLAIMED",
-        "publication_record_exact_match": true,
-        "guard": "CLAIMED",
-        "classification": "same_attempt_recognized_but_effect_outcome_ambiguous",
-        "non_idempotent_effect_reissue_authorized": false
-      },
-      {
-        "case": "exact_same_attempt_replay_after_COMPLETED",
-        "publication_record_exact_match": true,
-        "guard": "COMPLETED",
-        "classification": "idempotent_duplicate_completion",
-        "non_idempotent_effect_reissue_authorized": false
-      },
-      {
-        "case": "distinct_losing_attempt_same_generation_token",
-        "loser_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
-        "current_publication_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "full_record_equal": false,
-        "effect_guard_claim_authorized": false,
-        "classification": "loser_fail_closed_before_effect_guard"
-      }
-    ],
-    "result": "A role-local durable guard that is separate from a non-idempotent external effect can prevent double-application by failing closed after a persisted CLAIMED state, but it cannot provide both safety and liveness across the crash window between CLAIMED and durable COMPLETED. CLAIMED is observationally identical after a crash-before-effect and a crash-after-effect-before-completion. Therefore replay cannot safely authorize the non-idempotent effect again, while refusing reissue can permanently lose an effect that never ran.",
-    "validated_property": "Full publication identity plus EMPTY->CLAIMED CAS is sufficient to exclude concurrent losers and to authorize at most one initial effect attempt. It is insufficient for recoverable exactly-once non-idempotent effects unless the effect destination supplies stable-key idempotency/deduplication or the guard and effect participate in one atomic transaction/commit domain.",
-    "unavoidable_ambiguity": "After durable CLAIMED and before durable COMPLETED, local state alone cannot distinguish effect-not-run from effect-ran-but-marker-missing. No transition from CLAIMED can both guarantee no duplicate and guarantee eventual application for an arbitrary non-idempotent external effect.",
-    "limitations": [
-      "The model is synthetic and does not test a real storage backend or real sink.",
-      "It assumes the initial guard CAS is atomic for the guard record itself.",
-      "It does not yet test a sink-native idempotency key or an atomic outbox/transaction redesign.",
-      "It does not supply a concrete zero-quota concurrent attempt_identity allocator.",
-      "No live STATE guard was backfilled; this leaf only models transitions."
+    "redesign_B_atomic_outbox_or_transaction_domain": {
+      "model": "Couple guard state and final effect publication in one atomic commit domain. A transaction either commits both the effect and completion identity or commits neither.",
+      "case_matrix": [
+        {
+          "case": "before_atomic_commit",
+          "atomic_state": "not_committed",
+          "effect_visible": false,
+          "recovery": "retry same atomic transaction",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_same_domain"
+        },
+        {
+          "case": "crash_during_atomic_commit",
+          "atomic_state": "commit_outcome_resolved_by_transaction_domain",
+          "recovery": "observe committed-or-not atomically; retry only if not committed",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_same_domain"
+        },
+        {
+          "case": "after_effect_and_completion_atomic_commit_before_client_observation",
+          "atomic_state": "committed",
+          "effect_visible": true,
+          "recovery": "replay observes committed publication identity and does not publish a second effect",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_same_domain"
+        },
+        {
+          "case": "exact_replay_after_commit",
+          "atomic_state": "committed",
+          "recovery": "unique publication identity returns existing committed result",
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_same_domain"
+        },
+        {
+          "case": "distinct_loser_same_generation_token",
+          "full_record_equal": false,
+          "transaction_authorized": false,
+          "safety": true,
+          "eventual_application": true,
+          "classification": "pass_loser_excluded_by_publication_identity"
+        }
+      ],
+      "outbox_boundary_check": "An ordinary outbox that atomically commits only guard+outbox-record, while the actual non-idempotent sink remains a separate later delivery domain, does not by itself solve the original crash window. A crash after external delivery but before durable outbox acknowledgement recreates the same applied-vs-not-applied ambiguity unless the sink deduplicates a stable key or the delivery participates in an atomic transaction with the sink.",
+      "result": "Atomic coupling restores both safety and liveness when the final effect itself is inside the same atomic commit domain. Outbox-only enqueue is insufficient for an arbitrary separate non-idempotent external effect; it shifts rather than removes the ambiguity."
+    },
+    "comparison": {
+      "separate_commit_domains": "Redesign A is sufficient under durable sink idempotency; Redesign B is insufficient if it is merely an outbox feeding a separate non-idempotent sink.",
+      "single_commit_domain": "Redesign B is sufficient when the final effect and guard/identity are one atomic commit; Redesign A is not required for correctness in that restricted scope.",
+      "preferred_general_recovery_shape": "For separate local and effect destinations, require a destination-level stable idempotency key and reconstruct the exact same key on replay. Use atomic same-domain publication when available; do not treat an outbox alone as exactly-once external delivery."
+    },
+    "validated_property": "The prior safety-vs-liveness impossibility is not inherent once the effect destination contributes either durable same-key deduplication or true same-domain atomic commit. Stable sink idempotency resolves the cross-domain crash ambiguity; true atomic coupling removes the cross-domain boundary. An outbox record without idempotent/transactional delivery does neither.",
+    "unresolved_conditions": [
+      "A concrete zero-quota concurrent rule that allocates or reconstructs attempt_identity/replay_key without collision or accidental key drift remains untested.",
+      "No concrete sink was verified to provide durable idempotency semantics with optional monthly/trial/paid quota at zero; this leaf tests mechanism logic only.",
+      "No concrete same-domain transaction surface was verified for an arbitrary external non-idempotent effect; outbox enqueue alone is explicitly not counted as sufficient."
     ],
     "semantic_source_reads_performed": 1,
     "public_source_reads_performed": 0,
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "d7c2c7189af9c502997fa58c0368561ff96e1bd7",
-    "predecessor_leaf_status": "full_record_publication_identity_distinguishes_winner_loser_and_idempotent_duplicate_under_generation_collision",
-    "preflight_sha": "4f67e9afc0faf897ca0507475fc816aaec978879"
+    "predecessor_state_sha": "493e40b3a306fbd3795c4f06bd3ca068d333876c",
+    "predecessor_leaf_status": "effect_once_crash_window_non_idempotent_sink_ambiguity_fail_closed",
+    "preflight_sha": "c81e1fda8d9304d4e82ca7cdcc225a6edbc7d819"
   },
-  "missing_capability_child": "Recoverable exactly-once handling for a non-idempotent effect remains unresolved when effect execution and role-local guard persistence are separate commit domains. A safe redesign must either use a sink that deduplicates a stable attempt/replay idempotency key or atomically couple effect publication with the durable guard; otherwise CLAIMED crash recovery must fail closed and can lose liveness. A concrete zero-quota concurrent attempt_identity allocation rule also remains unresolved.",
+  "missing_capability_child": "Recoverable exactly-once handling is now mechanically characterized: separate commit domains require a stable destination idempotency key that is exactly reconstructible across restart; same-domain atomic commit is also sufficient; an outbox feeding a separate non-idempotent sink is not sufficient by itself. The next unresolved local child is how to derive/allocate a collision-safe stable logical effect identity and replay key under concurrent scheduled invocations using only zero-cost quota-independent role-local state, while preserving winner/loser exclusion and restart reconstruction.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -118,5 +170,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local redesign leaf using synthetic fixtures only: compare (A) a sink-native stable idempotency key keyed by attempt_identity/replay_key and (B) an atomic outbox/transaction-domain coupling between guard and effect publication. Re-run the same crash points (before claim, after claim before effect, after effect before local completion, exact replay, and distinct loser with same generation token). Determine which redesign restores both no-duplicate safety and eventual application without richer-mode execution, finite quota, paid infrastructure, or manual intervention. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local synthetic leaf for stable logical effect identity under concurrency. Starting from winner publication P:g4/Gsame:g5x and the cross-domain sink-idempotency result above, compare at least three zero-quota key constructions: (1) transient invocation attempt_identity/replay_key, (2) a deterministic key derived from task_id + expected_predecessor + generation_token + logical_effect_descriptor, and (3) a publication-winner key durably stored by CAS with the winning full record. Test two concurrent contenders with the same generation token, crash before and after winner-key persistence, restart with a new invocation identity, exact replay, and deliberate logical-effect descriptor collision. Determine which construction preserves one logical effect key across restart while excluding losers and detecting key reuse for different payloads. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effects, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
 }
