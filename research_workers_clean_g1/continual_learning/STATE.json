@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T16:25:54+09:00",
+  "updated_at": "2026-09-15T17:17:16+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -19,150 +19,96 @@
     "role_config_sha": "2c2931beb44c8f9506488b398a2b1717ba0d6301",
     "role_config_control_revision": 14,
     "role_config_revision": 11,
-    "transport_mode": "exact_blob_two_pass",
+    "main_head_sha_first": "94009614408b2daba85d923a5cd99a0f038d0d63",
+    "main_head_sha_second": "94009614408b2daba85d923a5cd99a0f038d0d63",
+    "transport_mode": "exact_sha_head_double_read",
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T162554_JST_CONFIG11_SINK_IDEMPOTENCY_VS_ATOMIC_OUTBOX.json",
-    "sha": "c81e1fda8d9304d4e82ca7cdcc225a6edbc7d819",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T171716_JST_CONFIG11_STABLE_LOGICAL_EFFECT_IDENTITY.json",
+    "sha": "a5fedeb1c9b0dadae7aae7e9c1c48b098eb2e216",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "stable_sink_idempotency_restores_cross_domain_safety_liveness_atomic_coupling_restores_only_when_final_effect_is_same_domain",
+    "status": "cas_bound_full_record_effect_identity_is_restart_stable_and_loser_safe_transient_identity_fails_deterministic_descriptor_key_needs_payload_binding",
     "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, real external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "inherited_publication_record": {
+    "fixture": {
+      "task_id": "phase1-clean-continual-learning-durable-adaptation",
       "expected_predecessor": "P:g4",
       "generation_token": "Gsame:g5x",
-      "replay_key": "K1",
-      "attempt_identity": "A1"
+      "winner_logical_effect_descriptor": "emit:D1",
+      "winner_payload": "payload-alpha",
+      "contender_A_invocation_identity": "I-A",
+      "contender_B_invocation_identity": "I-B",
+      "restart_invocation_identity": "I-R"
     },
-    "redesign_A_sink_native_idempotency": {
-      "assumptions": [
-        "The publication winner is still determined by exact full-record identity before any effect call.",
-        "The same logical attempt can reconstruct and reuse the exact stable sink idempotency key attempt_identity/replay_key across restart.",
-        "The sink durably deduplicates repeated submissions under that key and treats reuse with a different payload as invalid rather than as a second effect.",
-        "Sink idempotency is an existing destination capability and does not require richer-mode execution, a finite monthly/trial/paid quota, paid infrastructure, or manual intervention."
-      ],
-      "case_matrix": [
-        {
-          "case": "before_claim",
-          "guard": "EMPTY",
-          "effect_applied": false,
-          "recovery": "retry publication-owner CAS EMPTY->CLAIMED, then submit exact stable sink key A1/K1",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_under_sink_idempotency_assumptions"
-        },
-        {
-          "case": "after_claim_before_effect",
-          "guard": "CLAIMED",
-          "effect_applied": false,
-          "recovery": "re-submit A1/K1 to idempotent sink; first accepted submission applies once, then mark local COMPLETED",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_reissue_is_safe_because_sink_deduplicates"
-        },
-        {
-          "case": "after_effect_before_local_completion",
-          "guard": "CLAIMED",
-          "effect_applied": true,
-          "recovery": "re-submit A1/K1; sink returns/deduplicates prior logical effect, then local COMPLETED may be written",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_crash_window_collapsed_by_sink_key"
-        },
-        {
-          "case": "exact_replay_after_completed",
-          "guard": "COMPLETED",
-          "recovery": "local completion short-circuits; redundant sink submission with A1/K1 would also deduplicate",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_idempotent_duplicate_completion"
-        },
-        {
-          "case": "distinct_loser_same_generation_token",
-          "loser_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
-          "winner_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-          "full_record_equal": false,
-          "sink_call_authorized": false,
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_loser_excluded_before_sink"
-        }
-      ],
-      "result": "Within the synthetic model, a durable sink-native stable idempotency key removes the CLAIMED ambiguity across separate local/sink commit domains: replay may safely re-submit the same logical effect whether the pre-crash call happened or not, so no-duplicate safety and eventual application can both hold.",
-      "limitation": "The result is conditional on exact stable-key reconstruction and durable sink semantics. This leaf does not prove a concrete zero-quota sink capability or a collision-safe concurrent attempt_identity/replay_key allocation rule."
+    "construction_1_transient_invocation_identity": {
+      "key_rule": "key := invocation attempt identity or an invocation-local replay key",
+      "cases": {
+        "two_concurrent_contenders": "A and B produce different keys before winner identity is durably reconstructed; loser exclusion depends on a separate winner guard and the key itself supplies no stable logical identity.",
+        "crash_before_key_persistence": "restart I-R produces a new key; no exact key reconstruction is possible from durable logical state alone.",
+        "crash_after_sink_before_local_completion": "restart may re-submit the same logical payload under a different key, so an idempotent sink can treat it as a second logical effect.",
+        "exact_replay": "fails stable-key equality when replay occurs under a new invocation identity.",
+        "descriptor_collision": "not detected by the transient key because payload/descriptor identity is not bound to the key."
+      },
+      "safety": false,
+      "restart_stable": false,
+      "loser_safe_by_itself": false,
+      "classification": "fail"
     },
-    "redesign_B_atomic_outbox_or_transaction_domain": {
-      "model": "Couple guard state and final effect publication in one atomic commit domain. A transaction either commits both the effect and completion identity or commits neither.",
-      "case_matrix": [
-        {
-          "case": "before_atomic_commit",
-          "atomic_state": "not_committed",
-          "effect_visible": false,
-          "recovery": "retry same atomic transaction",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_same_domain"
-        },
-        {
-          "case": "crash_during_atomic_commit",
-          "atomic_state": "commit_outcome_resolved_by_transaction_domain",
-          "recovery": "observe committed-or-not atomically; retry only if not committed",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_same_domain"
-        },
-        {
-          "case": "after_effect_and_completion_atomic_commit_before_client_observation",
-          "atomic_state": "committed",
-          "effect_visible": true,
-          "recovery": "replay observes committed publication identity and does not publish a second effect",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_same_domain"
-        },
-        {
-          "case": "exact_replay_after_commit",
-          "atomic_state": "committed",
-          "recovery": "unique publication identity returns existing committed result",
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_same_domain"
-        },
-        {
-          "case": "distinct_loser_same_generation_token",
-          "full_record_equal": false,
-          "transaction_authorized": false,
-          "safety": true,
-          "eventual_application": true,
-          "classification": "pass_loser_excluded_by_publication_identity"
-        }
-      ],
-      "outbox_boundary_check": "An ordinary outbox that atomically commits only guard+outbox-record, while the actual non-idempotent sink remains a separate later delivery domain, does not by itself solve the original crash window. A crash after external delivery but before durable outbox acknowledgement recreates the same applied-vs-not-applied ambiguity unless the sink deduplicates a stable key or the delivery participates in an atomic transaction with the sink.",
-      "result": "Atomic coupling restores both safety and liveness when the final effect itself is inside the same atomic commit domain. Outbox-only enqueue is insufficient for an arbitrary separate non-idempotent external effect; it shifts rather than removes the ambiguity."
+    "construction_2_deterministic_task_predecessor_generation_descriptor_key": {
+      "key_rule": "key := H(task_id || expected_predecessor || generation_token || logical_effect_descriptor)",
+      "cases": {
+        "two_concurrent_same_logical_effect": "A and B derive the same key, so restart and duplicate submission are stable if the descriptor denotes the exact same payload; winner/loser authorization must still occur before sink submission.",
+        "crash_before_or_after_local_key_persistence": "key is reconstructible from durable task/predecessor/generation/descriptor state and therefore survives a new invocation identity.",
+        "exact_replay": "reconstructs the same key and is sink-deduplicable.",
+        "deliberate_descriptor_collision": "two different payloads intentionally sharing the same descriptor derive the same key. A sink that rejects key reuse with a different payload fails closed, preserving duplicate safety but preventing the second distinct effect; a sink that does not verify payload binding could conflate effects."
+      },
+      "safety_for_same_exact_payload": true,
+      "restart_stable": true,
+      "loser_safe_with_prior_publication_guard": true,
+      "collision_safe_as_stated": false,
+      "required_repair": "bind a canonical exact effect fingerprint, such as a cryptographic digest of the canonical payload plus an effect-type/domain separator, rather than a potentially colliding human-level descriptor.",
+      "classification": "conditional_fail_on_deliberate_descriptor_collision"
+    },
+    "construction_3_publication_winner_key_cas_bound_to_full_record": {
+      "key_rule": "Before any sink call, contenders CAS the publication slot from EMPTY to one winning full record containing task_id, expected_predecessor, generation_token, canonical effect fingerprint, and stable sink key. Only the exact winning full record is authorized to submit. The sink key is derived from or atomically bound to that exact canonical full-record identity, not from transient invocation identity.",
+      "cases": {
+        "two_concurrent_contenders_same_generation": "exactly one full-record CAS wins; the losing distinct record is forbidden from sink submission even when generation_token matches.",
+        "crash_before_winner_key_persistence": "no winner record is durable and no sink call is authorized; retry may race again without duplicate external effect.",
+        "crash_after_winner_key_persistence_before_sink": "restart reads the exact durable winner record and reuses its stable key.",
+        "crash_after_sink_before_local_completion": "restart reads the same winner key and re-submits it; sink-native idempotency collapses the crash ambiguity characterized by the predecessor leaf.",
+        "exact_replay": "full-record equality returns the same winning key and duplicate submission is deduplicable.",
+        "deliberate_logical_effect_descriptor_collision": "if the human descriptor is equal but canonical payloads differ, the canonical effect fingerprints and therefore full records differ. The first CAS winner remains authoritative; the differing record is a loser and cannot reuse the winner key. Replay with a mismatching payload is rejected before sink submission."
+      },
+      "safety": true,
+      "restart_stable": true,
+      "loser_safe": true,
+      "collision_detection": true,
+      "classification": "pass_in_synthetic_model_when_key_is_bound_to_exact_canonical_full_record_and_sink_rejects_key_payload_mismatch"
     },
     "comparison": {
-      "separate_commit_domains": "Redesign A is sufficient under durable sink idempotency; Redesign B is insufficient if it is merely an outbox feeding a separate non-idempotent sink.",
-      "single_commit_domain": "Redesign B is sufficient when the final effect and guard/identity are one atomic commit; Redesign A is not required for correctness in that restricted scope.",
-      "preferred_general_recovery_shape": "For separate local and effect destinations, require a destination-level stable idempotency key and reconstruct the exact same key on replay. Use atomic same-domain publication when available; do not treat an outbox alone as exactly-once external delivery."
+      "transient_invocation_key": "Rejected because invocation identity changes across restart and does not name the logical effect.",
+      "deterministic_descriptor_key": "Useful restart-stable baseline but insufficient when descriptor equality does not guarantee exact payload equality.",
+      "cas_bound_full_record_key": "Strongest tested construction: winner selection, stable replay identity, loser exclusion and payload-mismatch detection are all coupled to one durable canonical publication record before any effect call.",
+      "minimal_safe_shape": "CAS one canonical winner record containing an exact effect fingerprint and a stable sink idempotency key; authorize sink submission only from that exact winner record; on restart reconstruct the key from the record; reject any same-key/different-payload or full-record mismatch."
     },
-    "validated_property": "The prior safety-vs-liveness impossibility is not inherent once the effect destination contributes either durable same-key deduplication or true same-domain atomic commit. Stable sink idempotency resolves the cross-domain crash ambiguity; true atomic coupling removes the cross-domain boundary. An outbox record without idempotent/transactional delivery does neither.",
+    "validated_property": "A stable logical effect identity under concurrent scheduled invocations cannot be safely based on transient invocation identity. A deterministic logical key survives restart but must bind exact canonical effect content, not only a possibly colliding descriptor. Binding the stable sink key to the CAS-winning canonical full publication record preserves one key across restart, excludes losers sharing the generation token, and detects deliberate descriptor reuse for a different payload within the synthetic model.",
     "unresolved_conditions": [
-      "A concrete zero-quota concurrent rule that allocates or reconstructs attempt_identity/replay_key without collision or accidental key drift remains untested.",
-      "No concrete sink was verified to provide durable idempotency semantics with optional monthly/trial/paid quota at zero; this leaf tests mechanism logic only.",
-      "No concrete same-domain transaction surface was verified for an arbitrary external non-idempotent effect; outbox enqueue alone is explicitly not counted as sufficient."
+      "A concrete zero-quota repository-native canonicalization and fingerprint rule for arbitrary effect payloads remains untested.",
+      "A concrete sink with durable idempotency semantics, same-key/different-payload rejection and operation at optional monthly/trial/paid quota zero remains unverified.",
+      "Concurrent mutation of the publication slot itself still requires ordinary CAS conflict handling across invocations; this leaf did not test a real connector race."
     ],
     "semantic_source_reads_performed": 1,
     "public_source_reads_performed": 0,
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "493e40b3a306fbd3795c4f06bd3ca068d333876c",
-    "predecessor_leaf_status": "effect_once_crash_window_non_idempotent_sink_ambiguity_fail_closed",
-    "preflight_sha": "c81e1fda8d9304d4e82ca7cdcc225a6edbc7d819"
+    "predecessor_state_sha": "efe19ec04c6268474ed1601e68f7797d83f7349d",
+    "predecessor_leaf_status": "stable_sink_idempotency_restores_cross_domain_safety_liveness_atomic_coupling_restores_only_when_final_effect_is_same_domain",
+    "preflight_sha": "a5fedeb1c9b0dadae7aae7e9c1c48b098eb2e216"
   },
-  "missing_capability_child": "Recoverable exactly-once handling is now mechanically characterized: separate commit domains require a stable destination idempotency key that is exactly reconstructible across restart; same-domain atomic commit is also sufficient; an outbox feeding a separate non-idempotent sink is not sufficient by itself. The next unresolved local child is how to derive/allocate a collision-safe stable logical effect identity and replay key under concurrent scheduled invocations using only zero-cost quota-independent role-local state, while preserving winner/loser exclusion and restart reconstruction.",
+  "missing_capability_child": "The local model now has a concurrency-safe restart-stable logical-effect identity shape: bind a stable sink key and exact canonical effect fingerprint to the CAS-winning full publication record before any sink call. The next unresolved child is to test one concrete zero-quota canonicalization/fingerprint scheme under semantically equivalent payload encodings and one deliberate canonicalization ambiguity, so that exact logical-effect identity does not drift or alias across restart.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -170,5 +116,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local synthetic leaf for stable logical effect identity under concurrency. Starting from winner publication P:g4/Gsame:g5x and the cross-domain sink-idempotency result above, compare at least three zero-quota key constructions: (1) transient invocation attempt_identity/replay_key, (2) a deterministic key derived from task_id + expected_predecessor + generation_token + logical_effect_descriptor, and (3) a publication-winner key durably stored by CAS with the winning full record. Test two concurrent contenders with the same generation token, crash before and after winner-key persistence, restart with a new invocation identity, exact replay, and deliberate logical-effect descriptor collision. Determine which construction preserves one logical effect key across restart while excluding losers and detecting key reuse for different payloads. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effects, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local synthetic canonicalization leaf. Starting from the CAS-bound full-record key result, compare at least three exact effect-fingerprint encodings for the same logical payload presented with reordered object fields, equivalent numeric/string forms where semantics permit, and a deliberately ambiguous descriptor; include one truly different payload control. Determine which canonicalization yields the same fingerprint for intended semantic equivalence while never aliasing the distinct control, and specify the fail-closed rule for unsupported or ambiguous encodings. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effects, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
 }
