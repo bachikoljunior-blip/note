@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T11:14:44+09:00",
+  "updated_at": "2026-09-15T12:13:09+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -19,89 +19,83 @@
     "role_config_sha": "2c2931beb44c8f9506488b398a2b1717ba0d6301",
     "role_config_control_revision": 14,
     "role_config_revision": 11,
-    "head_sha_first": "34aa62dec99e0379860984096c6fb3faff7750d4",
-    "head_sha_second": "34aa62dec99e0379860984096c6fb3faff7750d4",
-    "transport_mode": "sha_only_exact_authority",
+    "transport_mode": "exact_blob_two_pass",
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T111444_JST_CONFIG11_GENERATION_PUBLICATION.json",
-    "sha": "95ee83aa1bf75a2043a5aed1a20260203b903ba8",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T121309_JST_CONFIG11_SAME_PREDECESSOR_CONCURRENT_GENERATION_CAS.json",
+    "sha": "f0f7ad92ea5197376158e0c71e49f6b12e43addd",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "generation_publication_crash_interleaving_matrix_passed_fail_closed_partials_and_supersession",
+    "status": "same_predecessor_concurrent_generation_publication_cas_matrix_passed_with_collision_fail_closed",
     "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, live rollback-guard backfill, real rollback, external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "model": "A fresh generation Gnew and replay key Knew may authorize a candidate effect only after the generation is durably recorded, the replay mapping exists, checkpoint_published=true, and current_generation=expected_generation=replay_mapping_generation=Gnew with current_replay_key=Knew. Any missing publication stage or any superseding current generation fails closed before candidate adoption/effect.",
-    "admission_predicate": "admit_before_candidate_effect iff generation_recorded=true AND replay_mapping_present=true AND checkpoint_published=true AND current_replay_key=Knew AND current_generation=expected_generation=replay_mapping_generation=Gnew.",
+    "model": "W1 and W2 start from the same durable predecessor P and independently propose candidate generation/replay bindings. Publication is a compare-and-swap over the current predecessor plus a complete allocation record. A candidate may be adopted or produce an effect only after its own publication CAS succeeds and exact publication identity remains current. A writer whose expected predecessor is stale fails closed. If two writers propose an indistinguishable generation token, generation-token identity alone is insufficient to prove which writer owns publication; the collision fixture therefore fails closed before effect.",
+    "admission_predicate": "candidate_effect_allowed iff publication_cas_succeeded=true AND published_predecessor=P_expected AND current_predecessor_binding_matches_published_record=true AND published_generation_token_is_distinguishable_for_this_attempt=true AND current_generation=published_generation AND current_replay_key=published_replay_key. Any stale expected predecessor, failed CAS, mismatched current publication record, or indistinguishable generation-token collision fails closed before candidate adoption/effect.",
     "synthetic_fixtures": {
-      "fresh_generation": "Gnew:g4",
-      "fresh_replay_key": "Knew",
-      "competing_generation": "Gcompetitor:g5"
+      "shared_predecessor": "P:g4",
+      "writer_1": {"writer":"W1","generation":"G1:g5a","replay_key":"K1"},
+      "writer_2": {"writer":"W2","generation":"G2:g5b","replay_key":"K2"},
+      "collision_generation": "Gsame:g5x"
     },
     "case_matrix": [
       {
-        "case": "crash_before_generation_allocation_durably_recorded",
-        "generation_recorded": false,
-        "replay_mapping_present": false,
-        "checkpoint_published": false,
-        "current_generation": "Gprior:g3",
-        "expected_generation": "Gnew:g4",
-        "decision": "fail_closed_generation_not_durable",
-        "candidate_effect_allowed": false
+        "case": "W1_wins_publication_CAS_W2_observes_superseding_generation_before_effect",
+        "initial_current": "P:g4",
+        "W1_expected_predecessor": "P:g4",
+        "W2_expected_predecessor": "P:g4",
+        "W1_publication_CAS": "success_publish_G1_K1",
+        "current_after_W1": "G1:g5a",
+        "W1_candidate_effect_allowed": true,
+        "W2_publication_CAS": "fails_expected_P_but_current_G1",
+        "W2_observed_current": "G1:g5a",
+        "W2_candidate_effect_allowed": false,
+        "decision": "admit_W1_only_fail_closed_W2_stale_expected"
       },
       {
-        "case": "generation_recorded_replay_mapping_absent",
-        "generation_recorded": true,
-        "replay_mapping_present": false,
-        "checkpoint_published": false,
-        "current_generation": "Gnew:g4",
-        "expected_generation": "Gnew:g4",
-        "decision": "fail_closed_mapping_absent",
-        "candidate_effect_allowed": false
+        "case": "W2_wins_publication_CAS_W1_loses_symmetrically",
+        "initial_current": "P:g4",
+        "W1_expected_predecessor": "P:g4",
+        "W2_expected_predecessor": "P:g4",
+        "W2_publication_CAS": "success_publish_G2_K2",
+        "current_after_W2": "G2:g5b",
+        "W2_candidate_effect_allowed": true,
+        "W1_publication_CAS": "fails_expected_P_but_current_G2",
+        "W1_observed_current": "G2:g5b",
+        "W1_candidate_effect_allowed": false,
+        "decision": "admit_W2_only_fail_closed_W1_stale_expected"
       },
       {
-        "case": "replay_mapping_written_checkpoint_not_published",
-        "generation_recorded": true,
-        "replay_mapping_present": true,
-        "replay_mapping_generation": "Gnew:g4",
-        "checkpoint_published": false,
-        "current_generation": "Gnew:g4",
-        "expected_generation": "Gnew:g4",
-        "decision": "fail_closed_unpublished_mapping",
-        "candidate_effect_allowed": false
+        "case": "loser_retries_with_stale_expected_predecessor_without_reread",
+        "prior_winner": "W1",
+        "current_generation": "G1:g5a",
+        "loser": "W2",
+        "loser_expected_predecessor": "P:g4",
+        "retry_reread_performed": false,
+        "retry_publication_CAS": "fails_expected_P_but_current_G1",
+        "candidate_effect_allowed": false,
+        "decision": "fail_closed_stale_expected_retry"
       },
       {
-        "case": "fully_published_exact_generation_and_mapping",
-        "generation_recorded": true,
-        "replay_mapping_present": true,
-        "replay_mapping_generation": "Gnew:g4",
-        "current_replay_key": "Knew",
-        "checkpoint_published": true,
-        "current_generation": "Gnew:g4",
-        "expected_generation": "Gnew:g4",
-        "decision": "admit_exact_fully_published_current_generation",
-        "candidate_effect_allowed": true
-      },
-      {
-        "case": "competing_writer_supersedes_generation_before_publication",
-        "generation_recorded": true,
-        "replay_mapping_present": true,
-        "replay_mapping_generation": "Gnew:g4",
-        "current_replay_key": "Knew",
-        "checkpoint_published": false,
-        "current_generation": "Gcompetitor:g5",
-        "expected_generation": "Gnew:g4",
-        "decision": "fail_closed_superseded_generation_before_publication",
-        "candidate_effect_allowed": false
+        "case": "allocator_collision_W1_and_W2_propose_same_generation_token",
+        "initial_current": "P:g4",
+        "W1_generation": "Gsame:g5x",
+        "W2_generation": "Gsame:g5x",
+        "W1_replay_key": "K1",
+        "W2_replay_key": "K2",
+        "generation_token_distinguishable_between_attempts": false,
+        "candidate_effect_allowed_for_W1": false,
+        "candidate_effect_allowed_for_W2": false,
+        "decision": "fail_closed_indistinguishable_generation_token_collision_before_adoption_or_effect",
+        "reason": "A generation token shared by both proposals cannot by itself establish unique publication ownership; allowing either candidate based only on token equality would permit a loser to mistake another writer's publication for its own."
       }
     ],
-    "result": "All modeled crash cutpoints before full publication fail closed. The only admitted case is the fully published Knew->Gnew mapping while Gnew remains both current and expected. A competing writer that advances current generation before publication prevents the stale Gnew candidate from being adopted or producing an effect.",
-    "validated_property": "Generation-bound replay admission can be made crash-cutpoint and supersession safe in the modeled state machine by requiring complete publication plus an equality check against the still-current expected generation immediately before candidate adoption/effect.",
+    "result": "For distinct generation tokens, predecessor-CAS publication admits exactly one winner and rejects the concurrent loser before effect; a stale loser retry without rereading remains rejected. When both writers propose the same generation token, the modeled guard correctly refuses adoption/effect because publication ownership is indistinguishable at the generation-token layer.",
+    "validated_property": "A same-predecessor publication CAS prevents two distinct generation proposals from both becoming effect-authorized, and stale-expected retries remain fail-closed. Safe admission additionally requires a publication identity that distinguishes the winning allocation attempt; raw generation-token equality is not sufficient under allocator collision.",
     "limitations": [
-      "This synthetic model does not provide a concrete zero-quota allocator that guarantees non-reused generation identifiers under concurrent writers.",
-      "It does not prove atomicity of a real storage backend across generation record, replay mapping and publication marker writes.",
-      "It does not test CAS conflict handling, allocator collision, generation reuse/wraparound, or real external effects.",
+      "The collision fixture deliberately fails closed rather than supplying a concrete zero-quota uniqueness allocator.",
+      "The model does not prove atomicity or linearizability of a real storage backend.",
+      "It does not test network ambiguity after a successful remote CAS response is lost, CAS ABA on a reused predecessor value, or real external effects.",
       "The live STATE still has no operational rollback_guard structure; this leaf intentionally did not backfill one."
     ],
     "semantic_source_reads_performed": 1,
@@ -109,11 +103,11 @@
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "ae51c2d8e76ffd5b2752b250290939a31a3e5819",
-    "predecessor_leaf_status": "aba_replay_rotation_generation_binding_matrix_passed_fail_closed_stale_or_ambiguous_bindings",
-    "preflight_sha": "95ee83aa1bf75a2043a5aed1a20260203b903ba8"
+    "predecessor_state_sha": "845e5c5b46cbf46bd6155777df011f5254a20308",
+    "predecessor_leaf_status": "generation_publication_crash_interleaving_matrix_passed_fail_closed_partials_and_supersession",
+    "preflight_sha": "f0f7ad92ea5197376158e0c71e49f6b12e43addd"
   },
-  "missing_capability_child": "A concrete zero-quota generation-allocation/publication mechanism that prevents same-predecessor concurrent writers from allocating an indistinguishable generation, resolves the losing writer without external arbitration, and preserves the modeled replay/publication fail-closed ordering remains unresolved.",
+  "missing_capability_child": "A concrete zero-quota publication identity/allocation mechanism that lets a losing concurrent writer distinguish its own attempt from a winner even when a generation token collides, without external arbitration, remains unresolved. The current leaf establishes that predecessor CAS alone is sufficient for distinct tokens but raw generation-token equality is insufficient under collision.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -121,5 +115,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local same-predecessor concurrent-generation allocation/CAS validation leaf using synthetic fixtures only. Model writers W1 and W2 reading the same predecessor generation Gnew and proposing distinct generation tokens G1 and G2; test at minimum: W1 wins publication CAS and W2 observes the superseding generation before effect, W2 wins and W1 loses symmetrically, a loser retries using its stale expected predecessor without rereading, and an allocator-collision fixture where W1 and W2 propose the same token. Require stale-expected losers and indistinguishable-token collisions to fail closed before candidate adoption/effect; admit only a winner whose publication CAS binds a unique generation and replay key to the current predecessor. Do not backfill the live STATE guard, use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local publication-identity collision-resolution leaf using synthetic fixtures only. Keep the same-predecessor W1/W2 model, but represent the allocation record as at least {expected_predecessor, generation_token, replay_key, attempt_identity}. Test at minimum: distinct generation tokens with distinct replay/attempt identities, the same generation token with distinct replay/attempt identities where one CAS wins, a loser that receives an ambiguous/lost CAS response and reads back the winner record, and an exact duplicate of the same attempt. Determine whether exact full-record readback can distinguish winner, loser and idempotent duplicate without requiring generation-token uniqueness; fail closed on any record that cannot establish ownership before candidate adoption/effect. Do not backfill the live STATE guard, use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real rollback, external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
 }
