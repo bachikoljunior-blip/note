@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-15T12:28:55+09:00",
+  "updated_at": "2026-09-15T13:28:59+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "89e5e99a188196b3f97664bd9605e868c645e308",
+  "previous_latest_blob": "bad37c1bf987effce0b5aa838d18028e07718b18",
   "semantic_config_snapshot": {
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
@@ -20,31 +20,31 @@
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
     "transport_mode": "sha_pinned_main_ref",
-    "main_commit": "385c9a5ffbb8d02e134b6494e1203e7dabb3f375"
+    "main_commit": "77b4f648692e8289cfe0eecab6d8058f910bfdaf"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-15T122855+0900.json",
-    "blob": "8df97775d576d26cf05ae3b513daa90eb98d61b8",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-15T132859_JST_config10.json",
+    "blob": "abb8fcad339317a774c1ae83dfb2c31fff0e42cd",
     "durable_readback": true
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "valid-schema-duplicate-after-migration-replay",
-  "tested_scope": "One local deterministic synthetic claim-adapter replay only. Initial canonical state contained exactly one committed claim for effect_identity=E with claim_identity=C1 and attempt_identity=A1. One schema-valid retry was presented with the same effect_identity=E and claim_identity=C1 but a different attempt_identity=A2. The fixture validated all required string fields, keyed canonical admission by effect_identity, and treated attempt_identity as retry-attempt metadata rather than a new effect identity. No public-source probe, repository race, production implementation, O/downstream state, other-worker state, external coordination, richer-mode execution, hosted compute, scheduler mutation, or optional second leaf was executed.",
+  "semantic_leaf": "deterministic-stale-CAS-two-writer-replay",
+  "tested_scope": "One self-contained deterministic local two-writer compare-and-swap fixture only. W1 and W2 both read the same modeled prior generation g0 in which no canonical claim exists for effect_identity=E. W1 proposes {effect_identity:E, claim_identity:C1, attempt_identity:A1, status:committed} with expected_generation=g0 and succeeds, producing generation g1 with exactly one canonical claim. W2 then presents a distinct proposal {effect_identity:E, claim_identity:C2, attempt_identity:A2, status:committed} using the stale expected_generation=g0 against current_generation=g1. The fixture requires fail-closed stale-write rejection before mutation, no same-run retry/spin, no second canonical effect, and no partial overwrite. No real concurrent repository race, public-source probe, production implementation, O/downstream state, other-worker state, external hosted coordination, richer-mode execution, scheduler mutation, or optional second leaf was executed.",
   "observations": [
-    "Before retry, canonical claim count for effect E was exactly 1 and the stored canonical record was {effect_identity:E, claim_identity:C1, attempt_identity:A1, status:committed}.",
-    "The retry {effect_identity:E, claim_identity:C1, attempt_identity:A2} passed schema validation, then found the existing canonical record for E before any fresh-claim admission.",
-    "The fixture classified the retry as IDEMPOTENT_REPLAY and returned the existing canonical claim C1; fresh_claim_emitted=false and canonical claim count remained exactly 1.",
-    "The stored canonical record remained byte-for-byte unchanged in the modeled fields, including attempt_identity=A1, so the retry caused no partial canonical overwrite."
+    "At modeled generation g0, both W1 and W2 observed canonical claim count 0 for effect E and independently prepared different claim identities C1 and C2.",
+    "W1's compare-and-swap matched expected_generation=g0, so the model committed C1/A1 and advanced the canonical generation to g1 with canonical claim count exactly 1.",
+    "W2's compare-and-swap still carried expected_generation=g0 while current_generation was g1, so the model classified it STALE_CAS_REJECTED before any canonical mutation.",
+    "After W2 rejection, canonical claim count for E remained exactly 1, canonical record C1/A1 was unchanged, fresh_second_effect_emitted=false, partial_overwrite=false, and same_run_retry_or_spin=false."
   ],
-  "inference": "Within this exact synthetic fixture, effect-identity-first lookup plus no-write replay handling is sufficient to suppress a duplicate effect when a valid retry arrives under a different attempt identity, while preserving the original canonical record. This does not establish simultaneous-writer, repository-CAS, external transport, fairness, or production behavior and is not Phase-1 acceptance evidence by itself.",
+  "inference": "Within this exact deterministic fixture, generation-checked compare-and-swap plus fail-closed no-retry handling prevents a second canonical effect after one writer wins from a shared prior generation. This is a replay-validity result for the modeled claim protocol only; it does not establish the behavior of an actual repository API under simultaneous networked writers, rate limits, fairness/lease expiry, or production integration and is not Phase-1 acceptance evidence by itself.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Repository-level simultaneous-writer behavior remains untested: two claimers starting from the same prior generation must not both produce a canonical effect.",
-    "Stale-CAS handling remains untested: a loser after another writer commits must fail closed without same-run spin, duplicate effect emission, or partial overwrite.",
-    "Rate-limit interruption, fairness/lease behavior, and quota-zero transport behavior remain outside this fixture's tested scope."
+    "Actual repository-level simultaneous-writer behavior remains untested; this slice modeled compare-and-swap semantics locally rather than inducing a live conflict.",
+    "Rate-limit interruption remains untested: a pre-commit transport failure must preserve zero canonical effects and a retryable cross-invocation continuation without same-run spin.",
+    "Fairness/lease-expiry behavior and quota-zero transport behavior remain outside this fixture's tested scope."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -53,7 +53,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the sanitized frozen controls, current multi_agent role-local LATEST, and a self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent role-local LATEST, and a self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -66,5 +66,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap the current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required config10 presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic stale-CAS two-writer fixture: model W1 and W2 reading the same prior generation, let W1 commit the sole canonical claim for effect E, then present W2's stale compare-and-swap attempt and require stale-write rejection, no fresh second effect, no partial overwrite, no same-run retry/spin, and an exact cross-invocation continuation. Persist exact tested scope, observations, zero-cost/zero-finite-quota classification, unresolved children, and a nonempty next continuation; do not start a second leaf or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap the current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required config10 presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic rate-limit-interruption fixture for the same claim protocol: start from a generation with no canonical effect E, model a transport rate-limit/failure before canonical commit, require zero canonical mutation, zero effect emission, zero same-run retry/spin, and a cross-invocation continuation that preserves effect_identity while allowing a new attempt_identity. Persist exact tested scope, observation versus inference, zero-cost/zero-finite-quota classification, unresolved children, and a nonempty next continuation; do not start a second leaf or mutate the scheduler."
 }
