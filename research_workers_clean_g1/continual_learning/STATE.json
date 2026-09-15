@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T22:14:41+09:00",
+  "updated_at": "2026-09-15T23:15:55+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -25,67 +25,111 @@
     "conflict_check": "pass_manifest_control127_scheduler_membership_override_applied_mechanically_without_semantic_scope_change"
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T221441_JST_CONFIG11_CRASH_MIGRATION_REPLAY.json",
-    "sha": "7c2b40e549a79bee5193e7977701d38a92375fb3",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T231555_JST_CONFIG11_CONCURRENT_INTERLEAVING.json",
+    "sha": "f5d1346fdba4c94333e6455d365c4f151eeef581",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "crash_boundary_migration_replay_is_restart_idempotent_under_unique_binding_and_fails_closed_on_stale_or_conflicting_identity",
-    "tested_scope": "Deterministic role-local synthetic state machine derived only from prior own STATE and frozen sanitized controls. Stages were legacy-validate -> migration-record-persist -> new-fingerprint-claim -> effect-commit. No public sources, other-role/O/downstream semantics, repository chronology beyond own STATE, real external effects, scheduler mutation, wait/retry, or second leaf were used.",
-    "migration_record": {
+    "status": "two_contender_migration_claim_cas_interleavings_preserve_single_binding_and_at_most_one_effect",
+    "tested_scope": "Deterministic role-local synthetic two-contender state machine derived only from prior own STATE and frozen sanitized controls. The transition relation was append-only migration binding -> append-only claim -> idempotent effect commit. Cases covered stale reads, simultaneous same-binding contenders, an altered-binding loser, and an ABA-like replacement attempt. No public sources, other-role/O/downstream semantics, repository chronology beyond own STATE, real external effects, scheduler mutation, wait/retry, or second leaf were used.",
+    "canonical_identity": {
       "legacy_fingerprint": "89fa969475d2f848929f470ec56f94594a8781bc45739340f339ddf706a8c0ab",
       "new_fingerprint": "0b9018713b84712563678e6b709e0432d730b94c848f73d695f3a0ace1805eb4",
-      "record_sha256": "5d5e94a38453344f19dae1d186f227b8718f8a5de4cfd5389d86dcb30d840822",
-      "cardinality": "1_to_1"
-    },
-    "effect_identity": {
-      "effect_key": "0b9018713b84712563678e6b709e0432d730b94c848f73d695f3a0ace1805eb4",
+      "migration_record_sha256": "5d5e94a38453344f19dae1d186f227b8718f8a5de4cfd5389d86dcb30d840822",
       "payload_v1_sha256": "771a3a881c4104aa7b68e06ea7808cf14a9d3c2e4069c49155cc4341d3b1e027",
-      "payload_v2_conflict_sha256": "86208aa390093d5ace41a02e627f5920cbccf4d679b0c1209ddb296370ba76aa"
+      "payload_v2_conflict_sha256": "86208aa390093d5ace41a02e627f5920cbccf4d679b0c1209ddb296370ba76aa",
+      "altered_candidate_new_fingerprint": "8886b123d1b763aaaf013e673574102474aec3aa02c1a349fddabeb7d4d07bc8"
     },
-    "restart_cases": [
-      {"checkpoint":"before_migration_record","resume_consults_binding_first":true,"final_effect_commit_count":1,"duplicate_effect":false,"classification":"pass"},
-      {"checkpoint":"after_migration_record_before_claim","resume_consults_binding_first":true,"final_effect_commit_count":1,"duplicate_effect":false,"classification":"pass"},
-      {"checkpoint":"after_new_fingerprint_claim_before_effect_commit","resume_consults_binding_first":true,"final_effect_commit_count":1,"duplicate_effect":false,"classification":"pass"},
-      {"checkpoint":"after_effect_commit","resume_consults_binding_first":true,"final_effect_commit_count":1,"duplicate_effect":false,"classification":"pass_idempotent_replay"}
+    "transition_rules": {
+      "migration_binding": "create-once CAS from absent to one legacy->new binding; existing identical binding is observed idempotently, existing different binding rejects the contender; no delete or replace transition is admitted",
+      "claim": "create-once CAS from absent to new_fingerprint+payload hash; existing same-key/same-payload is idempotent, existing same-key/different-payload rejects",
+      "effect_commit": "first matching claimed key/payload changes committed=false to committed=true; later same-key/same-payload commits are no-ops; conflicting payload is rejected before effect mutation",
+      "aba_guard": "because migration and claim records are append-only in the accepted transition relation, an observed existing record can never legally cycle through replacement/deletion back to the same visible value; a replace attempt is rejected even when it names the current record as expected-old"
+    },
+    "interleavings": [
+      {
+        "case": "stale_read_split_winners",
+        "steps": [
+          "C1 and C2 both read migration absent",
+          "C1 migration CAS(absent->canonical) succeeds",
+          "C2 stale migration CAS(absent->canonical) fails then observes identical canonical binding",
+          "C1 and C2 both read claim absent",
+          "C2 claim CAS(absent->key+payload_v1) succeeds",
+          "C1 stale claim CAS fails then observes identical key+payload_v1 claim",
+          "C1 commits effect once; C2 same-key/same-payload commit is idempotent no-op",
+          "same-key/payload_v2 conflict probe rejects"
+        ],
+        "durable_migration_binding_count": 1,
+        "accepted_claim_count": 1,
+        "effect_commit_count": 1,
+        "conflicting_payload_rejected": true,
+        "classification": "pass"
+      },
+      {
+        "case": "simultaneous_same_binding",
+        "steps": [
+          "both contenders propose the identical canonical migration binding from absent",
+          "C1 wins migration CAS; C2 loses expected-absent CAS and validates the identical durable binding",
+          "C2 wins claim CAS; C1 loses and validates the identical key+payload_v1 claim",
+          "C2 commits effect; C1 replay is idempotent no-op",
+          "same-key/payload_v2 conflict probe rejects"
+        ],
+        "durable_migration_binding_count": 1,
+        "accepted_claim_count": 1,
+        "effect_commit_count": 1,
+        "conflicting_payload_rejected": true,
+        "classification": "pass"
+      },
+      {
+        "case": "altered_binding_loser",
+        "steps": [
+          "C1 migration CAS(absent->canonical) succeeds",
+          "C2 stale expected-absent CAS for legacy->altered_new fails",
+          "C2 observes canonical binding mismatch and is rejected before claim",
+          "C1 claims payload_v1 and commits effect once",
+          "same-key/payload_v2 conflict probe rejects"
+        ],
+        "durable_migration_binding_count": 1,
+        "accepted_claim_count": 1,
+        "effect_commit_count": 1,
+        "altered_binding_accepted": false,
+        "conflicting_payload_rejected": true,
+        "classification": "pass_fail_closed_mapping_conflict"
+      },
+      {
+        "case": "aba_like_replace_attempt",
+        "steps": [
+          "C1 creates canonical migration binding",
+          "C2 observes canonical record and attempts canonical->altered replacement using the current canonical record as expected-old",
+          "append-only transition guard rejects replacement before migration state mutation",
+          "no delete/reinsert transition exists, so visible canonical value cannot complete an ABA cycle",
+          "canonical claim and effect commit proceed once",
+          "same-key/payload_v2 conflict probe rejects"
+        ],
+        "durable_migration_binding_count": 1,
+        "accepted_claim_count": 1,
+        "effect_commit_count": 1,
+        "replacement_accepted": false,
+        "aba_cycle_reachable": false,
+        "conflicting_payload_rejected": true,
+        "classification": "pass_fail_closed_append_only_aba_guard"
+      }
     ],
-    "stale_legacy_checkpoint_control": {
-      "starting_view":"legacy_checkpoint_without_local_new_claim",
-      "durable_store_already_contains":"unique_migration_binding_plus_same_payload_committed_effect",
-      "replay_action":"consult_migration_binding_then_existing_new_key_commit",
-      "final_effect_commit_count":1,
-      "duplicate_effect":false,
-      "classification":"pass_stale_checkpoint_does_not_reexecute"
-    },
-    "altered_mapping_control": {
-      "existing_new_fingerprint":"0b9018713b84712563678e6b709e0432d730b94c848f73d695f3a0ace1805eb4",
-      "altered_candidate_new_fingerprint":"8886b123d1b763aaaf013e673574102474aec3aa02c1a349fddabeb7d4d07bc8",
-      "accepted":false,
-      "effect_commit_count_after_rejection":1,
-      "classification":"pass_fail_closed_mapping_conflict_before_claim"
-    },
-    "same_key_different_payload_control": {
-      "existing_payload_sha256":"771a3a881c4104aa7b68e06ea7808cf14a9d3c2e4069c49155cc4341d3b1e027",
-      "conflicting_payload_sha256":"86208aa390093d5ace41a02e627f5920cbccf4d679b0c1209ddb296370ba76aa",
-      "accepted":false,
-      "effect_commit_count_after_rejection":1,
-      "classification":"pass_fail_closed_same_key_different_payload"
-    },
-    "validated_property":"Within this exact sequential crash/restart synthetic scope, a durable unique migration binding consulted before claim, plus same-key/same-payload idempotent claim/commit semantics and same-key/different-payload rejection, reconstructs every tested intermediate checkpoint to exactly one committed effect. A stale legacy checkpoint and an altered migration candidate fail safely without duplicate execution.",
-    "unresolved_conditions":[
-      "Concurrent contenders racing to persist or observe migration/claim state were not tested; sequential restart safety does not prove linearizability under interleaving.",
-      "ABA or compare-and-set conflicts on migration or claim records were not modeled.",
+    "validated_property": "Within this exact synthetic two-contender scope, create-once CAS for the migration binding and claim, identical-record idempotent observation, same-key/different-payload rejection, and an append-only no-replacement transition relation yield exactly one durable migration binding and at most one committed effect across all tested stale-read, same-binding, altered-binding and ABA-like schedules.",
+    "unresolved_conditions": [
+      "The CAS outcomes were modeled deterministically rather than exercised against a concrete role-local transport with stale blob SHAs.",
+      "The append-only ABA guard is an application transition invariant; transport-level protection against an unauthorized replace path remains untested.",
       "A concrete external sink with durable idempotency and same-key/different-payload rejection at zero optional monthly/trial/paid quota remains unverified."
     ],
     "semantic_frontier_advanced": true,
     "public_source_reads_performed": 0
   },
   "history_tail": {
-    "predecessor_state_sha": "e5a23e86c759bd1319619dceaf0bc07e86376390",
-    "predecessor_leaf_status": "cross_version_migration_record_accepts_only_unique_schema_validated_mapping_and_fails_closed_on_normalization_duplicates_or_ambiguity",
-    "preflight_sha": "7c2b40e549a79bee5193e7977701d38a92375fb3"
+    "predecessor_state_sha": "7c0d3e96aec8446d0b96667c2863f527c54c30a0",
+    "predecessor_leaf_status": "crash_boundary_migration_replay_is_restart_idempotent_under_unique_binding_and_fails_closed_on_stale_or_conflicting_identity",
+    "preflight_sha": "f5d1346fdba4c94333e6455d365c4f151eeef581"
   },
-  "missing_capability_child": "Sequential crash/restart replay now passes in the exact synthetic scope, but concurrent interleavings remain unresolved. The next child is to model two contenders resuming around migration-record and new-fingerprint-claim boundaries with CAS success/failure, stale reads, and ABA-like replacement, while requiring a single accepted binding and at most one committed effect.",
+  "missing_capability_child": "Synthetic concurrency now passes for the tested transition relation, but actual transport-level stale-CAS rejection and no-replacement enforcement remain unverified. The next child is one disposable role-local CAS probe that creates an immutable record, attempts one update using a stale expected blob identity, and verifies that the stale write is rejected while the canonical record remains unchanged; then separately classify whether an application-level no-replace guard is still required.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -93,5 +137,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local synthetic concurrent-interleaving migration/claim leaf. Model two contenders across migration-record-persist and new-fingerprint-claim using CAS-style expected-old checks, one stale-read schedule, one simultaneous same-binding schedule, one altered-binding loser, and one ABA-like replace-attempt control. Require exactly one durable migration binding, same-key/different-payload rejection, and at most one committed effect after every interleaving. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effects, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one bounded role-local transport CAS leaf on a disposable file inside research_workers_clean_g1/continual_learning/. Create one canonical immutable test record, retain its blob identity, perform exactly one authorized update that advances the record, then attempt exactly one update with the now-stale prior blob identity and require transport rejection plus exact readback of the advanced canonical record. Do not test deletion, do not mutate scheduler or other namespaces, do not use public sources or second leaf, and do not treat transport stale-CAS rejection as proof of application-level no-replace semantics. Persist exact observed result, zero-cost/quota classification, and a nonempty continuation, then return recurring-open."
 }
