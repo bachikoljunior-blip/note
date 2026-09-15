@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-15T19:28:26+09:00",
+  "updated_at": "2026-09-15T21:29:14+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "086d42454dc62869d04a144007da9b3ba39c57a3",
+  "previous_latest_blob": "12b9a09974bc18e36ce3214426e61ae7381da75a",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,44 +20,57 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_main_ref_exact_sha",
-    "main_commit": "7c1974b7b8e89a1a64a79ad3f909a0562154a6af"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260915T102826Z.json",
-    "blob": "39a5423757169fc8efdd89a6e33704c09c5637a1",
-    "commit": "da540761568b6ae1093fb6e4a432fd28e7bf5a26",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260915T212914+0900.json",
+    "blob": "cd0458d738accf13e0a61f3781d210a79c65dffc",
+    "commit": "5191b4b39b7edf69eabf000922c5a8eb80214dcd",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "086d42454dc62869d04a144007da9b3ba39c57a3"
+    "latest_input_blob": "12b9a09974bc18e36ce3214426e61ae7381da75a"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-ambiguous-commit-ack-loss-retry-replay",
-  "tested_scope": "One self-contained deterministic local idempotency fixture only. Canonical generation g0 initially contains no record for effect_identity=E. Attempt A1 with claim_identity=C1 submits a compare-and-swap create against expected_generation=g0; the modeled canonical store accepts the mutation, creates exactly one canonical effect record for E, and advances generation to g1, but the acknowledgement is lost/rate-limited before the client records success. The first invocation therefore checkpoints outcome_unknown for A1 while preserving stable effect_identity=E and performs no same-run retry. In a later-invocation replay, fresh attempt_identity=A2 first reads canonical state and looks up effect_identity=E before any create. It discovers the g1 record created by A1, classifies the effect as already committed, emits no second mutation, and terminates the retry path with canonical effect count exactly one. If the canonical read/lookup cannot establish absence or presence, the allowed branch is fail-closed with no create. No real repository/API failure, simultaneous writer, public-source probe, O/downstream state, other-worker state, external hosted coordination, richer-mode execution, scheduler mutation, or optional second leaf was executed.",
+  "semantic_leaf": "deterministic-reconciliation-read-unavailable-fail-closed",
+  "tested_scope": "One self-contained deterministic local idempotency/retry fixture only, continuing the prior acknowledgement-loss unknown-outcome case for stable effect_identity=E. The pre-reconciliation canonical branch is intentionally two-valued because an acknowledgement-loss client cannot infer commit success: branch B0 has canonical_effect_count=0 (the original mutation did not commit) and branch B1 has canonical_effect_count=1 (the original mutation committed once). On the next invocation, fresh attempt_identity=A2 preserves stable effect_identity=E and must perform a canonical lookup before any mutation. This slice models that lookup itself being rate-limited or unavailable. The required policy is fail-closed: A2 emits no create/update in either branch, preserves outcome=unknown_pending_reconciliation, and checkpoints for a future invocation. Therefore the canonical count remains exactly 0 on B0 and exactly 1 on B1; the retry cannot increase the count while reconciliation evidence is unavailable. No real repository/API failure, simultaneous writer, public-source probe, O/downstream state, other-worker state, external hosted coordination, richer-mode execution, scheduler mutation, or optional second leaf was executed.",
   "fixture": {
-    "initial": {"generation": "g0", "effect_identity": "E", "canonical_effect_count": 0},
-    "attempt_A1": {"attempt_identity": "A1", "claim_identity": "C1", "expected_generation": "g0", "server_commit": "accepted", "canonical_generation_after_commit": "g1", "canonical_effect_count_after_commit": 1, "acknowledgement": "lost_or_rate_limited", "client_outcome": "unknown"},
-    "cross_invocation_checkpoint": {"stable_effect_identity_preserved": true, "same_run_retry": false, "outcome": "unknown_pending_reconciliation"},
-    "attempt_A2": {"attempt_identity": "A2", "canonical_lookup_before_mutation": true, "lookup_result": "existing_effect_E_from_A1", "mutation_submitted": false, "classification": "already_committed", "canonical_effect_count_final": 1}
+    "stable_effect_identity": "E",
+    "pre_reconciliation_branches": {
+      "B0": {"prior_server_commit": "not_committed", "canonical_effect_count_before_A2": 0, "client_outcome": "unknown_pending_reconciliation"},
+      "B1": {"prior_server_commit": "committed_once_ack_lost", "canonical_effect_count_before_A2": 1, "client_outcome": "unknown_pending_reconciliation"}
+    },
+    "attempt_A2": {
+      "attempt_identity": "A2",
+      "canonical_lookup_before_mutation": true,
+      "lookup_result": "rate_limited_or_unavailable",
+      "policy": "fail_closed",
+      "mutation_submitted": false,
+      "effect_identity_preserved": true,
+      "outcome_after_A2": "unknown_pending_reconciliation"
+    },
+    "post_A2_branches": {
+      "B0": {"canonical_effect_count_after_A2": 0, "count_increase": 0},
+      "B1": {"canonical_effect_count_after_A2": 1, "count_increase": 0}
+    }
   },
   "observations": [
-    "The modeled server-side commit of A1 creates one canonical record for stable effect identity E and advances g0 to g1 even though the client never receives the acknowledgement.",
-    "Because A1's client outcome is unknown, the first invocation performs no same-run retry and checkpoints E as the reconciliation key rather than treating attempt identity A1 as proof of absence.",
-    "On the later-invocation replay, A2 reads canonical state before mutation and finds the existing record for E, so it emits no create/update and canonical effect count remains exactly one.",
-    "The safe alternate branch is fail-closed: if the canonical lookup is unavailable or cannot prove absence, the retry submits no mutation and preserves the unresolved reconciliation child for a future invocation."
+    "When reconciliation lookup is unavailable, the deterministic policy submits no mutation in either possible canonical branch.",
+    "Because no mutation is submitted, canonical effect count cannot increase during this retry slice: it remains 0 if the original effect never committed and remains 1 if it committed once before acknowledgement loss.",
+    "Stable effect_identity=E and outcome=unknown_pending_reconciliation are preserved across the boundary so a later invocation can retry the read rather than replay the effect blindly.",
+    "The safety-preserving choice sacrifices immediate liveness: a persistent inability to perform the canonical lookup leaves the effect unresolved rather than risking a duplicate."
   ],
-  "inference": "Within this exact deterministic fixture, stable effect identity plus read-before-mutate reconciliation converts an acknowledgement-loss ambiguity into at-most-once canonical effect emission: a later attempt may have a fresh attempt identity but must key duplicate detection on the stable effect identity. Safety depends on the canonical lookup being authoritative for E or otherwise failing closed; this fixture does not prove liveness, actual API consistency, or simultaneous-writer safety.",
+  "inference": "Within this exact local fixture, fail-closed read-before-mutate reconciliation is sufficient to prevent a retry from increasing canonical effect cardinality when the reconciliation read itself is rate-limited or unavailable. This is a safety result only; it does not prove eventual progress, real API read consistency, simultaneous-writer safety, or that any particular repository surface exposes an authoritative lookup by stable effect identity.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A later-invocation retry whose canonical lookup/read is itself unavailable or rate-limited remains untested; it must fail closed without creating a second effect and preserve reconciliation state.",
-    "Actual repository/API acknowledgement-loss, compare-and-swap, and read-consistency semantics remain untested; this slice is a local deterministic fixture only.",
-    "Simultaneous writers racing to create the same effect identity E remain untested, including uniqueness/CAS conflict behavior and fairness/lease-expiry concerns.",
-    "A canonical store that cannot look up by stable effect identity would need a different idempotency construction and remains an unresolved architecture child."
+    "Eventual-liveness behavior under repeated cross-invocation reconciliation-read unavailability remains unresolved; the safe policy may defer indefinitely.",
+    "Actual repository/API acknowledgement-loss, compare-and-swap, lookup-by-stable-effect-identity, rate-limit, and read-consistency semantics remain untested; this slice is a deterministic local fixture only.",
+    "Simultaneous writers racing on the same stable effect identity E remain untested, including uniqueness/CAS conflict handling and whether a loser can distinguish already-committed from unresolved state.",
+    "If no authoritative canonical lookup by stable effect identity exists, a different idempotency construction remains required."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -66,7 +79,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent role-local LATEST, the readback-valid own presemantic witness, and a self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent role-local LATEST, the readback-valid own presemantic witness, and a self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -79,5 +92,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required config10 presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic reconciliation-read-unavailable fixture for effect_identity=E after an acknowledgement-loss unknown outcome: model the later-invocation canonical lookup itself being rate-limited/unavailable, require fail-closed behavior with no mutation, preserve stable effect_identity and unknown_pending_reconciliation, and show that canonical effect count cannot increase above the preexisting unknown branch. Persist exact tested scope, observation versus inference, zero-cost/zero-finite-quota classification, unresolved children, and a nonempty next continuation; do not start a second leaf or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic simultaneous-writer fixture for stable effect_identity=E: model two writers that both begin from the same observed absence, require a single canonical uniqueness/CAS winner, require the loser to reconcile by authoritative lookup before any retry, and test that canonical effect count remains at most one without a lease, external coordinator, richer-mode arbitration, finite quota, or incremental cost. If the local fixture cannot establish a single-winner primitive generically, record that as an unresolved architecture child rather than assuming it. Persist exact tested scope, observation versus inference, unresolved children, zero-cost/zero-finite-quota classification, and a nonempty next continuation; do not read public sources, start a second leaf, or mutate the scheduler."
 }
