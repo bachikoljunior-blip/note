@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "artifact_type": "primary_source_verification",
+  "role": "primary_source_verifier",
+  "created_at": "2026-09-15T10:36:00+09:00",
+  "phase": {
+    "phase_id": "phase_1_chat_parity",
+    "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+    "task_id": "p1-primary-verify",
+    "enabled_desired": true,
+    "global_completion": false,
+    "phase1_completion_claimed": false
+  },
+  "authority": {
+    "instruction_manifest": {"path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json", "blob": "cd061848f602ed68d8416399be5d1f26f0d6a29d", "control_revision": 126},
+    "run_lifecycle": {"path": "automation_control/RUN_LIFECYCLE.json", "blob": "560024d46b6c26ea63ab58137be9d48863cab941", "control_revision": 3},
+    "desired_state": {"path": "automation_control/DESIRED_STATE.json", "blob": "0eee15a94c23400653d84506da1f795081a6ef24", "control_revision": 27},
+    "downstream_state": {"path": "automation_control/DOWNSTREAM_STATE.json", "blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3", "control_revision": 37, "primary_source_verifier_config_revision": 10}
+  },
+  "candidate": {
+    "identity": "reasoning/repository-effect-admission-single-cas-v1",
+    "source_path": "research_workers_clean_g1/reasoning/2026-09-01T0724JST_phase1_repository_effect_admission_checkpoint.json",
+    "source_blob": "c7ead2cd8122c5478dcb993038cce3d78925a957",
+    "source_pointer_path": "research_workers_clean_g1/reasoning/LATEST.md",
+    "source_pointer_blob_observed": "176a19d4a3d0d201fb4fe3e4bf1934ab3d532dc2",
+    "tested_scope": "Repository-visible effects only. Immutable candidate records are PREPARED; acceptance occurs only by replacing one canonical mutable HEAD from the exact predecessor identity. The worker exhaustively enumerated 137257 traces of length <=6 and reported zero safety violations in that finite model. Arbitrary external-service side effects and Phase-1 root completion were explicitly not claimed."
+  },
+  "primary_source_checks": [
+    {
+      "source": "GitHub REST API - repository contents",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "verified": "Create-or-update-file requires the current blob sha when updating an existing file and documents HTTP 409 Conflict. This supports stale-write rejection for a single repository file when the caller binds the expected predecessor blob. The endpoint also documents GitHub App installation tokens as a supported authentication type with Contents write permission."
+    },
+    {
+      "source": "GitHub REST API - rate limits",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "verified": "Authenticated users and GitHub App installations have per-hour primary rate limits, with 403/429 behavior and reset guidance. These are transient per-window transport limits, not finite monthly/trial/paid execution quotas. No GitHub Actions, Codespaces, package, LFS, hosted-compute or artifact quota is required by the tested repository-only protocol."
+    },
+    {
+      "source": "Current Chat GitHub connector surface",
+      "verified": "This invocation exposes direct repository fetch_file/create_file/update_file operations in Chat. update_file requires the current blob sha and returns commit/content blob identities on success. Therefore the exact repository-file mutation path does not require Work mode, a protected-primary executor, or a manual user execution step."
+    }
+  ],
+  "finding": {
+    "status": "primary_verified_scoped_route_not_phase1_root_accepted_due_unresolved_lost_ack_and_external_effect_boundary",
+    "repository_visible_effect_subclass": "supported_with_scope_clarification",
+    "cas_scope": "GitHub primary documentation supports expected-blob-bound single-file replacement with conflict signaling. This is enough to support the candidate's repository-file stale-predecessor gate, but it is not a server-side multi-object transaction and does not by itself prove the worker's full crash/replay model.",
+    "lost_ack_scope": "The completed CLEAN checkpoint itself names lost acknowledgement after successful HEAD CAS as the next unresolved child. GitHub's successful response can carry commit/blob identities, but a response lost before observation still requires a separately tested next-invocation readback/record-identity recovery rule. That leaf was not completed in the verified candidate and is not promoted here by inference.",
+    "external_effect_scope": "The route does not make arbitrary non-repository external side effects atomic with repository HEAD replacement. Any such external effect remains an unresolved dependency child and cannot be counted as solved by this verification.",
+    "strict_phase1_route_accepted": false
+  },
+  "hard_gates": {
+    "exact_tested_repository_visible_scope": {
+      "residual_work_protected_primary_manual_user_executor": 0,
+      "finite_monthly_trial_paid_quota_dependency": 0,
+      "incremental_monetary_cost": 0,
+      "rate_limit_classification": "per-window GitHub REST transport limit; must checkpoint/resume across invocations rather than wait or poll in-run",
+      "result": "passes only for the repository-visible effect subclass"
+    },
+    "phase1_root": {
+      "result": "fails_closed_unresolved",
+      "reason": "lost-ack recovery is not yet independently completed for this candidate and arbitrary non-repository externally visible effects remain outside the tested scope"
+    }
+  },
+  "scope_and_provenance": {
+    "clean_record_consumed": ["research_workers_clean_g1/reasoning/2026-09-01T0724JST_phase1_repository_effect_admission_checkpoint.json@c7ead2cd8122c5478dcb993038cce3d78925a957"],
+    "coordinator_or_downstream_state_used_only_for_control_and_frontier_reconstruction": true,
+    "cargo_route_reopened": false,
+    "clean_exploration_steered": false,
+    "protected_o_authority_mutated": false,
+    "scheduler_mutated": false
+  },
+  "continuation": {
+    "nonempty": true,
+    "exact_next_action": "Fresh-bootstrap current controls and reconstruct the primary-verification frontier. Do not re-open Cargo vendoring/source-replacement without a materially new exact claim or independently verifiable Chat-native Cargo executor. Do not re-verify reasoning/repository-effect-admission-single-cas-v1 unless a completed CLEAN lost-ack/recovery artifact materially changes its tested scope. Select exactly one other current completed CLEAN proposed dependency-elimination route and verify its exact source-qualified scope against primary sources plus current Chat/repository capability evidence, rejecting any residual Work/protected-primary/manual-user executor, finite monthly/trial/paid quota, or nonzero incremental cost. Persist and exact-read back one bounded role-local artifact with nonempty continuation."
+  },
+  "termination": "bounded_slice_complete_recurring_open",
+  "hard_runtime_boundary_reached": false,
+  "scheduler_mutation_by_worker": false
+}
