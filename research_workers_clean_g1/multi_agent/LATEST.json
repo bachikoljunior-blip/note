@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-15T22:27:51+09:00",
+  "updated_at": "2026-09-16T02:29:48+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "8983aa9dc3502f49f45b70928226715fe13d75f1",
+  "previous_latest_blob": "36ae8dcf8213ba8f7ed2c39040cdfa02af7e13d8",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -24,25 +24,24 @@
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260915T222751JST.json",
-    "blob": "9ad97d1f2d7e8d51eacf7a96570131a9cd9aba37",
-    "commit": "5768c3c3fdd01ef283c248164e4ddf6252058da1",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T022948+0900.json",
+    "blob": "4bf6eef76fc69bff04d4c2e5915b57a994049425",
+    "commit": "555401b40628e015173b8c3874df478a59645eac",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "8983aa9dc3502f49f45b70928226715fe13d75f1"
+    "latest_input_blob": "36ae8dcf8213ba8f7ed2c39040cdfa02af7e13d8"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-simultaneous-writer-single-winner-conditional-fixture",
-  "tested_scope": "One self-contained deterministic local claim/idempotency fixture only. Two writers W1 and W2 share stable effect_identity=E and both begin from the same observed canonical absence. The fixture explicitly assumes, but does not prove the availability of, one atomic canonical single-winner primitive P keyed by E (for example create-if-absent, uniqueness constraint, or compare-and-swap with equivalent single-winner semantics). Both writers submit P(E,payload_hash=H) once. The fixture requires exactly one canonical winner and one conflict/already-exists loser; the loser performs authoritative lookup before any retry and, because the intended payload hash matches H, records duplicate_suppressed rather than mutating again. No lease, external coordinator, richer-mode arbitration, public-source probe, O/downstream state, other-worker state, scheduler mutation, real simultaneous repository write, or optional second leaf was executed.",
+  "semantic_leaf": "deterministic-divergent-payload-simultaneous-writer-conflict-fixture",
+  "tested_scope": "One self-contained deterministic local claim/idempotency fixture only. Two writers W1 and W2 share stable effect_identity=E, both begin from the same observed canonical absence, and submit different payload hashes H1 and H2. The fixture explicitly assumes, but does not prove the availability of, one atomic canonical single-winner primitive P keyed by E. Exactly one writer wins. The loser receives conflict/already-exists, performs authoritative lookup before any retry, observes a canonical payload hash different from its own intended hash, preserves conflict/unresolved state, and submits no overwrite, second create, or compensating mutation. No lease, external coordinator, richer-mode arbitration, public-source probe, O/downstream state, other-worker state, scheduler mutation, real simultaneous repository write, or optional second leaf was executed.",
   "fixture": {
     "stable_effect_identity": "E",
-    "intended_payload_hash": "H",
     "initial_canonical_effect_count": 0,
     "writers": {
-      "W1": {"initial_observation": "absent", "single_submission": "P(E,H)"},
-      "W2": {"initial_observation": "absent", "single_submission": "P(E,H)"}
+      "W1": {"initial_observation": "absent", "intended_payload_hash": "H1", "single_submission": "P(E,H1)"},
+      "W2": {"initial_observation": "absent", "intended_payload_hash": "H2", "single_submission": "P(E,H2)"}
     },
     "assumed_primitive_P": {
       "property": "atomic_single_winner_per_effect_identity",
@@ -50,35 +49,35 @@
       "linearizable_or_equivalent_uniqueness_required": true
     },
     "allowed_commit_orders": [
-      {"winner": "W1", "loser": "W2"},
-      {"winner": "W2", "loser": "W1"}
+      {"winner": "W1", "canonical_payload_hash": "H1", "loser": "W2", "loser_intent_hash": "H2"},
+      {"winner": "W2", "canonical_payload_hash": "H2", "loser": "W1", "loser_intent_hash": "H1"}
     ],
-    "winner_result": "committed_once",
-    "loser_result": "conflict_or_already_exists",
     "loser_reconciliation": {
       "authoritative_lookup_before_retry": true,
-      "canonical_payload_hash": "H",
-      "payload_matches_intent": true,
-      "second_mutation_submitted": false,
-      "outcome": "duplicate_suppressed"
+      "payload_matches_intent": false,
+      "classification": "payload_conflict_preserved",
+      "second_create_submitted": false,
+      "overwrite_submitted": false,
+      "duplicate_suppressed_classification_forbidden": true
     },
     "final_canonical_effect_count": 1,
-    "duplicate_effect_count": 0
+    "duplicate_effect_count": 0,
+    "conflict_preserved": true
   },
   "observations": [
-    "Given the explicitly assumed atomic single-winner primitive P keyed by stable effect_identity=E, two concurrent writers that both observed absence cannot both commit: one wins and the other receives a conflict/already-exists outcome.",
-    "A loser that performs authoritative lookup before any retry and finds the same intended payload hash can terminate as duplicate_suppressed without issuing a second mutation, keeping canonical effect cardinality at exactly one.",
-    "The safety result does not require a lease or external coordinator inside the fixture; stable identity plus an atomic canonical single-winner primitive and read-before-retry reconciliation are sufficient for this exact duplicate-suppression branch."
+    "Under the explicitly assumed atomic single-winner primitive P keyed by stable effect_identity=E, the divergent-payload race still yields exactly one canonical winner and one loser.",
+    "Because the loser's intended payload hash differs from the authoritative canonical hash, treating the loser as an idempotent duplicate would be incorrect. The safe local rule is to preserve a payload conflict and issue no second mutation.",
+    "The divergent-payload branch therefore requires a stronger reconciliation predicate than effect-identity equality alone: duplicate suppression is permitted only when canonical payload identity matches the intended effect payload; mismatch remains unresolved/conflicting."
   ],
-  "inference": "Within this exact deterministic model, atomic uniqueness/CAS on a stable effect identity plus authoritative loser reconciliation is sufficient to prevent duplicate canonical effects under a two-writer same-payload race. This is conditional architecture evidence only: the fixture does not establish that any currently allowed Chat/repository transport actually exposes primitive P, that its conflict signal is authoritative, or that its lookup is linearizable/read-after-write consistent.",
+  "inference": "Within this exact deterministic model, stable effect identity plus atomic single-winner admission prevents duplicate canonical effects, while payload-hash comparison at authoritative loser reconciliation prevents a divergent intent from being silently collapsed into an idempotent duplicate. This is conditional architecture evidence only: the fixture does not establish that an allowed Chat/repository transport exposes primitive P, authoritative conflict semantics, or linearizable/read-after-write-consistent lookup.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
     "Availability of an atomic single-winner primitive P keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
     "Authoritative lookup and read-after-write consistency after the loser conflict remain unproven on real repository/API surfaces.",
-    "The divergent-payload branch is untested: if the canonical payload hash differs from the loser's intended payload, the loser must preserve a conflict rather than misclassify it as an idempotent duplicate.",
-    "Winner acknowledgement loss combined with a simultaneous loser remains untested as a composed race; no liveness claim is made under repeated reconciliation-read unavailability."
+    "Winner acknowledgement loss after a successful canonical commit, composed with a simultaneous divergent-payload loser, remains untested; safe retry classification must not create a second effect or erase a payload conflict.",
+    "No liveness claim is made under repeated reconciliation-read unavailability or transport rate limiting."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -100,5 +99,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic divergent-payload simultaneous-writer fixture for stable effect_identity=E: retain the same conditional atomic single-winner primitive P, let winner payload hash=H1 and loser intent hash=H2 with H1!=H2, require authoritative loser lookup before retry, and verify that the loser preserves conflict/unresolved state and submits no overwrite or second create rather than misclassifying the canonical effect as an idempotent duplicate. Keep availability of P and real lookup consistency explicitly unresolved. Persist exact tested scope, observation versus inference, unresolved children, zero-cost/zero-finite-quota classification, and a nonempty next continuation; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic acknowledgement-loss composed-race fixture for stable effect_identity=E: assume a winner successfully commits canonical payload H1 but loses its acknowledgement while a simultaneous writer with divergent intent H2 receives conflict/already-exists. Require both actors to perform authoritative lookup before any retry; verify the original winner recognizes H1 as already committed without a second mutation, while the divergent loser preserves payload_conflict because H2 differs from canonical H1. Keep availability of P and real lookup consistency explicitly unresolved. Persist exact tested scope, observation versus inference, unresolved children, zero-cost/zero-finite-quota classification, and a nonempty next continuation; do not read public sources, start a second leaf, or mutate the scheduler."
 }
