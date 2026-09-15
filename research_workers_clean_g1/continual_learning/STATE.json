@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "role": "continual_learning",
-  "updated_at": "2026-09-15T14:14:08+09:00",
+  "updated_at": "2026-09-15T15:41:38+09:00",
   "enabled_desired": true,
   "global_completion": false,
   "phase1_completion_claimed": false,
@@ -23,87 +23,94 @@
     "authority_clean": true
   },
   "preflight": {
-    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T141408_JST_CONFIG11_PUBLICATION_IDENTITY_COLLISION_RESOLUTION.json",
-    "sha": "7886a4200872b748b614bb8bfa5e81496eed796b",
+    "path": "research_workers_clean_g1/continual_learning/PREFLIGHT_20260915T154138_JST_CONFIG11_EFFECT_ONCE_CRASH_WINDOW.json",
+    "sha": "4f67e9afc0faf897ca0507475fc816aaec978879",
     "exact_readback": true
   },
   "bounded_leaf": {
-    "status": "full_record_publication_identity_distinguishes_winner_loser_and_idempotent_duplicate_under_generation_collision",
-    "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, live rollback-guard backfill, real rollback, external effect, scheduler mutation, wait/retry, or second leaf was used.",
-    "model": "Two writers may start from the same predecessor and may even propose the same generation token. Publication CAS stores a complete allocation record R={expected_predecessor,generation_token,replay_key,attempt_identity}. After a direct success or ambiguous/lost CAS response, a writer may claim publication ownership only when exact current readback equals its full proposed record. A different full record, even with the same generation token, proves that another attempt owns publication. An exact replay of the same logical attempt is classified as an idempotent publication duplicate rather than a new owner.",
-    "publication_ownership_predicate": "ownership_established iff current_record exactly equals proposed_record across expected_predecessor, generation_token, replay_key and attempt_identity. Generation-token equality alone is insufficient. Distinct logical attempts must have distinguishable attempt_identity values; an exact duplicate preserves the same attempt_identity.",
-    "effect_boundary": "Full-record equality establishes publication ownership/classification only. It does not by itself prove that an external effect has not already been applied. Therefore a replay classified as the same attempt may not issue a fresh non-idempotent effect without a separate durable effect-once/idempotency guard keyed to the stable attempt/replay identity.",
-    "synthetic_fixtures": {
-      "shared_predecessor": "P:g4",
-      "writer_1": {"generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-      "writer_2": {"generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"}
+    "status": "effect_once_crash_window_non_idempotent_sink_ambiguity_fail_closed",
+    "tested_scope": "Deterministic role-local synthetic fixtures only. No public sources, repository chronology beyond own current STATE, other-role state, O/downstream semantics, live rollback/effect-guard backfill, real external effect, scheduler mutation, wait/retry, or second leaf was used.",
+    "publication_record": {
+      "expected_predecessor": "P:g4",
+      "generation_token": "Gsame:g5x",
+      "replay_key": "K1",
+      "attempt_identity": "A1"
+    },
+    "effect_guard_model": {
+      "key": "attempt_identity/replay_key",
+      "states": ["EMPTY", "CLAIMED", "COMPLETED"],
+      "admission_rule": "Only the exact publication owner may CAS EMPTY to CLAIMED. A distinct attempt whose full publication record does not match current publication is ineligible even if its generation token matches.",
+      "effect_rule": "A non-idempotent effect may be attempted only by the invocation that has just established EMPTY->CLAIMED and still holds the exact same publication identity. Any later observation of CLAIMED is ambiguous and may not authorize reissue.",
+      "completion_rule": "COMPLETED may be written only after the effect call returns success in the same invocation. Because guard persistence is not atomic with the external effect, a crash between the effect and COMPLETED leaves CLAIMED ambiguous."
     },
     "case_matrix": [
       {
-        "case": "distinct_generation_tokens_distinct_attempts_W1_wins",
-        "W1_record": {"expected_predecessor":"P:g4","generation_token":"G1:g5a","replay_key":"K1","attempt_identity":"A1"},
-        "W2_record": {"expected_predecessor":"P:g4","generation_token":"G2:g5b","replay_key":"K2","attempt_identity":"A2"},
-        "published_record": "W1_record",
-        "W1_readback_exact_match": true,
-        "W2_readback_exact_match": false,
-        "classification": "W1_owner_W2_loser_fail_closed"
+        "case": "owner_before_effect_claim",
+        "publication_owner": true,
+        "guard_before": "EMPTY",
+        "transition": "CAS EMPTY->CLAIMED",
+        "non_idempotent_effect_authorized_once": true,
+        "classification": "single_first_attempt_only"
       },
       {
-        "case": "same_generation_token_distinct_attempt_identities_W1_wins",
-        "W1_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "W2_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
-        "published_record": "W1_record",
-        "generation_token_equal_for_both": true,
-        "W1_readback_exact_match": true,
-        "W2_readback_exact_match": false,
-        "classification": "generation_collision_resolved_by_full_record_identity_W1_owner_W2_loser"
+        "case": "crash_after_claim_persistence_before_effect",
+        "guard_after_restart": "CLAIMED",
+        "actual_effect_applied": false,
+        "replay_can_prove_not_applied_from_guard": false,
+        "non_idempotent_effect_reissue_authorized": false,
+        "classification": "fail_closed_liveness_loss"
       },
       {
-        "case": "winner_receives_ambiguous_or_lost_CAS_response_then_reads_back",
-        "proposed_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "CAS_response": "unknown_or_lost",
-        "current_readback": "exact_proposed_record",
-        "publication_ownership_established": true,
-        "classification": "recover_success_from_exact_full_record_readback"
+        "case": "crash_after_effect_before_completion_marker",
+        "guard_after_restart": "CLAIMED",
+        "actual_effect_applied": true,
+        "replay_can_prove_applied_from_guard": false,
+        "non_idempotent_effect_reissue_authorized": false,
+        "classification": "fail_closed_duplicate_prevention_with_unresolved_completion"
       },
       {
-        "case": "loser_receives_ambiguous_or_lost_CAS_response_then_reads_back_winner",
-        "loser_proposed_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
-        "current_readback": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "generation_token_equal": true,
+        "case": "exact_same_attempt_replay_after_CLAIMED",
+        "publication_record_exact_match": true,
+        "guard": "CLAIMED",
+        "classification": "same_attempt_recognized_but_effect_outcome_ambiguous",
+        "non_idempotent_effect_reissue_authorized": false
+      },
+      {
+        "case": "exact_same_attempt_replay_after_COMPLETED",
+        "publication_record_exact_match": true,
+        "guard": "COMPLETED",
+        "classification": "idempotent_duplicate_completion",
+        "non_idempotent_effect_reissue_authorized": false
+      },
+      {
+        "case": "distinct_losing_attempt_same_generation_token",
+        "loser_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K2","attempt_identity":"A2"},
+        "current_publication_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
         "full_record_equal": false,
-        "publication_ownership_established": false,
-        "classification": "loser_detected_fail_closed_before_adoption_or_effect"
-      },
-      {
-        "case": "exact_duplicate_of_same_attempt_after_publication",
-        "original_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "duplicate_record": {"expected_predecessor":"P:g4","generation_token":"Gsame:g5x","replay_key":"K1","attempt_identity":"A1"},
-        "current_readback": "exact_original_record",
-        "publication_classification": "same_logical_attempt_idempotent_duplicate",
-        "new_non_idempotent_effect_allowed_from_publication_identity_alone": false,
-        "reason": "Publication identity cannot distinguish effect-not-yet-applied from effect-already-applied for the same attempt."
+        "effect_guard_claim_authorized": false,
+        "classification": "loser_fail_closed_before_effect_guard"
       }
     ],
-    "result": "Exact full-record readback can distinguish publication winner, concurrent loser and exact idempotent duplicate without requiring generation-token uniqueness, provided distinct logical attempts have distinguishable attempt_identity values. The same mechanism also resolves an ambiguous/lost CAS response by exact readback. It does not alone guarantee effect-once semantics for an exact duplicate of the winning attempt.",
-    "validated_property": "Generation-token uniqueness is not required for publication ownership when the durable record includes a stable attempt identity and replay key and ownership is established only by exact full-record equality. Generation-token-only admission is unsafe; full-record mismatch fails closed. Exact same-attempt replay is recognizable, but effect deduplication remains a separate guard.",
+    "result": "A role-local durable guard that is separate from a non-idempotent external effect can prevent double-application by failing closed after a persisted CLAIMED state, but it cannot provide both safety and liveness across the crash window between CLAIMED and durable COMPLETED. CLAIMED is observationally identical after a crash-before-effect and a crash-after-effect-before-completion. Therefore replay cannot safely authorize the non-idempotent effect again, while refusing reissue can permanently lose an effect that never ran.",
+    "validated_property": "Full publication identity plus EMPTY->CLAIMED CAS is sufficient to exclude concurrent losers and to authorize at most one initial effect attempt. It is insufficient for recoverable exactly-once non-idempotent effects unless the effect destination supplies stable-key idempotency/deduplication or the guard and effect participate in one atomic transaction/commit domain.",
+    "unavoidable_ambiguity": "After durable CLAIMED and before durable COMPLETED, local state alone cannot distinguish effect-not-run from effect-ran-but-marker-missing. No transition from CLAIMED can both guarantee no duplicate and guarantee eventual application for an arbitrary non-idempotent external effect.",
     "limitations": [
-      "This synthetic leaf assumes distinct logical attempts can obtain distinguishable attempt_identity values; it does not yet supply or test a concrete zero-quota allocator for those identities.",
-      "The model does not prove atomicity or linearizability of a real storage backend.",
-      "The model does not test CAS ABA if a predecessor/publication value can be reused.",
-      "No real external effect was executed, so effect-once behavior after an exact duplicate remains unresolved.",
-      "The live STATE still has no operational rollback_guard/effect_guard structure; this leaf intentionally did not backfill one."
+      "The model is synthetic and does not test a real storage backend or real sink.",
+      "It assumes the initial guard CAS is atomic for the guard record itself.",
+      "It does not yet test a sink-native idempotency key or an atomic outbox/transaction redesign.",
+      "It does not supply a concrete zero-quota concurrent attempt_identity allocator.",
+      "No live STATE guard was backfilled; this leaf only models transitions."
     ],
     "semantic_source_reads_performed": 1,
     "public_source_reads_performed": 0,
     "semantic_frontier_advanced": true
   },
   "history_tail": {
-    "predecessor_state_sha": "ca32c8c10a2836a39354aca75a8fbe031b089da3",
-    "predecessor_leaf_status": "same_predecessor_concurrent_generation_publication_cas_matrix_passed_with_collision_fail_closed",
-    "preflight_sha": "7886a4200872b748b614bb8bfa5e81496eed796b"
+    "predecessor_state_sha": "d7c2c7189af9c502997fa58c0368561ff96e1bd7",
+    "predecessor_leaf_status": "full_record_publication_identity_distinguishes_winner_loser_and_idempotent_duplicate_under_generation_collision",
+    "preflight_sha": "4f67e9afc0faf897ca0507475fc816aaec978879"
   },
-  "missing_capability_child": "A concrete zero-quota role-local attempt_identity allocation rule that reliably distinguishes distinct concurrent attempts, plus a durable effect-once/idempotency guard that can distinguish effect-not-yet-applied from effect-already-applied for an exact replay of the same winning publication, remains unresolved. Full-record publication identity removes the need for generation-token uniqueness but does not remove these two narrower requirements.",
+  "missing_capability_child": "Recoverable exactly-once handling for a non-idempotent effect remains unresolved when effect execution and role-local guard persistence are separate commit domains. A safe redesign must either use a sink that deduplicates a stable attempt/replay idempotency key or atomically couple effect publication with the durable guard; otherwise CLAIMED crash recovery must fail closed and can lose liveness. A concrete zero-quota concurrent attempt_identity allocation rule also remains unresolved.",
   "zero_residual_work_protected_manual_execution": true,
   "zero_finite_quota_dependency": true,
   "zero_incremental_cost": true,
@@ -111,5 +118,5 @@
   "scheduler_mutation_by_worker": false,
   "hard_runtime_boundary_reached": false,
   "termination": "persistence_recovery_micro_slice_recurring_open",
-  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local effect-once crash-window leaf using synthetic fixtures only. Keep the current full publication record {expected_predecessor,generation_token,replay_key,attempt_identity}. Add a minimal durable effect guard keyed by attempt_identity/replay_key and test at minimum: owner before effect claim, crash after effect-claim persistence but before effect, crash after effect but before completion marker, exact same-attempt replay after each crash point, and a distinct losing attempt with the same generation token. Determine which transitions can safely authorize a non-idempotent effect without double-application and identify any unavoidable ambiguity; fail closed where effect state cannot prove permission. Do not backfill the live STATE guard, use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
+  "continuation": "On the next invocation, bootstrap and freeze current authority, resolve this STATE, persist and exact-read back the required config11 post-authority preflight, then execute exactly one deterministic role-local redesign leaf using synthetic fixtures only: compare (A) a sink-native stable idempotency key keyed by attempt_identity/replay_key and (B) an atomic outbox/transaction-domain coupling between guard and effect publication. Re-run the same crash points (before claim, after claim before effect, after effect before local completion, exact replay, and distinct loser with same generation token). Determine which redesign restores both no-duplicate safety and eventual application without richer-mode execution, finite quota, paid infrastructure, or manual intervention. Do not use public sources, repository chronology beyond own current state, other-role state, O/downstream semantics, real external effect, scheduler mutation, wait/retry, or a second leaf. Persist exact case results and a nonempty next continuation, then return recurring-open."
 }
