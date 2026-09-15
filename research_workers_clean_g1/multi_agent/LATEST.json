@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T04:31:01+09:00",
+  "updated_at": "2026-09-16T06:29:35+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "0a1471fe36edbfb2d3b8b4d24e46dd20eb32fcb1",
+  "previous_latest_blob": "4cd5abaf1ef2af8c34856c8eac2bb84f76a20e32",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -21,73 +21,86 @@
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
     "transport_mode": "sha_only_main_ref_exact_sha",
-    "authority_commit": "3638e09f153074a4f6bcbe395fdc1356b2306fff"
+    "authority_commit": "e3570653f3ae6180e45edd0ed60d89b32d97a5ec"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260916T043101_JST.json",
-    "blob": "c26cfdbcbb192e8d0f14660cb4d94da9d5b27651",
-    "commit": "57ca7fa51382a5e7b54c2b25c82f767bf1665914",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T062935_JST.json",
+    "blob": "3d651a282bb9e08b59d62121030278f3c7c7bd8d",
+    "commit": "0997c0a18ff14f6095917bff9d0b2ee88459c8e4",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "0a1471fe36edbfb2d3b8b4d24e46dd20eb32fcb1"
+    "latest_input_blob": "4cd5abaf1ef2af8c34856c8eac2bb84f76a20e32"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-acknowledgement-loss-plus-divergent-writer-composed-race-fixture",
-  "tested_scope": "One self-contained deterministic local claim/idempotency fixture only. Stable effect_identity=E is initially absent. Writer W1 intends payload H1 and invokes an explicitly assumed atomic canonical single-winner primitive P(E,H1); the canonical commit succeeds but W1 loses its acknowledgement. A simultaneous writer W2 with divergent intent H2 invokes P(E,H2) and receives conflict/already-exists because canonical E already contains H1. Before any retry, both actors perform an explicitly assumed authoritative lookup of E. W1 observes canonical H1 matching its intent and classifies the lost acknowledgement as already_committed without a second mutation. W2 observes canonical H1 differing from intended H2 and preserves payload_conflict without overwrite, second create, or compensating mutation. No public-source probe, O/downstream state, other-worker state, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second leaf was executed.",
+  "semantic_leaf": "deterministic-reconciliation-unavailable-after-ack-loss-plus-conflict-fixture",
+  "tested_scope": "One self-contained deterministic local claim/idempotency fixture only, continuing the immediately prior composed race trace. Canonical effect_identity=E already contains H1 after W1 committed but lost its acknowledgement; W2 intended divergent H2 and received conflict/already-exists. The authoritative reconciliation lookup is then temporarily unavailable/rate-limited for both actors. Each actor is evaluated only for whether it may safely emit a new mutation or claim success before a later authoritative lookup. No public-source probe, O/downstream state, other-worker state, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second leaf was executed.",
   "fixture": {
     "stable_effect_identity": "E",
-    "initial_canonical_effect_count": 0,
+    "canonical_payload_known_to_fixture": "H1",
+    "canonical_payload_visible_to_actors_during_outage": false,
+    "initial_canonical_effect_count": 1,
+    "reconciliation_surface": "temporarily_unavailable_or_rate_limited",
     "winner": {
       "writer": "W1",
       "intended_payload_hash": "H1",
-      "submission": "P(E,H1)",
-      "canonical_commit_succeeds": true,
-      "acknowledgement_received": false,
-      "authoritative_lookup_before_retry": true,
-      "lookup_payload_hash": "H1",
-      "payload_matches_intent": true,
-      "classification": "already_committed_after_ack_loss",
-      "retry_mutation_submitted": false
+      "prior_submission": "P(E,H1)",
+      "prior_local_observation": "acknowledgement_lost_after_possible_commit",
+      "authoritative_lookup_attempt": "unavailable_or_rate_limited",
+      "classification": "outcome_unknown_commit_may_exist",
+      "success_claim_allowed": false,
+      "blind_create_retry_allowed": false,
+      "overwrite_retry_allowed": false,
+      "checkpoint_required": true,
+      "next_safe_action": "cross_invocation_authoritative_lookup_only"
     },
-    "divergent_writer": {
+    "conflicting_writer": {
       "writer": "W2",
       "intended_payload_hash": "H2",
-      "submission": "P(E,H2)",
-      "submission_result": "conflict_or_already_exists",
-      "authoritative_lookup_before_retry": true,
-      "lookup_payload_hash": "H1",
-      "payload_matches_intent": false,
-      "classification": "payload_conflict_preserved",
-      "second_create_submitted": false,
-      "overwrite_submitted": false,
-      "duplicate_suppressed_classification_forbidden": true
+      "prior_submission": "P(E,H2)",
+      "prior_submission_result": "conflict_or_already_exists",
+      "authoritative_lookup_attempt": "unavailable_or_rate_limited",
+      "classification": "conflict_unresolved_canonical_payload_unknown",
+      "duplicate_suppressed_success_claim_allowed": false,
+      "second_create_allowed": false,
+      "overwrite_allowed": false,
+      "checkpoint_required": true,
+      "next_safe_action": "cross_invocation_authoritative_lookup_only"
     },
+    "checkpoint_payload_minimum": [
+      "effect_identity",
+      "intended_payload_hash",
+      "prior_submission_state",
+      "reconciliation_pending",
+      "no_mutation_retry_before_authoritative_lookup"
+    ],
     "assumed_primitives": {
       "P": "atomic_single_winner_per_effect_identity",
-      "authoritative_lookup": "returns canonical payload for E with sufficient read-after-write consistency for this reconciliation step",
+      "later_authoritative_lookup": "may become available in a future invocation",
       "availability_proven": false
     },
+    "mutations_during_reconciliation_outage": 0,
     "final_canonical_effect_count": 1,
     "duplicate_effect_count": 0,
-    "payload_conflict_preserved": true
+    "payload_conflict_erased": false
   },
   "observations": [
-    "Under the explicitly assumed atomic single-winner primitive P and authoritative lookup, acknowledgement loss does not require a blind retry: the original winner can classify canonical H1 as its already-committed effect and emit no second mutation.",
-    "The simultaneous divergent writer cannot be collapsed into the same idempotent-success class: canonical H1 does not equal intended H2, so the safe local classification remains payload_conflict_preserved with no overwrite or second create.",
-    "The composed trace therefore preserves both duplicate suppression for the acknowledgement-lost winner and conflict visibility for the divergent loser, ending with exactly one canonical effect."
+    "When authoritative reconciliation is unavailable after acknowledgement loss, W1 cannot safely infer success from its submission history and also cannot safely blind-retry a mutation because a canonical effect may already exist.",
+    "When authoritative reconciliation is unavailable after W2 receives conflict/already-exists, W2 cannot safely reinterpret the conflict as idempotent success because the canonical payload is unknown to that actor; it must preserve an unresolved conflict state and emit no create or overwrite.",
+    "Both actor states are durably checkpointable without a new mutation by retaining effect identity, intended payload hash, prior submission/result and a reconciliation-pending flag, allowing a later invocation to reconcile before any further effectful action.",
+    "The outage therefore preserves safety but not liveness: exactly one canonical effect remains in this fixture, while neither actor is permitted to claim a fully reconciled terminal outcome during the lookup outage."
   ],
-  "inference": "Within this exact deterministic model, stable effect identity plus atomic single-winner admission and payload-aware authoritative reconciliation is sufficient to avoid a duplicate after winner acknowledgement loss while also refusing to erase a simultaneous divergent intent. This is conditional architecture evidence only; the fixture does not prove that an allowed zero-cost Chat/repository transport exposes P, conflict semantics, or sufficiently authoritative read-after-write lookup.",
+  "inference": "Within this exact deterministic model, fail-closed checkpointing across a reconciliation outage prevents duplicate/conflicting mutations after both acknowledgement loss and loser conflict, but it does not establish liveness or transport availability. A recurring-Chat claim protocol can remain safe across a rate-limit interruption only if it persists enough local intent/submission state to defer all mutation retries until a later authoritative lookup; prolonged lookup unavailability remains an unresolved child rather than a success state.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
     "Availability of an atomic single-winner primitive P keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "Authoritative conflict semantics and read-after-write-consistent lookup after both acknowledgement loss and loser conflict remain unproven on real repository/API surfaces.",
-    "Safe behavior when the reconciliation lookup itself is unavailable or rate-limited after acknowledgement loss/conflict remains untested; no blind mutation retry may be assumed safe.",
-    "No liveness claim is made for prolonged lookup unavailability; cross-invocation checkpoint/resume behavior remains to be tested."
+    "A real allowed transport with authoritative payload lookup after rate-limit recovery remains unproven.",
+    "Cross-invocation reconstruction must still be tested: a later invocation must recover both checkpointed actor states and reconcile H1 versus H2 before any new mutation.",
+    "No liveness claim is made for indefinite authoritative-lookup unavailability."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -96,7 +109,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent role-local LATEST, the readback-valid own presemantic witness, and a self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent role-local LATEST, the readback-valid own presemantic witness, and one self-contained deterministic local fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -109,5 +122,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic reconciliation-unavailable fixture derived from this composed trace: after W1 has committed H1 but lost its acknowledgement and W2 has received conflict for divergent H2, make the authoritative lookup temporarily unavailable/rate-limited for both actors. Verify that neither actor issues a blind create/overwrite retry, that W1 remains outcome-unknown rather than falsely successful, that W2 remains unresolved/conflicting rather than duplicate-suppressed, and that both states are checkpointable for a later cross-invocation authoritative reconciliation. Keep primitive P and real transport semantics explicitly unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE, and multi_agent role config; freeze one exact authority tuple and persist/read back the required presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic cross-invocation reconciliation-resumption fixture: reconstruct W1 outcome_unknown and W2 conflict_unresolved from the checkpoint, make the authoritative lookup available and returning canonical H1, verify W1 becomes already_committed without mutation while W2 becomes payload_conflict_preserved without create/overwrite, and verify no duplicate effect occurs across the invocation boundary. Keep primitive P and real transport semantics explicitly unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
 }
