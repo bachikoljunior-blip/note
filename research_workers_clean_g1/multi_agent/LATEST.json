@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T07:27:59+09:00",
+  "updated_at": "2026-09-16T09:29:38+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "dc987102c4176005bc4f5111df3c46e41cd716d5",
+  "previous_latest_blob": "519af9386c5011bfac9a7aba1f06b392a7c1a3de",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,79 +20,58 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_main_ref_exact_sha",
-    "authority_commit": "7226c83f00fbebdbc841819c6d73d3714f8c15af"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260916T072759_JST.json",
-    "blob": "d52792f323be5a79c845defbb7d9ebebc3765427",
-    "commit": "4677469fb3fa20161c2b925e684aadc6f48a9953",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T002938Z.json",
+    "blob": "afee0f64121b5e9c5bff68ee99c9d3bbec0d018f",
+    "commit": "99be2c25ed8f61fc2c525a74a724a80cdc5c8e21",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "dc987102c4176005bc4f5111df3c46e41cd716d5"
+    "latest_input_blob": "519af9386c5011bfac9a7aba1f06b392a7c1a3de"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-cross-invocation-reconciliation-resumption-fixture",
-  "tested_scope": "Exactly one deterministic self-local continuation fixture. Reconstructed prior checkpointed actor states for stable effect_identity=E: W1 intended H1 with acknowledgement_lost_after_possible_commit and classification outcome_unknown_commit_may_exist; W2 intended divergent H2 after conflict_or_already_exists with classification conflict_unresolved_canonical_payload_unknown. The later authoritative lookup is made available in this fixture and returns canonical payload H1. The fixture verifies only state reconciliation and mutation suppression across the invocation boundary. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second leaf was used.",
+  "semantic_leaf": "deterministic-aba-absence-reconciliation-fixture",
+  "tested_scope": "Exactly one deterministic self-local continuation fixture derived from the prior multi_agent checkpoint. A worker W1 retains stable effect_identity=E, intended payload H1, and prior submission state acknowledgement_lost_after_possible_commit. A later authoritative lookup is available but returns ABSENT. The fixture assumes no monotonic version, tombstone, deletion proof, generation fence, or equivalent history-preserving primitive is exposed. It verifies only whether a create/overwrite retry is safe under that ambiguous absence. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second leaf was used.",
   "fixture": {
     "effect_identity": "E",
-    "reconstructed_prior_states": {
-      "W1": {
-        "intended_payload_hash": "H1",
-        "prior_submission_state": "acknowledgement_lost_after_possible_commit",
-        "prior_classification": "outcome_unknown_commit_may_exist",
-        "reconciliation_pending": true
-      },
-      "W2": {
-        "intended_payload_hash": "H2",
-        "prior_submission_state": "conflict_or_already_exists",
-        "prior_classification": "conflict_unresolved_canonical_payload_unknown",
-        "reconciliation_pending": true
-      }
-    },
-    "authoritative_lookup": {
+    "worker": "W1",
+    "intended_payload_hash": "H1",
+    "prior_submission_state": "acknowledgement_lost_after_possible_commit",
+    "prior_classification": "outcome_unknown_commit_may_exist",
+    "later_authoritative_lookup": {
       "available": true,
-      "canonical_effect_identity": "E",
-      "canonical_payload_hash": "H1"
+      "result": "absent",
+      "monotonic_version_exposed": false,
+      "tombstone_or_deletion_fence_exposed": false,
+      "generation_or_history_fence_exposed": false
     },
-    "reconciliation_results": {
-      "W1": {
-        "classification": "already_committed_same_payload",
-        "success_attribution": "safe_after_authoritative_lookup",
-        "new_create_allowed": false,
-        "overwrite_allowed": false,
-        "mutation_emitted": false
-      },
-      "W2": {
-        "classification": "payload_conflict_preserved",
-        "success_attribution": "forbidden",
-        "new_create_allowed": false,
-        "overwrite_allowed": false,
-        "mutation_emitted": false
-      }
-    },
-    "final_canonical_effect_count": 1,
-    "final_canonical_payload_hash": "H1",
-    "duplicate_effect_count": 0,
-    "payload_conflict_erased": false
+    "reconciliation_result": {
+      "classification": "ambiguous_absence_possible_commit_then_delete_or_stale_read",
+      "success_attribution": "forbidden",
+      "retry_create_allowed": false,
+      "overwrite_allowed": false,
+      "mutation_emitted": false,
+      "required_before_any_retry": "a monotonic version/tombstone/generation or equivalent authoritative fence proving that the prior canonical effect cannot have existed and then been deleted/replaced behind the checkpoint"
+    }
   },
   "observations": [
-    "The checkpointed W1 state is sufficient to resume safely across an invocation boundary: once authoritative lookup returns E->H1, W1 may classify the prior outcome as already_committed_same_payload without issuing a second create or overwrite.",
-    "The checkpointed W2 state is also sufficient to resume safely: authoritative E->H1 conflicts with intended H2, so W2 preserves a payload-conflict outcome and emits no create or overwrite.",
-    "The reconciliation step turns the prior outage's safety-only state into a resolved attribution for W1 while preserving the loser conflict; the canonical effect count remains one and no duplicate mutation is produced by the resumption itself."
+    "An authoritative-looking absence is not by itself sufficient to distinguish never-committed from committed-then-deleted/replaced or a stale/non-monotonic read after acknowledgement loss.",
+    "Without a history-preserving fence, retrying create on E could duplicate or resurrect an effect, so the fixture suppresses both create and overwrite.",
+    "The safe recurring-Chat checkpoint therefore needs more than stable effect identity and payload hash for this branch: it must preserve a transport-provided monotonic version/tombstone/generation fence, or else retain the outcome as unresolved and defer mutation."
   ],
-  "inference": "Within this exact deterministic model, persisting stable effect identity, intended payload hash and prior submission classification is sufficient for safe cross-invocation reconciliation after acknowledgement loss plus a conflicting writer, provided a later authoritative lookup becomes available. Equality between intended and canonical payload permits idempotent success attribution without mutation; inequality must remain an explicit payload conflict. This does not prove availability, atomicity, monotonic reads, or real transport behavior.",
+  "inference": "Within this exact deterministic model, idempotency by stable effect identity plus payload hash is insufficient after acknowledgement loss when the later lookup returns absence and the transport exposes no monotonic history fence. Safe resumption requires treating absence as ambiguous and forbidding mutation retry. This does not prove that any concrete allowed repository/API transport supplies or lacks such fencing, and it makes no liveness claim under indefinite ambiguity.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
     "Availability of an atomic single-winner primitive P keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "A real allowed transport with authoritative payload lookup after rate-limit recovery remains unproven.",
-    "Monotonic or ABA-safe authoritative-read semantics remain untested; an authoritative absence or changed payload after prior conflict could require stricter tombstone/version fencing before any retry.",
-    "No liveness claim is made for indefinite authoritative-lookup unavailability."
+    "A real allowed transport with authoritative lookup plus monotonic version/tombstone/generation fencing remains unproven.",
+    "The changed-version/ABA branch remains untested in this invocation.",
+    "No liveness claim is made when the authoritative state remains ambiguous indefinitely."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -114,5 +93,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config; freeze one exact authority tuple and persist/read back the required role-local presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic ABA/absence reconciliation fixture: start from a prior acknowledgement-loss or conflict checkpoint, make authoritative lookup available but return absent or a changed version, and verify that no mutation retry is allowed unless the transport exposes a monotonic version/tombstone or equivalent fence proving the prior canonical effect cannot have been deleted/replaced. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config; freeze one exact authority tuple and persist/read back the required role-local presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic changed-version/ABA reconciliation fixture: start from the same acknowledgement-loss checkpoint but have later authoritative lookup return E with a payload/version different from the checkpointed canonical observation, and verify that no success attribution or mutation retry occurs unless a monotonic generation/version fence proves the observed state transition and identifies the current canonical owner. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
 }
