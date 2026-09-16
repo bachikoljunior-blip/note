@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T22:30:46+09:00",
+  "updated_at": "2026-09-16T23:27:42+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "8b4c8abe105ce69ab815f482ddb33fb2220bc2b0",
+  "previous_latest_blob": "e896fa53d90bb68650866ce8286b5f3b2565b935",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,68 +20,56 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "exact_blob_two_pass",
+    "transport_mode": "sha_pinned_main_00cd53bc3d7238c1ddace774c4d7eda51b81a872",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T223046+0900.json",
-    "blob": "a24d0b45ea565d0eda349dc566d27d40f8266bd7",
-    "commit": "437c76bc3b29190279d5ee831ae37fd1c0c110ad",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260916T232742JST.json",
+    "blob": "9e32ed7851e2e4920374c5a67fcdd6c075e958d4",
+    "commit": "80ee6464adf462f7a16a8d7152eaa40bd34848e9",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "8b4c8abe105ce69ab815f482ddb33fb2220bc2b0"
+    "latest_input_blob": "e896fa53d90bb68650866ce8286b5f3b2565b935"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "atomic-coupling-interleaving-negative-control",
-  "tested_scope": "Exactly one deterministic self-local interleaving fixture from the immediately preceding multi_agent continuation. A prior claim incarnation A owns stable effect_identity=E with non-reusable fence F_old and token T_old. A validates while A is current. A later claim incarnation B then publishes a proven non-reusable fence F_new with token T_new. Before B performs its guarded effect mutation, stale attempt A resumes and performs mutation using its earlier validation result, because validation and mutation are modeled as separable non-atomic steps. Test only whether non-reusable incarnation identity by itself prevents stale mutation under this check-then-act interleaving. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
+  "semantic_leaf": "conditional-cas-positive-control",
+  "tested_scope": "Exactly one deterministic self-local positive-control fixture continuing the prior atomic-coupling negative control. Abstract effect E has current authoritative claim incarnation B={F_new,T_new}; stale A={F_old,T_old} is no longer authoritative. The modeled transport exposes one indivisible conditional mutation whose predicate requires current claim identity to equal the caller's expected {fence,token} and effect E to be uncommitted; on success it commits E and an idempotency marker together. Interleaving tested: stale A attempts first, current B attempts second, then B retries once. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, real external coordinator, richer-mode arbitration, or optional second semantic leaf was used.",
   "fixture": {
     "effect_identity": "E",
-    "historical_claim": {
-      "semantic_incarnation": "A",
-      "fence": "F_old",
-      "fence_non_reusable": true,
-      "claim_token": "T_old"
-    },
-    "new_claim": {
-      "semantic_incarnation": "B",
-      "fence": "F_new",
-      "fence_non_reusable": true,
-      "claim_token": "T_new",
-      "fence_distinct_from_historical": true
-    },
+    "initial_authority": {"incarnation":"B","fence":"F_new","claim_token":"T_new","effect_committed":false},
+    "stale_attempt": {"incarnation":"A","expected_fence":"F_old","expected_claim_token":"T_old"},
+    "current_attempt": {"incarnation":"B","expected_fence":"F_new","expected_claim_token":"T_new"},
+    "atomic_primitive": "commit E iff current claim identity == expected {fence,token} AND E is uncommitted; authority predicate evaluation, effect write and idempotency marker write are one indivisible operation",
     "interleaving": [
-      "1. A validates current claim state while F_old/T_old is authoritative; validation succeeds.",
-      "2. B atomically publishes new claim identity F_new/T_new for the same effect E.",
-      "3. A resumes after B publication but does not revalidate current authority; A uses the cached successful validation from step 1.",
-      "4. A performs the effect mutation as a separate operation not conditionally coupled to current F_old/T_old authority.",
-      "5. B has not yet performed its own guarded effect mutation."
+      "1. A invokes the conditional mutation with expected {F_old,T_old}; current authority is {F_new,T_new}, so predicate is false and A performs no mutation.",
+      "2. B invokes the same conditional mutation with expected {F_new,T_new}; authority matches and E is uncommitted, so B commits E and its idempotency marker exactly once.",
+      "3. B retries with the same expected identity; authority still matches but E is already committed, so the uncommitted predicate is false and no duplicate mutation occurs."
     ],
-    "reconciliation_result": {
-      "classification": "toctou_stale_mutation_after_nonreusable_fence_rotation",
-      "non_reusable_fence_alone_sufficient": false,
-      "stale_attempt_mutation_possible_in_model": true,
-      "cause": "Authority validation and effect mutation are separate steps, so a successful validation can become stale before mutation even when incarnation fence values never repeat.",
-      "minimum_safe_requirement_under_this_fixture": "The effect mutation must be atomically conditional on the currently authoritative claim-incarnation identity, e.g. a compare-and-set/conditional write whose predicate includes the expected non-reusable fence and claim token, or an equivalent transaction that couples authority verification and mutation as one indivisible decision.",
-      "safe_failure_rule": "If the transport cannot make mutation conditional on the current fence/token in the same atomic effect, treat prior validation as expired and emit no stale mutation."
+    "result": {
+      "classification": "abstract_atomic_conditional_claim_effect_positive_control",
+      "stale_A_rejected": true,
+      "current_B_first_commit_succeeds": true,
+      "current_B_retry_duplicate_rejected": true,
+      "exactly_once_effect_in_fixture": true,
+      "required_assumptions": ["claim identity comparison and effect mutation are atomic together","fence/token incarnation is non-reusable for the claim lifetime","effect committed marker participates in the same atomic decision"]
     }
   },
   "observations": [
-    "F_old and F_new are distinct and each is stipulated non-reusable, so ABA through fence-value reuse is excluded in this fixture.",
-    "A nevertheless mutates after B becomes authoritative because A's successful authority check occurred before B publication and mutation was not atomically conditioned on the still-current fence/token.",
-    "Therefore non-reuse solves identity collision but not check-then-act races by itself."
+    "A cannot use a cached earlier validation because the authority predicate is evaluated inside the same indivisible operation that would mutate E.",
+    "B can commit once because its expected identity matches the current claim and E is initially uncommitted.",
+    "B's retry cannot duplicate E because the same atomic predicate also requires E to remain uncommitted."
   ],
-  "inference": "Within this exact deterministic model, a safe claim/idempotency mechanism requires both an authority-backed non-reusable incarnation identity and atomic coupling between current-claim verification and effect mutation. A conditional mutation/CAS over the expected current fence+token is sufficient to reject this specific stale interleaving if the transport guarantees predicate evaluation and mutation are atomic. This fixture does not prove that any concrete allowed zero-cost transport exposes such a primitive, nor does it prove fork exclusion or liveness.",
+  "inference": "Within this exact abstract fixture, an atomic conditional effect primitive over both current non-reusable claim identity and an uncommitted effect marker is sufficient to reject the tested stale-incarnation interleaving and the tested same-incarnation retry while permitting one current commit. This proves only the modeled safety/idempotency property. It does not prove that any concrete allowed zero-cost quota-independent transport exposes the primitive, that claim acquisition is single-winner, that coupled state survives interruption, or that the mechanism is live or fork-safe under real contention.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Availability of an atomic single-winner claim primitive keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "Availability of a concrete allowed transport with an atomic conditional mutation/CAS that covers both expected non-reusable fence and claim token remains unproven.",
-    "Durable coupling of claim publication and effect mutation across interruptions remains unproven beyond this deterministic fixture.",
-    "Fork exclusion and liveness under contention or interrupted acquisition remain unproven."
+    "A concrete allowed zero-cost quota-independent transport exposing an atomic conditional mutation over expected non-reusable fence+token and effect-uncommitted state remains unverified.",
+    "Atomic single-winner claim acquisition keyed by stable effect identity remains unverified on a concrete allowed transport.",
+    "Interruption durability, fork exclusion and liveness under real contention remain unverified."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -90,7 +78,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent role-local LATEST, and the readback-valid own presemantic witness. The manifest 19-role membership override was used only as mechanical lifecycle metadata and did not steer the selected semantic fixture. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -103,5 +91,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic conditional-CAS positive-control fixture. Model an allowed abstract transport primitive whose single atomic operation mutates effect E only if current claim identity still equals expected {F_new,T_new}; interleave stale A and current B attempts and test whether A is rejected while B can commit exactly once. Derive only the idempotency and stale-rejection property supported by that abstract primitive; keep concrete transport availability, fork exclusion, interruption durability and liveness unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap and freeze the current multi_agent authority tuple; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST; then execute exactly one bounded public-primary-source verification leaf for a concrete Chat-exposed lightweight repository/API transport primitive that could implement the modeled atomic conditional claim/effect step without hosted compute, finite monthly/trial/paid quota or incremental cost. Test exact documented conditional-write/create semantics and rate-limit interruption behavior only; if no qualifying primitive is evidenced, persist the exact blocker and select a different role-safe next-invocation leaf without starting it in the same run."
 }
