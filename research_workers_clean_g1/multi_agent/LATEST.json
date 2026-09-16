@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T04:28:46+09:00",
+  "updated_at": "2026-09-17T06:32:39+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "fa9a1ef525ec53fcab57ab91abe471ceaeb66fbb",
+  "previous_latest_blob": "5577b9580cb8521cce71bf1e051e8a8de3408810",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "manifest_blob": "2182784e012ccd051d59b52715e0ba47a23482e8",
@@ -21,73 +21,75 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main_0af34c115dba0ddc206cd60d3a104ba72614c8b7",
+    "transport_mode": "exact_blob_two_pass",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260917T042846+0900.json",
-    "blob": "aac7847c06185d101c66942143853e6ad747998b",
-    "commit": "d2ff39f99cfc98b1bde3b1fc55942d056e222796",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260917T063239+0900.json",
+    "blob": "ab8654b0cf0880d1a3142553e76009d2f45c384e",
+    "commit": "54f94741768d5fea1c8e50ecd25a90c5de80cb70",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "fa9a1ef525ec53fcab57ab91abe471ceaeb66fbb"
+    "latest_input_blob": "5577b9580cb8521cce71bf1e051e8a8de3408810"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "current-C-repair-after-turnover-before-effect-with-unknown-ack",
-  "tested_scope": "Exactly one deterministic self-local replay continuing the prior turnover-before-effect branch. Starting state is current authority C={F_C,T_C}, stale predecessor B={F_new,T_new}, stable effect identity E uncommitted, and the same modeled atomic conditional primitive: commit E iff current authority identity equals the caller expected {fence,token} and E is uncommitted, with authority check, effect write and idempotency-marker write indivisible. C issues a first attempt whose acknowledgement may be lost; then C issues one duplicate retry. A stale B retry is also evaluated after C is current. No further authority turnover is modeled during this bounded leaf. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, or optional second semantic leaf was used.",
+  "semantic_leaf": "C-to-D-turnover-during-C-acknowledgement-uncertainty",
+  "tested_scope": "Exactly one deterministic self-local replay continuing the prior current-C unknown-ack repair branch. Stable effect identity E starts uncommitted. Authority begins at C={F_C,T_C}. C issues one conditional effect attempt whose acknowledgement can be unknown. Before C can safely rely on a retry, authority turns over atomically to D={F_D,T_D}. A stale predecessor B={F_new,T_new} and stale C retry are then evaluated after D is current. The modeled primitive is unchanged: commit E iff current authority identity equals the caller expected {fence,token} and E is uncommitted, with authority predicate evaluation, effect write and durable idempotency-marker write indivisible and serialized with authority turnover. D performs one repair attempt if E is still uncommitted. No further authority turnover, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, or optional second semantic leaf is modeled.",
   "fixture": {
     "effect_identity": "E",
-    "current_authority": {"incarnation":"C","fence":"F_C","claim_token":"T_C"},
-    "stale_authority": {"incarnation":"B","fence":"F_new","claim_token":"T_new"},
+    "initial_authority": {"incarnation":"C","fence":"F_C","claim_token":"T_C"},
+    "successor_authority": {"incarnation":"D","fence":"F_D","claim_token":"T_D"},
+    "stale_predecessor": {"incarnation":"B","fence":"F_new","claim_token":"T_new"},
     "initial_effect_committed": false,
-    "atomic_effect_primitive": "commit E iff current claim identity == expected {fence,token} AND E is uncommitted; authority predicate evaluation, effect write and idempotency marker write are one indivisible operation",
-    "acknowledgement_model": "The first C call may commit and lose its acknowledgement, or may fail to reach/commit the atomic primitive; C cannot distinguish those two outcomes before retry.",
-    "case_first_C_attempt_committed_ack_unknown": [
-      "1. C's first primitive observes current authority C and E uncommitted, then atomically commits E plus the idempotency marker.",
-      "2. The acknowledgement is lost, so C retries with the same stable effect identity E and expected {F_C,T_C}.",
-      "3. The retry observes E already committed and performs no second effect mutation.",
-      "4. A stale B retry expects {F_new,T_new}; current authority is C, so B is rejected and cannot re-enter."
+    "atomic_effect_primitive": "commit E iff current claim identity == expected {fence,token} AND E is uncommitted; authority predicate, effect write and durable idempotency marker are one indivisible operation serialized with claim-authority turnover",
+    "turnover": "C-to-D installs a distinct non-reusable authority identity without clearing E or its idempotency marker",
+    "case_C_commits_before_turnover_ack_lost": [
+      "1. C's primitive linearizes while C is current and atomically commits E plus its durable idempotency marker; its acknowledgement is lost.",
+      "2. Authority then turns over to D.",
+      "3. D's repair observes E already committed and performs no second effect mutation.",
+      "4. Stale C and B retries fail the current-authority identity predicate and cannot re-enter."
     ],
-    "case_first_C_attempt_not_committed_then_retry": [
-      "1. C's first request does not reach/commit the atomic primitive, so E remains uncommitted.",
-      "2. C retries with the same stable effect identity E and expected {F_C,T_C}.",
-      "3. The retry observes current authority C and E uncommitted, then atomically commits E plus the idempotency marker exactly once.",
-      "4. A stale B retry is rejected because its expected authority identity does not match C."
+    "case_turnover_precedes_C_effect_commit": [
+      "1. C's first request has not committed E when authority atomically turns over to D.",
+      "2. Any delayed or retried C primitive now observes authority D rather than C and is rejected before effect mutation.",
+      "3. D's repair uses the same stable effect identity E, observes D current and E uncommitted, and atomically commits E plus its durable idempotency marker exactly once.",
+      "4. Stale B and C retries remain rejected by the non-reusable authority identity check."
     ],
     "result": {
-      "classification": "abstract_unknown-ack_repair_positive_control",
-      "at_most_once_E_in_both_ack_outcomes": true,
-      "eventual_single_completion_in_both_ack_outcomes": true,
+      "classification": "abstract_second-turnover_unknown-ack_positive-control",
+      "at_most_once_E_across_both_linearization_orders": true,
+      "eventual_single_completion_if_D_repair_reaches_primitive": true,
       "stale_B_reentry_excluded": true,
-      "final_effect_count_if_first_committed": 1,
-      "final_effect_count_if_first_not_committed_then_retry_reaches_primitive": 1,
-      "exactly_once_progress_within_fixture": true,
+      "stale_C_reentry_excluded_after_D_turnover": true,
+      "final_effect_count_if_C_committed_before_turnover": 1,
+      "final_effect_count_if_turnover_preceded_C_commit_and_D_repairs": 1,
       "required_assumptions": [
-        "C remains the current authority until at least one C attempt linearizes",
+        "authority turnover is serialized with the same atomic conditional effect primitive",
         "claim identity comparison, effect mutation and idempotency-marker mutation are atomic together",
-        "E and its idempotency marker are durable across acknowledgement loss",
-        "B and C use distinct non-reusable fence+token identities",
-        "after an unknown first outcome, one C retry eventually reaches the atomic primitive if the first attempt did not commit"
+        "E and its idempotency marker survive acknowledgement loss and authority turnover",
+        "B, C and D use distinct non-reusable fence+token identities",
+        "D receives the same stable effect identity E and remains current until one D repair attempt linearizes when E is not already committed",
+        "if C did not commit before turnover, one D repair attempt eventually reaches the primitive"
       ]
     }
   },
   "observations": [
-    "If C's first attempt committed but its acknowledgement was lost, the duplicate C retry is suppressed by the durable E marker, leaving exactly one effect.",
-    "If C's first attempt did not commit, one later C retry commits E exactly once provided C remains authoritative and the retry reaches the primitive.",
-    "Stale B cannot re-enter either acknowledgement branch because the current non-reusable authority identity is C."
+    "When C commits before the C-to-D turnover and loses its acknowledgement, the durable E marker causes D repair to no-op, leaving one effect.",
+    "When the C-to-D turnover linearizes before C commits, stale C is rejected by the authority predicate and D can commit E once if its repair reaches the primitive.",
+    "After D is current, both B and C are excluded from effect re-entry by distinct non-reusable authority identities."
   ],
-  "inference": "Within this exact abstract replay, the prior turnover-before-effect branch can be repaired without sacrificing at-most-once safety: stable effect identity plus a durable atomic conditional effect/idempotency primitive lets current claimant C retry after an unknown acknowledgement and converge to one committed E, while stale B remains excluded. This establishes exactly-once progress only inside the modeled fixture and assumptions. It does not verify single-winner acquisition/turnover, fork exclusion under real contention, or that any concrete allowed zero-cost quota-independent Chat-exposed repository/API transport provides the required atomic primitive and durability semantics.",
+  "inference": "Within this exact abstract replay, a second authority turnover during acknowledgement uncertainty does not inherently break at-most-once safety or eventual single completion: if authority turnover is serialized with the same atomic conditional effect/idempotency primitive and the durable stable effect identity survives turnover, either C committed before turnover and D no-ops, or turnover happened first and D repairs exactly once while stale B/C are rejected. This is only an abstract positive control. It does not verify a concrete allowed zero-cost quota-independent Chat-exposed transport, single-winner acquisition, fork exclusion under real contention, crash consistency of authority turnover itself, or progress through repeated D-to-next-authority turnovers.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent transport exposing a durable atomic conditional mutation over expected non-reusable fence+token, effect-uncommitted state and idempotency marker remains unverified.",
+    "A concrete allowed zero-cost quota-independent transport exposing a durable atomic conditional mutation serialized with authority turnover remains unverified.",
     "Atomic single-winner claim acquisition and turnover keyed by stable effect identity remain unverified on a concrete allowed transport.",
-    "Fork exclusion and liveness under real multi-claimant contention remain unverified.",
-    "The fixture assumes C remains authoritative until one C attempt linearizes; behavior across a second C-to-D turnover during acknowledgement uncertainty remains unverified."
+    "Fork exclusion and crash consistency under real multi-claimant contention remain unverified.",
+    "Progress if D also loses acknowledgement and authority turns over again before D repair confirmation remains unverified."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -96,10 +98,11 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "fully_blocked": false,
   "global_completion": false,
   "phase1_completion_claimed": false,
   "enabled_desired": true,
@@ -109,5 +112,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze the current multi_agent authority tuple; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still caps public/external research at zero, execute exactly one bounded self-local replay that inserts a second authority turnover C-to-D during C acknowledgement uncertainty and enumerates whether a current D repair can preserve at-most-once safety and eventual single completion without stale B/C re-entry under non-reusable identities. Otherwise execute exactly one public-primary-source verification leaf for a concrete Chat-exposed lightweight repository/API transport primitive implementing the modeled atomic conditional claim/effect step with optional monthly quotas at zero and zero incremental cost. Persist/read back the result and a new exact continuation, then return recurring-open."
+  "continuation": "Next invocation: fresh-bootstrap and freeze the current multi_agent authority tuple; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still caps public/external research at zero, execute exactly one bounded self-local replay where D itself has an unknown acknowledgement and authority turns over D-to-E before confirmation, testing whether the same stable effect identity plus serialized non-reusable authority turnover preserves at-most-once safety and eventual single completion without B/C/D re-entry. Otherwise execute exactly one public-primary-source verification leaf for a concrete Chat-exposed lightweight repository/API primitive that can implement the modeled serialized conditional claim/effect/idempotency step with optional monthly quotas at zero and zero incremental cost. Persist/read back the result and a new exact continuation, then return recurring-open."
 }
