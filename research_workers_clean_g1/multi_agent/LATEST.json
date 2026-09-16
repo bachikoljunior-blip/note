@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T17:31:45+09:00",
+  "updated_at": "2026-09-16T18:32:06+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "917e8efde6cff1f05570dda2a19e80052a6ee24c",
+  "previous_latest_blob": "48b68772a4ed8a1879aba868a4d32a29f854568d",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,64 +20,65 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_exact_main_ref",
-    "authority_head_commit": "3325af46ad8fda48e0fb3b211cb1ad48b9cc0436"
+    "transport_mode": "sha_only_main_ref",
+    "authority_head_commit": "34f40d8986212b3f6858964051b96d503e65e375"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260916T173145JST.json",
-    "blob": "c8cf84acee3a53ef6ad2dd8a87156700794beafd",
-    "commit": "40d6a2528697328bb8a25cb9ec1e91dbed01fdf6",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_20260916T093206Z.json",
+    "blob": "f5d1b570c6f7527d521901cdf48084b55e59cb1e",
+    "commit": "93c9996ba43db4cfa78bf463d4df6372a1468aa2",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "917e8efde6cff1f05570dda2a19e80052a6ee24c"
+    "latest_input_blob": "48b68772a4ed8a1879aba868a4d32a29f854568d"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-owner-label-reuse-incarnation-fence-fixture",
-  "tested_scope": "Exactly one deterministic self-local continuation fixture from the prior multi_agent checkpoint. A historical acknowledgement-lost W1 attempt targets stable effect_identity=E with payload H1 and attempt_token=T_old. A later authoritative canonical lookup returns the same payload H1 and logical owner label W1 at strictly newer monotonic generation 14, but with distinct attempt_token=T_new. The fixture tests only whether payload equality plus owner-label equality permits attribution to the old W1 attempt or any stale replay/mutation. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
+  "semantic_leaf": "deterministic-token-reuse-generation-fence-fixture",
+  "tested_scope": "Exactly one deterministic self-local continuation fixture from the immediately preceding multi_agent checkpoint. A historical acknowledgement-lost W1 attempt targets stable effect_identity=E with payload H1 and attempt_token=T_old. A later authoritative canonical claim is deliberately constructed at strictly newer monotonic generation 15 with the same payload H1, the same logical owner label W1, and the deliberately reused attempt_token T_old. The fixture tests only whether equality of effect identity, payload, owner label and attempt token is sufficient to attribute the newer canonical claim to the historical attempt or to authorize stale replay/mutation when token uniqueness is not guaranteed. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
   "fixture": {
     "effect_identity": "E",
     "historical_worker_label": "W1",
     "historical_attempt_token": "T_old",
+    "historical_generation_upper_bound": 14,
     "intended_payload_hash": "H1",
     "prior_submission_state": "acknowledgement_lost_after_possible_commit",
     "later_authoritative_lookup": {
       "result": "present",
-      "generation": 14,
+      "generation": 15,
       "payload_hash": "H1",
       "owner_label": "W1",
-      "attempt_token": "T_new",
+      "attempt_token": "T_old",
       "monotonic_generation_proven": true,
       "payload_relation": "equal",
       "owner_label_relation": "equal",
-      "attempt_token_relation": "different"
+      "attempt_token_relation": "equal_by_deliberate_reuse"
     },
     "reconciliation_result": {
-      "classification": "owner_label_reuse_with_distinct_claim_incarnation_after_lost_ack",
+      "classification": "claim_token_reuse_across_newer_generation",
       "success_attribution_to_historical_W1_attempt": "forbidden",
-      "payload_plus_owner_label_equality_sufficient": false,
+      "effect_payload_owner_token_equality_sufficient": false,
       "stale_retry_create_allowed": false,
       "stale_retry_overwrite_allowed": false,
       "mutation_emitted": false,
-      "minimum_fencing_identity_for_attribution": "a non-reused per-claim attempt/incarnation token stored atomically with the canonical claim; owner label and payload are not claim-instance identity",
-      "ordering_fence": "a strictly newer authoritative generation independently proves the historical attempt is stale; any future mutation must CAS/fence against the current canonical generation or equivalent current claim token rather than reuse historical ownership"
+      "minimum_fencing_identity_for_attribution": "When attempt-token uniqueness is not guaranteed, attribution must include a non-reusable ordering component such as the canonical monotonic generation/fence epoch together with the claim token, or an equivalent composite claim-incarnation identity.",
+      "ordering_fence": "The strictly newer authoritative generation proves that the canonical claim belongs to a later incarnation even though effect identity, payload, owner label and token all compare equal. Any mutation must CAS/fence against generation 15 or an equivalent current non-reusable epoch; token equality alone cannot revive the historical attempt."
     }
   },
   "observations": [
-    "Logical worker labels can repeat across process or claim incarnations, so owner-label equality does not prove claim-instance identity.",
-    "The distinct attempt token separates the newer W1 incarnation from the historical acknowledgement-lost W1 attempt even though payload and owner label are identical.",
-    "The strictly newer generation provides an ordering fence that suppresses stale replay; the per-claim token provides attribution identity."
+    "Deliberate reuse of T_old removes the distinguishing power that the prior fixture obtained from attempt-token inequality.",
+    "Equality of effect identity, payload, owner label and reused attempt token still does not establish historical-attempt identity when the authoritative canonical generation is strictly newer.",
+    "A monotonic generation or equivalent non-reusable fence epoch therefore becomes necessary in the claim-incarnation identity whenever token uniqueness cannot be guaranteed."
   ],
-  "inference": "Within this exact deterministic model, safe post-ack-loss attribution requires claim-instance identity, not merely effect identity, payload equality, or reusable owner labels. A non-reused per-claim attempt/incarnation token atomically recorded with the canonical claim is the minimum identity needed to distinguish same-label reincarnations; a current-generation or equivalent current-token CAS fence is still required before mutation. This does not prove that any concrete allowed transport exposes these primitives or liveness under contention.",
+  "inference": "Within this exact deterministic model, a per-claim token is sufficient as an incarnation discriminator only under a uniqueness assumption. If the same token may be reused, safe post-ack-loss attribution and mutation require a composite fence containing a non-reusable ordering component such as canonical generation/fence epoch. This fixture does not prove availability, atomicity or liveness of such a primitive on any concrete allowed transport.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
     "Availability of an atomic single-winner claim primitive keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "A real allowed transport exposing an atomically stored non-reused claim token and current-generation or equivalent CAS fence remains unproven.",
-    "Token uniqueness itself is assumed by this fixture; behavior under accidental or adversarial token reuse remains untested.",
+    "A real allowed transport exposing atomically stored claim token plus monotonic generation/fence epoch and CAS-equivalent mutation guard remains unproven.",
+    "The fixture assumes the authoritative generation comparison itself is trustworthy and monotonic; wraparound, reset, forked epochs, or incomparable generations remain untested.",
     "No liveness claim is made when fresh atomic claim acquisition remains unavailable or indefinitely contended."
   ],
   "zero_dependency_zero_quota_assessment": {
@@ -100,5 +101,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic token-reuse fixture. Keep payload H1 and owner label W1 constant, deliberately reuse T_old at a strictly newer canonical generation, and verify that if per-claim token uniqueness is not guaranteed then generation (or an equivalent non-reusable fence epoch) must be part of the attribution/mutation fence. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic generation-reset/fork fixture. Hold effect E, payload H1, owner W1 and token T_old constant, but construct two authoritative-looking claim records from incomparable/reset epochs that both expose generation 1, and test the minimum epoch identity needed so generation-number equality cannot authorize stale attribution or mutation. Preserve real transport atomicity and liveness as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
 }
