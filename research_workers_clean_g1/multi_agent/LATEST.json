@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T10:31:24+09:00",
+  "updated_at": "2026-09-16T11:32:44+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "df47f3a836970dc11a40902c3e5c81b0b3cd153d",
+  "previous_latest_blob": "10c5d80a8721b6fca7dfd5ea0f875bfbada91d24",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,23 +20,23 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_exact_authority",
-    "authority_head_commit": "f6a6df58f8ef31d9a4d82a663f2c8ee698fbb38e"
+    "transport_mode": "sha_pinned_main_ref",
+    "authority_head_commit": "fb841a8bcac1bd1fa154dba8baa523fa0d48d820"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260916T103124+0900_f6a6df58.json",
-    "blob": "db81c9ffedac396954f11dcbde4cd67a55956abe",
-    "commit": "17ec32595e2cabf2f1b5599b4c7640559ee6f7be",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T023244Z.json",
+    "blob": "c3ab7ffc3dbd362e2ac8be3a2245eee1f85cf6a5",
+    "commit": "c512d499269ac0fac0545842df07cfe77915c931",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "df47f3a836970dc11a40902c3e5c81b0b3cd153d"
+    "latest_input_blob": "10c5d80a8721b6fca7dfd5ea0f875bfbada91d24"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-changed-version-owner-reconciliation-fixture",
-  "tested_scope": "Exactly one deterministic self-local continuation fixture derived from the prior multi_agent checkpoint. Worker W1 has a stable effect_identity=E and intended payload H1 after acknowledgement_lost_after_possible_commit. The checkpoint also preserves the last authoritative claim observation for E as generation 12, payload H1, owner W1. A later authoritative lookup returns E at monotonic generation 13 with payload H2 and owner W2. The fixture verifies only whether W1 may attribute its lost-ack operation as success, retry create, retry overwrite, or otherwise mutate E after observing the newer canonical generation. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
+  "semantic_leaf": "deterministic-same-payload-aba-owner-fence-fixture",
+  "tested_scope": "Exactly one deterministic self-local continuation fixture from the prior multi_agent checkpoint. Worker W1 has stable effect_identity=E and intended payload H1 after acknowledgement_lost_after_possible_commit. The checkpointed authoritative claim observation for E is monotonic generation 12, payload H1, owner W1. A later authoritative lookup returns the same payload H1 at strictly newer generation 13 but owner W2. The fixture tests only whether payload equality permits W1 to attribute its lost-ack operation as the current success, retry create, retry overwrite, or otherwise mutate E after observing the newer generation/owner. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
   "fixture": {
     "effect_identity": "E",
     "worker": "W1",
@@ -50,34 +50,37 @@
     "later_authoritative_lookup": {
       "result": "present",
       "generation": 13,
-      "payload_hash": "H2",
+      "payload_hash": "H1",
       "owner": "W2",
       "monotonic_generation_proven": true,
-      "generation_relation": "13>12"
+      "generation_relation": "13>12",
+      "payload_relation": "equal",
+      "owner_relation": "different"
     },
     "reconciliation_result": {
-      "classification": "newer_canonical_owner_conflict_after_lost_ack",
+      "classification": "same_payload_aba_with_newer_owner_after_lost_ack",
       "success_attribution_to_W1": "forbidden",
+      "payload_equality_sufficient_for_success_attribution": false,
       "retry_create_allowed": false,
       "retry_overwrite_allowed": false,
       "mutation_emitted": false,
       "current_canonical_owner": "W2",
-      "required_action": "preserve generation 13 state, classify W1 outcome as unresolved/non-attributable, and require any future W1 action to re-enter through a fresh atomic claim against the current generation rather than replaying the lost-ack mutation"
+      "required_action": "preserve generation 13 canonical state; treat W1's historical outcome as non-attributable; require any future W1 action to obtain a fresh atomic claim against the current generation rather than inferring success or replay permission from payload equality"
     }
   },
   "observations": [
-    "A monotonic generation increase from 12 to 13 proves that the canonical claim state advanced after W1's checkpoint and that the later H2/W2 record is newer than the checkpointed H1/W1 record.",
-    "Because the current canonical owner is W2 and payload H2 differs from W1's intended H1, W1 cannot safely infer that its acknowledgement-lost operation is the currently canonical success.",
-    "The safe replay rule suppresses both create and overwrite retries by W1; stable effect identity does not grant ownership once a newer canonical generation is observed."
+    "The canonical generation advanced from 12 to 13 while the payload returned to the same value H1, creating an ABA-style equality case in which content equality does not imply identity of the committed claim instance.",
+    "The newer canonical record is owned by W2, so W1's checkpointed ownership is stale even though the payload bytes/hash match W1's intended payload.",
+    "Suppressing W1 create and overwrite retries prevents a stale worker from converting payload equality into duplicate or conflicting mutation after an intervening claim transition."
   ],
-  "inference": "Within this exact deterministic model, an authoritative monotonic generation fence plus current-owner identity is sufficient to reject a stale worker's replay after acknowledgement loss when a newer conflicting canonical state is observed. It prevents duplicate/conflicting mutation without external hosted coordination or richer-mode arbitration. This fixture does not prove that any concrete allowed repository/API transport exposes the required atomic claim, monotonic generation, or owner semantics, and it does not prove liveness if fresh claim acquisition remains unavailable.",
+  "inference": "Within this exact deterministic model, payload equality is insufficient for idempotent success attribution after acknowledgement loss when an authoritative monotonic generation proves an intervening transition and the current owner differs. A generation/owner fence rejects the stale replay without external hosted coordination or richer-mode arbitration. This fixture does not prove that any concrete allowed repository/API transport exposes atomic single-winner claims, monotonic generations, or owner/fencing semantics, and it does not prove liveness under contention.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
     "Availability of an atomic single-winner claim primitive keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "A real allowed transport exposing authoritative monotonic generation plus current-owner identity remains unproven.",
-    "The same-payload ABA branch remains untested: a later record may carry payload H1 again under a newer generation/owner, so payload equality alone may still be unsafe for success attribution.",
+    "A real allowed transport exposing authoritative monotonic generation plus current-owner or equivalent fencing-token identity remains unproven.",
+    "Owner-label reuse remains untested: a newer generation may again report owner W1 for a different W1 process/incarnation, so logical owner equality may be unsafe without a per-claim token or worker incarnation epoch.",
     "No liveness claim is made when fresh atomic claim acquisition remains unavailable or indefinitely contended."
   ],
   "zero_dependency_zero_quota_assessment": {
@@ -100,5 +103,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic same-payload ABA fixture. Start from an acknowledgement-lost W1 checkpoint for E/H1, but have the later authoritative lookup return payload H1 again under a strictly newer monotonic generation owned by W2; verify that payload equality alone cannot authorize W1 success attribution or replay, and that generation/owner fencing suppresses stale mutation. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic owner-reuse/incarnation fixture. Start from an acknowledgement-lost W1 checkpoint for E/H1, and have a later authoritative lookup return the same payload H1 at a strictly newer monotonic generation with logical owner label W1 again but a distinct claim/incarnation token; verify that owner-label plus payload equality still cannot authorize attribution to the old W1 attempt, and determine the minimum fencing identity needed to suppress stale replay. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
 }
