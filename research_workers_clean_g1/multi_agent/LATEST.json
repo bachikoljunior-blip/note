@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-16T09:29:38+09:00",
+  "updated_at": "2026-09-16T10:31:24+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "519af9386c5011bfac9a7aba1f06b392a7c1a3de",
+  "previous_latest_blob": "df47f3a836970dc11a40902c3e5c81b0b3cd153d",
   "semantic_config_snapshot": {
     "manifest_control_revision": 127,
     "run_lifecycle_revision": 3,
@@ -20,58 +20,65 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "exact_blob_two_pass"
+    "transport_mode": "sha_only_exact_authority",
+    "authority_head_commit": "f6a6df58f8ef31d9a4d82a663f2c8ee698fbb38e"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260916T002938Z.json",
-    "blob": "afee0f64121b5e9c5bff68ee99c9d3bbec0d018f",
-    "commit": "99be2c25ed8f61fc2c525a74a724a80cdc5c8e21",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260916T103124+0900_f6a6df58.json",
+    "blob": "db81c9ffedac396954f11dcbde4cd67a55956abe",
+    "commit": "17ec32595e2cabf2f1b5599b4c7640559ee6f7be",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "519af9386c5011bfac9a7aba1f06b392a7c1a3de"
+    "latest_input_blob": "df47f3a836970dc11a40902c3e5c81b0b3cd153d"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "deterministic-aba-absence-reconciliation-fixture",
-  "tested_scope": "Exactly one deterministic self-local continuation fixture derived from the prior multi_agent checkpoint. A worker W1 retains stable effect_identity=E, intended payload H1, and prior submission state acknowledgement_lost_after_possible_commit. A later authoritative lookup is available but returns ABSENT. The fixture assumes no monotonic version, tombstone, deletion proof, generation fence, or equivalent history-preserving primitive is exposed. It verifies only whether a create/overwrite retry is safe under that ambiguous absence. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second leaf was used.",
+  "semantic_leaf": "deterministic-changed-version-owner-reconciliation-fixture",
+  "tested_scope": "Exactly one deterministic self-local continuation fixture derived from the prior multi_agent checkpoint. Worker W1 has a stable effect_identity=E and intended payload H1 after acknowledgement_lost_after_possible_commit. The checkpoint also preserves the last authoritative claim observation for E as generation 12, payload H1, owner W1. A later authoritative lookup returns E at monotonic generation 13 with payload H2 and owner W2. The fixture verifies only whether W1 may attribute its lost-ack operation as success, retry create, retry overwrite, or otherwise mutate E after observing the newer canonical generation. No public-source probe, O/downstream or other-worker semantics, shared ledger, scheduler mutation, real simultaneous repository write, richer-mode arbitration, external coordinator, or optional second semantic leaf was used.",
   "fixture": {
     "effect_identity": "E",
     "worker": "W1",
     "intended_payload_hash": "H1",
     "prior_submission_state": "acknowledgement_lost_after_possible_commit",
-    "prior_classification": "outcome_unknown_commit_may_exist",
+    "checkpointed_canonical_observation": {
+      "generation": 12,
+      "payload_hash": "H1",
+      "owner": "W1"
+    },
     "later_authoritative_lookup": {
-      "available": true,
-      "result": "absent",
-      "monotonic_version_exposed": false,
-      "tombstone_or_deletion_fence_exposed": false,
-      "generation_or_history_fence_exposed": false
+      "result": "present",
+      "generation": 13,
+      "payload_hash": "H2",
+      "owner": "W2",
+      "monotonic_generation_proven": true,
+      "generation_relation": "13>12"
     },
     "reconciliation_result": {
-      "classification": "ambiguous_absence_possible_commit_then_delete_or_stale_read",
-      "success_attribution": "forbidden",
+      "classification": "newer_canonical_owner_conflict_after_lost_ack",
+      "success_attribution_to_W1": "forbidden",
       "retry_create_allowed": false,
-      "overwrite_allowed": false,
+      "retry_overwrite_allowed": false,
       "mutation_emitted": false,
-      "required_before_any_retry": "a monotonic version/tombstone/generation or equivalent authoritative fence proving that the prior canonical effect cannot have existed and then been deleted/replaced behind the checkpoint"
+      "current_canonical_owner": "W2",
+      "required_action": "preserve generation 13 state, classify W1 outcome as unresolved/non-attributable, and require any future W1 action to re-enter through a fresh atomic claim against the current generation rather than replaying the lost-ack mutation"
     }
   },
   "observations": [
-    "An authoritative-looking absence is not by itself sufficient to distinguish never-committed from committed-then-deleted/replaced or a stale/non-monotonic read after acknowledgement loss.",
-    "Without a history-preserving fence, retrying create on E could duplicate or resurrect an effect, so the fixture suppresses both create and overwrite.",
-    "The safe recurring-Chat checkpoint therefore needs more than stable effect identity and payload hash for this branch: it must preserve a transport-provided monotonic version/tombstone/generation fence, or else retain the outcome as unresolved and defer mutation."
+    "A monotonic generation increase from 12 to 13 proves that the canonical claim state advanced after W1's checkpoint and that the later H2/W2 record is newer than the checkpointed H1/W1 record.",
+    "Because the current canonical owner is W2 and payload H2 differs from W1's intended H1, W1 cannot safely infer that its acknowledgement-lost operation is the currently canonical success.",
+    "The safe replay rule suppresses both create and overwrite retries by W1; stable effect identity does not grant ownership once a newer canonical generation is observed."
   ],
-  "inference": "Within this exact deterministic model, idempotency by stable effect identity plus payload hash is insufficient after acknowledgement loss when the later lookup returns absence and the transport exposes no monotonic history fence. Safe resumption requires treating absence as ambiguous and forbidding mutation retry. This does not prove that any concrete allowed repository/API transport supplies or lacks such fencing, and it makes no liveness claim under indefinite ambiguity.",
+  "inference": "Within this exact deterministic model, an authoritative monotonic generation fence plus current-owner identity is sufficient to reject a stale worker's replay after acknowledgement loss when a newer conflicting canonical state is observed. It prevents duplicate/conflicting mutation without external hosted coordination or richer-mode arbitration. This fixture does not prove that any concrete allowed repository/API transport exposes the required atomic claim, monotonic generation, or owner semantics, and it does not prove liveness if fresh claim acquisition remains unavailable.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Availability of an atomic single-winner primitive P keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
-    "A real allowed transport with authoritative lookup plus monotonic version/tombstone/generation fencing remains unproven.",
-    "The changed-version/ABA branch remains untested in this invocation.",
-    "No liveness claim is made when the authoritative state remains ambiguous indefinitely."
+    "Availability of an atomic single-winner claim primitive keyed by stable effect identity on an allowed zero-cost quota-independent transport remains unproven.",
+    "A real allowed transport exposing authoritative monotonic generation plus current-owner identity remains unproven.",
+    "The same-payload ABA branch remains untested: a later record may carry payload H1 again under a newer generation/owner, so payload equality alone may still be unsafe for success attribution.",
+    "No liveness claim is made when fresh atomic claim acquisition remains unavailable or indefinitely contended."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -93,5 +100,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config; freeze one exact authority tuple and persist/read back the required role-local presemantic witness. Then resolve only current multi_agent LATEST and execute exactly one bounded deterministic changed-version/ABA reconciliation fixture: start from the same acknowledgement-loss checkpoint but have later authoritative lookup return E with a payload/version different from the checkpointed canonical observation, and verify that no success attribution or mutation retry occurs unless a monotonic generation/version fence proves the observed state transition and identifies the current canonical owner. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
+  "continuation": "Next invocation: fresh-bootstrap current manifest, RUN_LIFECYCLE, DESIRED_STATE and multi_agent role config under one verified authority tuple; persist/read back the required role-local presemantic witness; then resolve only current multi_agent LATEST and execute exactly one bounded deterministic same-payload ABA fixture. Start from an acknowledgement-lost W1 checkpoint for E/H1, but have the later authoritative lookup return payload H1 again under a strictly newer monotonic generation owned by W2; verify that payload equality alone cannot authorize W1 success attribution or replay, and that generation/owner fencing suppresses stale mutation. Preserve atomic primitive and real transport availability as unresolved; do not read public sources, start a second leaf, or mutate the scheduler."
 }
