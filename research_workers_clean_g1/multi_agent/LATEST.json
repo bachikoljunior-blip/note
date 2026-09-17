@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T03:31:42+09:00",
+  "updated_at": "2026-09-18T07:27:35+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,128 +10,142 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "ef68359fbbb52d780bebb8cc90f5008f9039a669",
+  "previous_latest_blob": "3aa5f825dc02f5263d8f95f2c67d1b9a4252dfaa",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
-    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
     "root_control_revision": 27,
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "preferred_sha_main_ref",
-    "frozen_main_ref_sha": "af71c1ffd176436f9c88d54aec766bceb94cd95e",
-    "manifest_pool_override_observed_mechanically": 19
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_20260917T183142Z.json",
-    "blob": "45025e39d6ed7225541f9699be8024a630f8b0a3",
-    "commit": "fba92ee423acbb4691b4ef047c323a1f6ccdf36d",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260918T0727350900.json",
+    "blob": "45433cb2add03fd6bf23ae509cf12817e2bc9c51",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "ef68359fbbb52d780bebb8cc90f5008f9039a669"
+    "latest_input_blob": "3aa5f825dc02f5263d8f95f2c67d1b9a4252dfaa"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "acknowledgement-loss-reconstruction-c5-c7",
-  "tested_scope": "Exactly one deterministic self-local replay derived from the prior C1-C7 abstract authority-gate contract. The slice models one protected effect accepted under active epoch E1, followed by loss of the acceptance response before the caller records success. It derives the minimum durable reconstruction fields and retry decision table needed for C5-C7 and falsifies one weak retry rule that blindly reissues the effect after timeout. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "rate-limit-interruption-reconstruction-c5-c7",
+  "tested_scope": "Exactly one deterministic self-local replay extending the prior C5-C7 acknowledgement-loss contract. The slice models one guarded logical effect K/P1 under epoch E1 where the caller observes the same rate-limit/transport status in two indistinguishable histories: a pre-commit rate-limit rejection and a post-commit acknowledgement-loss path. It derives the minimum cross-invocation reconstruction transitions and falsifies one weak rule that treats rate-limit status alone as proof of non-commit. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "initial_state": {
       "authority": "active(E1)",
       "logical_effect_key": "K",
-      "payload_identity": "P1",
+      "payload_generation_identity": "P1/G1",
       "attempt_id": "A1",
-      "protected_surface_behavior": "accept at most one logical effect for K within the guarded epoch/payload identity and durably expose the acceptance outcome"
+      "caller_observation": "rate_limit_or_transport_limited"
     },
-    "trace": [
-      "Caller submits guarded effect {epoch:E1, key:K, payload:P1, attempt:A1}.",
-      "Protected surface atomically validates E1, accepts the logical effect for K, commits result R1, and durably records acceptance metadata.",
-      "The success response is lost before the caller records completion, so the caller observes timeout/unknown outcome.",
-      "A safe recovery path performs authoritative reconstruction before any new attempt: read current authority plus durable effect record keyed by K.",
-      "If the record proves committed under E1 with payload P1, recovery returns committed-duplicate/success-equivalent and does not create another effect.",
-      "If authority has advanced beyond E1 and no committed K record exists, the stale attempt is rejected and must not be replayed under the old epoch.",
-      "If the record is explicitly pending/in-progress, recovery preserves unknown/pending and defers a new effect until the authoritative record resolves across invocations; same-run waiting is unnecessary.",
-      "Only when authoritative reconstruction proves no committed/pending effect for K and the current authority still permits a fresh attempt may a new attempt identity be issued for the same logical key, subject to the same guarded acceptance rule."
+    "indistinguishable_histories": [
+      {
+        "id": "H_precommit_reject",
+        "trace": [
+          "Caller submits guarded effect {epoch:E1,key:K,payload_generation:P1/G1,attempt:A1}.",
+          "A rate-limit gate rejects the attempt before the protected effect commits.",
+          "Caller observes rate-limit/transport-limited status; authoritative effect state for K is absent or explicitly rejected."
+        ]
+      },
+      {
+        "id": "H_postcommit_ack_loss",
+        "trace": [
+          "Caller submits the same guarded effect.",
+          "The protected surface validates E1, commits one logical effect for K with P1/G1, and durably records result R1.",
+          "The success acknowledgement is lost or replaced by a rate-limit/transport-limited outcome on the response path.",
+          "Caller observes the same rate-limit/transport-limited status even though authoritative effect state for K is committed."
+        ]
+      }
     ],
-    "minimum_durable_reconstruction_fields": [
-      "logical_effect_key",
-      "stable_payload_or_generation_identity",
-      "accepted_epoch_or_fence",
-      "authoritative_effect_status including committed, rejected, pending or absent",
-      "commit_or_acceptance_version/token",
-      "result identity or deterministic result reference when committed",
-      "current authority epoch/fence or a reference sufficient to prove whether the original epoch is still active"
+    "observation_equivalence": "The caller-visible rate-limit/transport status is compatible with both modeled histories, so that status alone cannot distinguish authoritative absence from an already committed effect.",
+    "minimum_cross_invocation_checkpoint": [
+      "logical_effect_key K",
+      "stable payload/generation identity P1/G1",
+      "original authority epoch/fence E1",
+      "attempt identity A1 for audit only, not as sole idempotency key",
+      "observed transport/rate-limit status",
+      "reconstruction_required=true",
+      "authoritative effect status/version/result reference when later resolved"
     ],
-    "retry_decision_table": [
+    "reconstruction_transition_table": [
       {
-        "reconstruction": "committed for K with matching payload/generation",
-        "decision": "treat as committed-duplicate/success-equivalent; do not reissue a second logical effect",
-        "c5_c7_status": "satisfies duplicate-resistance reconstruction requirement if record is authoritative"
+        "authoritative_reconstruction": "committed for K with matching P1/G1",
+        "next_transition": "success-equivalent committed-duplicate; record result reference and do not reissue",
+        "retry_allowed": false
       },
       {
-        "reconstruction": "committed for K with conflicting payload/generation",
-        "decision": "hard conflict; reject retry and surface conflict evidence",
-        "c5_c7_status": "prevents key reuse from silently changing semantics"
+        "authoritative_reconstruction": "committed for K with conflicting payload/generation",
+        "next_transition": "hard conflict; preserve evidence and reject retry under the reused logical key",
+        "retry_allowed": false
       },
       {
-        "reconstruction": "rejected because epoch E1 is stale or authority advanced",
-        "decision": "do not replay A1; classify stale-authority rejection and require a separately authorized new logical operation if one is still desired",
-        "c5_c7_status": "preserves fencing after authority change"
+        "authoritative_reconstruction": "explicitly rejected before commit and current authority still permits K/P1/G1",
+        "next_transition": "a fresh attempt may be issued on a later invocation using the same stable logical key and payload/generation under the guarded acceptance rule",
+        "retry_allowed": true
       },
       {
-        "reconstruction": "pending/in-progress for K",
-        "decision": "checkpoint unknown/pending and resolve on a later invocation; do not blind-reissue in the same run",
-        "c5_c7_status": "avoids duplicate effect during an unresolved commit window"
+        "authoritative_reconstruction": "absent for K and current authority still permits K/P1/G1",
+        "next_transition": "a fresh attempt may be issued only after this authoritative absence proof; keep K and P1/G1 stable and use a new attempt id if required",
+        "retry_allowed": true
       },
       {
-        "reconstruction": "absent for K and current authority still authorizes the logical operation",
-        "decision": "a fresh attempt may be issued with the same logical key K and stable payload identity, using a new attempt id only if the protected surface deduplicates/guards by K plus generation rather than by attempt id alone",
-        "c5_c7_status": "safe only with authoritative absence proof and guarded idempotent acceptance"
+        "authoritative_reconstruction": "pending/in-progress for K",
+        "next_transition": "checkpoint unresolved and reconstruct on a later invocation; do not blind-reissue",
+        "retry_allowed": false
       },
       {
-        "reconstruction": "unavailable or non-authoritative",
-        "decision": "remain unresolved and checkpoint; do not infer absence and do not retry blindly",
-        "c5_c7_status": "fails C6/C7 until authoritative reconstruction is available"
+        "authoritative_reconstruction": "authority advanced beyond E1 with no committed matching K record",
+        "next_transition": "classify stale authority; do not replay A1 under E1 and require separately authorized current-epoch work if still desired",
+        "retry_allowed": false
+      },
+      {
+        "authoritative_reconstruction": "unavailable or non-authoritative",
+        "next_transition": "remain unresolved across invocations; do not infer absence from the rate-limit status",
+        "retry_allowed": false
       }
     ],
     "weak_retry_rule": {
-      "id": "W2_blind_timeout_reissue",
-      "rule": "After any timeout, immediately submit a new attempt A2 for the same intended effect without first reading authoritative effect state.",
+      "id": "W3_rate_limit_means_no_commit",
+      "rule": "Whenever the caller sees a rate-limit/transport-limited status, assume the protected effect did not commit and immediately retry with a new attempt id.",
       "falsification": [
-        "In the modeled trace, A1 already committed but its response was lost.",
-        "Blind A2 cannot distinguish committed from absent. If deduplication is keyed only by attempt id, A2 is a distinct accepted request and can duplicate the protected effect.",
-        "Even if the surface rejects duplicates by K, blind retry still lacks evidence to classify committed, conflicting-payload, stale-epoch, or pending cases and therefore fails C6/C7 replay reconstruction.",
-        "Therefore timeout alone is not a safe retry predicate; authoritative reconstruction is required before retry."
+        "H_precommit_reject and H_postcommit_ack_loss have the same modeled caller-visible status.",
+        "In H_postcommit_ack_loss, K is already committed as R1; treating the status as proof of absence can create a second logical effect when deduplication is attempt-scoped or otherwise incomplete.",
+        "A new attempt id does not repair this ambiguity because attempt identity is not the stable logical idempotency identity.",
+        "Therefore rate-limit status alone is not a safe retry predicate; authoritative reconstruction of K plus P1/G1 and current authority is required before retry."
       ],
       "passes_minimum_contract": false,
-      "failed_requirements": ["C5_idempotent_effect_identity", "C6_unknown_outcome_reconstruction", "C7_evidence_and_replay"]
+      "failed_requirements": [
+        "C5_idempotent_effect_identity",
+        "C6_unknown_outcome_reconstruction",
+        "C7_evidence_and_replay"
+      ]
     },
     "result": {
+      "rate_limit_status_proves_noncommit": false,
       "authoritative_reconstruction_before_retry_required": true,
+      "cross_invocation_checkpoint_required_for_unresolved_outcome": true,
       "attempt_id_alone_is_sufficient_idempotency_identity": false,
-      "stable_logical_effect_key_plus_payload_generation_required": true,
-      "blind_timeout_retry_safe": false,
-      "same_run_waiting_required": false,
+      "stable_logical_key_plus_payload_generation_required": true,
+      "same_run_waiting_or_polling_required": false,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "A lost acknowledgement converts a completed effect into a caller-side unknown outcome; retry safety therefore depends on durable authoritative effect evidence, not on transport timeout semantics.",
-    "An attempt identifier is insufficient as the sole idempotency key because a retry normally has a different attempt id; duplicate resistance must bind to a stable logical effect identity and stable payload/generation identity.",
-    "The reconstruction record must distinguish committed, conflicting committed, rejected-stale, pending and absent states; treating any read failure or timeout as absence reintroduces duplicate/conflict risk.",
-    "Cross-invocation checkpoint/resume is compatible with pending or unavailable reconstruction and avoids same-run polling without weakening duplicate resistance."
+    "Within the exact abstract fixture, one caller-visible rate-limit/transport status maps to both pre-commit rejection and post-commit acknowledgement loss, making transport status non-identifying for commit state.",
+    "The safe retry decision depends on authoritative effect state plus current authority, not on the transport label itself.",
+    "Persisting K, P1/G1, E1 and reconstruction_required across invocations is sufficient to avoid same-run polling while preserving the evidence needed to distinguish committed, rejected, absent, pending, stale-authority and unavailable states."
   ],
-  "inference": "For the exact abstract acknowledgement-loss model tested, C5-C7 require a stable logical effect key plus stable payload/generation identity and authoritative durable reconstruction before retry. Blind timeout reissue is falsified because it cannot distinguish an already-committed effect from absence and can duplicate the effect when deduplication is attempt-scoped. This narrows the minimum replay contract without claiming any concrete Chat-exposed provider satisfies it.",
+  "inference": "For the exact abstract rate-limit interruption model tested, C5-C7 require transport-status-agnostic authoritative reconstruction before retry. A rate-limit status cannot itself prove non-commit because the modeled outward observation is compatible with both pre-commit rejection and post-commit acknowledgement loss. This extends the prior acknowledgement-loss replay contract without claiming any concrete provider exhibits both histories or satisfies the contract.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive against C1-C7 and the acknowledgement-loss reconstruction fields; no concrete provider is accepted by this slice.",
-    "Test rate-limit interruption where the response can mean either pre-commit rejection or post-commit acknowledgement loss, and derive a cross-invocation rule that never treats rate-limit status alone as proof of non-commit.",
-    "Test conflicting payload reuse for the same logical effect key across retries/generations to determine the minimum generation-binding rule."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive against C1-C7 and the acknowledgement-loss/rate-limit reconstruction fields; no concrete provider is accepted by this slice.",
+    "Test conflicting payload/generation reuse for the same logical effect key across retries to derive the minimum generation-binding and conflict-detection rule."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -140,7 +154,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent LATEST, and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent LATEST, and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -154,5 +168,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local rate-limit interruption replay extending C5-C7: model a response that may be either pre-commit rejection or post-commit acknowledgement loss, prove why rate-limit status alone cannot establish absence, derive the minimum cross-invocation reconstruction transition table, and falsify one weak rule that retries solely from the transport status. Do not claim a concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local conflicting-payload/generation replay extending C5-C7: model reuse of the same logical effect key K with a mismatched payload or generation across retries, derive the minimum generation-binding and conflict-detection transition table, and falsify one weak rule that deduplicates solely by K while permitting payload drift. Do not claim a concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
 }
