@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T14:30:29+09:00",
+  "updated_at": "2026-09-17T16:29:40+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,10 +10,9 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "c9e95f88719ba8cd9aeb25b4c9d054bbe0e9294b",
+  "previous_latest_blob": "d2bc6cb512d0c92c79b7d11b4739bbd48505ff96",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
-    "manifest_blob": "2182784e012ccd051d59b52715e0ba47a23482e8",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
@@ -26,62 +25,62 @@
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260917T143029+0900.json",
-    "blob": "4840f6dfaaa0d59fa2725f501b1a054b4bcdd2b9",
-    "commit": "4b723ea9ef0a627fe0ec410a59339439c5059880",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260917T162940JST.json",
+    "blob": "887099f3db095cc746e2b3b3f40e17a518bd0472",
+    "commit": "dfef77ecb942bdf4519ee29b56be6516d350f057",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "c9e95f88719ba8cd9aeb25b4c9d054bbe0e9294b"
+    "latest_input_blob": "d2bc6cb512d0c92c79b7d11b4739bbd48505ff96"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "toctou-decoupled-authority-validation-negative-control",
-  "tested_scope": "Exactly one deterministic self-local negative-control replay derived from the immediately preceding abstract claim/idempotency fixture. Durable recurrence-stable marker persistence, stable effect identity effect:E, a current-authority/fencing validation step, and an atomic conditional marker-absent effect:E plus marker creation are present. The single removed assumption is atomic coupling between authority validation and the later effect/marker commit: a predecessor may validate while current and continue after authority turnover using that stale validation result. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "crash-decoupled-effect-marker-negative-control",
+  "tested_scope": "Exactly one deterministic self-local negative-control replay continuing the immediately preceding TOCTOU fixture. Commit-time current-authority/fence validation is restored and required at every effect attempt; durable recurrence-stable marker persistence and stable effect identity effect:E are retained. The single removed assumption is atomic coupling between effect:E execution and durable marker M_E creation. The modeled effect is nontransactional with respect to marker persistence, permitting a crash after effect execution but before marker creation. No public source, concrete transport, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, or optional second semantic leaf is modeled.",
   "fixture": {
     "restored_assumptions": [
-      "current-authority or fencing validation exists before the effect attempt",
-      "recurrence-stable durable marker persistence",
-      "stable effect identity effect:E",
-      "atomic conditional marker-absent check plus effect:E plus marker creation"
+      "commit-time current-authority or fencing predicate is checked immediately before every effect attempt",
+      "recurrence-stable durable marker persistence once M_E is created",
+      "stable effect identity effect:E"
     ],
-    "removed_assumption": "atomic coupling between current-authority validation and the effect:E/marker commit",
+    "removed_assumption": "atomic coupling between effect:E execution and durable marker M_E creation",
     "counterexample_schedule": [
-      "A0 is current; effect:E has not executed and durable marker M_E is absent.",
-      "A0 validates that it is the current authority and retains that successful validation result without an atomic commit-time authority predicate.",
-      "Authority advances from A0 to A1 before A0 performs the effect/marker commit.",
-      "A0 proceeds using the stale earlier validation result; its atomic marker-absent transition observes M_E absent, performs effect:E exactly once, and durably creates M_E.",
-      "A1, now the rightful current authority, validates current authority and later attempts the same transition; it observes M_E present and performs no second effect."
+      "A0 is current, passes the commit-time authority/fence predicate, M_E is absent, and effect:E has not yet executed.",
+      "A0 executes effect:E once.",
+      "A0 crashes before durable marker M_E is created; the external/nontransactional effect remains observable while M_E remains absent.",
+      "On retry, a current claimant (A0 if still current, or A1 after a legitimate authority turnover) passes the then-current commit-time authority/fence predicate and observes M_E absent.",
+      "The retry executes effect:E again, producing a duplicate effect, and then creates durable marker M_E.",
+      "Later retries observe M_E present and are suppressed, but the duplicate has already occurred."
     ],
-    "duplicate_effect_search": "No duplicate effect is required for failure. The durable marker still enforces at-most-once effect identity E, so the later A1 attempt is suppressed.",
-    "authority_check": "Current-authority-only execution fails despite the presence of a fencing/current-authority validation step, because that validation is a TOCTOU-prone precheck rather than part of the commit predicate. Stale A0 becomes the unique writer after A1 is current.",
+    "duplicate_effect_search": "A duplicate effect is exhibited in the crash window because the first effect survives while the idempotency marker does not yet exist.",
+    "authority_check": "Current-authority-only execution can remain satisfied for both attempts: each actor may be legitimately current at its own commit-time fence check. The failure is therefore distinct from stale-authority TOCTOU and is caused by the non-atomic effect/marker boundary.",
     "result": {
-      "classification": "negative-control_toctou-stale-authority-effect-without-duplicate",
-      "duplicate_effect_exhibited": false,
-      "cross_recurrence_at_most_once_preserved": true,
-      "recurrence_stable_marker_preserved": true,
-      "authority_validation_present": true,
-      "authority_validation_atomic_with_commit": false,
-      "stale_predecessor_reentry_excluded": false,
-      "current_authority_only_execution_preserved": false,
-      "atomic_persistent_idempotency_sufficient_for_duplicate_suppression": true,
-      "precommit_authority_check_sufficient_for_authority_correctness": false,
-      "commit_time_fencing_or_equivalent_atomic_current_authority_predicate_needed_under_this_model": true
+      "classification": "negative-control_crash-window-duplicate-with-valid-commit-time-fencing",
+      "duplicate_effect_exhibited": true,
+      "cross_recurrence_at_most_once_preserved": false,
+      "recurrence_stable_marker_preserved_after_creation": true,
+      "commit_time_authority_validation_present": true,
+      "stale_predecessor_reentry_required_for_failure": false,
+      "current_authority_only_execution_may_remain_preserved": true,
+      "atomic_effect_marker_coupling_present": false,
+      "durable_marker_alone_sufficient_for_exactly_once_effect": false,
+      "commit_time_fencing_alone_sufficient_for_duplicate_suppression": false,
+      "transactional_or_equivalent_recoverable_effect_protocol_needed_under_this_model": true
     }
   },
   "observations": [
-    "Adding a current-authority check does not repair the stale-winner failure when the check can become stale before commit.",
-    "Durable idempotency still prevents a duplicate effect, so duplicate suppression remains intact while authority correctness fails.",
-    "The distinction from the previous fixture is TOCTOU: authority validation exists, but its result is not coupled to the write that consumes the unique effect opportunity."
+    "Restoring commit-time fencing removes the prior stale-authority defect but does not close the crash window between a nontransactional effect and durable idempotency-marker creation.",
+    "A durable marker prevents duplicates only after it exists; if effect:E survives a crash that occurs before marker persistence, a later valid current claimant can repeat the effect without violating authority fencing.",
+    "This separates two independent safety dimensions: authority correctness needs commit-time fencing, while duplicate suppression across crashes needs atomic effect/marker coupling or an equivalent recoverable protocol."
   ],
-  "inference": "Within this exact abstract model, authority validation must be enforced at the effect/marker commit boundary, or by an equivalent atomic epoch/fence predicate that a stale predecessor cannot satisfy after turnover. A separate earlier validation step plus durable idempotency is insufficient for current-authority-only safety even though it preserves at-most-once effect identity E. This does not establish any concrete Chat-exposed transport, CAS primitive, lease implementation, crash transaction boundary, or real multi-claimant system.",
+  "inference": "Within this exact abstract model, true exactly-once useful effects cannot be inferred from durable idempotency plus commit-time fencing when the useful effect is nontransactional relative to marker persistence. A concrete accepted mechanism must either atomically commit the effect and durable idempotency state, make the effect itself intrinsically idempotent under a stable effect key, or provide a recoverable protocol whose crash states cannot repeat or lose the intended effect. This does not establish any concrete Chat-exposed transport, CAS primitive, transaction facility, lease implementation, or real multi-claimant system.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed primitive that atomically couples current-authority/fence validation with the durable idempotent commit remains unverified.",
-    "Crash behavior when effect execution and durable marker creation are not atomic remains unverified.",
-    "A next local negative control should restore commit-time authority/fence validation and then remove atomic coupling between effect execution and marker persistence to test crash/retry duplicate risk separately from stale-authority risk."
+    "A concrete allowed zero-cost quota-independent Chat-exposed primitive or protocol that couples current-authority fencing with crash-safe idempotent effect execution remains unverified.",
+    "Reservation-before-effect protocols may prevent duplicates but can lose the effect when a crash occurs after reservation and before execution; that loss-mode negative control remains untested in the current bounded slice.",
+    "A next local negative control should pre-create/reserve the durable effect marker before effect execution, retain commit-time fencing, then crash after reservation but before effect:E to test whether duplicate avoidance is traded for permanent lost-effect risk."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -104,5 +103,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that restores commit-time current-authority/fence validation and durable marker persistence but removes atomic coupling between effect:E execution and marker creation, then test a crash/retry schedule for duplicate-effect risk while preserving the stale-authority distinction. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive that atomically combines durable idempotency and current-authority fencing at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice is still active, execute exactly one bounded self-local negative-control replay that retains commit-time authority/fence validation and pre-creates/reserves durable marker M_E before effect:E, then crash after reservation but before effect execution to test permanent lost-effect risk and whether a safe recovery rule reintroduces duplicates. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight zero-cost quota-independent primitive/protocol against both established failure dimensions: stale-authority TOCTOU and crash-window effect/marker decoupling. Persist/read back one checkpoint with exact tested scope and a new exact continuation, then return recurring-open."
 }
