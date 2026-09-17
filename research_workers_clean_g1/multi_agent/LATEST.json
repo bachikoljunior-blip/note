@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T08:28:13+09:00",
+  "updated_at": "2026-09-17T09:28:31+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "b9c65b58c2faae1bec75333ccbda347b59f9ce47",
+  "previous_latest_blob": "1a8197dcdd5b6337925511fc7999cf928d486e49",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,64 +20,66 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main_ref",
-    "authority_main_sha": "c316c4d9078047f6451e4703bc36e1a077e32ce5",
+    "transport_mode": "sha_ref_exact",
+    "authority_main_sha": "e55e0c8bad3048a51fd8c7857b2c314203014408",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260917T082813JST.json",
-    "blob": "94c6a21a33f63450cc956a3d900d773e179ee82c",
-    "commit": "59a1e1f7a7f6ef31a33ef78689c756462e94f0da",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260917T092831JST.json",
+    "blob": "b7ae1775700f82a03aa883c5507ecf3258d8790a",
+    "commit": "c0419d92128e8d810e546c33f2430e1d30fdab29",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "b9c65b58c2faae1bec75333ccbda347b59f9ce47"
+    "latest_input_blob": "1a8197dcdd5b6337925511fc7999cf928d486e49"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "finite-authority-sequence-induction-falsification-replay",
-  "tested_scope": "Exactly one deterministic self-local induction/falsification replay generalizing the prior finite D-to-E unknown-ack turnover fixture to an arbitrary but finite authority sequence A0..An. Each Ai has a distinct non-reusable fence+token identity; all attempts use one stable effect identity effect:E and one durable idempotency marker. The modeled primitive is unchanged: commit effect:E iff current authority identity equals caller expected {fence,token} and effect:E is uncommitted, with authority predicate evaluation, effect mutation and durable idempotency-marker mutation indivisible and serialized with authority turnover. Turnovers are finite and preserve effect:E plus its marker. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "turnover-effect-nonserialization-negative-control-replay",
+  "tested_scope": "Exactly one deterministic self-local negative-control replay of the prior arbitrary-finite-turnover abstract claim/idempotency model. This replay removes exactly one assumption: authority turnover is no longer serialized with an in-flight authority-checked effect attempt. All other assumptions are retained: each authority Ai has a distinct non-reusable {Fi,Ti}; effect identity effect:E is stable; effect:E plus its durable idempotency marker are committed atomically with an uncommitted check at the effect commit point; the marker persists across turnover. The replay permits an attempt to snapshot a matching authority identity before turnover and reach the effect commit point after turnover without revalidating current authority. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
   "fixture": {
-    "authority_sequence": "A0..An, n finite",
-    "authority_identity_rule": "each Ai uses a distinct non-reusable {Fi,Ti}",
-    "effect_identity": "effect:E",
-    "atomic_effect_primitive": "commit effect:E iff current claim identity == expected {fence,token} AND effect:E is uncommitted; authority predicate, effect mutation and durable idempotency marker are one indivisible operation serialized with claim-authority turnover",
-    "turnover_rule": "Ai-to-A(i+1) is serialized with the same primitive and never clears effect:E or its marker",
-    "inductive_invariant": [
-      "I1: effect:E is committed at most once.",
-      "I2: after turnover from Ai to A(i+1), every delayed/retried attempt from A0..Ai fails the current-authority identity predicate before effect mutation.",
-      "I3: if effect:E was committed before a turnover, its durable marker survives every later turnover and all successor repairs become no-ops with respect to the effect."
+    "removed_assumption": "turnover/effect serialization",
+    "retained_assumptions": [
+      "distinct non-reusable authority identities",
+      "stable effect identity effect:E",
+      "atomic uncommitted-check plus effect:E plus durable idempotency-marker commit",
+      "durable marker persistence across turnover"
     ],
-    "base_case": "A0 alone satisfies I1 because the atomic primitive checks uncommitted and writes the effect plus marker indivisibly.",
-    "induction_step": "Assume I1-I3 hold through current Ai. If Ai commits before Ai-to-A(i+1), the persistent marker makes all later repairs no-op and distinct identities reject stale A0..Ai. If turnover linearizes first, every Ai attempt becomes stale and is rejected; A(i+1) may commit once if effect:E is still uncommitted. Therefore I1-I3 hold after the turnover.",
-    "falsification_attempt": "Search the finite two-order composition for a schedule that yields two commits while preserving all stated assumptions. None exists: any pre-turnover commit sets the persistent marker, and any post-turnover stale attempt fails the authority predicate before mutation. A duplicate requires violating at least one modeled assumption (for example non-serialized turnover, reusable authority identity, non-atomic effect+marker mutation, or marker loss).",
-    "liveness_case": "If no earlier authority committed effect:E before the final authority An becomes current, exact-once completion additionally requires An to remain current long enough for at least one An repair attempt to reach and linearize at the primitive. Infinite turnover or perpetual failure to reach the primitive is outside the proved liveness scope.",
+    "counterexample_schedule": [
+      "A0 is current; effect:E is uncommitted.",
+      "An A0 attempt snapshots current identity A0 and observes effect:E uncommitted.",
+      "Authority turns over to A1 while the A0 attempt remains in flight.",
+      "An A1 repair attempt may also begin while effect:E is still uncommitted.",
+      "Because turnover is not serialized with the in-flight A0 attempt, A0 can reach the atomic effect commit point after A1 is already current.",
+      "If A0 linearizes first, A0 commits effect:E plus its marker even though A0 is stale; the later A1 commit attempt observes the marker and becomes a no-op. If A1 linearizes first, A0 becomes a no-op."
+    ],
+    "duplicate_effect_search": "No two-commit schedule exists under this exact one-assumption removal because every effect commit still performs an atomic uncommitted check and writes the persistent effect marker in the same indivisible effect operation. Whichever contender linearizes first makes every later contender a no-op.",
+    "stronger_safety_falsification": "Current-authority-only effect ownership is falsified: the schedule where A0 snapshots before turnover and commits after turnover allows a stale predecessor to produce the sole effect after A1 is current.",
     "result": {
-      "classification": "abstract_arbitrary-finite-turnover_positive-control_with_liveness-boundary",
-      "at_most_once_effect_for_any_finite_n_under_assumptions": true,
-      "stale_predecessor_reentry_excluded_after_each_turnover": true,
-      "eventual_single_completion_if_final_authority_stabilizes_and_one_final_repair_linearizes": true,
-      "proof_scope": "arbitrary finite turnover count only under the modeled atomicity, serialization, persistence and non-reusable-identity assumptions",
-      "minimum_final_liveness_assumption": "after the last turnover, if effect:E is still uncommitted, final authority An remains current until at least one An repair attempt reaches and linearizes at the primitive"
+      "classification": "negative-control_no-duplicate_but-stale-authority-commit",
+      "duplicate_effect_exhibited": false,
+      "at_most_once_effect_preserved_under_retained_atomic_marker_assumption": true,
+      "stale_predecessor_reentry_excluded": false,
+      "turnover_serialization_necessary_for_at_most_once_under_this_model": false,
+      "turnover_serialization_or_commit-time-authority-revalidation_needed_for_current-authority-only-effect": true
     }
   },
   "observations": [
-    "The prior two-order argument composes inductively across every finite turnover when the same serialized atomic primitive and persistent stable effect marker are preserved.",
-    "Safety (at-most-once) does not require any particular authority to receive a successful acknowledgement; unknown acknowledgements are absorbed by the persistent effect marker.",
-    "Liveness is separate from safety: if no earlier authority committed, the final authority must eventually get one linearizing repair opportunity while still current.",
-    "No duplicate schedule was found without violating at least one explicit modeled assumption."
+    "Removing only turnover/effect serialization does not by itself break at-most-once effect safety while the atomic durable idempotency marker remains intact.",
+    "The same removal does break the stronger claim that only the currently authorized claimant can produce the effect: a predecessor can snapshot authority before turnover and commit afterward.",
+    "Therefore turnover serialization was sufficient but not necessary for duplicate suppression in the prior finite-sequence proof; it was necessary there for stale-predecessor exclusion unless replaced by commit-time authority revalidation coupled to the effect commit."
   ],
-  "inference": "Within this exact abstract model, at-most-once safety generalizes from the prior finite turnover fixtures to any finite sequence A0..An by induction. Eventual exactly-once completion additionally needs eventual authority stability plus one successful final repair linearization when the effect remains uncommitted. This is not evidence for infinite churn, a concrete Chat-exposed transport, real contention, crash-consistent authority turnover, or atomicity of any repository/API surface.",
+  "inference": "Within this exact abstract model, the persistent atomic effect marker is doing the decisive work for at-most-once suppression, while serialization with turnover enforces authority correctness. This narrows the assumption set: duplicate prevention and current-authority ownership are separable properties. The result does not establish any concrete repository/API primitive, crash consistency, fork exclusion, infinite-turnover liveness, or real multi-claimant behavior.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed transport exposing a durable atomic conditional mutation serialized with authority turnover remains unverified.",
+    "A concrete allowed zero-cost quota-independent Chat-exposed transport exposing the required durable conditional mutation semantics remains unverified.",
     "Atomic single-winner claim acquisition and turnover keyed by stable effect identity remain unverified on a concrete allowed transport.",
     "Fork exclusion and crash consistency under real multi-claimant contention remain unverified.",
-    "The modeled assumptions should be individually negative-controlled, especially serialization of turnover with effect mutation and non-reusable authority identity, to identify which are necessary rather than merely sufficient.",
-    "No liveness guarantee is established under infinite turnover or if the final authority never reaches the primitive."
+    "Atomicity of the uncommitted check plus effect mutation plus durable marker should be negative-controlled next because the current replay shows that assumption, rather than turnover serialization alone, is central to duplicate suppression.",
+    "If turnover is not serialized, commit-time authority revalidation coupled atomically to effect commit is required to recover current-authority-only effect ownership in this model."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -100,5 +102,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that removes exactly one assumption from the finite-sequence result, prioritizing turnover/effect non-serialization, and exhibit or rule out a duplicate-effect schedule with exact scope. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive against the required serialized conditional authority+effect+idempotency semantics at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that removes exactly one remaining assumption: atomicity of the uncommitted check plus effect mutation plus durable idempotency-marker commit, while restoring serialized turnover and retaining distinct non-reusable authority identities and marker persistence. Construct two concurrent same-authority repair attempts and exhibit or rule out a duplicate-effect schedule with exact scope. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive against the required conditional authority+effect+idempotency semantics at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
 }
