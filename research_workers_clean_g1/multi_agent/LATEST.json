@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T19:27:19+09:00",
+  "updated_at": "2026-09-17T20:29:34+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "42935b771f254ee8e226c090157a13406d6499c9",
+  "previous_latest_blob": "b5de17422377fed1149b97d477416748054e36ba",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,67 +20,65 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "main_sha_exact_ref",
-    "frozen_main_sha": "fa6b3dd4332e7de7008fd356766a5c723b8aac5b",
+    "transport_mode": "sha_pinned_main_ref",
+    "frozen_main_sha": "feca2b87037b9b7f690a930a8cbbf4b1e4e559c3",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260917T102719Z_control13.json",
-    "blob": "dc94fbc8f7ebcb8758007ce1743b478d089d41fc",
-    "commit": "381c056a93127b40582e318c44f06cc61d01c500",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260917T202934+0900_feca2b87.json",
+    "blob": "304d27c653db4ade42e7e5a9a896c5089b54bf71",
+    "commit": "78e00c01eb2f60f9e39eacbe53ec2fb912463e42",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "42935b771f254ee8e226c090157a13406d6499c9"
+    "latest_input_blob": "b5de17422377fed1149b97d477416748054e36ba"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "intrinsic-idempotency-key-positive-control",
-  "tested_scope": "Exactly one deterministic self-local positive-control replay continuing the immediately preceding reservation/effect ambiguity fixture. The replay assumes a stable logical effect identity effect:E, a fixed payload P, a current-authority/fence predicate checked immediately before every external effect attempt and local marker write, and an intrinsically idempotent durable effect primitive apply_once(effect:E,P) whose first accepted call performs the useful external effect once and durably binds the result to effect:E, while every later same-key/same-payload call returns the bound result without performing a second external effect. The local done marker remains nontransactional with the external effect. The replay covers a crash after the external effect is accepted but before the local done marker, followed by a legitimate authority-turnover retry with the same stable effect key, plus a stale-old-claimant resume after turnover. No concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "stable-idempotency-key-reuse-aba-negative-control",
+  "tested_scope": "Exactly one deterministic self-local negative-control replay continuing the prior intrinsic-idempotency-key positive control. The replay models two logically distinct intended effect generations G0 and G1 separated by legitimate authority turnover. G0 uses current claimant A0, stable key K and payload P0 and is durably accepted once. After turnover, current claimant A1 legitimately intends distinct generation G1 but incorrectly reuses K. The replay tests (a) same-key/different-payload P1 under a key-only or return-first-result apply_once behavior, (b) same-key/different-payload under an explicit payload-binding mismatch rejection behavior, and (c) logically distinct G1 with the same payload P0, where payload equality cannot distinguish generations. It then checks whether generation-scoped effect identity K1=(logical_effect,G1) removes the false-suppression/ABA ambiguity. No concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or optional second semantic leaf is modeled.",
   "fixture": {
     "retained_assumptions": [
-      "commit-time current-authority or fencing predicate is checked immediately before each effect attempt and before the local done marker write",
-      "stable logical effect identity effect:E and stable payload P across legitimate retries",
-      "apply_once(effect:E,P) durably records the successful effect result by key and is intrinsically idempotent for later same-key/same-payload calls",
-      "same-key/different-payload behavior is outside this replay and remains unresolved"
+      "current-authority or fencing predicate is checked immediately before each effect attempt and local marker write",
+      "apply_once is durable and intrinsically idempotent for repeated attempts carrying the same key within one intended logical effect generation",
+      "G0 and G1 are semantically distinct intended effect generations even if their payload bytes can be equal"
     ],
-    "protocol_under_test": "current-authority check -> apply_once(stable_effect_key,payload) -> nontransactional local done marker",
-    "positive_control_schedule": [
-      "A0 is current, passes the authority/fence predicate, and has no local done marker for effect:E.",
-      "A0 calls apply_once(effect:E,P); the primitive accepts the call, performs the useful external effect exactly once, and durably binds its result to effect:E.",
-      "A0 crashes after the external effect/result binding but before writing the local done marker.",
-      "Authority legitimately turns over to A1.",
-      "A1 passes the then-current authority/fence predicate, observes the local done marker still absent, and retries apply_once(effect:E,P).",
-      "The retry returns the already-bound result for effect:E and performs no second external effect.",
-      "A1 writes the local done marker after rechecking current authority/fence.",
-      "If stale A0 later resumes, it fails the current authority/fence predicate before any further effect attempt or marker write."
+    "negative_control_schedule": [
+      "A0 is current for G0 and apply_once(K,P0) performs the G0 effect once and durably binds K to its result.",
+      "Authority legitimately turns over to A1 and a distinct intended generation G1 becomes current.",
+      "Buggy key discipline reuses K for G1 instead of allocating a generation-scoped identity.",
+      "Variant V1: A1 calls apply_once(K,P1) with P1 != P0. If the primitive is key-only or returns the first bound result without validating payload, G1 is falsely suppressed and the G0 result is returned for a distinct intended effect.",
+      "Variant V2: if the primitive durably binds payload and rejects same-key/different-payload, the silent false-suppression is converted into a detectable conflict, but G1 still cannot progress until a fresh logical effect identity is chosen.",
+      "Variant V3: A1 legitimately intends G1 with payload bytes equal to P0 and reuses K. Payload-binding cannot detect the semantic generation change; apply_once(K,P0) returns the G0 result and falsely suppresses G1.",
+      "Control: A1 instead uses K1=(logical_effect,G1). apply_once(K1,P1_or_P0) is a distinct effect identity and can perform G1 once; repeated retries of G1 collapse on K1. Any stale A0 resume is independently blocked by the current-authority/fence predicate."
     ],
     "result": {
-      "classification": "positive-control_stable-idempotency-key-collapses-crash-retry-duplicate",
-      "external_effect_count_in_tested_history": 1,
-      "retry_after_unknown_local_marker_state_safe_for_duplicate_suppression": true,
-      "legitimate_authority_turnover_retry_collapses_to_existing_effect": true,
-      "stale_old_claimant_effect_attempt_blocked_by_fence": true,
-      "atomic_coupling_between_local_marker_and_external_effect_required_for_duplicate_suppression_in_this_history": false,
-      "lost_effect_exhibited_in_tested_history": false,
+      "classification": "negative-control_key-reuse-causes-false-suppression-aba",
+      "v1_key_only_same_key_different_payload_false_suppression": true,
+      "v2_payload_mismatch_rejection_detects_conflict": true,
+      "v2_payload_binding_alone_restores_liveness": false,
+      "v3_same_payload_distinct_generation_detectable_by_payload_binding": false,
+      "generation_scoped_effect_identity_prevents_tested_false_suppression": true,
+      "fencing_alone_prevents_current_actor_key_reuse_error": false,
       "exactly_once_external_effect_established_beyond_tested_assumptions": false,
       "concrete_chat_exposed_primitive_verified": false
     }
   },
   "observations": [
-    "Replacing an ambiguous local reservation marker with a durable effect-side idempotency key removes the specific crash-after-effect-before-local-marker duplicate window in this tested history: the legitimate retry is allowed, but the external effect count remains one.",
-    "The authority/fence predicate and the effect idempotency key solve different failure classes: fencing rejects stale actors after turnover, while the stable effect key collapses repeated attempts by legitimate current actors after an unknown local completion state.",
-    "The local done marker can lag the external effect without forcing a duplicate in this model because duplicate suppression is anchored at the effect primitive rather than inferred from local marker state."
+    "A stable idempotency key is safe only when its uniqueness domain matches exactly one logical effect generation. Reusing a completed key for a distinct intended generation converts duplicate suppression into false suppression.",
+    "Payload binding is an important integrity check for same-key/different-payload reuse because it can turn a silent wrong-result replay into an explicit conflict, but it is not sufficient to distinguish two distinct generations that legitimately carry identical payload bytes.",
+    "Current-authority fencing and idempotency-key discipline remain orthogonal: fencing blocks stale claimants after turnover, but it cannot stop the legitimate current claimant from reusing an old completed key.",
+    "In this replay, a generation-scoped effect identity or equivalently unique logical effect-instance identifier is required in addition to fencing; payload mismatch rejection is a complementary guard, not a replacement for generation uniqueness."
   ],
-  "inference": "Within this exact abstract model, current-authority fencing plus a durable intrinsically idempotent effect primitive keyed by stable logical effect identity is sufficient to prevent duplicate external effects across the tested crash-after-effect-before-local-marker and legitimate authority-turnover retry history without transactional coupling to the local marker. This is only a conditional positive control: it does not prove that any allowed Chat-exposed primitive provides durable apply-once semantics, does not test same-key/different-payload or key-reuse/ABA behavior, and does not by itself prove eventual liveness or no-loss if repeated crashes prevent any effect attempt from being durably accepted.",
+  "inference": "Within the exact abstract replay, durable apply-once semantics eliminate crash/retry duplicates only if the key is injective over intended logical effect generations. Explicit payload binding should reject same-key/different-payload conflicts, but because distinct generations may share identical payloads, a generation/instance component in the logical effect identity is required to prevent tested ABA-style false suppression. This does not prove a concrete allowed Chat-exposed primitive, key allocator, persistence mechanism, or end-to-end liveness property.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed primitive that exposes durable stable-key idempotency together with current-authority validation remains unverified.",
-    "Same-key/different-payload rejection and logical-key reuse or ABA across distinct effect generations have not been replayed; a bad key discipline could convert safe duplicate suppression into false suppression of a distinct intended effect.",
-    "Eventual no-loss/liveness under crash-before-first-accept and repeated retry interruption remains untested; this positive control establishes duplicate safety only for the exact accepted-first-effect history above."
+    "A concrete allowed zero-cost quota-independent Chat-exposed primitive exposing durable generation-scoped idempotency plus current-authority validation remains unverified.",
+    "Generation/instance identity allocation itself could suffer ABA or collision after state loss; no concrete collision-resistant zero-quota allocator was tested here.",
+    "Eventual no-loss/liveness under crash-before-first-accept, repeated interruption, and rate-limit boundaries remains untested."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -103,5 +101,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice is still active, execute exactly one bounded self-local negative-control replay for stable-key discipline: reuse the same idempotency key across two logically distinct effect generations or payloads under legitimate authority turnover, then test whether explicit payload binding and/or an authority-generation component in the logical effect key is required to prevent false suppression or ABA. Preserve exact tested scope, do not infer any concrete Chat primitive, persist/read back one checkpoint with zero-cost/zero-finite-quota assessment and a nonempty continuation, and return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice is still active, execute exactly one bounded self-local liveness negative-control replay for crash-before-first-accept and repeated interruption using generation-scoped keys: test whether retry-until-accepted plus current-authority fencing avoids loss without creating duplicate effects, and identify the exact fairness/retry assumptions that remain necessary. Preserve exact tested scope, do not infer any concrete Chat primitive, persist/read back one checkpoint with zero-cost/zero-finite-quota assessment and a nonempty continuation, and return recurring-open without a second leaf."
 }
