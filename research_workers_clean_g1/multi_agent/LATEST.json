@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T09:28:31+09:00",
+  "updated_at": "2026-09-17T10:28:23+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "1a8197dcdd5b6337925511fc7999cf928d486e49",
+  "previous_latest_blob": "0162e343fc078da8046cafe6ed422f840cc7727e",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,66 +20,65 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_ref_exact",
-    "authority_main_sha": "e55e0c8bad3048a51fd8c7857b2c314203014408",
+    "transport_mode": "exact_blob_two_pass",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260917T092831JST.json",
-    "blob": "b7ae1775700f82a03aa883c5507ecf3258d8790a",
-    "commit": "c0419d92128e8d810e546c33f2430e1d30fdab29",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260917T102823+0900.json",
+    "blob": "68cf77927dc361b97713dd3f1b122695d0ea61f8",
+    "commit": "3ad241119e166229540619213872cb0060484e70",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "1a8197dcdd5b6337925511fc7999cf928d486e49"
+    "latest_input_blob": "0162e343fc078da8046cafe6ed422f840cc7727e"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "turnover-effect-nonserialization-negative-control-replay",
-  "tested_scope": "Exactly one deterministic self-local negative-control replay of the prior arbitrary-finite-turnover abstract claim/idempotency model. This replay removes exactly one assumption: authority turnover is no longer serialized with an in-flight authority-checked effect attempt. All other assumptions are retained: each authority Ai has a distinct non-reusable {Fi,Ti}; effect identity effect:E is stable; effect:E plus its durable idempotency marker are committed atomically with an uncommitted check at the effect commit point; the marker persists across turnover. The replay permits an attempt to snapshot a matching authority identity before turnover and reach the effect commit point after turnover without revalidating current authority. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "atomic-check-effect-marker-negative-control-replay",
+  "tested_scope": "Exactly one deterministic self-local negative-control replay of the prior abstract claim/idempotency model. This replay removes exactly one assumption: atomicity of the uncommitted check plus effect mutation plus durable idempotency-marker commit. Serialized authority turnover is restored and retained; each authority has a distinct non-reusable identity; effect identity effect:E is stable; the durable marker persists once written. Two concurrent repair attempts under the same current authority A0 are permitted to interleave the uncommitted check, effect mutation, and marker write as separate steps. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
   "fixture": {
-    "removed_assumption": "turnover/effect serialization",
+    "removed_assumption": "atomic uncommitted-check plus effect mutation plus durable marker commit",
     "retained_assumptions": [
+      "serialized authority turnover",
       "distinct non-reusable authority identities",
       "stable effect identity effect:E",
-      "atomic uncommitted-check plus effect:E plus durable idempotency-marker commit",
-      "durable marker persistence across turnover"
+      "durable marker persistence after marker write"
     ],
     "counterexample_schedule": [
-      "A0 is current; effect:E is uncommitted.",
-      "An A0 attempt snapshots current identity A0 and observes effect:E uncommitted.",
-      "Authority turns over to A1 while the A0 attempt remains in flight.",
-      "An A1 repair attempt may also begin while effect:E is still uncommitted.",
-      "Because turnover is not serialized with the in-flight A0 attempt, A0 can reach the atomic effect commit point after A1 is already current.",
-      "If A0 linearizes first, A0 commits effect:E plus its marker even though A0 is stale; the later A1 commit attempt observes the marker and becomes a no-op. If A1 linearizes first, A0 becomes a no-op."
+      "A0 is current; effect:E is uncommitted and its marker is absent.",
+      "Repair attempt R1 under A0 checks the marker and observes effect:E uncommitted.",
+      "Repair attempt R2 under the same still-current A0 checks the marker before R1 writes it and also observes effect:E uncommitted.",
+      "R1 performs effect:E but has not yet written the marker.",
+      "R2 performs effect:E before either attempt writes the marker.",
+      "R1 writes the durable marker for effect:E.",
+      "R2 writes the same durable marker; marker persistence now prevents later attempts but cannot undo the second already-performed effect."
     ],
-    "duplicate_effect_search": "No two-commit schedule exists under this exact one-assumption removal because every effect commit still performs an atomic uncommitted check and writes the persistent effect marker in the same indivisible effect operation. Whichever contender linearizes first makes every later contender a no-op.",
-    "stronger_safety_falsification": "Current-authority-only effect ownership is falsified: the schedule where A0 snapshots before turnover and commits after turnover allows a stale predecessor to produce the sole effect after A1 is current.",
+    "duplicate_effect_search": "A duplicate-effect schedule exists: both same-authority attempts pass the separated uncommitted check and both perform effect:E before either marker write linearizes.",
+    "authority_check": "Current-authority-only ownership is preserved in this replay because serialized turnover keeps A0 current for both effect executions; the failure is duplicate suppression, not stale-authority execution.",
     "result": {
-      "classification": "negative-control_no-duplicate_but-stale-authority-commit",
-      "duplicate_effect_exhibited": false,
-      "at_most_once_effect_preserved_under_retained_atomic_marker_assumption": true,
-      "stale_predecessor_reentry_excluded": false,
-      "turnover_serialization_necessary_for_at_most_once_under_this_model": false,
-      "turnover_serialization_or_commit-time-authority-revalidation_needed_for_current-authority-only-effect": true
+      "classification": "negative-control_duplicate-effect-with-nonatomic-check-effect-marker",
+      "duplicate_effect_exhibited": true,
+      "at_most_once_effect_preserved": false,
+      "stale_predecessor_reentry_excluded": true,
+      "serialized_turnover_sufficient_to_prevent_duplicate": false,
+      "atomic_combined_check_effect_marker_or_equivalent_conditional_idempotency_needed_under_this_model": true
     }
   },
   "observations": [
-    "Removing only turnover/effect serialization does not by itself break at-most-once effect safety while the atomic durable idempotency marker remains intact.",
-    "The same removal does break the stronger claim that only the currently authorized claimant can produce the effect: a predecessor can snapshot authority before turnover and commit afterward.",
-    "Therefore turnover serialization was sufficient but not necessary for duplicate suppression in the prior finite-sequence proof; it was necessary there for stale-predecessor exclusion unless replaced by commit-time authority revalidation coupled to the effect commit."
+    "Removing only the atomic check/effect/marker assumption is sufficient to create a two-attempt duplicate-effect schedule even with perfectly serialized authority turnover.",
+    "Durable marker persistence after the fact is insufficient: the marker must participate in the same indivisible winner-decision/effect boundary, or the effect primitive itself must provide equivalent conditional idempotency.",
+    "This separates authority correctness from duplicate suppression: serialization protects who may act, while atomic conditional effect+idempotency semantics protect how many times the effect can occur."
   ],
-  "inference": "Within this exact abstract model, the persistent atomic effect marker is doing the decisive work for at-most-once suppression, while serialization with turnover enforces authority correctness. This narrows the assumption set: duplicate prevention and current-authority ownership are separable properties. The result does not establish any concrete repository/API primitive, crash consistency, fork exclusion, infinite-turnover liveness, or real multi-claimant behavior.",
+  "inference": "Within this exact abstract model, an atomic winner decision coupled to the effect and durable idempotency state, or a behaviorally equivalent conditional/idempotent effect primitive, is necessary for at-most-once execution under same-authority concurrent repair. This does not establish availability of such a primitive on any concrete Chat-exposed repository/API transport, crash consistency, fork exclusion, infinite-turnover liveness, or real multi-claimant behavior.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed transport exposing the required durable conditional mutation semantics remains unverified.",
-    "Atomic single-winner claim acquisition and turnover keyed by stable effect identity remain unverified on a concrete allowed transport.",
-    "Fork exclusion and crash consistency under real multi-claimant contention remain unverified.",
-    "Atomicity of the uncommitted check plus effect mutation plus durable marker should be negative-controlled next because the current replay shows that assumption, rather than turnover serialization alone, is central to duplicate suppression.",
-    "If turnover is not serialized, commit-time authority revalidation coupled atomically to effect commit is required to recover current-authority-only effect ownership in this model."
+    "A concrete allowed zero-cost quota-independent Chat-exposed transport exposing an atomic conditional mutation or behaviorally equivalent idempotent effect primitive remains unverified.",
+    "Crash consistency if failure occurs between the external effect and durable marker remains unverified unless the effect and marker share one transactional boundary.",
+    "Fork exclusion and real multi-claimant contention remain unverified.",
+    "The next negative control should test marker persistence loss/replay across recurrence while restoring atomic conditional commit semantics, to distinguish crash/reconstruction safety from same-run race safety."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -102,5 +101,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that removes exactly one remaining assumption: atomicity of the uncommitted check plus effect mutation plus durable idempotency-marker commit, while restoring serialized turnover and retaining distinct non-reusable authority identities and marker persistence. Construct two concurrent same-authority repair attempts and exhibit or rule out a duplicate-effect schedule with exact scope. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive against the required conditional authority+effect+idempotency semantics at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that restores atomic conditional commit semantics but removes marker persistence across recurrence/crash reconstruction, then exhibit or rule out duplicate effect:E after a later invocation reconstructs state with the marker absent. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive against conditional authority+effect+idempotency semantics at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
 }
