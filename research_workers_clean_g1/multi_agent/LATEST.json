@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T10:28:23+09:00",
+  "updated_at": "2026-09-17T11:31:31+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "0162e343fc078da8046cafe6ed422f840cc7727e",
+  "previous_latest_blob": "324ce3ab7182846ddcc631799180834f28200791",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -25,60 +25,59 @@
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260917T102823+0900.json",
-    "blob": "68cf77927dc361b97713dd3f1b122695d0ea61f8",
-    "commit": "3ad241119e166229540619213872cb0060484e70",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260917T113131JST.json",
+    "blob": "969f4f8a691c9e6ee1ac183949349482f5be5c32",
+    "commit": "b3989f47ade2b46c3320e48ec775928483ee7c54",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "0162e343fc078da8046cafe6ed422f840cc7727e"
+    "latest_input_blob": "324ce3ab7182846ddcc631799180834f28200791"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "atomic-check-effect-marker-negative-control-replay",
-  "tested_scope": "Exactly one deterministic self-local negative-control replay of the prior abstract claim/idempotency model. This replay removes exactly one assumption: atomicity of the uncommitted check plus effect mutation plus durable idempotency-marker commit. Serialized authority turnover is restored and retained; each authority has a distinct non-reusable identity; effect identity effect:E is stable; the durable marker persists once written. Two concurrent repair attempts under the same current authority A0 are permitted to interleave the uncommitted check, effect mutation, and marker write as separate steps. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "atomic-commit-with-marker-persistence-loss-negative-control",
+  "tested_scope": "Exactly one deterministic self-local negative-control replay of the prior abstract claim/idempotency model. Same-run atomic conditional commit semantics are restored: marker absence check, effect:E, and marker creation occur as one indivisible winner transition. Serialized authority turnover and distinct non-reusable authority identities are retained. The single removed assumption is marker persistence across recurrence/crash reconstruction: effect:E remains externally observable after the first successful run, but a later recurring invocation reconstructs local durable state with the marker absent. No public source, O/downstream/other-worker state, shared ledger, scheduler mutation, external coordinator, richer-mode arbitration, hosted compute, concrete transport, or optional second semantic leaf is modeled.",
   "fixture": {
-    "removed_assumption": "atomic uncommitted-check plus effect mutation plus durable marker commit",
-    "retained_assumptions": [
+    "restored_assumptions": [
+      "atomic conditional marker-absent check plus effect:E plus marker creation within each invocation",
       "serialized authority turnover",
       "distinct non-reusable authority identities",
-      "stable effect identity effect:E",
-      "durable marker persistence after marker write"
+      "stable effect identity effect:E"
     ],
+    "removed_assumption": "marker persistence across recurrence/crash reconstruction",
     "counterexample_schedule": [
-      "A0 is current; effect:E is uncommitted and its marker is absent.",
-      "Repair attempt R1 under A0 checks the marker and observes effect:E uncommitted.",
-      "Repair attempt R2 under the same still-current A0 checks the marker before R1 writes it and also observes effect:E uncommitted.",
-      "R1 performs effect:E but has not yet written the marker.",
-      "R2 performs effect:E before either attempt writes the marker.",
-      "R1 writes the durable marker for effect:E.",
-      "R2 writes the same durable marker; marker persistence now prevents later attempts but cannot undo the second already-performed effect."
+      "A0 is current; effect:E is not yet recorded and the marker is absent.",
+      "Invocation I0 executes one atomic conditional transition: it observes marker absent, performs effect:E, and creates the marker; no same-run competitor can also win.",
+      "A later recurrence/crash reconstruction preserves the already-produced external effect:E but reconstructs local state with the marker absent.",
+      "Authority advances serially to distinct current identity A1.",
+      "Invocation I1 executes the same atomic conditional transition under A1, again observes marker absent, performs effect:E a second time, and recreates the marker."
     ],
-    "duplicate_effect_search": "A duplicate-effect schedule exists: both same-authority attempts pass the separated uncommitted check and both perform effect:E before either marker write linearizes.",
-    "authority_check": "Current-authority-only ownership is preserved in this replay because serialized turnover keeps A0 current for both effect executions; the failure is duplicate suppression, not stale-authority execution.",
+    "duplicate_effect_search": "A cross-recurrence duplicate schedule exists even though each individual invocation has perfect atomic conditional commit semantics, because loss of the durable idempotency marker makes the later invocation indistinguishable from a never-executed state.",
+    "authority_check": "Current-authority-only execution is preserved: I0 executes under current A0 and I1 executes under current A1 after serialized turnover. The failure is reconstruction/idempotency persistence, not stale-authority execution or same-run race.",
     "result": {
-      "classification": "negative-control_duplicate-effect-with-nonatomic-check-effect-marker",
+      "classification": "negative-control_duplicate-effect-with-marker-loss-across-recurrence",
       "duplicate_effect_exhibited": true,
-      "at_most_once_effect_preserved": false,
+      "same_invocation_at_most_once_preserved": true,
+      "cross_recurrence_at_most_once_preserved": false,
       "stale_predecessor_reentry_excluded": true,
-      "serialized_turnover_sufficient_to_prevent_duplicate": false,
-      "atomic_combined_check_effect_marker_or_equivalent_conditional_idempotency_needed_under_this_model": true
+      "atomic_same_run_commit_sufficient_for_cross_run_exactly_once": false,
+      "persistent_idempotency_state_or_external_stable_idempotent_effect_needed_under_this_model": true
     }
   },
   "observations": [
-    "Removing only the atomic check/effect/marker assumption is sufficient to create a two-attempt duplicate-effect schedule even with perfectly serialized authority turnover.",
-    "Durable marker persistence after the fact is insufficient: the marker must participate in the same indivisible winner-decision/effect boundary, or the effect primitive itself must provide equivalent conditional idempotency.",
-    "This separates authority correctness from duplicate suppression: serialization protects who may act, while atomic conditional effect+idempotency semantics protect how many times the effect can occur."
+    "Restoring perfect same-run atomicity eliminates the prior two-attempt race but does not prevent a later recurrence from repeating an already-visible effect when its durable marker is lost.",
+    "Serialized authority turnover is orthogonal to this failure: both executions can be authority-correct while the effect is duplicated across generations.",
+    "For cross-run at-most-once behavior, either the idempotency decision must survive recurrence/crash reconstruction or the effect primitive itself must deduplicate a stable effect identity across runs independently of local marker recovery."
   ],
-  "inference": "Within this exact abstract model, an atomic winner decision coupled to the effect and durable idempotency state, or a behaviorally equivalent conditional/idempotent effect primitive, is necessary for at-most-once execution under same-authority concurrent repair. This does not establish availability of such a primitive on any concrete Chat-exposed repository/API transport, crash consistency, fork exclusion, infinite-turnover liveness, or real multi-claimant behavior.",
+  "inference": "Within this exact abstract model, same-invocation atomic check/effect/marker semantics are insufficient for cross-recurrence at-most-once execution if marker state can disappear while the external effect persists. A recurrence-stable durable idempotency record or behaviorally equivalent external idempotent effect keyed by a stable effect identity is necessary. This does not establish any concrete Chat-exposed transport, storage durability guarantee, crash transaction boundary, fork exclusion, or real multi-claimant implementation.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": false,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed transport exposing an atomic conditional mutation or behaviorally equivalent idempotent effect primitive remains unverified.",
-    "Crash consistency if failure occurs between the external effect and durable marker remains unverified unless the effect and marker share one transactional boundary.",
-    "Fork exclusion and real multi-claimant contention remain unverified.",
-    "The next negative control should test marker persistence loss/replay across recurrence while restoring atomic conditional commit semantics, to distinguish crash/reconstruction safety from same-run race safety."
+    "A concrete allowed zero-cost quota-independent Chat-exposed primitive providing recurrence-stable conditional idempotency remains unverified.",
+    "Crash consistency where an external effect commits but local marker persistence fails remains unresolved unless both share one transactional boundary or the effect is independently idempotent.",
+    "Fork exclusion and stale-authority behavior remain unverified under loss of serialized authority turnover.",
+    "A next negative control should restore atomic commit and marker persistence, then remove serialized authority turnover/fencing to isolate stale-authority execution from duplicate-suppression correctness."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -87,7 +86,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -101,5 +100,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that restores atomic conditional commit semantics but removes marker persistence across recurrence/crash reconstruction, then exhibit or rule out duplicate effect:E after a later invocation reconstructs state with the marker absent. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive against conditional authority+effect+idempotency semantics at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice still forbids public/external research, execute exactly one bounded self-local negative-control replay that restores atomic conditional commit and recurrence-stable marker persistence but removes serialized authority turnover/fencing, then test whether a stale predecessor can execute effect:E after a newer authority becomes current while preserving exact distinction between stale-authority safety and duplicate suppression. If recovery mode has been retired and one public-source leaf is allowed, instead verify one concrete Chat-exposed lightweight repository/API primitive for stable conditional idempotency across recurrence at zero optional monthly quota and zero incremental cost. Persist/read back one checkpoint and a new exact continuation, then return recurring-open."
 }
