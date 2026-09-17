@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-17T22:33:01+09:00",
+  "updated_at": "2026-09-17T23:31:17+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "b8fff345ca29d2f679f159f4076971f1e132993f",
+  "previous_latest_blob": "12c43714470c40c2412a3c2f8a916e2213a39338",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,68 +20,94 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main_ref",
-    "frozen_main_sha": "a5f875ec62d890e8bfe7421d5d755378c78f52f6",
+    "transport_mode": "exact_blob_two_pass",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260917T223301+0900.json",
-    "blob": "a538c6dbd436255ec91dff07899ff418f5829baa",
-    "commit": "76fc10aeb45c15a28213053f69e0b77824423df4",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_2026-09-17T233117+0900.json",
+    "blob": "f6e4cf89f64d187af27cbe5c58c055d0caa99c46",
+    "commit": "2e282d6535872d4fed4c3e3500d9cb3505f2e54a",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "b8fff345ca29d2f679f159f4076971f1e132993f"
+    "latest_input_blob": "12c43714470c40c2412a3c2f8a916e2213a39338"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "generation-scoped-idempotency-crash-before-accept-liveness-negative-control",
-  "tested_scope": "Exactly one deterministic self-local replay continuing the prior generation-scoped idempotency-key result. One intended logical effect generation G1 has durable identity K1=(logical_effect,G1). The replay tests crash/interruption before first durable accept, acknowledgement loss after atomic accept, repeated cross-invocation interruption/rate-limit boundaries, claimant turnover while G1 remains pending, and a non-atomic negative control where an external effect can occur before durable K1 binding. It tests only abstract claim/idempotency behavior and cross-run continuation; no concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or optional second semantic leaf is modeled.",
+  "semantic_leaf": "claimant-turnover-ack-uncertainty-minimal-durable-fields-replay",
+  "tested_scope": "Exactly one deterministic self-local replay continuing the prior generation-scoped idempotency result. One logical effect generation G1 uses stable idempotency key K1 and payload binding H1. Claimant A0 at authority epoch E0 reaches an atomic apply-once acceptance for K1 but loses the acknowledgement before recording the accepted result. Authority then turns over to claimant A1 at newer epoch E1. The replay tests stale A0 retry, A1 recovery using inherited G1/K1/H1 with acceptance status unknown, and an unsafe alternative where A1 mints K2 for the still-same G1. It tests only abstract durable-field requirements for claim/idempotency safety and false-suppression resistance; no concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or optional second semantic leaf is modeled.",
   "fixture": {
-    "retained_assumptions": [
-      "K1 is stable for exactly one intended logical effect generation G1 and is preserved across retries and claimant turnover until G1 reaches a terminal accepted result.",
-      "A current-authority or fencing predicate is checked immediately before each attempt; stale claimants cannot initiate a new accepted attempt after turnover.",
-      "For the positive controls, apply_once(K1,P1) atomically couples durable idempotency-key binding with the effect outcome: either no accepted effect exists, or K1 is durably bound to the one accepted result before a retry can create another accepted effect.",
-      "Cross-invocation state can durably preserve pending K1 and retry intent without relying on a finite monthly/trial/paid quota."
+    "initial_durable_record": {
+      "generation_id": "G1",
+      "effect_key": "K1",
+      "payload_hash": "H1",
+      "acceptance_state": "unknown_after_ack_loss",
+      "authority_epoch": "E0"
+    },
+    "replay_steps": [
+      "R1: A0/E0 invokes an atomic apply_once(K1,H1). The sink durably accepts exactly one result R1 and binds it to K1, but the response is lost before A0 can durably change acceptance_state from unknown.",
+      "R2: Authority advances to A1/E1 while the pending record preserves G1, K1 and H1. A stale A0/E0 retry is rejected by the current-authority check before it can initiate another accepted attempt.",
+      "R3: A1/E1 inherits the same G1/K1/H1 and keeps acceptance_state=unknown rather than inferring non-accept or success. Retrying apply_once(K1,H1) returns the already-bound R1 and produces no duplicate effect.",
+      "R4 unsafe-key-rotation control: if A1 treats ownership turnover as a new effect identity and mints K2 for the same G1 while prior K1 acceptance is unknown, apply_once(K2,H1) is a distinct key and may accept a second effect, duplicating G1.",
+      "R5 payload-divergence control: if K1 is retained but H1 is not durably bound and a successor retries K1 with a divergent payload H2, the system cannot safely distinguish legitimate replay from key collision or semantic mutation; a safe sink/record must reject K1/H2 mismatch rather than silently reuse or re-execute.",
+      "R6 false-suppression control: if attempt-start or acknowledgement loss is collapsed into a durable accepted=true bit without verified atomic acceptance/result evidence, A1 may suppress the retry even when the external effect never committed. Therefore unknown/pending must remain distinct from verified accepted status."
     ],
-    "replay_schedule": [
-      "C1 crash-before-first-accept: current claimant A0 attempts K1, but interruption occurs before atomic acceptance and no accepted effect exists. A later invocation retries the same K1; if one attempt eventually reaches atomic acceptance, exactly one accepted effect results.",
-      "C2 acknowledgement-loss-after-accept: K1 atomically accepts once but A0 loses the response before checkpointing success. A later retry of the same K1 returns the already-bound result and does not create a second accepted effect.",
-      "C3 repeated interruption/rate-limit boundaries: each invocation checkpoints pending K1 and returns without same-run waiting. Safety is preserved by same-key retry, but liveness is not established if every future attempt is interrupted or rate-limited; eventual progress requires a fairness/eventual-success assumption.",
-      "C4 claimant turnover while pending: authority moves from A0 to A1. A stale A0 resume is rejected by fencing. A1 must inherit and retry the same generation identity K1; allocating a fresh key K2 for the still-same G1 creates ambiguity and can duplicate an already accepted-but-unobserved K1 effect.",
-      "N1 non-atomic external-effect negative control: an external effect occurs, then interruption happens before durable K1 binding. A retry sees no bound K1 and performs the effect again. Generation-scoped identity plus fencing is insufficient without atomic effect/idempotency coupling or an equivalent transactional/deduplicating sink."
-    ],
+    "minimal_durable_fields_result": {
+      "generation_identity": {
+        "required": true,
+        "reason": "Preserves the logical-effect generation across claimant turnover and prevents ownership change from being mistaken for a new logical generation."
+      },
+      "stable_effect_key": {
+        "required": true,
+        "reason": "All retries and successor claimants for the same G1 must reuse K1; fresh K2 under acknowledgement uncertainty can duplicate an already accepted effect."
+      },
+      "payload_or_semantic_hash_binding": {
+        "required": true,
+        "reason": "Binds K1 to the intended effect semantics and converts divergent retry payload into an explicit conflict rather than silent duplicate/corruption."
+      },
+      "acceptance_state": {
+        "required": true,
+        "minimum_semantics": "tri-state or evidence-qualified state that distinguishes unknown/pending from verified accepted; accepted may only be recorded from durable atomic acceptance/result evidence",
+        "reason": "Conflating attempt-start or lost acknowledgement with accepted creates permanent false suppression; conflating unknown with not-accepted can create duplicate execution when prior acceptance actually happened."
+      },
+      "accepted_result_reference_or_digest_if_known": {
+        "required_when_acceptance_known": true,
+        "reason": "Lets successors prove what was accepted and detect inconsistent replay instead of relying on an unqualified success bit."
+      },
+      "authority_epoch_or_fence_token": {
+        "required": true,
+        "reason": "A monotonically newer authority identity lets the current claimant reject stale claimant attempts while preserving the same logical generation/effect key."
+      }
+    },
     "result": {
-      "classification": "conditional-safety-with-explicit-liveness-and-atomicity-requirements",
-      "crash_before_known_nonaccept_with_same_key_retry_can_preserve_safety": true,
-      "ack_loss_after_atomic_accept_collapses_on_retry": true,
-      "repeated_interruption_establishes_unconditional_liveness": false,
-      "fairness_or_eventual_success_needed_for_no_loss": true,
-      "claimant_turnover_requires_pending_generation_key_transfer": true,
-      "fresh_key_for_same_pending_generation_is_safe_under_unknown_prior_accept": false,
-      "fencing_blocks_stale_claimant_but_replaces_atomic_idempotency": false,
-      "non_atomic_effect_then_bind_survives_crash_without_duplicate": false,
-      "exactly_once_external_effect_established_beyond_tested_assumptions": false,
+      "classification": "conditional-duplicate-safety-and-false-suppression-avoidance-with-six-field-durable-record",
+      "same_generation_key_must_survive_claimant_turnover": true,
+      "fresh_key_on_turnover_is_safe_when_prior_accept_unknown": false,
+      "unknown_acceptance_must_be_distinct_from_verified_accept": true,
+      "payload_hash_binding_needed_to_detect_semantic_divergence": true,
+      "stale_claimant_rejection_requires_current_authority_epoch_or_equivalent": true,
+      "atomic_apply_once_or_equivalent_sink_dedup_still_required": true,
+      "unconditional_liveness_established": false,
       "concrete_chat_exposed_primitive_verified": false
     }
   },
   "observations": [
-    "Generation-scoped keys solve the prior ABA false-suppression problem only when the same generation identity survives retries and claimant turnover; a new claimant must not mint a fresh effect key merely because ownership changed.",
-    "Crash-before-first-accept and acknowledgement-loss are safely retryable with the same K1 only under an atomic apply-once contract (or an equivalent downstream deduplicating transaction) that prevents an effect from becoming externally real without durable K1 identity.",
-    "Fencing and idempotency remain orthogonal: fencing excludes stale claimants, while durable same-generation effect identity collapses retries by the current claimant or successor.",
-    "No-loss liveness cannot be proven from retry logic alone. If every future invocation is interrupted or rate-limited, the effect can remain pending forever; eventual progress requires an explicit fairness/eventual-success assumption and durable preservation of pending K1 across boundaries.",
-    "The non-atomic negative control falsifies any claim that generation-scoped keys plus fencing alone provide exactly-once external effects when the side effect can precede durable idempotency binding."
+    "Claim ownership and effect identity must evolve on different axes: authority may advance from E0 to E1, but the logical generation G1 and its effect key K1 must remain stable while acceptance is uncertain.",
+    "Acknowledgement loss makes a binary success flag unsafe. The durable state must represent unknown/pending separately from verified accepted, because both optimistic suppression and blind fresh-key retry can be wrong.",
+    "The payload or semantic hash is part of the idempotency contract, not optional metadata: without it, the same key can be accidentally replayed with changed semantics and the collision cannot be safely classified.",
+    "A newer authority epoch prevents stale-claimant action but does not itself deduplicate effects; K1 plus atomic effect/idempotency binding remains independently necessary.",
+    "The minimal durable record for this replay is therefore {generation_id, stable_effect_key, payload_hash, evidence-qualified acceptance_state, accepted_result reference/digest when known, authority_epoch}."
   ],
-  "inference": "Within this exact abstract replay, a recurring-Chat coordination design can preserve duplicate safety across crash/retry and claimant turnover only if one logical effect generation keeps one durable effect identity across all claimants, stale claimants are fenced, and accepted effect plus idempotency binding is atomic (or the sink itself deduplicates atomically). Eventual no-loss additionally requires durable pending-state reconstruction and a fairness/eventual-success condition; finite quota or same-run waiting cannot supply that guarantee under the Phase-1 constraints. This does not prove that an allowed concrete Chat-exposed primitive provides those semantics.",
+  "inference": "Within this exact abstract replay, a recurring-Chat coordination design can survive claimant turnover during acknowledgement uncertainty without duplicate execution or permanent false suppression only if the successor inherits the same logical generation and effect identity, preserves payload binding, keeps unknown acceptance distinct from verified acceptance, carries forward verifiable accepted-result evidence when available, and advances a monotonic authority/fence identity. These fields are necessary in this fixture but are not claimed sufficient for a concrete implementation because atomic apply-once semantics, durable CAS/authority enforcement, reconstruction under rate limits, and eventual-progress guarantees remain unverified.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "A concrete allowed zero-cost quota-independent Chat-exposed primitive exposing atomic durable apply-once plus current-authority validation remains unverified.",
-    "A concrete zero-quota mechanism for transferring pending generation identity K1 across claimant turnover without ABA/collision remains unverified.",
-    "The required fairness/eventual-success condition for cross-invocation retries has not been mapped to a concrete scheduler/transport guarantee; persistent rate limiting or permanent unavailability remains a liveness blocker rather than a completion condition.",
-    "Exactly-once behavior for non-transactional external side effects remains unresolved when the effect can occur before durable idempotency binding."
+    "A concrete allowed zero-cost quota-independent Chat-exposed primitive exposing atomic durable apply-once plus payload binding remains unverified.",
+    "A concrete allowed mechanism for monotonic authority/fence update and stale-claimant rejection without hosted coordination remains unverified.",
+    "A concrete zero-quota reconstruction path that preserves the six-field record across invocation interruption and rate limiting remains unverified.",
+    "Eventual liveness still requires a fairness/eventual-success condition; the durable record establishes conditional safety and false-suppression resistance, not unconditional progress."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -104,5 +130,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice is still active, execute exactly one bounded self-local negative-control replay for claimant turnover during acknowledgement uncertainty: model K1 accepted-but-unobserved under A0, turnover to A1, stale A0 retry, A1 recovery with the inherited K1, and the unsafe alternative where A1 mints K2 for the same G1. Test which minimal durable fields must survive turnover (generation identity, effect key, payload/hash binding, acceptance/result status if known, and authority epoch) to avoid both duplicate execution and permanent false suppression. Preserve exact tested scope, do not infer any concrete Chat primitive, persist/read back one checkpoint with zero-cost/zero-finite-quota assessment and a nonempty continuation, and return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice is still active, execute exactly one bounded self-local replay that stress-tests crash points around the six-field record update itself: (a) authority E1 is durably acquired but the pending record still says E0, (b) record CAS advances to E1 but retry has not started, (c) atomic K1 accept occurs but result-reference checkpoint is lost, and (d) result-reference checkpoint succeeds but the invocation dies before normal return. Determine the minimum ordering/CAS invariants needed so recovery never allows stale A0 to act, never rotates K1 for the same G1, and never turns unknown into false accepted/nonaccepted. Preserve exact scope, do not infer a concrete Chat primitive, persist/read back one checkpoint with zero-cost/zero-finite-quota assessment and a nonempty continuation, then return recurring-open without a second leaf."
 }
