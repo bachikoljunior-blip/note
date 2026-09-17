@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-17T20:38:06Z",
+  "source_role": "reproducibility_auditor",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-repro-feasibility",
+  "result_classification": "MIGRATION_MARKER_POSTWRITE_LEGACY_APPEND_GAP_REPRODUCED_SCOPE_BOUNDED",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "2182784e012ccd051d59b52715e0ba47a23482e8",
+    "manifest_revision": 128,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_revision": 3,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_state_revision": 27,
+    "downstream_state_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "downstream_state_revision": 37,
+    "reproducibility_auditor_config_revision": 7,
+    "transport_mode": "exact_blob_revalidated_before_accepted_source_observations",
+    "note": "Earlier pre-freeze source observations were discarded for acceptance; all observations used below were re-fetched at the exact Argus commit after the DESIRED_STATE/DOWNSTREAM_STATE authority tuple was revalidated."
+  },
+  "predecessor": {
+    "latest_pointer_path": "research_audits/reproducibility/LATEST.json",
+    "latest_pointer_blob": "291e0115597d107edcd377bbb15405febfbef54a",
+    "latest_record": "research_audits/reproducibility/2026-09-17T194117+0900_agentio_canonical_writer_reproduction_control128.json",
+    "latest_record_blob": "880ab26c3e2f29815c4d99921df8265228db99ce"
+  },
+  "carrier_revalidation": {
+    "path": "research_index_clean_g1/ACTIVE_WAVE.json",
+    "blob": "09bb84baf7c29f0d1044172f85336ec2c69969f4",
+    "wave_id": "clean-g1-wave-c32-20260828T195737JST-3be91469",
+    "candidate_path": "research_workers_clean_g1/open_source/RUN_20260828_1907_EVENT_AUTHORITY_API.md",
+    "candidate_blob": "2405043822b199c2d9674527dc925e76c312a9ea"
+  },
+  "bounded_slice": {
+    "claim_id": "repro-migration-marker-postwrite-gap:argus-2894b434:2026-09-18T053806+0900",
+    "tested_scope": "Static exact-commit reproduction of argus_skill/core/usage.py::ensure_project_events_standardized, its legacy history enumeration helper, and the direct AgentCliBackend._agent_io_log_path production call/path-selection boundary at Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236. This proves the helper/API-level post-marker gap but does not claim whole-program reachability of every context transition, repository-wide reference exhaustiveness, runtime contention behavior, Windows behavior, or no-fourth-writer exhaustiveness.",
+    "upstream": {
+      "repository": "lbx154/Argus",
+      "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
+      "files": [
+        {"path": "argus_skill/core/usage.py", "blob": "9c33908e0065a97e35a595ac9d558d9f5f8b1026"},
+        {"path": "argus_skill/adapters/agent_cli_backend/_core.py", "blob": "ed3df1e3320001204a2a1a0907700bed6dfc59b9"}
+      ]
+    },
+    "observations": [
+      "ensure_project_events_standardized returns immediately whenever events.migration-v2.json exists, both before entering and again after acquiring events.migration-v2.lock.",
+      "Before acquiring the migration lock it snapshots legacy source paths from <project_root>/.argus/events.jsonl using _event_history_paths; that helper includes numeric generations in oldest-to-newest order followed by the live file.",
+      "The migration appends directly to <project_root>/events.jsonl while holding events.migration-v2.lock, fsyncs best-effort, then atomically writes a version-2 marker containing source_files and row counts but no source signature/version that would invalidate the marker if a legacy source later changes.",
+      "AgentCliBackend._agent_io_log_path calls ensure_project_events_standardized and selects <project_root>/events.jsonl only when a project usage context is present. With no project context, an explicit ARGUS_SKILL_AGENT_IO_LOG path wins; otherwise options.working_dir selects <working_dir>/.argus/events.jsonl. The legacy branch does not consult the migration marker.",
+      "Therefore the exact helper/API composition admits this bounded counterexample: migrate legacy rows and create the marker; later invoke AgentIO logging without project usage context but with working_dir equal to that project root, which selects .argus/events.jsonl; then invoke a project-context path again. ensure_project_events_standardized sees the existing marker and returns 0, so the later legacy append is not migrated by this protocol.",
+      "This is sufficient to reject marker-existence alone as a complete source-change seal at the tested helper/API boundary. Whole-program proof that the no-project-context to project-context sequence is reachable in a deployed production flow remains open and is not inferred here."
+    ],
+    "reproduced": {
+      "migration_is_direct_canonical_events_writer": true,
+      "migration_uses_distinct_events_migration_v2_lock": true,
+      "marker_has_no_legacy_source_signature": true,
+      "legacy_agentio_path_remains_selectable_without_project_context": true,
+      "helper_api_level_post_marker_unmigrated_append_counterexample": true,
+      "whole_program_context_transition_reachability": false,
+      "repository_wide_no_fourth_writer_exhaustiveness": false,
+      "exact_commit_reference_exhaustiveness": false
+    },
+    "acceptance_effect": "The candidate remains unresolved: an event-authority patch that only serializes the migration append cannot by itself guarantee completeness if legacy source writes remain possible after the one-shot marker. Either prove the legacy writer unreachable once the marker may exist, or make migration replay/source-change detection robust to later legacy writes.",
+    "work_protected_primary_user_execution_dependency": false,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "incremental_monetary_cost": 0,
+    "repository_transport_only": true,
+    "scheduler_mutation_by_worker": false,
+    "protected_o_mutation": false,
+    "clean_exploration_steering": false,
+    "semantic_completion": false
+  },
+  "continuation": "Next invocation: fresh-bootstrap the four required controls; exact-read research_audits/reproducibility/LATEST.json and this immutable record; revalidate ACTIVE_WAVE/candidate identity; then content-exhaust exactly one remaining reachability child at Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236: trace exact production callers of AgentCliBackend.set_usage_context and the run_exec/log-path lifecycle to determine whether a call can write <project_root>/.argus/events.jsonl after events.migration-v2.json exists and later re-enter project-context canonical logging. If reachable, preserve the counterexample and test a source-signature/replay or legacy-writer-disable condition; if unreachable, record the exact invariant that forbids it. Keep repository-wide no-fourth-writer and exact-reference exhaustiveness open. Use zero Work, zero finite monthly/trial/paid quota and zero incremental cost. Do not mutate protected O, steer CLEAN exploration, mutate the scheduler, retry same-run transport failures, or start a second candidate leaf.",
+  "termination": "bounded_slice_complete_recurring_open"
+}
