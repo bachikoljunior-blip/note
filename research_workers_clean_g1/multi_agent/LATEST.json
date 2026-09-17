@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T01:30:27+09:00",
+  "updated_at": "2026-09-18T02:32:33+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "33967e3ca69fcd569eb58707996f1b275d65417e",
+  "previous_latest_blob": "bc87e3055106035fb6176846ebae407c97cf8e4b",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -25,100 +25,86 @@
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T013027+0900.json",
-    "blob": "5bf03c3b8df17af59a1c2aca4243c4f5080b06f4",
-    "commit": "5a03f013b8095afa0df9268e73e5ea5d14c4eaf7",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260918T023233+0900.json",
+    "blob": "9ef3901bd436b597ba8ffa925395b64e94fb7a86",
+    "commit": "381406532b89245c07a9d810f9845bcf61ce7942",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "33967e3ca69fcd569eb58707996f1b275d65417e"
+    "latest_input_blob": "bc87e3055106035fb6176846ebae407c97cf8e4b"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "crash-window-A-authority-activation-protocol-comparison",
-  "tested_scope": "Exactly one deterministic self-local replay of crash window A from the prior six-field coordination record. Two abstract authority activation protocols are compared only for stale-claimant exclusion and crash ordering: P1 independent authoritative monotonic fence activation; P2 quiescent two-phase activation using an authoritative transition state before record CAS and final E1 activation. No concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is modeled.",
+  "semantic_leaf": "authority-gate-minimum-api-contract-vs-lww-falsification",
+  "tested_scope": "Exactly one deterministic self-local derivation from the prior crash-window-A protocols. The slice specifies the minimum abstract API contract needed by either P1 independent fencing or P2 quiescent activation, then falsifies one deliberately weak primitive that provides only ordinary read plus unconditional last-write-wins put. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
-    "precondition": {
-      "effect_record_authority_epoch": "E0",
-      "currently_active_authority": "E0",
-      "next_epoch": "E1",
-      "stale_claimant": "A0/E0",
-      "successor_claimant": "A1/E1"
-    },
-    "protocols": [
+    "minimum_authority_gate_contract": [
       {
-        "id": "P1_independent_monotonic_fence",
-        "steps": [
-          "Atomically advance the authoritative current-fence value from E0 to E1.",
-          "After that activation, every effect attempt and every authority-sensitive mutation must validate current_fence == E1 at the operation boundary; E0 is rejected even if the role-local effect record still says E0.",
-          "CAS the effect record authority field from E0 to E1 while preserving generation/effect-key/payload-hash/acceptance fields."
-        ],
-        "crash_replay": {
-          "before_fence_advance": "E0 remains authoritative and E1 must not act; retry may safely repeat the same E0->E1 fence CAS attempt under expected-old validation.",
-          "after_fence_advance_before_record_cas": "E0 is already invalid. E1 may proceed only through operations that atomically validate the authoritative fence; the lagging record cannot authorize E0.",
-          "after_record_cas": "Record and current fence both say E1; stale E0 remains rejected."
-        },
-        "minimum_durable_state": [
-          "one authoritative monotonic current-fence value",
-          "record version/epoch for CAS",
-          "stable generation/effect identity preserved across claimant turnover"
-        ],
-        "cross_record_atomic_transaction_required": false,
-        "condition": "No cross-record transaction is needed only if the fence primitive is independently authoritative and is checked atomically enough at every side-effect/state-mutation boundary."
+        "id": "C1_authoritative_state",
+        "requirement": "Expose one authoritative gate state containing at least mode(active or quiescent), monotonic authority epoch/fence, and a mutation version or equivalent compare token."
       },
       {
-        "id": "P2_quiescent_two_phase_activation",
-        "steps": [
-          "Atomically move authority from active(E0) to quiescent(pending E1), making no claimant executable.",
-          "While quiescent, CAS the effect record authority field from E0 to E1 while preserving generation/effect-key/payload-hash/acceptance fields.",
-          "After durable record CAS, atomically move authority from quiescent(pending E1) to active(E1)."
-        ],
-        "crash_replay": {
-          "before_quiescence": "E0 remains active; E1 must not act.",
-          "after_quiescence_before_record_cas": "No claimant is active, so stale E0 and premature E1 effects are both rejected; recovery resumes the record CAS.",
-          "after_record_cas_before_E1_activation": "Record says E1 but authority remains quiescent; no effect runs. Recovery may validate the E1 record then activate E1.",
-          "after_E1_activation": "Only E1 is active and E0 remains rejected."
-        },
-        "minimum_durable_state": [
-          "one authoritative authority-state record with active/quiescent mode and pending/active epoch",
-          "effect-record version/epoch for CAS",
-          "stable generation/effect identity preserved across the transition"
-        ],
-        "cross_record_atomic_transaction_required": false,
-        "condition": "The quiescent authority state must itself be authoritative and every effect attempt must reject while quiescent. This replaces a cross-record atomic transaction with two atomic authority transitions plus one effect-record CAS and explicit crash recovery."
+        "id": "C2_conditional_monotonic_transition",
+        "requirement": "Support an atomic conditional state transition that succeeds only from the caller-specified predecessor state/version and cannot let an older epoch overwrite or resurrect authority after a newer epoch is committed."
+      },
+      {
+        "id": "C3_operation_boundary_guard",
+        "requirement": "Every protected side effect or authority-sensitive state mutation must validate the expected active epoch at the same linearization boundary as acceptance of that operation, or use an equivalent fencing-token primitive enforced by the protected surface. A separate read-then-effect check is insufficient."
+      },
+      {
+        "id": "C4_quiescence_semantics",
+        "requirement": "For P2, quiescent(pending E1) must itself be authoritative and must reject effects from both E0 and E1 until active(E1) is committed. P1 does not require quiescence but still requires C3."
+      },
+      {
+        "id": "C5_idempotent_effect_identity",
+        "requirement": "Protected effects must carry a stable logical effect key or idempotency key plus stable generation/payload identity so retry cannot create a second conflicting acceptance."
+      },
+      {
+        "id": "C6_unknown_outcome_reconstruction",
+        "requirement": "After interruption, timeout, or rate-limit response with unknown commit outcome, the caller must be able to read authoritative gate/effect state and distinguish committed, rejected, duplicate, and still-pending cases before retrying."
+      },
+      {
+        "id": "C7_evidence_and_replay",
+        "requirement": "Successful transitions and guarded effect decisions must return or expose durable version/epoch/acceptance evidence sufficient for exact readback and deterministic replay reconstruction."
       }
     ],
-    "comparison": {
-      "both_avoid_atomic_cross_record_transaction": true,
-      "shared_hard_requirement": "An independently authoritative operation-boundary check must invalidate E0 before E1 can execute; consulting only the lagging effect record is insufficient.",
-      "P1_tradeoff": "Fewer transitions and higher availability, but requires the side-effect/state surface to validate the current monotonic fence during each protected operation.",
-      "P2_tradeoff": "Introduces a safe no-owner interval that makes crash ordering explicit and can simplify reasoning, but adds recovery states and temporary loss of liveness. It still needs an authoritative quiescent/active gate checked by every protected operation.",
-      "atomic_cross_record_transaction_eliminated": true,
-      "atomicity_not_eliminated": "Each authority-state transition and each effect-record CAS still needs single-record atomic compare-and-set semantics; the replay does not prove a concrete Chat-exposed primitive providing them."
+    "weak_primitive": {
+      "id": "W1_unconditional_lww_register",
+      "operations": ["read(key)", "put(key, value)"],
+      "assumptions": "Even granting a linearizable single-key last-write-wins register, put has no expected-version/predecessor condition, no monotonic-epoch enforcement, and no atomic protected-effect guard."
     },
+    "falsification_trace": [
+      "Initial authority value is active(E0). A stale claimant S and successor claimant N both read active(E0).",
+      "N unconditionally puts active(E1), intending to activate the successor epoch.",
+      "S, using its stale observation, later unconditionally puts active(E0). Because the primitive is last-write-wins rather than conditional/monotonic, E0 can become authoritative again.",
+      "Therefore W1 violates C2: it permits stale-authority resurrection after a newer epoch was committed.",
+      "Even if callers promise never to write a lower epoch, a protected side effect performed after a separate read of active(E1) can race with a later authority change before the effect commits. W1 provides no operation-boundary fence token or atomic guarded-effect acceptance, so it also violates C3.",
+      "For P2, a stale unconditional put can overwrite quiescent(pending E1) with active(E0), so W1 cannot guarantee C4 either.",
+      "Adding a stable effect key in caller data does not repair these authority races because W1 has no conditional acceptance primitive; concurrent or retried writers can still overwrite acceptance state without proving a unique winner."
+    ],
     "result": {
-      "classification": "two-abstract-safe-orderings-under-independent-authority-gate",
-      "P1_crash_window_A_safe_under_stated_fence_condition": true,
-      "P2_crash_window_A_safe_under_stated_quiescence_condition": true,
-      "record_only_authority_safe": false,
-      "concrete_chat_exposed_primitive_verified": false,
-      "unconditional_liveness_established": false
+      "weak_lww_primitive_satisfies_minimum_contract": false,
+      "failed_requirements": ["C2_conditional_monotonic_transition", "C3_operation_boundary_guard", "C4_quiescence_semantics"],
+      "caller_convention_alone_repairs_failure": false,
+      "cross_record_atomic_transaction_required_by_contract": false,
+      "per_record_or_protected_surface_atomicity_still_required": true,
+      "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "The unsafe part of crash window A is not record lag by itself; it is permitting stale E0 operations during that lag. Both protocols become safe only when a separate authoritative gate rejects E0 before any E1 effect can occur.",
-    "A cross-record atomic transaction is not logically necessary for this modeled safety property. P1 tolerates temporary record lag behind an already-active fence; P2 prevents all effects during record migration through a quiescent authority state.",
-    "P2 converts a concurrency-safety problem into a bounded liveness interruption: crashes between quiescence and E1 activation are safe but require replay to finish activation.",
-    "Neither protocol establishes a concrete scheduled-Chat implementation because the existence and quota-zero behavior of a Chat-exposed authoritative fence/quiescence primitive remains unverified."
+    "The prior abstract P1/P2 safety result depends on stronger semantics than ordinary storage: authority changes must be conditional/monotonic, and protected effects need a fence check coupled to effect acceptance rather than a separate pre-read.",
+    "A linearizable last-write-wins register is still too weak because linearizability orders writes but does not forbid a stale lower epoch from becoming the last write.",
+    "Quiescence is safe only when the quiescent state is itself authoritative and cannot be overwritten by a stale claimant without a failed predecessor/version check.",
+    "Stable idempotency keys are necessary for duplicate resistance but do not substitute for authority fencing."
   ],
-  "inference": "For the exact abstract crash-window-A model, stale-claimant safety can be achieved without an atomic transaction spanning authority and effect records. The minimal design obligation is an independently authoritative gate whose state transition invalidates E0 before E1 can execute. P1 makes E1 active first and tolerates effect-record lag; P2 first enters a durable no-owner state, migrates the effect record, then activates E1. Both preserve the same stable logical effect identity and require only per-record atomic transitions, but both leave the concrete Chat-exposed primitive child unresolved.",
+  "inference": "For the exact abstract model tested, any concrete Chat-exposed candidate for P1 or P2 must provide conditional monotonic authority transition semantics plus operation-boundary fencing or equivalent guarded acceptance; ordinary read plus unconditional last-write-wins storage is falsified even if single-key operations are linearizable. This narrows the unresolved provider search without claiming that any concrete provider satisfies the contract.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive that can serve as the authoritative current-fence or active/quiescent gate and can be checked at each protected operation boundary.",
-    "Verify that the same allowed surface supports single-record monotonic CAS/reconstruction under interruption and rate limiting without hosted coordination or manual execution.",
-    "Verify end-to-end same-key idempotent effect acceptance after the authority protocol, including acknowledgement-loss replay, on an allowed concrete surface."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive against C1-C7; no concrete provider is accepted by this slice.",
+    "Test acknowledgement-loss/unknown-outcome replay against C5-C7 to determine the minimum reconstruction fields and whether duplicate acceptance can still occur after a committed guarded effect whose response is lost.",
+    "Verify rate-limit interruption behavior without same-run waiting and without hosted coordination or manual execution."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -141,5 +127,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local replay for the still-open concrete-primitive abstraction child: derive the minimum API contract a Chat-exposed authority gate must provide to implement either P1 or P2 (operations, atomicity, return evidence, retry/idempotency semantics, rate-limit interruption behavior, reconstruction fields), then falsify that contract against one abstract weak primitive that offers only last-write-wins storage without conditional write. Do not claim any concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local acknowledgement-loss replay against C5-C7: model a guarded effect that commits under E1 but whose response is lost, derive the minimum durable reconstruction fields and retry decision table needed to distinguish committed-duplicate, rejected-stale, pending/unknown and safe-new-attempt states, and falsify one weak retry rule that blindly reissues the effect after timeout. Do not claim a concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
 }
