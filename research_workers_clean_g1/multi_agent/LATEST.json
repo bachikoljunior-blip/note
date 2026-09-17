@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T00:32:41+09:00",
+  "updated_at": "2026-09-18T01:30:27+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "4bb91173a7019d7e9d05c16273e6cb7c618b6da4",
+  "previous_latest_blob": "33967e3ca69fcd569eb58707996f1b275d65417e",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,93 +20,105 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main",
-    "frozen_main_sha": "6224e65d7ebf558730fc0dccc9a26c1b5d5bf95a",
+    "transport_mode": "exact_blob_two_pass",
     "manifest_pool_override_observed_mechanically": 19
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260917T153241Z.json",
-    "blob": "603abf72726531a00f0fd3bcf88e9dd17bb340c4",
-    "commit": "e9f17ff32133c25f4f0d8d7e64cad4b4f1646b78",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T013027+0900.json",
+    "blob": "5bf03c3b8df17af59a1c2aca4243c4f5080b06f4",
+    "commit": "5a03f013b8095afa0df9268e73e5ea5d14c4eaf7",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "4bb91173a7019d7e9d05c16273e6cb7c618b6da4"
+    "latest_input_blob": "33967e3ca69fcd569eb58707996f1b275d65417e"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "six-field-record-crash-ordering-and-cas-invariants-replay",
-  "tested_scope": "Exactly one deterministic self-local replay of four crash windows around the prior six-field coordination record {generation_id, stable_effect_key, payload_hash, evidence-qualified acceptance_state, accepted_result reference/digest when known, authority_epoch}. The replay tests: (a) authority E1 is durably acquired while the effect record still contains E0, (b) the record CAS advances to E1 but retry has not started, (c) atomic apply_once(K1,H1) accepts but the accepted-result checkpoint is lost, and (d) the accepted-result checkpoint succeeds but the invocation dies before normal return. It tests abstract ordering/CAS requirements only; no concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is modeled.",
+  "semantic_leaf": "crash-window-A-authority-activation-protocol-comparison",
+  "tested_scope": "Exactly one deterministic self-local replay of crash window A from the prior six-field coordination record. Two abstract authority activation protocols are compared only for stale-claimant exclusion and crash ordering: P1 independent authoritative monotonic fence activation; P2 quiescent two-phase activation using an authoritative transition state before record CAS and final E1 activation. No concrete transport, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is modeled.",
   "fixture": {
     "precondition": {
-      "generation_id": "G1",
-      "effect_key": "K1",
-      "payload_hash": "H1",
-      "acceptance_state": "unknown_or_pending",
-      "record_authority_epoch": "E0",
-      "next_authority_epoch": "E1"
+      "effect_record_authority_epoch": "E0",
+      "currently_active_authority": "E0",
+      "next_epoch": "E1",
+      "stale_claimant": "A0/E0",
+      "successor_claimant": "A1/E1"
     },
-    "crash_windows": [
+    "protocols": [
       {
-        "id": "A",
-        "event": "E1 is durably acquired but the effect record still says E0.",
-        "safe_recovery": "Every effect attempt and every authority-sensitive record mutation must be rejected unless its fence token equals the currently active monotonic authority token. Therefore stale A0/E0 cannot remain executable merely because the effect record has not yet been rewritten. Record propagation from E0 to E1 may lag only if the active authority/fence check is independent and authoritative.",
-        "failure_control": "If stale-claimant rejection consults only record_authority_epoch, the E1-acquired/E0-record window permits A0 to act and safety is not established."
+        "id": "P1_independent_monotonic_fence",
+        "steps": [
+          "Atomically advance the authoritative current-fence value from E0 to E1.",
+          "After that activation, every effect attempt and every authority-sensitive mutation must validate current_fence == E1 at the operation boundary; E0 is rejected even if the role-local effect record still says E0.",
+          "CAS the effect record authority field from E0 to E1 while preserving generation/effect-key/payload-hash/acceptance fields."
+        ],
+        "crash_replay": {
+          "before_fence_advance": "E0 remains authoritative and E1 must not act; retry may safely repeat the same E0->E1 fence CAS attempt under expected-old validation.",
+          "after_fence_advance_before_record_cas": "E0 is already invalid. E1 may proceed only through operations that atomically validate the authoritative fence; the lagging record cannot authorize E0.",
+          "after_record_cas": "Record and current fence both say E1; stale E0 remains rejected."
+        },
+        "minimum_durable_state": [
+          "one authoritative monotonic current-fence value",
+          "record version/epoch for CAS",
+          "stable generation/effect identity preserved across claimant turnover"
+        ],
+        "cross_record_atomic_transaction_required": false,
+        "condition": "No cross-record transaction is needed only if the fence primitive is independently authoritative and is checked atomically enough at every side-effect/state-mutation boundary."
       },
       {
-        "id": "B",
-        "event": "A CAS updates record authority from E0 to E1, preserving G1/K1/H1 and unknown acceptance, then the invocation dies before retry.",
-        "safe_recovery": "A successor reading E1 resumes the same G1/K1/H1 and keeps acceptance unknown; no new key is minted and no accepted/nonaccepted inference is made. The authority update CAS must be monotonic and must not rewrite generation, effect key, payload hash, or acceptance evidence as a side effect."
-      },
-      {
-        "id": "C",
-        "event": "apply_once(K1,H1) atomically accepts R1 but the result-reference checkpoint is lost.",
-        "safe_recovery": "The durable record remains unknown, so recovery retries the same K1/H1 under the current fence. The sink must return the already-bound R1 or equivalent definitive accepted evidence without applying the effect again. Only that returned durable evidence may advance acceptance_state to verified_accepted and attach the result reference/digest.",
-        "failure_control": "Rotating to K2 can duplicate G1; changing unknown to not_accepted can duplicate; changing unknown to accepted without result/atomic evidence can falsely suppress an effect that may never have committed."
-      },
-      {
-        "id": "D",
-        "event": "The record checkpoint durably stores verified_accepted plus R1 reference/digest and the invocation dies before normal return.",
-        "safe_recovery": "The next invocation treats the accepted record as terminal for that logical effect generation and does not execute another side effect. Normal-return acknowledgement is not part of effect identity and must not trigger K1 rotation or replay-as-new-work."
+        "id": "P2_quiescent_two_phase_activation",
+        "steps": [
+          "Atomically move authority from active(E0) to quiescent(pending E1), making no claimant executable.",
+          "While quiescent, CAS the effect record authority field from E0 to E1 while preserving generation/effect-key/payload-hash/acceptance fields.",
+          "After durable record CAS, atomically move authority from quiescent(pending E1) to active(E1)."
+        ],
+        "crash_replay": {
+          "before_quiescence": "E0 remains active; E1 must not act.",
+          "after_quiescence_before_record_cas": "No claimant is active, so stale E0 and premature E1 effects are both rejected; recovery resumes the record CAS.",
+          "after_record_cas_before_E1_activation": "Record says E1 but authority remains quiescent; no effect runs. Recovery may validate the E1 record then activate E1.",
+          "after_E1_activation": "Only E1 is active and E0 remains rejected."
+        },
+        "minimum_durable_state": [
+          "one authoritative authority-state record with active/quiescent mode and pending/active epoch",
+          "effect-record version/epoch for CAS",
+          "stable generation/effect identity preserved across the transition"
+        ],
+        "cross_record_atomic_transaction_required": false,
+        "condition": "The quiescent authority state must itself be authoritative and every effect attempt must reject while quiescent. This replaces a cross-record atomic transaction with two atomic authority transitions plus one effect-record CAS and explicit crash recovery."
       }
     ],
-    "minimum_ordering_and_cas_invariants": [
-      "I1: Authority/fence epochs are monotonic; a lower epoch can never regain authority after a higher epoch becomes active.",
-      "I2: Every effect attempt and every authority-sensitive state mutation validates the currently active fence atomically enough that stale A0/E0 cannot act during the E1-acquired/E0-record propagation window; if no such primitive exists, crash window A remains unsafe.",
-      "I3: Claimant turnover changes authority epoch only. For the same logical generation, generation_id G1, effect_key K1 and payload_hash H1 are immutable across retries until acceptance is resolved.",
-      "I4: Record CAS compares an expected prior record version/epoch and preserves immutable generation/key/hash fields. A stale claimant cannot overwrite a newer epoch or move acceptance backward.",
-      "I5: acceptance_state is monotonic in evidence strength: unknown/pending may become verified_accepted only from durable atomic acceptance/result evidence; it may not be converted to accepted or not_accepted merely from attempt-start, timeout, acknowledgement loss, or invocation return status.",
-      "I6: apply_once is keyed by K1 and bound to H1. A repeated K1/H1 returns the same accepted result/evidence; K1/H2 is an explicit conflict; K2 for the same unresolved G1 is forbidden.",
-      "I7: Once verified_accepted plus result reference/digest is durably checkpointed, crash/restart and missing normal return cannot reopen the generation for another effect execution."
-    ],
+    "comparison": {
+      "both_avoid_atomic_cross_record_transaction": true,
+      "shared_hard_requirement": "An independently authoritative operation-boundary check must invalidate E0 before E1 can execute; consulting only the lagging effect record is insufficient.",
+      "P1_tradeoff": "Fewer transitions and higher availability, but requires the side-effect/state surface to validate the current monotonic fence during each protected operation.",
+      "P2_tradeoff": "Introduces a safe no-owner interval that makes crash ordering explicit and can simplify reasoning, but adds recovery states and temporary loss of liveness. It still needs an authoritative quiescent/active gate checked by every protected operation.",
+      "atomic_cross_record_transaction_eliminated": true,
+      "atomicity_not_eliminated": "Each authority-state transition and each effect-record CAS still needs single-record atomic compare-and-set semantics; the replay does not prove a concrete Chat-exposed primitive providing them."
+    },
     "result": {
-      "classification": "conditional-crash-safe-ordering-with-external-fence-validation-and-stable-idempotency-identity",
-      "window_A_safe_without_independent_current_fence_validation": false,
-      "window_B_safe_under_monotonic_cas_and_identity_preservation": true,
-      "window_C_safe_under_atomic_apply_once_same_key_replay": true,
-      "window_D_safe_when_verified_acceptance_is_monotonic_terminal_for_effect_execution": true,
-      "stable_key_survives_claimant_turnover_and_crash": true,
-      "unknown_acceptance_survives_ack_loss_without_guessing": true,
+      "classification": "two-abstract-safe-orderings-under-independent-authority-gate",
+      "P1_crash_window_A_safe_under_stated_fence_condition": true,
+      "P2_crash_window_A_safe_under_stated_quiescence_condition": true,
+      "record_only_authority_safe": false,
       "concrete_chat_exposed_primitive_verified": false,
       "unconditional_liveness_established": false
     }
   },
   "observations": [
-    "The six-field record alone is insufficient to close crash window A if current authority is inferred only from that same lagging record. A distinct monotonic fence authority, or an equivalent atomic activation protocol, is required so a newly active E1 immediately invalidates E0 even before record propagation completes.",
-    "Crash windows B-D do not require a fresh effect identity. Safety depends on preserving G1/K1/H1, keeping unknown acceptance epistemically honest, and making verified acceptance monotonic once supported by durable atomic evidence.",
-    "Invocation completion is not an effect-commit signal. The durable effect record and sink idempotency evidence, not whether the Chat invocation returned normally, determine whether the logical effect may execute again.",
-    "CAS must protect both authority monotonicity and non-regression of acceptance evidence; otherwise a stale claimant can overwrite E1 or regress verified_accepted to unknown and reopen execution."
+    "The unsafe part of crash window A is not record lag by itself; it is permitting stale E0 operations during that lag. Both protocols become safe only when a separate authoritative gate rejects E0 before any E1 effect can occur.",
+    "A cross-record atomic transaction is not logically necessary for this modeled safety property. P1 tolerates temporary record lag behind an already-active fence; P2 prevents all effects during record migration through a quiescent authority state.",
+    "P2 converts a concurrency-safety problem into a bounded liveness interruption: crashes between quiescence and E1 activation are safe but require replay to finish activation.",
+    "Neither protocol establishes a concrete scheduled-Chat implementation because the existence and quota-zero behavior of a Chat-exposed authoritative fence/quiescence primitive remains unverified."
   ],
-  "inference": "Within this exact abstract replay, crash-safe claimant turnover requires two coupled but distinct mechanisms: monotonic fencing for who may act now, and stable idempotency identity for what logical effect is being retried. The minimum safety ordering is that E1 activation invalidates E0 before any E1 retry is permitted; thereafter the effect record may be CAS-updated to E1 while preserving G1/K1/H1 and unknown acceptance. Lost acknowledgements are recovered by same-key apply_once replay, and only durable atomic result evidence may close acceptance. These invariants are necessary for the modeled crashes but are not sufficient evidence for a concrete scheduled-Chat implementation because an allowed primitive providing current-fence validation, CAS durability, atomic apply-once and reconstruction under quota-zero/rate-limit interruption remains unverified.",
+  "inference": "For the exact abstract crash-window-A model, stale-claimant safety can be achieved without an atomic transaction spanning authority and effect records. The minimal design obligation is an independently authoritative gate whose state transition invalidates E0 before E1 can execute. P1 makes E1 active first and tolerates effect-record lag; P2 first enters a durable no-owner state, migrates the effect record, then activates E1. Both preserve the same stable logical effect identity and require only per-record atomic transitions, but both leave the concrete Chat-exposed primitive child unresolved.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed mechanism whose authority operation provides monotonic current-fence validation across crash window A.",
-    "Verify a concrete allowed CAS/state surface that preserves G1/K1/H1 and prevents stale-epoch or acceptance-regression writes without hosted coordination.",
-    "Verify a concrete allowed atomic apply-once or equivalent sink dedup primitive that binds K1 to H1 and can return prior accepted evidence after acknowledgement loss.",
-    "Verify reconstruction and eventual-progress behavior under repository/API rate limiting with no finite quota, hosted compute, richer mode, protected authority, or manual user execution."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive that can serve as the authoritative current-fence or active/quiescent gate and can be checked at each protected operation boundary.",
+    "Verify that the same allowed surface supports single-record monotonic CAS/reconstruction under interruption and rate limiting without hosted coordination or manual execution.",
+    "Verify end-to-end same-key idempotent effect acceptance after the authority protocol, including acknowledgement-loss replay, on an allowed concrete surface."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -115,7 +127,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent LATEST and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent LATEST, and the readback-valid own presemantic witness. Manifest pool membership was used only as mechanical lifecycle metadata. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -129,5 +141,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local replay for the still-open authority primitive child: compare two abstract activation protocols for crash window A only—(1) independently authoritative monotonic fence checked by every effect attempt, versus (2) two-phase authority activation where E1 is reserved but not active until the effect record CAS to E1 succeeds. Stress crashes before/after activation and stale A0 retries, identify the minimum state/ordering each protocol must durably expose, and determine whether either avoids requiring an atomic cross-record transaction. Do not infer a concrete Chat primitive or use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-primitive child and a nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority; persist/read back the required role-local presemantic witness; resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local replay for the still-open concrete-primitive abstraction child: derive the minimum API contract a Chat-exposed authority gate must provide to implement either P1 or P2 (operations, atomicity, return evidence, retry/idempotency semantics, rate-limit interruption behavior, reconstruction fields), then falsify that contract against one abstract weak primitive that offers only last-write-wins storage without conditional write. Do not claim any concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
 }
