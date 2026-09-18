@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T11:30:25+09:00",
+  "updated_at": "2026-09-18T12:28:18+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,10 +10,9 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "61c4ac9204b43b7f965b6cfcc85b2b94e9233342",
+  "previous_latest_blob": "29c5293eae1e6f63792de13e521b2172009f2992",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
-    "manifest_blob": "2182784e012ccd051d59b52715e0ba47a23482e8",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
@@ -21,109 +20,88 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "main_sha_exact_authority",
-    "frozen_main_sha": "aa9d7cae11834d81c4faf506d8f92d4be23c7868"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260918T023025Z.json",
-    "blob": "a132396a08237073f5e4630d47efd1b6251ee7c2",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T032818Z.json",
+    "blob": "53b43eb5cd227dc5fbb3742bf07544db852858c7",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "61c4ac9204b43b7f965b6cfcc85b2b94e9233342"
+    "latest_input_blob": "29c5293eae1e6f63792de13e521b2172009f2992"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "crash-boundary-supersession-write-order-c8",
-  "tested_scope": "Exactly one deterministic self-local replay extending the prior C5-C7 supersession contract. The slice compares two interrupted partial-write orderings for one authorized transition S1 from predecessor K/P1/G1 to successor K2/P2/G2 under authority epoch E2: A, predecessor is durably marked superseded before any durable successor or transition record exists; B, a transition/successor record is durable before the predecessor link is written. It derives the minimum reconstruction fields and visibility rules needed to avoid duplicate or lost logical effects and falsifies a weak recovery rule that treats either one-sided durable marker as sufficient proof of completion. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "unknown-outcome-after-external-effect-before-repository-ack-c9",
+  "tested_scope": "Exactly one deterministic self-local replay extending the prior prepared-transition/write-order result. The fixture places one logical external effect between durable prepared transition S2 and repository acknowledgement, then compares two acknowledgement-loss/retry traces. Trace A has no provider-side idempotency or result reconstruction guarantee. Trace B uses one stable provider idempotency token bound to S2 plus exact payload digest and supports replay/readback of the original result. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "baseline": {
-      "predecessor_identity": "K/P1/G1",
-      "predecessor_result": "R1",
-      "successor_identity": "K2/P2/G2",
-      "transition_id": "S1",
-      "authority_epoch": "E2",
-      "initial_state": "predecessor committed and has no accepted successor"
+      "prepared_transition": "S2",
+      "predecessor_identity": "K2/P2/G2",
+      "successor_identity": "K3/P3/G3",
+      "authority_epoch": "E3",
+      "effect_identity": "EFFECT(S2,payload_digest_D3)",
+      "crash_boundary": "external logical effect occurs after S2 is durable but before repository result acknowledgement is durable"
     },
-    "ordering_A_predecessor_marker_first": {
-      "steps_before_crash": [
-        "write predecessor.superseded_by=S1",
-        "crash before any separate durable transition record or successor record"
+    "trace_A_no_provider_idempotency": {
+      "steps": [
+        "persist S2 prepared with exact payload digest D3 and authority E3",
+        "invoke external effect; effect occurs once",
+        "repository acknowledgement/result write is lost before durability",
+        "next invocation reconstructs S2=prepared with no durable result and retries the same requested effect"
       ],
-      "authoritative_reconstruction_after_crash": "predecessor says superseded_by S1 but there is no durable object proving S1's successor identity, payload digest/generation, authority epoch, or commit state",
-      "result": "unsafe/unresolved",
-      "reason": "The marker suppresses safe predecessor re-execution but does not prove what successor was authorized or whether any successor effect was issued. Completing an arbitrary S1 guess can mutate the logical effect; rolling the marker back can duplicate an already-issued-but-unacknowledged successor. A strict predecessor-marker-first protocol is therefore not recoverable from repository state alone unless the marker itself atomically embeds the full transition envelope, in which case it is already transition evidence and no longer matches this strict ordering.",
-      "minimum_fields_if_marker_is_used_as_the_transition_record": [
-        "transition_id S1",
-        "exact predecessor K/P1/G1",
-        "exact successor K2/P2/G2 including payload digest",
-        "authority/fence epoch E2",
-        "state=prepared or committed",
-        "no-competing-successor precondition identity"
-      ]
+      "observation": "Repository state cannot distinguish 'effect never happened' from 'effect happened but acknowledgement was lost'. Retrying can produce a second logical effect; refusing to retry can permanently lose the useful result.",
+      "result": "unsafe/unresolved"
     },
-    "ordering_B_transition_successor_first": {
-      "steps_before_crash": [
-        "durably write S1 binding predecessor K/P1/G1, successor K2/P2/G2, payload digest, authority E2, state=prepared",
-        "optionally durably stage K2/P2/G2 as pending and non-authoritative under S1",
-        "crash before predecessor.superseded_by=S1 is written"
+    "trace_B_stable_provider_idempotency_and_result_replay": {
+      "steps": [
+        "persist S2 prepared with exact payload digest D3 and authority E3",
+        "derive one stable provider token T=H(S2,D3) and use it for the external effect",
+        "external effect occurs once; repository acknowledgement/result write is lost",
+        "next invocation reconstructs S2 and retries/queries with the exact same token T and payload digest",
+        "provider returns the same accepted operation/result identity without creating a second logical effect",
+        "persist result identity/digest, CAS predecessor to superseded_by=S2, then commit S2 and expose successor only when the predecessor-transition-successor triad matches"
       ],
-      "authoritative_reconstruction_after_crash": "predecessor remains the accepted committed predecessor; S1 and any staged successor are visible only as pending intent",
-      "result": "recoverable under explicit visibility/CAS rules",
-      "recovery": [
-        "read predecessor and S1",
-        "if predecessor is still committed_no_successor and authority E2 is current, CAS predecessor to superseded_by=S1",
-        "then mark S1 committed and successor accepted; exact retries reconstruct this same transition",
-        "if predecessor already names another accepted transition, abort/reject S1 as conflict rather than overwrite",
-        "never expose the staged successor as the accepted logical result until S1 is committed and predecessor link matches"
-      ],
-      "safety_condition": "A prepared successor/transition may be durable before the predecessor link only if it is non-authoritative until the predecessor CAS and final transition commit agree."
+      "observation": "Under the stated abstract provider contract, acknowledgement loss is duplicate-safe because the stable token identifies the already accepted logical effect and the original result can be reconstructed before finalization.",
+      "result": "recoverable_under_explicit_provider_contract"
     },
-    "derived_minimum_recoverable_write_order": [
-      "1. Durably create a unique prepared transition envelope S1 containing exact predecessor, exact successor/payload digest/generation, authority epoch/fence and the expected predecessor no-successor version.",
-      "2. A successor record may be staged, but it must be marked pending/non-authoritative and bound to S1.",
-      "3. CAS the predecessor from the exact expected committed_no_successor state to superseded_by=S1; a different accepted successor is a hard conflict.",
-      "4. Commit S1 and make the successor authoritative only when predecessor->S1 and S1->successor both match; readers/retries require this triad for duplicate-success reconstruction.",
-      "5. If the crash occurs before step 3, predecessor remains authoritative and S1 can be retried/aborted safely. If it occurs after step 3 but before step 4, S1 plus predecessor link deterministically identifies the only successor that may be finalized."
+    "derived_minimum_provider_side_evidence": [
+      "One idempotency/effect token stable across invocations and retries, derived from or durably bound to the exact transition/effect identity rather than a per-attempt value.",
+      "Exact request/payload binding: reuse of the token with a different payload must be rejected rather than silently creating or mutating an effect.",
+      "A provider-visible accepted-operation identity or equivalent result handle that can be reconstructed after acknowledgement loss.",
+      "Replay/query semantics that return the original accepted result or an unambiguous terminal status without issuing a second logical effect.",
+      "Sufficient retention/lifetime for the token and result to survive the repository checkpoint/resume interval being claimed; otherwise safety becomes time-window dependent and remains unresolved.",
+      "Repository finalization must still require matching prepared transition, predecessor CAS, provider result identity/digest, and successor binding; provider idempotency alone does not authorize successor visibility."
     ],
-    "weak_recovery_rule": {
-      "id": "W6_either_side_durable_means_complete",
-      "rule": "After a crash, if either predecessor.superseded_by is durable or a successor/transition-shaped record exists, infer the logical transition completed and return that side as authoritative.",
-      "falsification": [
-        "Under ordering A the durable predecessor marker does not identify a trustworthy successor or prove that successor execution happened, so inferring completion can lose or mutate the logical effect.",
-        "Under ordering B a staged successor can exist before the predecessor CAS; treating it as complete allows a competing successor or the still-authoritative predecessor to coexist with two accepted logical results.",
-        "Only a transition envelope plus matching predecessor link and committed visibility state distinguishes prepared intent from accepted successor state."
-      ],
-      "passes_minimum_contract": false,
-      "failed_requirements": [
-        "C5_idempotent_effect_identity",
-        "C6_unknown_outcome_reconstruction",
-        "C7_evidence_and_replay"
-      ]
+    "weak_retry_rule": {
+      "id": "W7_retry_when_repository_ack_missing",
+      "rule": "If S2 is prepared and no repository acknowledgement exists, retry the external action once and then treat the latest response as authoritative.",
+      "falsification": "Trace A produces two possible logical effects after one lost acknowledgement, while refusing the retry leaves an indistinguishable successful first effect unreconstructed. Therefore repository acknowledgement absence alone is not a safe retry predicate.",
+      "passes_minimum_contract": false
     },
     "result": {
-      "strict_predecessor_marker_first_without_transition_envelope_recoverable": false,
-      "transition_successor_first_with_pending_visibility_and_predecessor_CAS_recoverable": true,
-      "prepared_transition_envelope_required_before_any irreversible_supersession_interpretation": true,
-      "authoritative_successor_requires_matching_predecessor_transition_successor_triad": true,
-      "either_side_durable_is_completion": false,
+      "repository_only_prepared_state_can_resolve_unknown_external_outcome": false,
+      "stable_provider_idempotency_plus_result_reconstruction_is_sufficient_for_this_abstract_two_trace_fixture": true,
+      "provider_token_without_payload_binding_is_sufficient": false,
+      "provider_idempotency_without_result_or_terminal_status_reconstruction_proves_full_useful_outcome_parity": false,
       "same_run_waiting_or_polling_required": false,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "A one-sided predecessor superseded marker creates an ambiguity that cannot be resolved safely if the successor identity, authority and transition state were never made durable.",
-    "A successor/transition can be staged first without becoming a duplicate effect only when it is explicitly pending and readers gate authority on a successful predecessor CAS plus transition commit.",
-    "The recoverable protocol therefore needs a durable prepared transition envelope before the system interprets either side as an accepted supersession, followed by an exact predecessor CAS and triad-consistent finalization."
+    "A durable prepared transition plus a missing repository acknowledgement leaves an irreducible local ambiguity once an external effect may already have happened.",
+    "A stable provider-side effect token removes duplicate issuance only if retries are bound to the identical payload/effect identity.",
+    "Useful outcome reconstruction additionally needs a replayable result or unambiguous accepted-operation status; duplicate suppression alone is not enough to recover the result needed for repository finalization.",
+    "The idempotency/result retention window is part of the safety scope: if it can expire before the next recurring invocation, the same unknown-outcome ambiguity can reappear."
   ],
-  "inference": "For the exact abstract crash-boundary fixture tested, durable write ordering matters independently of idempotency-key identity. The safest reconstructible pattern is intent-first: persist a complete prepared transition envelope, keep any staged successor non-authoritative, CAS the exact predecessor, then expose the successor only after predecessor->transition->successor consistency is durable. A predecessor-only superseded bit or successor-only record is insufficient evidence of completion. This is an abstract local contract and is not evidence that any concrete Chat-exposed provider implements the required atomicity or visibility semantics.",
+  "inference": "For the exact abstract acknowledgement-loss fixture tested, repository-local CAS and prepared-transition records are necessary but not sufficient once the logical effect crosses an external boundary. Duplicate-safe recovery requires a provider-side idempotency/effect identity that is stable across invocations, bound to the exact payload, and paired with reconstructible result/terminal-status evidence for at least the claimed checkpoint-resume horizon. This does not prove any concrete Chat-exposed provider supplies those semantics or that the full Phase-1 root is satisfied.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full C1-C7 contract, including whether it can represent a prepared transition plus predecessor CAS and authoritative readback without external arbitration or finite quota.",
-    "Test the remaining unknown-outcome edge where the external logical effect may occur between prepared-transition durability and repository acknowledgement; derive whether result reconstruction can remain duplicate-safe without a separate external idempotency guarantee."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the claim/idempotency contract, including stable idempotency identity, payload binding, result reconstruction, retention horizon, CAS/readback, and absence of external arbitration or finite quota.",
+    "Test retention-expiry and delayed-retry behavior: determine whether an idempotency token/result that expires before a later scheduled invocation can be made safe using only durable repository evidence without creating a second logical effect."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -146,5 +124,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local unknown-outcome replay: place an external logical effect boundary between durable prepared-transition state and repository acknowledgement, compare at least two acknowledgement-loss/retry traces, derive what provider-side idempotency/result-reconstruction evidence is minimally required to prevent a second logical effect, and falsify one weak retry rule. Do not claim any concrete provider passes without direct allowed evidence; preserve the concrete zero-cost quota-independent provider-verification child. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment and nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local retention-expiry replay: let provider token/result retention expire before a later scheduled retry, compare a retry-after-expiry trace against a repository tombstone/final-result-digest reconstruction trace, derive the minimum durable fields needed to prevent a second logical effect without trusting an expired provider token, and falsify one weak expiry-retry rule. Do not claim any concrete provider passes without direct allowed evidence; keep the concrete zero-cost quota-independent provider-verification child open. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment and nonempty continuation, then return recurring-open without a second leaf."
 }
