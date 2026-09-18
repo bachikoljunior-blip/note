@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T17:27:58+09:00",
+  "updated_at": "2026-09-18T19:27:11+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "8578f969e174dfbe791be3da3945e231bbb33753",
+  "previous_latest_blob": "0dbb5800d26696141c29aaffd5721e25e5a8cdcb",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,91 +20,85 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "main_sha_exact_ref",
-    "frozen_main_ref_sha": "d80b4791f563f7a0cfa7fa4a077da9d5d8b591f1"
+    "transport_mode": "main_sha_exact_authority",
+    "frozen_main_ref_sha": "e8626d17041a92c46ee6e141f61053e147b5e0bf"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T172758+0900.json",
-    "blob": "d623b869255857db4ad74a145a12417aba686170",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T102711Z.json",
+    "blob": "aff83431eb38e9a0fcb802c268467b16a4cb5424",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "8578f969e174dfbe791be3da3945e231bbb33753"
+    "latest_input_blob": "0dbb5800d26696141c29aaffd5721e25e5a8cdcb"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "forged-corrupted-stale-receipt-validation-c13",
-  "tested_scope": "Exactly one deterministic self-local replay extending the prior F4-to-F5 handoff fixture. After F5 takeover for logical operation O5 with exact payload digest D5 and stable idempotency identity I5, compare three delayed F4 terminal-evidence candidates: (1) an A-authored success receipt with no provider-verifiable proof, (2) a provider-verifiable accepted receipt bound exactly to O5,D5,I5 and result identity R5, and (3) an otherwise authentic receipt whose operation, payload digest, or idempotency identity does not exactly match O5,D5,I5. The fixture tests only whether stale terminal evidence may suppress reissue or contribute to F5 finalization; it does not verify any concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or a second semantic leaf.",
+  "semantic_leaf": "expired-provider-proof-horizon-validation-c14",
+  "tested_scope": "Exactly one deterministic self-local replay extending the prior O5,D5,I5 stale-receipt fixture. Start from a delayed F4 terminal receipt that exactly matches logical operation O5, payload digest D5 and stable idempotency identity I5, and that was provider-verifiable when issued, but whose documented provider verification/result-retention or idempotency-deduplication horizon no longer guarantees current reconstruction. Compare only three recovery policies under current fence F5: fail-closed unresolved state, blind reissue, and provider-guaranteed query or idempotent replay when such a guarantee still covers the recovery instant. The fixture tests horizon requirements only; it does not verify a concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or a second semantic leaf.",
   "fixture": {
     "common_state": {
       "logical_operation_id": "O5",
       "payload_digest": "D5",
       "stable_idempotency_identity": "I5",
-      "authoritative_fence_after_takeover": "F5",
+      "current_authoritative_fence": "F5",
       "stale_fence": "F4",
-      "rule": "F5 remains the only repository finalization authority after takeover; stale F4 evidence can never renew or replace claim authority."
+      "historical_receipt": "once provider-verifiable accepted(O5,D5,I5)->R5",
+      "current_horizon_condition": "the provider no longer guarantees that the historical acceptance/result can be verified or reconstructed at the current recovery instant, unless a separate current query/replay guarantee still applies",
+      "authority_rule": "F5 remains the sole repository finalization authority; stale F4 material is evidence only and can never renew claim authority."
     },
-    "candidate_unverifiable_A_authored_receipt": {
-      "input": "A delayed F4 receipt self-authored by claimant A asserts accepted(O5,D5,I5) but carries no provider signature, provider query proof, or independently checkable result identity.",
-      "observation": "The assertion cannot distinguish a true accepted effect from stale, forged, corrupted, or mistaken claimant state. Treating it as success would allow a stale claimant to suppress a necessary recovery action by assertion alone.",
-      "admission": "may_be_archived_as_untrusted_non_authoritative_claim_only",
-      "may_suppress_retry": false,
-      "may_finalize": false,
-      "result": "unresolved_until_provider_verification_or_provider_idempotent_reconstruction"
+    "policy_fail_closed_unresolved": {
+      "action": "Do not treat historical validity plus exact tuple match as current proof after the relevant verification/reconstruction horizon has lapsed. Preserve O5,D5,I5 as unresolved and do not finalize success or absence.",
+      "observation": "This avoids converting expired evidence into a false-success claim and avoids duplicate effects from an unjustified retry, at the cost of liveness until a current provider-backed reconstruction route exists.",
+      "duplicate_effect_risk_from_policy": "none added by the policy itself",
+      "false_success_risk_from_policy": "bounded by refusing unsupported success",
+      "result": "safe_default_for_tested_trace_but_nonterminal"
     },
-    "candidate_provider_verifiable_exact_match": {
-      "input": "A delayed F4 terminal receipt is independently provider-verifiable and proves accepted(O5,D5,I5) with stable provider result/effect identity R5.",
-      "observation": "Because authenticity and the exact logical-operation, payload and idempotency binding are independently verified, F5 can use the receipt as non-authoritative evidence that the irreversible effect already occurred. Reissue is unnecessary for this tested trace, but only F5 may publish/finalize repository state through the exact current-claim/predecessor CAS.",
-      "admission": "accepted_as_non_authoritative_effect_evidence",
-      "may_suppress_blind_reissue": true,
-      "may_finalize": false,
-      "result": "safe_for_tested_trace_subject_to_exact_binding_and_provider_verifiability"
+    "policy_blind_reissue": {
+      "action": "Reissue O5,D5,I5 solely because the historical proof can no longer be verified.",
+      "observation": "If the provider's deduplication/idempotency horizon has also expired or is unspecified, the same I5 may no longer suppress a second irreversible effect. Loss of verifiability is not evidence that the first effect failed.",
+      "duplicate_effect_risk_from_policy": "unbounded_without_current_provider_dedupe_guarantee",
+      "result": "rejected_without_current_idempotent_replay_guarantee"
     },
-    "candidate_provider_verifiable_mismatch": {
-      "input": "A provider-verifiable delayed receipt is authentic but binds to O5 with D6, or to O6, or to idempotency identity I6 instead of the exact O5,D5,I5 tuple.",
-      "observation": "Authenticity alone does not prove that the exact intended O5,D5 effect succeeded. Allowing a genuine but mismatched receipt to suppress recovery would create false-success completion for the requested payload or operation.",
-      "admission": "rejected_for_O5_D5_I5_success_evidence",
-      "may_suppress_retry": false,
-      "may_finalize": false,
-      "result": "exact_tuple_binding_required_even_when_receipt_is_authentic"
+    "policy_current_provider_query_or_replay": {
+      "action": "Use a currently valid provider query or provider-guaranteed idempotent replay bound to exact O5,D5,I5 when its documented guarantee still covers the recovery instant.",
+      "observation": "A current query that reconstructs accepted(O5,D5,I5)->R5 may suppress reissue; a replay guarantee may be used only if the provider guarantees the same logical effect/result for I5 throughout the recovery window. F5 alone may then finalize repository state through the exact current-claim/predecessor CAS.",
+      "result": "conditionally_safe_only_while_current_provider_guarantee_covers_recovery"
     },
-    "minimum_validation_predicate": [
-      "Evidence authenticity/integrity is independently provider-verifiable; a claimant-authored assertion alone is insufficient.",
-      "The receipt or provider query binds exactly to the intended logical operation O5, payload digest D5, and stable cross-claimant idempotency/result identity I5; any mismatch rejects the evidence for O5,D5,I5.",
-      "The provider evidence denotes a terminal accepted effect and exposes a stable result/effect identity R5 or equivalent reconstructible proof; nonterminal or ambiguous status cannot suppress recovery.",
-      "The provider guarantee and evidence-validity/retention horizon cover the delayed-receipt and recovery window; otherwise the state remains unresolved rather than inferred successful.",
-      "Admitted stale evidence is non-authoritative only: it cannot renew F4, change the current claim, mutate payload semantics, or publish final state.",
-      "F5 remains the sole finalization authority and must CAS the exact current claim/fence plus O5,D5,I5 and reconstructed result identity R5 against the exact predecessor/stage.",
-      "If exact provider verification fails or tuple binding mismatches, F5 must use provider query or provider-guaranteed idempotent replay when available; absence or rejection of stale evidence alone is not proof that the original effect did not occur."
+    "minimum_horizon_predicate": [
+      "At the recovery instant, at least one independently provider-verifiable reconstruction mechanism remains valid for the exact O5,D5,I5 tuple: historical-result query/proof, or provider-guaranteed idempotent replay/deduplication.",
+      "The surviving mechanism's documented validity/retention/deduplication horizon covers the maximum delay between possible effect acceptance and recovery decision; a once-valid receipt is insufficient if its provider-backed verification guarantee has expired.",
+      "Any replay route preserves the exact payload digest and stable idempotency identity and guarantees no second irreversible effect for O5,D5,I5 during the covered horizon.",
+      "Any reconstructed success exposes R5 or an equivalent stable result/effect identity sufficient for F5 to CAS-finalize exact current state; ambiguous or nonterminal status remains unresolved.",
+      "If no currently valid reconstruction or idempotent-replay guarantee exists, fail closed: neither success nor failure is inferred, and blind reissue is forbidden for irreversible effects."
     ],
     "weak_rule_falsified": {
-      "id": "W11_any_authentic_stale_receipt_may_suppress_retry",
-      "rule": "Any provider-authentic stale terminal receipt from F4 is enough to suppress F5 retry/recovery for the current logical operation.",
-      "falsification": "An authentic receipt can bind to a different payload digest D6, a different logical operation O6, or a different idempotency identity I6. Using authenticity without exact tuple binding can falsely mark O5,D5,I5 as successful and suppress the recovery needed for the intended effect.",
+      "id": "W12_historical_exact_match_validity_is_sufficient_forever",
+      "rule": "A stale receipt that exactly matches O5,D5,I5 and was provider-verifiable when issued may suppress recovery forever, regardless of current verification, retention or idempotency horizons.",
+      "falsification": "After the provider-backed verification/reconstruction horizon lapses, historical validity plus tuple equality no longer supplies a current independently checkable effect state under this fixture. Suppressing recovery would assume success without current proof, while blind reissue could duplicate the effect if the deduplication horizon also lapsed. The safe state is unresolved unless a currently valid query or idempotent replay guarantee still covers O5,D5,I5.",
       "passes_minimum_contract": false
     },
     "result": {
-      "claimant_authored_unverifiable_stale_success_is_sufficient": false,
-      "provider_authenticity_without_exact_tuple_binding_is_sufficient": false,
-      "provider_verifiable_exact_O5_D5_I5_terminal_evidence_may_suppress_blind_reissue": true,
-      "stale_evidence_may_finalize_after_F5": false,
+      "historical_provider_validity_plus_exact_tuple_is_sufficient_after_horizon_expiry": false,
+      "blind_reissue_is_safe_without_current_dedupe_guarantee": false,
+      "fail_closed_unresolved_is_safe_default_for_irreversible_effect": true,
+      "current_provider_query_or_covered_idempotent_replay_can_resolve": true,
       "F5_exclusive_finalization_required": true,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "Authority and evidence remain separate after takeover: F4 cannot regain authority, but independently verified evidence of an already accepted effect can still inform F5.",
-    "Authenticity is necessary but not sufficient. Safe stale-evidence admission also requires exact semantic binding to the intended operation, payload and stable idempotency/result identity.",
-    "Rejecting unverifiable or mismatched stale evidence does not prove the effect never happened; it preserves an unresolved recovery state until provider query or provider-guaranteed idempotent reconstruction can decide safely."
+    "Evidence freshness is a separate safety dimension from authenticity and exact tuple binding: a receipt can be authentic and exactly bound yet still fail the recovery contract if no current provider-backed verification or reconstruction guarantee covers the decision time.",
+    "Loss of historical-result verifiability is not evidence of effect absence. Therefore retry safety depends on a current idempotency/deduplication guarantee, not merely on the inability to prove prior success.",
+    "For irreversible effects, fail-closed unresolved state is safer than either unsupported success or blind reissue when both evidence-retention and deduplication horizons are exhausted."
   ],
-  "inference": "For this exact self-local handoff fixture, the minimum stale-terminal-evidence rule is provider-verifiable authenticity plus exact O5,D5,I5 binding plus terminal accepted-effect/result identity, while F5 alone retains finalization authority. A claimant-authored receipt is insufficient, and a provider-authentic but tuple-mismatched receipt is also insufficient. This narrows the open contract but does not prove that any concrete zero-cost quota-independent Chat-exposed primitive supplies the required provider semantics, result reconstruction, or retention horizon.",
+  "inference": "For this exact self-local replay, safe recurring-Chat recovery requires a provider-backed horizon predicate in addition to authenticity, exact O5,D5,I5 binding and current-fence CAS. At recovery time there must still be a valid historical-result proof/query or an idempotent replay guarantee covering the entire relevant delay window. If neither survives, the effect remains unresolved and blind reissue is unsafe. This narrows the generic claim/idempotency contract but does not prove that any concrete zero-cost quota-independent Chat-exposed primitive provides the required horizons.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including cross-claimant stable identity, result reconstruction, exact tuple binding, retention horizon, CAS/readback and absence of external arbitration or finite quota.",
-    "Test a delayed receipt whose provider proof was once valid but is outside its documented verification/retention horizon, deriving the exact fail-closed recovery rule without blind duplicate reissue."
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including cross-claimant stable identity, exact tuple binding, provider-verifiable result reconstruction, documented verification/retention and deduplication horizons, CAS/readback, and absence of external arbitration or finite quota.",
+    "Test a partial-horizon trace where historical-result query expires before idempotency deduplication, and the inverse, to derive whether the minimum contract needs both horizons simultaneously or only one currently valid safe reconstruction route for the exact effect class."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -113,7 +107,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -127,5 +121,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local expired-or-unverifiable-provider-proof fixture: start from a receipt that exactly matches O5,D5,I5 but whose provider verification or retention horizon no longer guarantees reconstructibility; compare fail-closed unresolved state, blind reissue, and provider-guaranteed idempotent replay/query when still available. Derive the minimum horizon predicate, falsify one weak rule, preserve concrete zero-cost quota-independent provider verification as an unresolved child, persist/read back one compact checkpoint with exact scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf or public research while recovery mode forbids it."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local partial-horizon fixture: compare (A) provider historical-result verification expired but idempotency/deduplication for exact O5,D5,I5 still guaranteed, and (B) historical-result verification still valid but deduplication horizon expired. Derive the minimum safe action for each branch, falsify one weak rule about requiring both horizons simultaneously, keep concrete zero-cost quota-independent provider verification as an unresolved child, persist/read back one compact checkpoint with exact scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf or public research while recovery mode forbids it."
 }
