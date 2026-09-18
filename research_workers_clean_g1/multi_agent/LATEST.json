@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T14:28:39+09:00",
+  "updated_at": "2026-09-18T15:28:00+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "a398adeef0148630df30160a419c94ddfa07b7b3",
+  "previous_latest_blob": "536c32f41769fa9f55338ab3e9eff8d0e852ea7e",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,105 +20,84 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main_ref",
-    "frozen_main_ref_sha": "7a5e0e791720be74b54d1b6ca10cfdd6b0169c40"
+    "transport_mode": "main_sha_exact_ref",
+    "frozen_main_ref_sha": "028c4e356ff209702167717c2595fdcee1364539"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T142839JST.json",
-    "blob": "9c65d70fcfec63e9e0820a07af728c5874bcf4c2",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_2026-09-18T062800Z.json",
+    "blob": "d8dd3cea33c8d7db50fb3b2259515c0e78144773",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "a398adeef0148630df30160a419c94ddfa07b7b3"
+    "latest_input_blob": "536c32f41769fa9f55338ab3e9eff8d0e852ea7e"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "concurrent-claim-expiry-monotonic-fencing-c11",
-  "tested_scope": "Exactly one deterministic self-local concurrency replay extending the prior claim/idempotency frontier. Claimant A owns logical operation O5 under claim record C4 with fence F4 and lease L4, then is delayed beyond lease expiry. Claimant B atomically takes over the same logical operation at strictly newer fence F5. The replay compares no-fencing, lease-only, and monotonic-fencing repository acceptance rules when stale A resumes. It tests repository-visible claim/publication safety and the limits of repository fencing for an external side effect; it does not verify any concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf.",
+  "semantic_leaf": "stale-terminal-receipt-handoff-fencing-c12",
+  "tested_scope": "Exactly one deterministic self-local handoff-window replay extending the prior claim/idempotency frontier. Claimant A holds fence F4 for logical operation O5 with payload digest D5. A's external effect is accepted, but A is delayed before its post-effect receipt becomes durable. Claimant B then takes over at strictly newer fence F5. After takeover, A's delayed terminal-effect receipt arrives. The replay compares three acceptance strategies: reject every stale-F4 receipt, retain a stale-F4 terminal receipt only as non-authoritative effect evidence while F5 exclusively owns finalization, and provider-side fencing or a stable cross-claimant idempotency/result identity that lets F5 reconstruct the accepted effect without reissue. It tests duplicate reissue and stale-finalization safety for this exact trace only; it does not verify any concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or a second semantic leaf.",
   "fixture": {
     "common_state": {
       "logical_operation_id": "O5",
       "payload_digest": "D5",
-      "predecessor_identity": "K4/P4/G4",
-      "successor_identity": "K5/P5/G5",
-      "claim_record": "C4",
       "claimant_A": "A",
       "claimant_B": "B",
-      "A_initial_fence": "F4",
-      "B_takeover_fence": "F5 where F5 > F4",
-      "failure_boundary": "A is delayed past L4; B takes over and becomes authoritative; stale A later resumes while B may already be preparing, issuing, or finalizing the same logical operation"
+      "A_fence": "F4",
+      "B_fence": "F5 where F5 > F4",
+      "failure_boundary": "A's external effect is accepted under F4, A is delayed before the post-effect receipt is durable, B takes over at F5, then A's delayed receipt arrives"
     },
-    "trace_no_fencing": {
-      "steps": [
-        "A acquires C4 and begins work",
-        "A is delayed past lease expiry",
-        "B observes expiry and takes over",
-        "A resumes using only cached ownership and writes or issues the logical effect",
-        "B independently writes or issues the same logical effect"
-      ],
-      "observation": "Nothing in the acceptance path distinguishes stale A from current B. Both can produce conflicting repository publications and, if an external effect exists, both can issue it.",
-      "result": "unsafe"
+    "strategy_reject_all_stale_receipts": {
+      "rule": "After F5 takeover, reject every artifact carrying F4, including a terminal receipt for an already accepted effect.",
+      "observation": "This blocks stale F4 from finalizing repository state, but it also discards the only local evidence that the effect may already have succeeded. If B interprets absence of a current-fence receipt as permission to issue O5 again, B can duplicate an effect that A already caused.",
+      "result": "stale_finalization_safe_but_duplicate_reissue_unsafe_without_independent_result_reconstruction_or_stable_provider_idempotency"
     },
-    "trace_lease_only": {
-      "steps": [
-        "Ownership is represented by claimant identity plus an expiry timestamp but no monotonic generation/fence",
-        "B takes over after L4 expires",
-        "A resumes and performs a fresh timestamp/owner check before acting",
-        "A and B race between that check and the later publication or external effect"
-      ],
-      "observation": "A lease recheck narrows the race but does not itself bind a later effect or commit to the ownership version observed by the check. Repository publication can be made safer only if the final write CASes against an exact current claim version; an unfenced external effect can still be issued by stale A after authority moved to B.",
-      "result": "insufficient_as_a_complete_duplicate_safety_rule"
+    "strategy_stale_terminal_receipt_as_non_authoritative_evidence": {
+      "rule": "A delayed F4 receipt may be retained only in an evidence slot keyed by O5,D5 and a stable provider operation/result identity; it cannot renew F4, change the claim, mutate payload, or finalize the operation. F5 remains the sole authority for repository finalization.",
+      "observation": "This can prevent duplicate reissue only when the stale receipt contains verifiable evidence that the exact O5,D5 effect was accepted, or when F5 can use its stable provider identity to reconstruct the result. A self-authored or unverifiable stale receipt cannot safely prove success because accepting it could convert a stale claimant's assertion into false completion.",
+      "result": "conditionally_safe_for_evidence_ingest; authority_and_finalization_must_remain_F5"
     },
-    "trace_monotonic_fencing": {
-      "steps": [
-        "A acquires F4 and all prepared state records bind O5,D5,F4",
-        "B takeover atomically advances the claim to F5 and records B as current claimant",
-        "every repository publish/finalize transition requires CAS against exact predecessor identity plus current claim fence F5",
-        "stale A resumes with F4 and attempts a repository transition",
-        "the CAS/fence predicate rejects A because F4 is not current",
-        "B alone can publish/finalize repository state under F5"
-      ],
-      "observation": "For repository mutations in this exact replay, a strictly monotonic fence coupled to the final acceptance CAS prevents stale A from publishing after B becomes authoritative. Safety does not depend on A voluntarily noticing staleness.",
-      "external_effect_limit": "Repository fencing alone cannot prevent stale A from sending a non-fenced external side effect after F5 exists. External duplicate safety additionally requires either provider-side rejection of lower fences or a stable logical-operation idempotency identity bound to O5 and D5 that remains valid across claimant handoff for the required recovery horizon.",
-      "result": "repository_publication_safe_for_tested_trace; external_effect_still_conditional"
+    "strategy_provider_fence_or_cross_claimant_idempotency": {
+      "rule": "Bind A and B to the same stable logical operation/idempotency identity I5 for O5,D5. Either the provider rejects lower fences after F5 becomes current, or repeated issuance/query under I5 returns the already accepted result rather than causing a second effect. F5 uses the provider result/evidence and alone performs the final repository CAS.",
+      "observation": "This closes both sides of the tested handoff window if the provider guarantee covers the recovery horizon: stale A cannot cause an accepted lower-fence retry after authority advances, and B can reconstruct or replay idempotently without a duplicate effect. Repository finalization still requires F5 and the exact predecessor/current-claim CAS.",
+      "result": "safe_for_tested_trace_subject_to_provider_guarantee_and_retention_horizon"
     },
-    "minimum_repository_visible_contract": [
-      "Stable logical operation identity O5 and exact payload digest D5 shared across retries and claimant handoff.",
-      "Claim record containing current claimant, monotonically increasing fence/generation, lease expiry metadata, and an exact CAS/version identity.",
-      "Takeover rule that atomically advances the fence; a fence value is never reused after authority moves forward.",
-      "Prepared/effect-committed/finalized stage bound to predecessor/successor generation identities, logical operation, payload digest, and the fence that authorized that transition.",
-      "Every repository publication/finalization must CAS both the exact predecessor/stage identity and the currently authoritative fence, so a stale claimant cannot commit merely because it still holds an old lease token.",
-      "If the logical operation has an external effect, duplicate safety requires provider-visible fencing or an idempotency identity stable across claimant transfer plus durable result/effect evidence; repository fencing by itself is not enough."
+    "minimum_acceptance_predicates": [
+      "O5 and exact payload digest D5 remain stable across claimant transfer; takeover may change fence/claimant but not logical operation identity or payload semantics.",
+      "The irreversible effect has a stable provider-visible identity or idempotency key I5 shared across A and B, with a guarantee/retention horizon at least as long as the maximum recovery and delayed-receipt window.",
+      "A stale F4 receipt may be retained only as non-authoritative evidence and only when its accepted-effect assertion is independently verifiable and bound to O5,D5 and the stable provider operation/result identity; stale evidence never changes the current claim or authorizes finalization.",
+      "F5 is the only authority allowed to publish/finalize repository state after takeover; finalization CASes the exact predecessor/stage identity, O5,D5, the currently authoritative fence F5, and the reconstructed provider result/effect identity.",
+      "Before F5 reissues an apparently incomplete effect, it must reconstruct/query by the stable operation identity or use a provider-guaranteed idempotent replay; absence of a current-fence receipt alone is not proof that no effect occurred.",
+      "If the stale receipt is unverifiable and no provider-side fencing or stable idempotency/result reconstruction exists, the state remains unresolved rather than treating either stale success or safe reissue as proven."
     ],
-    "weak_lease_only_rule": {
-      "id": "W9_lease_recheck_without_fenced_acceptance",
-      "rule": "After a delayed claimant resumes, it may continue if a fresh lease/owner check appears valid; later effect issuance and publication need not carry the exact ownership generation observed by that check.",
-      "falsification": "A can pass the check immediately before B's takeover, then pause; B advances authority and acts; stale A resumes and its later unfenced action is still accepted or externally issued. The check and the effect are separated by a TOCTOU window, so the rule does not guarantee single-winner behavior.",
+    "weak_rule_falsified": {
+      "id": "W10_reject_stale_receipts_then_reissue",
+      "rule": "After takeover, discard every stale-fence receipt; if no F5 receipt exists, let B issue the logical operation again.",
+      "falsification": "A's effect was already accepted before takeover but its receipt was delayed. Discarding that receipt erases the only available success evidence, so B's reissue can cause a second irreversible effect. Rejecting stale authority is necessary, but conflating stale authority with unusable effect evidence is not duplicate-safe.",
       "passes_minimum_contract": false
     },
     "result": {
-      "no_fencing_is_duplicate_safe": false,
-      "lease_only_recheck_is_sufficient": false,
-      "monotonic_fence_plus_final_repository_CAS_blocks_stale_publication_for_tested_trace": true,
-      "repository_fencing_alone_blocks_stale_external_effect": false,
+      "reject_all_stale_receipts_is_end_to_end_duplicate_safe": false,
+      "stale_receipt_may_finalize_after_F5": false,
+      "verified_stale_terminal_receipt_may_be_non_authoritative_effect_evidence": true,
+      "F5_exclusive_finalization_required": true,
+      "stable_cross_claimant_provider_identity_or_provider_fencing_required_for_safe_reconstruction_in_tested_trace": true,
       "same_run_waiting_or_polling_required": false,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "Lease expiry answers when takeover may begin; it does not by itself establish which claimant a later effect or commit belongs to.",
-    "The safety-critical fence check must occur at the irreversible acceptance boundary, not only at claim acquisition or a preflight reread.",
-    "Monotonic fencing makes stale repository publication rejectable even if the stale claimant behaves incorrectly, because acceptance is bound to the current generation.",
-    "For external side effects, a repository fence is only local evidence. Without provider-side fence enforcement or cross-claimant idempotency, a stale claimant may still cause an irreversible duplicate before the repository rejects its later commit."
+    "Claim authority and effect evidence are different dimensions: a stale claimant must lose authority, but evidence of an already accepted irreversible effect cannot be discarded merely because its claimant fence is stale.",
+    "The hard handoff window is the interval between external acceptance and durable post-effect receipt. A protocol that protects only repository publication can still duplicate the external effect when takeover happens inside that interval.",
+    "Safe recovery requires the new claimant to reconstruct the external result under a stable logical identity or to rely on provider-enforced fencing/idempotency; lack of a current-fence receipt is insufficient evidence that the effect never occurred.",
+    "A stale receipt that is merely self-asserted cannot safely suppress reissue. Evidence accepted across a fence transition must be independently verifiable and must never confer stale finalization authority."
   ],
-  "inference": "For the exact concurrent-expiry replay tested, the minimum repository claim protocol needs both a lease and a monotonic authority generation: the lease permits takeover, while the fence plus final CAS makes stale publication impossible after takeover. This closes the repository-local stale-writer race but not a non-fenced external-effect race. End-to-end duplicate safety therefore requires the irreversible external acceptance point to share the same authority generation or a stable idempotency identity/result contract that survives claimant transfer. This fixture does not prove that any concrete Chat-exposed zero-cost primitive supplies those semantics or that the Phase-1 root is satisfied.",
+  "inference": "For the exact F4-to-F5 handoff trace tested, the minimum end-to-end claim protocol separates authority from evidence. Monotonic fencing plus repository CAS ensures only F5 may finalize after takeover, while a stable provider operation/idempotency identity or provider-side fencing bridges the effect-to-receipt gap so F5 can learn that A's effect already succeeded without reissuing it. A delayed F4 terminal receipt can contribute only as verifiable non-authoritative effect evidence; rejecting every stale receipt is unsafe because it can erase success evidence and induce duplicate reissue, while allowing a stale receipt to finalize is unsafe because it revives stale authority. This fixture does not prove that any concrete Chat-exposed zero-cost primitive supplies the required provider semantics or retention horizon.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including stable logical identity, payload binding, monotonic fencing or equivalent single-winner acceptance, result reconstruction, retention horizon, CAS/readback and absence of external arbitration or finite quota.",
-    "Test the hardest handoff window where stale A's external effect is accepted before A learns it lost F4, then B becomes authoritative at F5 before A can durably write the post-effect receipt; compare provider-fence enforcement versus a stable cross-claimant idempotency/result token and derive which receipt under which fence may be accepted."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, especially stable cross-claimant operation identity, result reconstruction, retention horizon, CAS/readback and absence of external arbitration or finite quota.",
+    "Test a forged-or-corrupted delayed stale receipt: distinguish a provider-verifiable accepted-effect receipt from an untrusted claimant-authored receipt and derive the minimum validation predicate that prevents false-success suppression of a necessary retry while preserving F5-only finalization."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -141,5 +120,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local handoff-window fixture: stale claimant A under F4 has an external effect accepted, B takes over at F5 before A's post-effect receipt is durable, then A's delayed receipt arrives. Compare (1) rejecting every F4 receipt, (2) accepting an F4 terminal-effect receipt only as non-authoritative evidence while F5 owns finalization, and (3) provider-enforced fencing or a stable cross-claimant idempotency/result identity that lets F5 reconstruct without reissue. Derive the minimum acceptance predicates that prevent both duplicate reissue and stale finalization, falsify one weak rule, keep concrete zero-cost quota-independent provider verification open, persist/read back one compact checkpoint with exact scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local forged/corrupted-stale-receipt fixture: after F5 takeover, compare (1) an unverifiable A-authored F4 success receipt, (2) a provider-signed or provider-query-verifiable receipt bound to O5,D5,I5, and (3) a mismatched-payload or mismatched-operation receipt. Derive the minimum validation predicate for admitting stale terminal evidence without reviving stale authority or suppressing a necessary retry, falsify one weak rule, preserve concrete zero-cost quota-independent provider verification as an unresolved child, persist/read back one compact checkpoint with exact scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf or public research while recovery mode forbids it."
 }
