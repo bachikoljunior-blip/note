@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T19:27:11+09:00",
+  "updated_at": "2026-09-18T20:30:24+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "0dbb5800d26696141c29aaffd5721e25e5a8cdcb",
+  "previous_latest_blob": "42f84988feee792eec8560c4e433e75efaea3129",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,22 +20,22 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "main_sha_exact_authority",
-    "frozen_main_ref_sha": "e8626d17041a92c46ee6e141f61053e147b5e0bf"
+    "transport_mode": "preferred_main_sha_exact_ref",
+    "frozen_main_ref_sha": "9f4eb2421e5516bfeb419f411839b9a65fc0f648"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T102711Z.json",
-    "blob": "aff83431eb38e9a0fcb802c268467b16a4cb5424",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T203024+0900.json",
+    "blob": "0c02d25f0fe86090cce2e03b4c4b9beb1b771a87",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "0dbb5800d26696141c29aaffd5721e25e5a8cdcb"
+    "latest_input_blob": "42f84988feee792eec8560c4e433e75efaea3129"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "expired-provider-proof-horizon-validation-c14",
-  "tested_scope": "Exactly one deterministic self-local replay extending the prior O5,D5,I5 stale-receipt fixture. Start from a delayed F4 terminal receipt that exactly matches logical operation O5, payload digest D5 and stable idempotency identity I5, and that was provider-verifiable when issued, but whose documented provider verification/result-retention or idempotency-deduplication horizon no longer guarantees current reconstruction. Compare only three recovery policies under current fence F5: fail-closed unresolved state, blind reissue, and provider-guaranteed query or idempotent replay when such a guarantee still covers the recovery instant. The fixture tests horizon requirements only; it does not verify a concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or a second semantic leaf.",
+  "semantic_leaf": "partial-provider-horizon-split-c15",
+  "tested_scope": "Exactly one deterministic self-local replay derived from prior O5,D5,I5,F4->F5 recovery state. Compare only two partial-horizon branches: (A) historical-result verification/retrieval has expired while current provider idempotency/deduplication for exact O5,D5,I5 remains guaranteed; (B) current provider historical-result verification/retrieval for exact O5,D5,I5 remains valid while the replay/deduplication horizon has expired. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "common_state": {
       "logical_operation_id": "O5",
@@ -43,62 +43,51 @@
       "stable_idempotency_identity": "I5",
       "current_authoritative_fence": "F5",
       "stale_fence": "F4",
-      "historical_receipt": "once provider-verifiable accepted(O5,D5,I5)->R5",
-      "current_horizon_condition": "the provider no longer guarantees that the historical acceptance/result can be verified or reconstructed at the current recovery instant, unless a separate current query/replay guarantee still applies",
-      "authority_rule": "F5 remains the sole repository finalization authority; stale F4 material is evidence only and can never renew claim authority."
+      "historical_effect": "accepted(O5,D5,I5)->R5 once under F4",
+      "authority_rule": "F5 alone may finalize repository state through exact current-claim/predecessor CAS; stale F4 evidence never renews claim authority."
     },
-    "policy_fail_closed_unresolved": {
-      "action": "Do not treat historical validity plus exact tuple match as current proof after the relevant verification/reconstruction horizon has lapsed. Preserve O5,D5,I5 as unresolved and do not finalize success or absence.",
-      "observation": "This avoids converting expired evidence into a false-success claim and avoids duplicate effects from an unjustified retry, at the cost of liveness until a current provider-backed reconstruction route exists.",
-      "duplicate_effect_risk_from_policy": "none added by the policy itself",
-      "false_success_risk_from_policy": "bounded by refusing unsupported success",
-      "result": "safe_default_for_tested_trace_but_nonterminal"
+    "branch_A_result_proof_expired_dedupe_live": {
+      "conditions": [
+        "Historical terminal-result proof/query can no longer independently verify R5 at the recovery instant.",
+        "Provider currently guarantees that replay with exact O5,D5,I5 cannot create a second irreversible effect throughout the recovery instant."
+      ],
+      "safe_action": "A replay is duplicate-safe only within the live provider idempotency guarantee. It is sufficient for recovery only if that same replay route returns or reconstructs a provider-verifiable terminal result/effect identity bound to exact O5,D5,I5. If deduplication merely suppresses a duplicate but does not yield a terminal result, keep the state unresolved and do not infer success from the old receipt.",
+      "result": "conditionally_resolvable_via_live_idempotent_replay_with_terminal_result_reconstruction"
     },
-    "policy_blind_reissue": {
-      "action": "Reissue O5,D5,I5 solely because the historical proof can no longer be verified.",
-      "observation": "If the provider's deduplication/idempotency horizon has also expired or is unspecified, the same I5 may no longer suppress a second irreversible effect. Loss of verifiability is not evidence that the first effect failed.",
-      "duplicate_effect_risk_from_policy": "unbounded_without_current_provider_dedupe_guarantee",
-      "result": "rejected_without_current_idempotent_replay_guarantee"
+    "branch_B_result_proof_live_dedupe_expired": {
+      "conditions": [
+        "A current provider-backed query/proof still verifies the terminal result/effect identity R5 for exact O5,D5,I5.",
+        "The provider no longer guarantees duplicate suppression for a new replay of I5."
+      ],
+      "safe_action": "Use the live result proof/query and do not replay. If the current proof is terminal and exactly bound to O5,D5,I5, F5 may CAS-finalize the recovered result. If the query is ambiguous or nonterminal, remain unresolved; replay is forbidden because the deduplication horizon has expired.",
+      "result": "resolvable_without_replay_when_live_terminal_result_proof_exists"
     },
-    "policy_current_provider_query_or_replay": {
-      "action": "Use a currently valid provider query or provider-guaranteed idempotent replay bound to exact O5,D5,I5 when its documented guarantee still covers the recovery instant.",
-      "observation": "A current query that reconstructs accepted(O5,D5,I5)->R5 may suppress reissue; a replay guarantee may be used only if the provider guarantees the same logical effect/result for I5 throughout the recovery window. F5 alone may then finalize repository state through the exact current-claim/predecessor CAS.",
-      "result": "conditionally_safe_only_while_current_provider_guarantee_covers_recovery"
-    },
-    "minimum_horizon_predicate": [
-      "At the recovery instant, at least one independently provider-verifiable reconstruction mechanism remains valid for the exact O5,D5,I5 tuple: historical-result query/proof, or provider-guaranteed idempotent replay/deduplication.",
-      "The surviving mechanism's documented validity/retention/deduplication horizon covers the maximum delay between possible effect acceptance and recovery decision; a once-valid receipt is insufficient if its provider-backed verification guarantee has expired.",
-      "Any replay route preserves the exact payload digest and stable idempotency identity and guarantees no second irreversible effect for O5,D5,I5 during the covered horizon.",
-      "Any reconstructed success exposes R5 or an equivalent stable result/effect identity sufficient for F5 to CAS-finalize exact current state; ambiguous or nonterminal status remains unresolved.",
-      "If no currently valid reconstruction or idempotent-replay guarantee exists, fail closed: neither success nor failure is inferred, and blind reissue is forbidden for irreversible effects."
+    "minimum_safe_route_predicate": [
+      "Recovery does not require both historical-result-verification and replay-deduplication horizons to remain valid simultaneously.",
+      "At least one currently valid route must be complete for the intended decision: it must both avoid an unsupported second irreversible effect and provide a provider-verifiable terminal result/effect identity sufficient for exact F5 CAS finalization.",
+      "A live result-query route can satisfy the predicate without any live replay guarantee because no replay is needed.",
+      "A live idempotent-replay route can satisfy the predicate without live historical-result proof only if replay is guaranteed duplicate-safe for exact O5,D5,I5 and reconstructs a terminal result/effect identity.",
+      "If no single currently valid route satisfies both safety and terminal reconstruction, fail closed and preserve unresolved state."
     ],
     "weak_rule_falsified": {
-      "id": "W12_historical_exact_match_validity_is_sufficient_forever",
-      "rule": "A stale receipt that exactly matches O5,D5,I5 and was provider-verifiable when issued may suppress recovery forever, regardless of current verification, retention or idempotency horizons.",
-      "falsification": "After the provider-backed verification/reconstruction horizon lapses, historical validity plus tuple equality no longer supplies a current independently checkable effect state under this fixture. Suppressing recovery would assume success without current proof, while blind reissue could duplicate the effect if the deduplication horizon also lapsed. The safe state is unresolved unless a currently valid query or idempotent replay guarantee still covers O5,D5,I5.",
+      "id": "W13_both_result_retention_and_dedupe_horizons_must_be_live_simultaneously",
+      "rule": "Safe recovery requires both current historical-result verification and current replay/deduplication guarantees to remain valid at the same time.",
+      "falsification": "Branch B recovers safely through a live exact terminal-result query without replay, so expired deduplication is irrelevant. Branch A can recover safely through a live duplicate-safe replay only when that replay also reconstructs a terminal result. Therefore the minimum contract is one currently valid complete safe reconstruction route, not simultaneous survival of both horizon classes.",
       "passes_minimum_contract": false
-    },
-    "result": {
-      "historical_provider_validity_plus_exact_tuple_is_sufficient_after_horizon_expiry": false,
-      "blind_reissue_is_safe_without_current_dedupe_guarantee": false,
-      "fail_closed_unresolved_is_safe_default_for_irreversible_effect": true,
-      "current_provider_query_or_covered_idempotent_replay_can_resolve": true,
-      "F5_exclusive_finalization_required": true,
-      "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "Evidence freshness is a separate safety dimension from authenticity and exact tuple binding: a receipt can be authentic and exactly bound yet still fail the recovery contract if no current provider-backed verification or reconstruction guarantee covers the decision time.",
-    "Loss of historical-result verifiability is not evidence of effect absence. Therefore retry safety depends on a current idempotency/deduplication guarantee, not merely on the inability to prove prior success.",
-    "For irreversible effects, fail-closed unresolved state is safer than either unsupported success or blind reissue when both evidence-retention and deduplication horizons are exhausted."
+    "The two horizon classes are substitutable only at the route level, not as bare booleans. A surviving horizon is useful only when its route yields enough terminal evidence for current F5 finalization without risking a second irreversible effect.",
+    "A live result-query route is strictly preferable when replay deduplication has expired because it avoids creating a new effect attempt.",
+    "A live deduplication horizon alone is not equivalent to recoverability if the replay response cannot reconstruct a terminal result/effect identity."
   ],
-  "inference": "For this exact self-local replay, safe recurring-Chat recovery requires a provider-backed horizon predicate in addition to authenticity, exact O5,D5,I5 binding and current-fence CAS. At recovery time there must still be a valid historical-result proof/query or an idempotent replay guarantee covering the entire relevant delay window. If neither survives, the effect remains unresolved and blind reissue is unsafe. This narrows the generic claim/idempotency contract but does not prove that any concrete zero-cost quota-independent Chat-exposed primitive provides the required horizons.",
+  "inference": "For this exact self-local trace, the minimum safe recurring-Chat recovery contract is disjunctive: one currently valid complete reconstruction route is enough. The route may be a live exact terminal-result query/proof, or a live exact idempotent replay that both prevents duplicate effects and reconstructs a terminal result. Requiring both horizon classes simultaneously is stronger than necessary, while accepting either horizon without route completeness is unsafe.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including cross-claimant stable identity, exact tuple binding, provider-verifiable result reconstruction, documented verification/retention and deduplication horizons, CAS/readback, and absence of external arbitration or finite quota.",
-    "Test a partial-horizon trace where historical-result query expires before idempotency deduplication, and the inverse, to derive whether the minimum contract needs both horizons simultaneously or only one currently valid safe reconstruction route for the exact effect class."
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the complete route predicate, including exact cross-claimant identity, terminal-result reconstruction, documented horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
+    "Test a third partial case where a provider query guarantees operation existence but not terminal result identity, to separate existence proof from result-reconstructive proof."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -121,5 +110,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local partial-horizon fixture: compare (A) provider historical-result verification expired but idempotency/deduplication for exact O5,D5,I5 still guaranteed, and (B) historical-result verification still valid but deduplication horizon expired. Derive the minimum safe action for each branch, falsify one weak rule about requiring both horizons simultaneously, keep concrete zero-cost quota-independent provider verification as an unresolved child, persist/read back one compact checkpoint with exact scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf or public research while recovery mode forbids it."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where a provider query proves operation existence for exact O5,D5,I5 but does not expose a terminal result/effect identity. Compare existence-only proof against terminal-result proof and live idempotent replay, derive the minimum evidence needed for F5 finalization, falsify one weak rule that existence proof alone is sufficient, keep concrete zero-cost quota-independent provider verification unresolved, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
 }
