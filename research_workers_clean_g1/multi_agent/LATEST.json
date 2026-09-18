@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T03:31:11+09:00",
+  "updated_at": "2026-09-19T04:27:34+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "2b3b179335ba42eb2e59b2c539e6eaa16914f7fc",
+  "previous_latest_blob": "5628952eca4feb9c4efbcb76285a7bd1875a0db3",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -21,66 +21,66 @@
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
     "transport_mode": "sha_only_main_ref_exact_authority",
-    "frozen_main_sha": "3d58d69a70b6c3d6d7b4e4c39a35ba2481761359"
+    "frozen_main_sha": "0c1404d11f853a556c7e731ea85bf786ff4b776d"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260919T033111+0900.json",
-    "blob": "7ab88a60b478e9f19254224c6f7536135bd36038",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260919T042734+0900.json",
+    "blob": "201619b013317c881f11f0a5150f21a50a1fadce",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "2b3b179335ba42eb2e59b2c539e6eaa16914f7fc"
+    "latest_input_blob": "5628952eca4feb9c4efbcb76285a7bd1875a0db3"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "complete-but-unsealed-history-negative-closure-c21",
-  "tested_scope": "Exactly one deterministic self-local recovery fixture for logical identity O5,D5,I5 under current fence F5. The provider guarantees that the attempt history observed at snapshot S5 is complete for O5,D5,I5 and every covered attempt reports started=false, but the history is not sealed: a future retry or later execution for the same logical identity may still appear after S5. Test only whether snapshot completeness plus all-started=false records and current-fence repository CAS/readback is sufficient for terminal duplicate-safe negative/non-effect closure. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "complete-sealed-history-started-false-semantic-gap-c22",
+  "tested_scope": "Exactly one deterministic self-local recovery fixture for logical identity O5,D5,I5 under current fence F5. The provider guarantees that the attempt history observed at terminalization snapshot S6 is complete and sealed for O5,D5,I5, no new attempt can be created, resumed, or executed after S6, and every covered attempt reports started=false. The provider contract does not define whether started=false excludes crossing the irreversible-effect boundary and supplies no explicit no-effect attestation. Test only whether complete+sealed history plus all-started=false and current-fence repository CAS/readback is sufficient for terminal duplicate-safe negative/non-effect closure. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "identity": {
       "logical_operation_id": "O5",
       "payload_digest": "D5",
       "stable_idempotency_identity": "I5",
       "current_authoritative_fence": "F5",
-      "history_snapshot": "S5"
+      "terminalization_snapshot": "S6"
     },
     "premises": [
-      "At S5, the provider guarantees the returned attempt history is complete for exact O5,D5,I5.",
-      "Every attempt present in the complete S5 history reports started=false.",
-      "The provider does not guarantee S5 is sealed, terminal, or quiescent.",
-      "A future retry or later execution for O5,D5,I5 may still be created after S5.",
-      "No provider-level terminal no-more-attempts attestation is available.",
+      "At S6, the provider guarantees the returned attempt history is complete for exact O5,D5,I5.",
+      "The provider guarantees S6 is sealed/terminal: no new attempt for O5,D5,I5 can be created, resumed, or executed after S6.",
+      "Every attempt in the complete sealed S6 history reports started=false.",
+      "The provider contract does not define started=false relative to the irreversible-effect boundary.",
+      "No explicit provider-side no-effect attestation is available for the covered attempts.",
       "Repository finalization still requires current F5 claim/predecessor CAS and exact readback."
     ],
-    "candidate_action": "F5 records terminal negative/non-effect closure from complete-at-S5 all-started=false history plus current-claim CAS/readback.",
+    "candidate_action": "F5 records terminal negative/non-effect closure from complete+sealed all-started=false history plus current-claim CAS/readback.",
     "result": "unsafe_insufficient_evidence",
-    "reason": "Snapshot completeness proves only that no covered attempt had started up to S5. Because the history is explicitly unsealed, the logical operation can still acquire a later retry or execution after the negative closure is committed. Repository fencing/CAS can serialize the repository transition, but it cannot by itself make the provider history terminal or prevent a delayed provider-side attempt from crossing the effect boundary. Terminal negative closure therefore requires both completeness for the relevant identity and a quiescence/sealing property that excludes future execution, or an equivalent provider-side terminalization primitive bound to the same identity.",
+    "reason": "Completeness plus sealing resolves the temporal gap identified in the prior fixture: no later attempt can appear after S6. It does not resolve the semantic gap between the provider's started flag and the irreversible-effect boundary. Without a documented implication that started=false means the attempt could not have crossed that boundary, or an equivalent explicit no-effect attestation, a covered attempt may still have produced the material effect while remaining started=false under the provider's own flag semantics. Repository fencing/CAS can serialize the repository transition but cannot repair ambiguous provider-side effect semantics. Terminal negative closure therefore still lacks evidence of no past irreversible effect.",
     "weak_rule_falsified": {
-      "id": "W19_complete_snapshot_all_started_false_plus_current_fence_CAS_is_enough_for_terminal_no_effect_closure",
-      "rule": "For exact O5,D5,I5, a provider-guaranteed complete current attempt-history snapshot in which every attempt reports started=false, combined with current F5 CAS/readback, is sufficient to record terminal non-effect closure even if future attempts remain possible.",
-      "falsification": "The rule is unsafe because completeness is time-bounded to S5 while terminal closure is a statement about the future as well as the past. A retry created after S5 can still start or produce an irreversible effect unless a separate sealing/quiescence guarantee prevents it."
+      "id": "W20_complete_sealed_all_started_false_plus_current_fence_CAS_is_enough_for_terminal_no_effect_closure_without_effect_semantics",
+      "rule": "For exact O5,D5,I5, provider-guaranteed complete and sealed attempt history in which every attempt reports started=false, combined with current F5 CAS/readback, is sufficient to record terminal non-effect closure even when the provider does not define started=false relative to the irreversible-effect boundary.",
+      "falsification": "Sealing excludes future attempts but says nothing about whether a past covered attempt with started=false could already have crossed the material-effect boundary. The rule conflates an execution-state label with an effect-state proof and is therefore unsafe under the stated contract."
     },
     "minimum_additional_provider_evidence": {
       "required_properties": [
-        "Exact binding of the proof to O5,D5,I5.",
-        "Complete history for all attempts relevant to the identity up to the terminalization point.",
-        "Sealed/terminal quiescence: no new attempt for O5,D5,I5 can be created, resumed, or executed after the proof is issued.",
-        "For every covered attempt, started=false must semantically exclude crossing the irreversible-effect boundary, or an equivalent explicit no-effect attestation must be supplied."
+        "Exact binding of the terminal proof to O5,D5,I5.",
+        "Complete history for every attempt relevant to that exact identity.",
+        "Sealed/terminal quiescence so no new attempt can be created, resumed, or executed after the proof.",
+        "Documented semantics that for every covered attempt started=false implies the irreversible-effect boundary was not crossed, or an equivalent explicit identity-bound no-effect attestation for all covered attempts."
       ],
-      "repository_side_guard_after_provider_proof": "Only after provider-side completeness and sealing/quiescence are both established may current F5 CAS plus exact readback safely finalize terminal negative closure in repository state."
+      "repository_side_guard_after_provider_proof": "Only after provider-side completeness, sealing/quiescence, and explicit no-effect semantics are all established may current F5 CAS plus exact readback safely finalize terminal negative closure in repository state for this fixture."
     }
   },
   "observations": [
-    "Completeness and sealing are distinct proof obligations: a history can be complete at a snapshot while remaining open to future attempts.",
-    "All-started=false across a complete current snapshot establishes no-start for the past covered set, not impossibility of future start.",
-    "Repository fencing protects repository authority and duplicate finalization, but does not synthesize provider-side terminality."
+    "Sealing repairs the prior future-attempt uncertainty but not uncertainty about the meaning of a provider execution-state flag.",
+    "A provider state label is not interchangeable with an effect-state attestation unless the contract explicitly links the two.",
+    "Repository fencing protects repository authority and duplicate finalization, but does not synthesize provider-side no-effect semantics."
   ],
-  "inference": "Within this exact fixture, completeness without terminal quiescence is still insufficient for terminal negative/non-effect closure. The minimal safe proof must combine identity-bound complete history with a sealing/quiescence guarantee, or use an equivalent atomic provider terminalization primitive that prevents later execution for the same idempotency identity.",
+  "inference": "Within this exact fixture, complete+sealed history with all attempts marked started=false is still insufficient for terminal negative/non-effect closure when the provider does not define started=false as excluding the irreversible-effect boundary. The minimal safe proof must also include identity-bound effect semantics or an explicit no-effect attestation, after which current-claim CAS/readback can guard repository finalization.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Next test a self-local boundary case where the provider guarantees a complete and sealed attempt history for exact O5,D5,I5 and every covered attempt reports started=false, but the provider contract does not explicitly define whether started=false excludes all irreversible effects; determine whether complete+sealed history without explicit no-effect semantics is sufficient for terminal negative closure.",
+    "Next test a self-local boundary case where the provider guarantees complete and sealed history for exact O5,D5,I5 and every covered attempt carries an explicit identity-bound no-effect attestation, but the terminal proof was minted under an earlier repository claim/fence and is replayed after a later claim/fence becomes authoritative; determine whether provider terminality is sufficient without binding the proof to the current repository claim epoch.",
     "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full success-route predicate, including exact cross-claimant identity, immutable terminal-result/effect reconstruction, documented idempotency-horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
     "Verify one concrete allowed primitive whose documented terminal cancellation/no-execution semantics bind the exact idempotency identity and remain usable with optional monthly quotas at zero."
   ],
@@ -105,5 +105,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where the provider guarantees a complete and sealed attempt history for exact O5,D5,I5 and every covered attempt reports started=false, but the provider contract does not explicitly state whether started=false excludes crossing the irreversible-effect boundary. Determine whether complete+sealed history without explicit no-effect semantics is sufficient for terminal negative closure, falsify one weak rule if possible, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where the provider supplies complete and sealed history for exact O5,D5,I5 plus an explicit identity-bound no-effect attestation for every covered attempt, but that terminal proof was minted under an earlier repository claim/fence and is replayed after a later claim/fence becomes authoritative. Determine whether provider terminality/no-effect evidence is sufficient without proof-to-current-claim epoch binding, falsify one weak rule if possible, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
 }
