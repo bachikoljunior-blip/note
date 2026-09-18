@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T01:29:59+09:00",
+  "updated_at": "2026-09-19T02:28:08+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "849c8f6227a8e9729f1ecf6c2d39697aacee39fb",
+  "previous_latest_blob": "74bf73510d20b1e700bee7a09ed8591137d4e187",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,22 +20,22 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_exact_authority",
-    "frozen_main_sha": "081be0c3eaec749242fb0145f333f91562b630c4"
+    "transport_mode": "preferred_exact_main_sha",
+    "frozen_main_sha": "8c8fdc892f55496db3cc833b6078c666180cfd8b"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260919T0130JST.json",
-    "blob": "e429aa8ca2ef46087bd94a3697fe5ab50681c7ff",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260919T022808+0900.json",
+    "blob": "2979028462a476a9244c854bb0f67af0244af9b7",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "849c8f6227a8e9729f1ecf6c2d39697aacee39fb"
+    "latest_input_blob": "74bf73510d20b1e700bee7a09ed8591137d4e187"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "ambiguous-cancellation-requested-non-effect-closure-c19",
-  "tested_scope": "Exactly one deterministic self-local recovery fixture for exact logical identity O5,D5,I5 under current fence F5. A provider-authoritative query bound to O5,D5,I5 returns cancellation_requested, but the documented semantics allow execution to have started, to race with cancellation, or to complete after the request; there is no immutable result/effect identifier and no separately authoritative proof that execution never began or can no longer begin. Test only whether cancellation_requested plus current-fence repository CAS/readback is sufficient for duplicate-safe negative/non-effect closure. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "started-false-unsealed-history-negative-closure-c20",
+  "tested_scope": "Exactly one deterministic self-local recovery fixture for logical identity O5,D5,I5 under current fence F5. A provider-authoritative attempt record bound to O5,D5,I5 reports started=false, but the provider does not guarantee that the observed record set is complete, unique for the logical identity, sealed against later attempts, or terminal/quiescent. Test only whether that single started=false record plus current-fence repository CAS/readback is sufficient for duplicate-safe terminal non-effect closure. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "identity": {
       "logical_operation_id": "O5",
@@ -44,49 +44,45 @@
       "current_authoritative_fence": "F5"
     },
     "premises": [
-      "The cancellation_requested observation is authoritatively bound to exact O5,D5,I5.",
-      "The status means only that a cancellation request was accepted or recorded; it does not prove cancellation-before-execution.",
-      "Execution may already have started, may race with cancellation, or may still complete for the same O5,D5,I5.",
-      "No immutable result/effect identifier is available.",
-      "No provider-authoritative execution-never-started attestation, sealed no-effect terminal state, or equivalent quiescence proof is available.",
-      "Repository finalization would still require current F5 claim/predecessor CAS and exact readback."
+      "The observed attempt record is authoritatively bound to exact O5,D5,I5 and reports started=false.",
+      "The provider does not guarantee that this is the only attempt record for O5,D5,I5.",
+      "The provider does not guarantee that the record set is complete or sealed.",
+      "The provider does not guarantee terminal quiescence or forbid a later attempt for O5,D5,I5.",
+      "No immutable terminal result/effect identifier or provider-level no-effect attestation is available.",
+      "Repository finalization still requires current F5 claim/predecessor CAS and exact readback."
     ],
-    "candidate_action": "F5 records a negative/non-effect closure immediately from cancellation_requested plus current-claim CAS/readback.",
+    "candidate_action": "F5 records terminal negative/non-effect closure from the single authoritative started=false record plus current-claim CAS/readback.",
     "result": "unsafe_insufficient_evidence",
-    "reason": "Repository fencing prevents stale repository writers but cannot prove the provider-side effect did not already occur or will not occur. Because cancellation_requested admits execution races, negative closure would collapse an unresolved external outcome into a false no-effect fact.",
-    "minimum_additional_provider_evidence": {
-      "required_properties": [
-        "Exact binding to O5,D5,I5.",
-        "Authoritative proof that no irreversible effect occurred; for example a documented execution-never-started or cancelled-before-execution terminal assertion whose source is complete for the operation.",
-        "Terminal/quiescent semantics that forbid later execution for the same O5,D5,I5, not merely a transient absence of execution evidence.",
-        "If the proof is derived from an event/attempt record, an explicit completeness or sealed-history guarantee so missing start/effect events can be interpreted as absence rather than unobserved data."
-      ],
-      "repository_side_guard_after_provider_proof": "Only after the provider-side no-effect/no-later-execution obligation is satisfied may current F5 CAS plus exact readback finalize the negative closure."
-    },
+    "reason": "started=false is evidence only about the observed attempt record. Without completeness/uniqueness and sealed terminal semantics, an unobserved concurrent/retry attempt may have started or a later attempt may still start. Repository fencing controls who may finalize repository state; it cannot convert an incomplete provider history into proof of global non-effect.",
     "weak_rule_falsified": {
-      "id": "W17_cancellation_requested_plus_current_fence_CAS_is_enough_for_no_effect_closure",
-      "rule": "For exact O5,D5,I5, a provider cancellation_requested status plus current F5 repository CAS/readback is sufficient to record terminal non-effect closure.",
-      "falsification": "The status explicitly allows an execution race or already-started execution. F5 CAS controls repository finalization authority only; it supplies no provider-side evidence that an irreversible effect is absent. Therefore the rule is unsafe within this fixture.",
+      "id": "W18_one_started_false_attempt_plus_current_fence_CAS_is_enough_for_no_effect_closure",
+      "rule": "For exact O5,D5,I5, one provider-authoritative attempt record with started=false plus current F5 CAS/readback is sufficient to record terminal non-effect closure.",
+      "falsification": "The rule is unsafe because the record set may omit another or later attempt. The observed record's started=false property does not establish that no irreversible effect occurred anywhere for the logical identity or that future execution is impossible.",
       "passes_minimum_contract": false
     },
-    "comparison_to_prior_leaf": {
-      "documented_cancelled_before_execution": "May support negative closure without a result/effect identifier because the provider semantics themselves prove no effect and no later execution for the exact identity.",
-      "cancellation_requested": "Cannot support negative closure without additional provider-side no-effect and quiescence evidence because execution remains possible or unresolved."
+    "minimum_additional_provider_evidence": {
+      "required_properties": [
+        "Exact binding to O5,D5,I5 for every attempt covered by the proof.",
+        "Completeness or uniqueness: either the provider proves this is the only possible attempt for O5,D5,I5, or exposes a complete attempt history for that identity.",
+        "Sealed/terminal semantics: no additional attempt can appear or execute after the proof is issued.",
+        "No-effect semantics: every covered attempt is proven not to have crossed the irreversible-effect boundary."
+      ],
+      "repository_side_guard_after_provider_proof": "Only after the provider-side completeness/uniqueness, terminal-quiescence, and no-effect obligations are satisfied may current F5 CAS plus exact readback finalize terminal negative closure."
     }
   },
   "observations": [
-    "Cancellation-request acknowledgement and cancellation-before-execution are distinct evidence classes.",
-    "Current-fence CAS/readback is necessary for repository authority but cannot substitute for provider-side outcome evidence.",
-    "For a negative closure derived from event absence, completeness/sealed-history semantics are part of the evidence minimum; an incomplete log with no start event is not proof that execution never started."
+    "A single exact-identity started=false attempt record is stronger than cancellation_requested for that record, but it is still local to the observed attempt unless completeness/uniqueness is guaranteed.",
+    "History completeness and terminal sealing are independently necessary when negative closure is inferred from absence of any started/effectful attempt.",
+    "Current-fence repository CAS/readback remains necessary for repository authority but does not supply provider-side completeness or no-effect evidence."
   ],
-  "inference": "For this exact self-local fixture, cancellation_requested plus F5 CAS/readback is insufficient for safe non-effect closure. The minimum missing provider-side obligation is exact-identity evidence proving both absence of irreversible effect and impossibility of later execution. This can be satisfied by a documented terminal no-effect assertion or by an equivalent complete and sealed execution-history/attempt proof, but not by a request acknowledgement or ambiguous status label alone.",
+  "inference": "Within this exact fixture, negative closure is unsafe without explicit provider guarantees that the attempt evidence is complete or unique for O5,D5,I5 and terminally sealed against later execution. A trustworthy started=false field can establish non-start for the observed attempt, but not global non-effect for the logical operation when unseen or future attempts remain possible.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Test the next self-local boundary case where an authoritative attempt record says started=false but history completeness is not guaranteed, to determine whether explicit sealed-history/completeness is independently necessary for negative closure.",
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the complete success-route predicate, including exact cross-claimant identity, immutable terminal-result/effect reconstruction, documented idempotency horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
-    "Verify one concrete allowed primitive whose documented terminal cancellation semantics guarantee no execution/no irreversible effect for an exact idempotency identity without consuming finite quota."
+    "Next test a self-local boundary case where the provider guarantees a complete attempt history for O5,D5,I5 and every attempt says started=false, but the history is not sealed against future retries; determine whether completeness without quiescence is still insufficient for terminal negative closure.",
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full success-route predicate, including exact cross-claimant identity, immutable terminal-result/effect reconstruction, documented idempotency-horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
+    "Verify one concrete allowed primitive whose documented terminal cancellation/no-execution semantics bind the exact idempotency identity and remain usable with optional monthly quotas at zero."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -95,7 +91,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, the current multi_agent LATEST, and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -109,5 +105,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where a provider-authoritative attempt record bound to exact O5,D5,I5 reports started=false but the record set is not guaranteed complete or sealed. Determine whether negative closure is safe without explicit history-completeness/quiescence semantics, falsify one weak rule if possible, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where the provider guarantees a complete attempt history for exact O5,D5,I5 and every covered attempt reports started=false, but the history is not sealed against future retries or later execution. Determine whether completeness without terminal quiescence is sufficient for negative closure, falsify one weak rule if possible, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
 }
