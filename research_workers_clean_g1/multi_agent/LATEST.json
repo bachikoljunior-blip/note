@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T21:32:13+09:00",
+  "updated_at": "2026-09-18T23:30:00+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "9e123141ff61652559a318845a94f7dcb1ca9c73",
+  "previous_latest_blob": "e6c370ae10736e180984387df8f9cf71dddfaca3",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -20,22 +20,21 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "preferred_main_sha_exact_ref",
-    "frozen_main_ref_sha": "8179133f8c85c04183c1e7267ac3c3c96aaba264"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T213213JST.json",
-    "blob": "fb5f40bd0a1466c4ffb15dfcc0b01e8d4775d2b4",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260918T232957+0900.json",
+    "blob": "dde1fc392a019b5a9964598ea9322195978e319c",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "9e123141ff61652559a318845a94f7dcb1ca9c73"
+    "latest_input_blob": "e6c370ae10736e180984387df8f9cf71dddfaca3"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "existence-proof-insufficient-c16",
-  "tested_scope": "Exactly one deterministic self-local replay derived from the prior O5,D5,I5,F4->F5 recovery state. Test only the third partial case where a current provider query proves that exact operation O5 with payload digest D5 and stable idempotency identity I5 exists, but does not expose a terminal result/effect identity. Compare that existence-only route against the already-local terminal-result-query route and live idempotent-replay-with-terminal-reconstruction route. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "terminal-status-only-insufficient-c17",
+  "tested_scope": "Exactly one deterministic self-local replay of the prior O5,D5,I5,F4->F5 recovery fixture. Test only the fourth partial case where a current provider query bound to exact O5,D5,I5 exposes a terminal status label (for example completed) but exposes no immutable terminal result/effect identity. Compare that status-only evidence with the prior exact terminal-result/effect-identity route under retry and duplicate recovery. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "common_state": {
       "logical_operation_id": "O5",
@@ -46,45 +45,40 @@
       "historical_effect": "accepted(O5,D5,I5)->R5 once under F4",
       "authority_rule": "F5 alone may finalize repository state through exact current-claim/predecessor CAS; stale F4 evidence never renews claim authority."
     },
-    "branch_C_operation_exists_terminal_identity_absent": {
+    "branch_D_terminal_status_without_effect_identity": {
       "conditions": [
-        "A current provider-backed query proves that an operation bound to exact O5,D5,I5 exists or was accepted.",
-        "The query does not establish terminal completion, irreversible-effect occurrence, terminal result R5, or any provider-verifiable terminal result/effect identity.",
-        "No separate live replay/deduplication guarantee with terminal-result reconstruction is assumed."
+        "A current provider-backed query is bound to exact O5,D5,I5 and returns a terminal status label such as completed.",
+        "The query exposes no immutable terminal result identifier, effect identifier, receipt identifier, or equivalent immutable binding that proves which irreversible effect/result the status refers to.",
+        "No separate replay/deduplication guarantee or stronger terminal-result query is assumed."
       ],
-      "safe_action": "Do not let F5 CAS-finalize success from existence alone. Preserve unresolved state because operation existence does not distinguish pending, failed, cancelled, accepted-without-effect, or completed-with-effect outcomes. A replay remains forbidden unless a currently valid exact O5,D5,I5 idempotency guarantee prevents a second irreversible effect and the replay route reconstructs a terminal result/effect identity.",
-      "result": "unresolved_existence_only_proof_is_not_terminal_reconstruction"
+      "safe_action": "Do not let F5 finalize an effectful success from the terminal status label alone. The status can narrow the operation lifecycle state, but without an immutable result/effect binding it cannot prove the unique irreversible effect/result needed for duplicate-safe recovery. Preserve unresolved effect-sensitive finalization unless stronger evidence supplies an immutable terminal binding, or a duplicate-safe exact O5,D5,I5 replay reconstructs one.",
+      "result": "terminal_status_only_is_nonterminal_for_effect_sensitive_success_finalization"
     },
     "route_comparison": {
-      "live_terminal_result_query": "Sufficient for F5 finalization without replay when it verifies a terminal result/effect identity bound to exact O5,D5,I5.",
-      "live_idempotent_replay_with_terminal_reconstruction": "Conditionally sufficient when replay is duplicate-safe for exact O5,D5,I5 and the replay returns or reconstructs a provider-verifiable terminal result/effect identity.",
-      "live_existence_only_query": "Insufficient by itself because it proves presence/acceptance, not terminal outcome or irreversible-effect identity."
+      "exact_terminal_result_or_effect_identity": "Sufficient in this fixture for F5 success finalization when current evidence binds the terminal identity to exact O5,D5,I5 and the current-claim CAS succeeds.",
+      "terminal_status_label_only": "Insufficient for effect-sensitive success finalization because the label does not identify the unique irreversible result/effect that recovery is trying to preserve exactly once.",
+      "duplicate_safe_replay_with_terminal_reconstruction": "Conditionally sufficient when the replay is duplicate-safe for exact O5,D5,I5 and returns or reconstructs an immutable provider-verifiable terminal result/effect identity."
     },
-    "minimum_evidence_for_F5_finalization": [
-      "Current evidence must be bound to exact O5,D5,I5 rather than only to an account, queue, request class, or stale fence.",
-      "The evidence must establish a terminal result/effect identity sufficient to distinguish completed irreversible effect from pending, failed, cancelled, or accepted-without-effect states.",
-      "If recovery uses a replay rather than a read-only query, a currently valid duplicate-suppression/idempotency guarantee for exact O5,D5,I5 is additionally required through the replay decision window.",
-      "If no current route simultaneously establishes terminal identity and, when replaying, duplicate safety, fail closed and keep F5 unresolved."
-    ],
+    "status_only_nuance": "A terminal status may be useful for narrowing or for a provider-specific non-effect conclusion only if its documented semantics independently prove the required outcome. This generic fixture assumes no such stronger semantics. Therefore it does not generalize the negative result beyond effect-sensitive success finalization without an immutable terminal binding.",
     "weak_rule_falsified": {
-      "id": "W14_operation_existence_proof_alone_is_sufficient_for_F5_finalization",
-      "rule": "A current provider proof that exact O5,D5,I5 exists is sufficient for F5 to finalize the recovered operation as successful.",
-      "falsification": "The same existence fact is compatible with materially different terminal states, including pending, failed, cancelled, accepted-without-effect, and completed-with-effect. Because F5 finalization must identify the terminal result/effect rather than merely operation presence, existence-only proof cannot safely authorize success. A terminal result/effect proof, or a duplicate-safe replay that reconstructs one, is still required.",
+      "id": "W15_terminal_status_completed_alone_is_sufficient_for_F5_effectful_success_finalization",
+      "rule": "A current completed status bound to exact O5,D5,I5 is sufficient by itself for F5 to finalize the recovered operation as the unique successful irreversible effect.",
+      "falsification": "The completed label establishes a lifecycle classification but, under the tested fixture, supplies no immutable result/effect identity. Retry-safe recovery must distinguish the one preserved irreversible result/effect from merely being in a terminal status. Without an immutable binding, the same status-level observation cannot establish which irreversible result is being adopted, so effectful success finalization remains unresolved.",
       "passes_minimum_contract": false
     }
   },
   "observations": [
-    "Operation identity and terminal-result identity are distinct evidence classes: exact operation existence narrows ambiguity but does not resolve the effect/outcome ambiguity needed for finalization.",
-    "A read-only terminal-result query is stronger than existence-only proof because it can resolve recovery without replay or renewed duplicate risk.",
-    "Replay idempotency is only a safe substitute for missing terminal history when the replay route itself yields terminal reconstruction; duplicate suppression alone does not turn existence into success evidence."
+    "Terminal-state evidence and terminal-result/effect identity are distinct evidence classes in the tested recovery fixture.",
+    "A current completed label narrows ambiguity beyond mere operation existence but still does not establish the immutable result/effect binding required for exact effect-sensitive success recovery.",
+    "The negative result is deliberately scoped: it does not claim that every provider terminal label is useless, only that status-only evidence without stronger documented semantics or immutable effect binding is insufficient for this effect-sensitive F5 success finalization."
   ],
-  "inference": "For this exact self-local trace, F5 finalization requires current terminal reconstruction, not merely current operation existence. The minimum complete route is either a live exact terminal-result/effect query bound to O5,D5,I5, or a live exact idempotent replay that both prevents duplicate irreversible effects and reconstructs a terminal result/effect identity. Existence-only proof is useful diagnostic evidence but remains nonterminal.",
+  "inference": "For this exact self-local trace, status-only evidence cannot authorize F5 effectful success finalization without an immutable terminal result/effect binding. The minimum complete success route remains either a current exact terminal result/effect query bound to O5,D5,I5, or a currently valid duplicate-safe replay for O5,D5,I5 that reconstructs such a terminal binding. A provider-specific terminal status could support a narrower non-effect conclusion only if its documented semantics independently prove that conclusion; that stronger case was not tested here.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the complete route predicate, including exact cross-claimant identity, terminal-result reconstruction, documented horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
-    "Test a fourth self-local partial case where a provider exposes a terminal status label but no immutable result/effect identity, to distinguish terminal-state evidence from result-identity evidence under retry and duplicate recovery."
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the complete route predicate, including exact cross-claimant identity, immutable terminal-result/effect reconstruction, documented idempotency horizon semantics, current-claim CAS/readback, and absence of external arbitration or finite quota.",
+    "Test one self-local non-success terminal case where a provider status such as cancelled-before-execution carries documented semantics that may prove absence of irreversible effect without a result identity, to separate success-finalization evidence from safe negative closure."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -107,5 +101,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where a provider exposes a terminal status label for exact O5,D5,I5 but no immutable terminal result/effect identity. Compare terminal-status-only evidence against exact terminal result/effect identity under retry and duplicate recovery, derive whether status-only evidence can ever authorize F5 finalization without an immutable effect binding, falsify one weak rule if possible, keep concrete zero-cost quota-independent provider verification unresolved, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture where a provider reports a non-success terminal status with documented no-effect semantics (for example cancelled-before-execution) for exact O5,D5,I5 but still exposes no immutable result identity. Determine whether such semantics can safely authorize a negative/non-effect closure under F5 without weakening duplicate/effect guarantees, falsify one weak rule if possible, keep concrete zero-cost quota-independent provider verification unresolved, persist/read back one compact checkpoint, and return recurring-open without a second leaf or public research."
 }
