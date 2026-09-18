@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T12:28:18+09:00",
+  "updated_at": "2026-09-18T13:28:02+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "29c5293eae1e6f63792de13e521b2172009f2992",
+  "previous_latest_blob": "bfc55f477a08576d43d99ec39cc2b5b6c0547e5a",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "run_lifecycle_revision": 3,
@@ -24,84 +24,92 @@
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T032818Z.json",
-    "blob": "53b43eb5cd227dc5fbb3742bf07544db852858c7",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T042802Z.json",
+    "blob": "434435aef14c8ff5db46e884c851f9761cde7d09",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "29c5293eae1e6f63792de13e521b2172009f2992"
+    "latest_input_blob": "bfc55f477a08576d43d99ec39cc2b5b6c0547e5a"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "unknown-outcome-after-external-effect-before-repository-ack-c9",
-  "tested_scope": "Exactly one deterministic self-local replay extending the prior prepared-transition/write-order result. The fixture places one logical external effect between durable prepared transition S2 and repository acknowledgement, then compares two acknowledgement-loss/retry traces. Trace A has no provider-side idempotency or result reconstruction guarantee. Trace B uses one stable provider idempotency token bound to S2 plus exact payload digest and supports replay/readback of the original result. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "provider-idempotency-retention-expiry-c10",
+  "tested_scope": "Exactly one deterministic self-local replay extending the prior unknown-outcome/idempotency result. The fixture assumes one provider idempotency token T4 is stably bound to prepared transition S3 and payload digest D4, but the provider token/result retention window expires before a later scheduled retry. Trace A retries after expiry without any durable repository post-effect receipt. Trace B has a durable repository effect-committed tombstone/result receipt written after provider success but before successor finalization, then reconstructs finalization from that receipt after provider retention expires. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "baseline": {
-      "prepared_transition": "S2",
-      "predecessor_identity": "K2/P2/G2",
-      "successor_identity": "K3/P3/G3",
-      "authority_epoch": "E3",
-      "effect_identity": "EFFECT(S2,payload_digest_D3)",
-      "crash_boundary": "external logical effect occurs after S2 is durable but before repository result acknowledgement is durable"
+      "prepared_transition": "S3",
+      "predecessor_identity": "K3/P3/G3",
+      "successor_identity": "K4/P4/G4",
+      "authority_epoch": "E4",
+      "payload_digest": "D4",
+      "provider_token": "T4=H(S3,D4)",
+      "provider_retention_window": "W4",
+      "failure_boundary": "external effect may have occurred and provider acknowledgement may have been observed transiently, but a later retry occurs only after W4 has expired"
     },
-    "trace_A_no_provider_idempotency": {
+    "trace_A_expired_token_no_durable_post_effect_receipt": {
       "steps": [
-        "persist S2 prepared with exact payload digest D3 and authority E3",
-        "invoke external effect; effect occurs once",
-        "repository acknowledgement/result write is lost before durability",
-        "next invocation reconstructs S2=prepared with no durable result and retries the same requested effect"
+        "persist S3 prepared with T4, D4 and authority E4",
+        "invoke the provider effect using T4; the logical effect occurs once",
+        "repository post-effect acknowledgement/result persistence is lost",
+        "provider forgets T4 and its result after W4",
+        "a later scheduled invocation sees S3 prepared with no durable result and retries after expiry"
       ],
-      "observation": "Repository state cannot distinguish 'effect never happened' from 'effect happened but acknowledgement was lost'. Retrying can produce a second logical effect; refusing to retry can permanently lose the useful result.",
+      "observation": "After provider retention expires, repository state cannot distinguish 'effect never happened' from 'effect happened but acknowledgement was lost'. Reusing T4 is no longer guaranteed idempotent if the provider has forgotten it, while minting a new token is plainly a new logical request. Automatic retry can therefore duplicate the effect; refusing retry preserves duplicate safety but may permanently lose the useful result.",
       "result": "unsafe/unresolved"
     },
-    "trace_B_stable_provider_idempotency_and_result_replay": {
+    "trace_B_durable_effect_committed_tombstone": {
       "steps": [
-        "persist S2 prepared with exact payload digest D3 and authority E3",
-        "derive one stable provider token T=H(S2,D3) and use it for the external effect",
-        "external effect occurs once; repository acknowledgement/result write is lost",
-        "next invocation reconstructs S2 and retries/queries with the exact same token T and payload digest",
-        "provider returns the same accepted operation/result identity without creating a second logical effect",
-        "persist result identity/digest, CAS predecessor to superseded_by=S2, then commit S2 and expose successor only when the predecessor-transition-successor triad matches"
+        "persist S3 prepared with T4, D4 and authority E4",
+        "invoke the provider effect using T4",
+        "after provider terminal success, durably persist an immutable effect-committed receipt R4 containing S3, T4, D4, authority E4, provider operation/effect identity O4, terminal outcome marker and result digest H4 before exposing successor completion",
+        "successor-finalization write is lost and provider retention W4 later expires",
+        "a later invocation reconstructs from durable R4, does not issue any provider retry, CAS-checks the exact predecessor/transition authority tuple, and finalizes the successor only from the preserved result identity/digest"
       ],
-      "observation": "Under the stated abstract provider contract, acknowledgement loss is duplicate-safe because the stable token identifies the already accepted logical effect and the original result can be reconstructed before finalization.",
-      "result": "recoverable_under_explicit_provider_contract"
+      "observation": "For this exact trace, provider retention expiry no longer creates duplicate issuance because durable repository evidence already proves that the logical effect reached a terminal accepted state and identifies the result needed for finalization. The provider is not consulted after expiry.",
+      "result": "recoverable_if_post_effect_receipt_was_durable_before_expiry"
     },
-    "derived_minimum_provider_side_evidence": [
-      "One idempotency/effect token stable across invocations and retries, derived from or durably bound to the exact transition/effect identity rather than a per-attempt value.",
-      "Exact request/payload binding: reuse of the token with a different payload must be rejected rather than silently creating or mutating an effect.",
-      "A provider-visible accepted-operation identity or equivalent result handle that can be reconstructed after acknowledgement loss.",
-      "Replay/query semantics that return the original accepted result or an unambiguous terminal status without issuing a second logical effect.",
-      "Sufficient retention/lifetime for the token and result to survive the repository checkpoint/resume interval being claimed; otherwise safety becomes time-window dependent and remains unresolved.",
-      "Repository finalization must still require matching prepared transition, predecessor CAS, provider result identity/digest, and successor binding; provider idempotency alone does not authorize successor visibility."
+    "derived_minimum_durable_fields": [
+      "Exact prepared transition identity and predecessor/successor generation tuple.",
+      "Authority/fencing epoch binding the effect to the permitted claimant.",
+      "Stable provider token/effect identity and exact payload digest; a token alone without payload binding is insufficient.",
+      "Provider accepted-operation/effect identity or equivalent terminal identity.",
+      "Unambiguous terminal outcome marker proving whether the logical effect occurred.",
+      "Result digest plus repository-resident result material or a durable non-expiring result handle sufficient to reconstruct the useful outcome without provider replay.",
+      "Commit stage indicating effect_committed but successor_not_yet_finalized so later invocations do not reissue the effect.",
+      "CAS/readback linkage from predecessor through prepared transition to the post-effect receipt before successor visibility."
     ],
-    "weak_retry_rule": {
-      "id": "W7_retry_when_repository_ack_missing",
-      "rule": "If S2 is prepared and no repository acknowledgement exists, retry the external action once and then treat the latest response as authoritative.",
-      "falsification": "Trace A produces two possible logical effects after one lost acknowledgement, while refusing the retry leaves an indistinguishable successful first effect unreconstructed. Therefore repository acknowledgement absence alone is not a safe retry predicate.",
+    "impossibility_window": {
+      "condition": "The effect may have occurred, no repository post-effect receipt/result identity became durable, and the provider idempotency/result retention guarantee has already expired.",
+      "result": "No repository-only retry rule can simultaneously guarantee both no duplicate logical effect and recovery of the useful result from the information remaining in this fixture. A safe design must either make a post-effect receipt durable before the provider evidence can disappear, or require a provider retention guarantee that exceeds the maximum supported checkpoint-resume horizon."
+    },
+    "weak_expiry_retry_rule": {
+      "id": "W8_retry_after_idempotency_expiry",
+      "rule": "If S3 is still prepared after the provider idempotency window expires and no repository result is present, retry the effect once using either the old token or a newly derived token.",
+      "falsification": "In Trace A the original effect already occurred. After expiry the old token may be treated as unseen and a new token is necessarily a fresh request, so either form of retry can create a second logical effect. The rule is therefore not duplicate-safe.",
       "passes_minimum_contract": false
     },
     "result": {
-      "repository_only_prepared_state_can_resolve_unknown_external_outcome": false,
-      "stable_provider_idempotency_plus_result_reconstruction_is_sufficient_for_this_abstract_two_trace_fixture": true,
-      "provider_token_without_payload_binding_is_sufficient": false,
-      "provider_idempotency_without_result_or_terminal_status_reconstruction_proves_full_useful_outcome_parity": false,
+      "prepared_state_plus_expired_provider_token_is_sufficient_for_safe_retry": false,
+      "durable_post_effect_tombstone_can_prevent_reissue_after_provider_expiry_for_this_fixture": true,
+      "tombstone_without_terminal_effect_identity_or_result_digest_is_sufficient_for_useful_outcome_reconstruction": false,
+      "repository_only_recovery_after_lost_post_effect_receipt_and_expired_provider_evidence_is_proven": false,
       "same_run_waiting_or_polling_required": false,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "A durable prepared transition plus a missing repository acknowledgement leaves an irreducible local ambiguity once an external effect may already have happened.",
-    "A stable provider-side effect token removes duplicate issuance only if retries are bound to the identical payload/effect identity.",
-    "Useful outcome reconstruction additionally needs a replayable result or unambiguous accepted-operation status; duplicate suppression alone is not enough to recover the result needed for repository finalization.",
-    "The idempotency/result retention window is part of the safety scope: if it can expire before the next recurring invocation, the same unknown-outcome ambiguity can reappear."
+    "Idempotency retention is part of the safety boundary, not a convenience parameter: once provider memory expires, a stable token ceases to prove duplicate suppression unless the provider contract explicitly says otherwise.",
+    "A durable post-effect receipt changes the recovery problem from 'should the effect be retried?' to 'can finalization be replayed?', which can be solved repository-locally for the exact modeled trace.",
+    "A tombstone that merely says 'attempted' is insufficient. To prevent duplicate issuance and still recover the useful outcome, it must durably distinguish terminal effect occurrence and bind the exact result/effect identity to the prepared transition.",
+    "There remains an unavoidable crash window between external effect occurrence and durable post-effect receipt unless provider-side idempotency/result retention covers that interval and the later checkpoint-resume horizon."
   ],
-  "inference": "For the exact abstract acknowledgement-loss fixture tested, repository-local CAS and prepared-transition records are necessary but not sufficient once the logical effect crosses an external boundary. Duplicate-safe recovery requires a provider-side idempotency/effect identity that is stable across invocations, bound to the exact payload, and paired with reconstructible result/terminal-status evidence for at least the claimed checkpoint-resume horizon. This does not prove any concrete Chat-exposed provider supplies those semantics or that the full Phase-1 root is satisfied.",
+  "inference": "For the exact retention-expiry fixture tested, safe recurring-Chat recovery requires a two-layer contract: provider-side idempotency/result reconstruction must cover the interval until a repository post-effect receipt becomes durable, and the repository must then preserve enough terminal effect/result evidence to avoid any provider retry after provider retention can expire. If both provider evidence and durable post-effect repository evidence are absent, the unknown-outcome ambiguity is information-theoretically unresolved within this fixture. This does not prove any concrete Chat-exposed provider supplies the required semantics or that the full Phase-1 root is satisfied.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the claim/idempotency contract, including stable idempotency identity, payload binding, result reconstruction, retention horizon, CAS/readback, and absence of external arbitration or finite quota.",
-    "Test retention-expiry and delayed-retry behavior: determine whether an idempotency token/result that expires before a later scheduled invocation can be made safe using only durable repository evidence without creating a second logical effect."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including stable identity, payload binding, result reconstruction, retention horizon, CAS/readback and absence of external arbitration or finite quota.",
+    "Test concurrent lease/claim expiry with a delayed stale claimant versus a newly authorized claimant, comparing no-fencing and monotonic-fencing traces to determine whether claim ownership can be made duplicate-safe without external coordination."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -110,7 +118,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST and the readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -124,5 +132,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local retention-expiry replay: let provider token/result retention expire before a later scheduled retry, compare a retry-after-expiry trace against a repository tombstone/final-result-digest reconstruction trace, derive the minimum durable fields needed to prevent a second logical effect without trusting an expired provider token, and falsify one weak expiry-retry rule. Do not claim any concrete provider passes without direct allowed evidence; keep the concrete zero-cost quota-independent provider-verification child open. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment and nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local concurrent-claim expiry fixture: let claimant A hold claim epoch/fence F4, let its lease expire while A is delayed, authorize claimant B at strictly newer fence F5, then compare no-fencing, lease-only and monotonic-fencing traces when stale A resumes. Derive the minimum repository-visible fields and CAS predicates needed so stale A cannot publish or reissue a logical effect after B is authoritative, falsify one weak lease-only rule, keep the concrete zero-cost quota-independent provider-verification child open, persist/read back one compact checkpoint with exact tested scope and zero-cost/zero-finite-quota assessment, and return recurring-open without a second leaf."
 }
