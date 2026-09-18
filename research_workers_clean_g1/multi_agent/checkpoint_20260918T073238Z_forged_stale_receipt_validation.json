@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "role": "multi_agent",
+  "generation": "clean_g1",
+  "kind": "phase1_bounded_semantic_checkpoint",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
+  "checkpoint_mode": "persistence_recovery_micro_slice",
+  "authority": {
+    "invocation_main_sha": "b816cac7ede52976b170e7c034e09751ca4427d2",
+    "post_witness_commit": "bab02ba3728b2ab6d4bbc3455ce913c5904e4ecf",
+    "manifest_control_revision": 128,
+    "run_lifecycle_control_revision": 3,
+    "root_path": "automation_control/DESIRED_STATE.json",
+    "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "root_control_revision": 27,
+    "role_config_path": "automation_control/roles/multi_agent.json",
+    "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
+    "role_control_revision": 13,
+    "config_revision": 10
+  },
+  "presemantic_liveness_witness": {
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260918T073238Z.json",
+    "commit": "bab02ba3728b2ab6d4bbc3455ce913c5904e4ecf",
+    "durable_readback": true
+  },
+  "own_state_resolution": {
+    "latest_path": "research_workers_clean_g1/multi_agent/LATEST.json",
+    "latest_blob": "8578f969e174dfbe791be3da3945e231bbb33753",
+    "latest_read": true,
+    "state_path": "research_workers_clean_g1/multi_agent/STATE.json",
+    "state_read_result": "404_not_present",
+    "authority_for_continuation": "LATEST.json"
+  },
+  "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
+  "semantic_leaf": "forged-corrupted-stale-terminal-receipt-validation-c13",
+  "tested_scope": "Exactly one deterministic self-local forged/corrupted stale-terminal-receipt fixture continuing the prior O5,D5,F4-to-F5 handoff trace. After F5 takeover, compare only three candidate stale receipts as evidence for whether the already-attempted irreversible effect for O5,D5,I5 succeeded: (1) an unverifiable claimant-A-authored F4 success receipt, (2) an independently provider-signed or provider-query-verifiable receipt exactly bound to O5,D5,I5 and an accepted provider result identity R5, and (3) a receipt whose operation or payload binding mismatches O5 or D5. The slice derives the minimum admission predicate for stale terminal evidence and tests retry-suppression safety. It does not verify any concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or a second semantic leaf.",
+  "fixture": {
+    "common_state": {
+      "logical_operation_id": "O5",
+      "payload_digest": "D5",
+      "stable_provider_identity": "I5",
+      "stale_claimant": "A",
+      "stale_fence": "F4",
+      "current_claimant": "B",
+      "current_fence": "F5",
+      "ordering": "F5 > F4",
+      "authority_rule": "After takeover only F5 may finalize repository state. A stale receipt can at most be evidence about an external effect; it can never restore F4 authority."
+    },
+    "case_unverifiable_claimant_authored_receipt": {
+      "input": "A self-authored F4 terminal receipt says success for O5,D5 but has no provider signature, provider result identity, or independently queryable proof.",
+      "observation": "The assertion is compatible both with a genuinely accepted effect and with a forged, corrupted, duplicated, or prematurely emitted local receipt. Therefore it cannot distinguish success from non-success and cannot safely suppress a necessary retry.",
+      "admission": "reject_as_success_evidence",
+      "safe_next_state": "unresolved_pending_provider_reconstruction_or_provider_guaranteed_idempotent_replay",
+      "may_finalize": false,
+      "may_suppress_retry_by_itself": false
+    },
+    "case_provider_verifiable_exact_binding": {
+      "input": "A stale F4 receipt is independently provider-signed or reproducibly provider-query-verifiable and binds exact O5,D5,I5 to accepted result identity R5.",
+      "observation": "Independent verification plus exact operation/payload/idempotency binding distinguishes an accepted external effect from a claimant-only assertion. The receipt can therefore establish that reissuing a non-idempotent effect would be duplicate-risky, while the stale F4 fence still cannot authorize repository finalization.",
+      "admission": "admit_as_non_authoritative_effect_evidence_only",
+      "safe_next_state": "F5_reconstructs_R5_and_finalizes_only_after_current_claim_and_exact_predecessor_CAS",
+      "may_finalize": false,
+      "may_suppress_non_idempotent_retry": true
+    },
+    "case_mismatched_operation_or_payload": {
+      "input": "A stale receipt is provider-verifiable but binds O5 to a payload digest other than D5, or binds a different logical operation/idempotency identity than O5,I5.",
+      "observation": "Provider authenticity alone does not prove that the exact intended effect O5,D5 occurred. Treating a valid-but-mismatched receipt as success evidence can suppress a necessary retry for the intended operation.",
+      "admission": "reject_for_O5_D5_I5",
+      "safe_next_state": "unresolved_for_exact_intended_effect; query_or_idempotently_replay_under_exact_O5_D5_I5",
+      "may_finalize": false,
+      "may_suppress_retry_by_itself": false
+    },
+    "minimum_stale_terminal_evidence_admission_predicate": [
+      "The receipt must be independently verifiable against the external provider or another authority independent of the stale claimant; a claimant-authored assertion is insufficient.",
+      "Verification must bind the exact logical operation O5, exact payload digest D5, and stable cross-claimant provider operation/idempotency identity I5; provider authenticity without exact semantic binding is insufficient.",
+      "The verified provider state must establish acceptance or a stable result identity R5 for the intended irreversible effect, not merely receipt creation, request submission, or an ambiguous transient status.",
+      "The provider guarantee and evidence retention horizon must cover the recovery/delayed-receipt window so that F5 can reconstruct the result without depending on a stale claimant's authority.",
+      "Admission of a stale receipt changes only the evidence dimension. It must not renew F4, change the current claim, alter O5/D5/I5, or authorize finalization; F5 remains the sole authority after takeover.",
+      "F5 may suppress a non-idempotent retry only when the exact effect is independently verified as accepted. If exact success cannot be verified, the state remains unresolved and recovery must use provider query, provider-enforced fencing, or a provider-guaranteed idempotent replay under the same I5 rather than inferring success from the stale receipt."
+    ],
+    "weak_rule_falsified": {
+      "id": "W11_any_matching_stale_terminal_receipt_suppresses_retry",
+      "rule": "After F5 takeover, any stale terminal receipt that names O5 may be retained as success evidence and used to suppress B's retry.",
+      "falsification": "An A-authored F4 receipt can name O5 while being forged or corrupted, and a provider-authentic receipt can name O5 while binding a different payload. Under the weak rule either case would suppress a necessary retry even though exact O5,D5,I5 success is unproven. Therefore operation-name matching is insufficient; independent verification and exact operation/payload/idempotency binding are minimum requirements.",
+      "passes_minimum_contract": false
+    },
+    "result": {
+      "unverifiable_stale_receipt_is_sufficient_success_evidence": false,
+      "provider_authenticity_without_exact_payload_and_operation_binding_is_sufficient": false,
+      "provider_verifiable_exactly_bound_stale_receipt_can_be_non_authoritative_effect_evidence": true,
+      "stale_receipt_can_restore_old_fence_authority": false,
+      "F5_exclusive_finalization_required": true,
+      "retry_suppression_requires_independently_verified_exact_effect_or_provider_guaranteed_idempotent_reconstruction": true,
+      "concrete_chat_exposed_provider_verified": false
+    }
+  },
+  "observations": [
+    "Authenticity and semantic binding are separate checks: a provider-authentic receipt for the wrong payload is not evidence that the intended effect occurred.",
+    "Authority and evidence remain separate dimensions across takeover: stale evidence can inform F5 only if independently verified, but never grants stale finalization rights.",
+    "The safe failure mode for unverifiable or mismatched stale receipts is unresolved, not success. Retry safety then depends on provider query/fencing/idempotency under the stable identity I5 rather than on local receipt trust.",
+    "The minimum predicate must prevent both false-success suppression of a necessary retry and duplicate reissue of an already accepted effect."
+  ],
+  "inference": "For the exact tested F4-to-F5 trace, stale terminal evidence is admissible only when independent provider verification establishes the exact O5,D5,I5 effect and a stable accepted result identity within a sufficient retention horizon. Such evidence may suppress a non-idempotent duplicate reissue, but it remains non-authoritative: only F5 can finalize after current-claim and predecessor CAS. An unverifiable claimant-authored receipt or a provider-authentic but operation/payload-mismatched receipt must leave the exact intended effect unresolved. This fixture derives a necessary validation predicate but does not prove that any concrete Chat-exposed zero-cost primitive supplies the required verification, identity, retention, fencing, or idempotency semantics.",
+  "semantic_progress_credit": true,
+  "scientific_progress_credit": true,
+  "phase1_acceptance_credit": false,
+  "unresolved_children": [
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full claim/idempotency contract, including stable cross-claimant operation identity, provider-verifiable accepted result, retention horizon, CAS/readback, and absence of external arbitration or finite quota.",
+    "Test exactly one future self-local ambiguity fixture where a provider query returns accepted-but-result-pending versus definitely-not-accepted, and derive when F5 may wait until a future invocation versus safely idempotently replay without same-run polling."
+  ],
+  "zero_dependency_zero_quota_assessment": {
+    "incremental_monetary_cost": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "optional_hosted_compute_or_storage_quota_dependency_added": false,
+    "richer_mode_protected_manual_execution_dependency": "none",
+    "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
+  },
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and the readback-valid own presemantic witness. STATE.json was absent at the role-local path and no stale substitute was invented. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "clean_exploration": "preserved_exactly",
+  "recovery_epoch": "2026-09-04T22:59:28+09:00",
+  "termination": "persistence_recovery_micro_slice_recurring_open",
+  "termination_class": "scheduled_invocation_boundary_with_open_frontier",
+  "fully_blocked": false,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "enabled_desired": true,
+  "scheduler_mutation_by_worker": false,
+  "zero_residual_work_protected_manual_execution": true,
+  "zero_finite_quota_dependency": true,
+  "zero_incremental_cost": true,
+  "hard_runtime_boundary_reached": false,
+  "continuation_nonempty": true,
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local accepted-but-result-pending ambiguity fixture: compare provider state that is independently verified accepted-but-result-pending with provider state that is definitely-not-accepted, derive the minimum rule for whether F5 must defer to a future invocation or may issue a provider-guaranteed idempotent replay under exact O5,D5,I5 without same-run waiting/polling, falsify one weak rule, keep concrete zero-cost quota-independent provider verification unresolved, persist/read back one compact checkpoint, and stop without a second leaf or scheduler mutation."
+}
