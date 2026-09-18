@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-18T09:27:11+09:00",
+  "updated_at": "2026-09-18T10:31:34+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "61dadcf015015f87fe67c065b39d01f969ae7626",
+  "previous_latest_blob": "0c0dd0f9c5e272c3f9c19231d71a1927b694e539",
   "semantic_config_snapshot": {
     "manifest_control_revision": 128,
     "manifest_blob": "2182784e012ccd051d59b52715e0ba47a23482e8",
@@ -21,88 +21,110 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "main_sha_exact_ref",
-    "frozen_main_sha": "6517de88f50d01696036058303c6528a81033f62"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T0027Z_6517de88.json",
-    "blob": "7072853c1c768f377aa32295acba2de4a5463f50",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260918T103134_JST.json",
+    "blob": "fb68646d67ce715b7b9fe9735dfacfe9b9532de3",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "61dadcf015015f87fe67c065b39d01f969ae7626"
+    "latest_input_blob": "0c0dd0f9c5e272c3f9c19231d71a1927b694e539"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "conflicting-payload-generation-reuse-c5-c7",
-  "tested_scope": "Exactly one deterministic self-local replay extending the prior C5-C7 unknown-outcome contract. The slice models one logical effect key K whose accepted identity is bound to payload P1 and generation G1, then tests retries/replays that reuse K with P2/G1, P1/G2, or P2/G2. It derives the minimum generation-binding/conflict transitions and falsifies one weak rule that deduplicates solely by K while allowing payload or generation drift. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "authorized-supersession-protocol-replay-c5-c7",
+  "tested_scope": "Exactly one deterministic self-local replay extending the prior C5-C7 K/P/G binding contract. The slice models a legitimate authorized transition from predecessor identity K/P1/G1 to successor payload P2 at G2, compares two protocols (A: reuse K with explicit predecessor binding and an atomic supersession record; B: allocate new logical key K2 linked to K/P1/G1), derives minimum atomic authorization/evidence fields, and falsifies one weak rule that treats a numerically higher generation as sufficient authorization. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler mutation, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "baseline": {
       "authority": "active(E1)",
-      "logical_effect_key": "K",
-      "accepted_identity": "K/P1/G1",
-      "durable_result": "R1"
+      "predecessor_identity": "K/P1/G1",
+      "predecessor_result": "R1",
+      "predecessor_transition_state": "committed_no_successor"
     },
+    "supersession_authority": {
+      "authority_epoch": "E2",
+      "transition_id": "S1",
+      "authorized_predecessor": "K/P1/G1",
+      "authorized_successor_payload_generation": "P2/G2"
+    },
+    "protocols": [
+      {
+        "id": "A_reuse_key_with_predecessor_binding",
+        "successor_identity": "K/P2/G2",
+        "required_atomic_precondition": "predecessor K/P1/G1 is committed and has no accepted successor",
+        "required_commit": "atomically bind S1 and E2 to predecessor K/P1/G1 and successor K/P2/G2; mark predecessor superseded_by S1 and successor committed/authorized",
+        "exact_replay": "same S1 + predecessor + successor reconstructs the committed transition without reissuing the effect",
+        "competing_successor": "any different P/G or transition under reused K is a hard conflict unless it proves the same accepted S1 identity",
+        "safe_under_fixture": true,
+        "tradeoff": "preserves one logical key but makes every replay path check transition generation and predecessor binding before interpreting K"
+      },
+      {
+        "id": "B_new_key_linked_to_predecessor",
+        "successor_identity": "K2/P2/G2",
+        "required_atomic_precondition": "predecessor K/P1/G1 is committed and has no accepted successor",
+        "required_commit": "atomically bind S1 and E2 to predecessor K/P1/G1 and new key K2/P2/G2; mark predecessor superseded_by S1 and persist K2 supersedes K/P1/G1",
+        "exact_replay": "same S1 + predecessor + K2/P2/G2 reconstructs the committed transition without reissuing the effect",
+        "competing_successor": "a second K2-like successor from the same predecessor is a hard conflict unless it is exact replay of S1",
+        "safe_under_fixture": true,
+        "tradeoff": "keeps predecessor and successor idempotency identities immutable and easier to audit, at the cost of an explicit lineage link"
+      }
+    ],
     "replay_cases": [
       {
-        "id": "R_exact",
-        "request_identity": "K/P1/G1",
-        "authoritative_state": "committed K/P1/G1 -> R1",
-        "safe_transition": "success-equivalent duplicate; return or reconstruct R1; do not reissue effect",
+        "id": "S_exact_replay",
+        "request": "S1: K/P1/G1 -> P2/G2 under E2",
+        "authoritative_state": "S1 already committed",
+        "safe_transition": "duplicate-success; reconstruct accepted successor and do not reissue",
         "conflict": false
       },
       {
-        "id": "R_payload_drift",
-        "request_identity": "K/P2/G1",
-        "authoritative_state": "committed K/P1/G1 -> R1",
-        "safe_transition": "hard identity conflict; reject reuse of K; preserve both identities and R1",
+        "id": "S_competing_payload",
+        "request": "same predecessor but P3/G2",
+        "authoritative_state": "S1 already committed to P2/G2",
+        "safe_transition": "hard conflict; preserve S1 and reject alternate successor",
         "conflict": true
       },
       {
-        "id": "R_generation_drift",
-        "request_identity": "K/P1/G2",
-        "authoritative_state": "committed K/P1/G1 -> R1",
-        "safe_transition": "hard generation conflict under reused K; require a separately authorized supersession/new logical identity before any G2 effect",
-        "conflict": true
-      },
-      {
-        "id": "R_payload_and_generation_drift",
-        "request_identity": "K/P2/G2",
-        "authoritative_state": "committed K/P1/G1 -> R1",
-        "safe_transition": "hard identity conflict; never coerce to duplicate success or overwrite R1",
-        "conflict": true
-      },
-      {
-        "id": "R_absent_after_unknown",
-        "request_identity": "K/P1/G1",
-        "authoritative_state": "authoritatively absent for K and E1 still permits K/P1/G1",
-        "safe_transition": "later-invocation retry may proceed only with the same bound K/P1/G1 identity; a new attempt id may change, the logical identity may not",
+        "id": "S_stale_predecessor_retry",
+        "request": "retry original K/P1/G1 after S1 committed",
+        "authoritative_state": "predecessor committed and superseded_by S1",
+        "safe_transition": "reconstruct predecessor/supersession evidence; never execute predecessor again and never reinterpret it as successor",
         "conflict": false
       },
       {
-        "id": "R_unavailable_reconstruction",
-        "request_identity": "K/P1/G1",
-        "authoritative_state": "unavailable or non-authoritative",
-        "safe_transition": "remain unresolved; do not infer absence, duplicate success, or permission for payload/generation drift",
+        "id": "S_generation_number_only",
+        "request": "P9/G3 with no predecessor binding, transition identity, or current authority proof",
+        "authoritative_state": "S1 committed from G1 to G2",
+        "safe_transition": "reject as unauthorized/unresolved; a larger generation number is not authorization",
+        "conflict": true
+      },
+      {
+        "id": "S_authority_unavailable",
+        "request": "candidate G2 supersession",
+        "authoritative_state": "predecessor or S1 reconstruction unavailable/non-authoritative",
+        "safe_transition": "remain unresolved; do not infer permission from generation ordering and do not issue",
         "conflict": null
       }
     ],
-    "minimum_generation_binding_contract": [
-      "Treat the idempotency identity as at least {logical_effect_key K, payload identity/digest P, generation G}; bind it under the authority/fence that accepted it.",
-      "A committed record for K is duplicate-success only when the incoming payload and generation match the bound committed identity.",
-      "Reuse of K with mismatched payload or generation is a conflict, not a duplicate and not an overwrite opportunity.",
-      "If a new generation is legitimately required, establish a separately authorized supersession/new logical identity before issuing the effect; never silently reinterpret the old K.",
-      "Attempt identifiers are audit/retry-attempt metadata and cannot replace the stable bound logical identity."
+    "minimum_atomic_supersession_contract": [
+      "Persist the exact predecessor identity {logical key, payload identity/digest, generation} that is eligible for replacement.",
+      "Persist the exact successor identity {logical key or new key, payload identity/digest, generation}; if a new key is used, persist an immutable supersedes link.",
+      "Bind a unique transition_id to an authority/fence epoch that explicitly authorizes this predecessor-to-successor transition.",
+      "Accept the transition only under an atomic precondition that the predecessor is still the authorized committed predecessor and has no different accepted successor.",
+      "Atomically persist predecessor->transition->successor evidence before interpreting later retries as duplicate-success.",
+      "Treat exact replay of the same transition identity as duplicate-success; treat any different successor, predecessor, or authority binding as conflict or unresolved rather than overwrite.",
+      "A generation number is ordering metadata, not authorization; legitimate advancement requires explicit predecessor and authority binding."
     ],
-    "weak_retry_rule": {
-      "id": "W4_key_only_dedupe_with_payload_drift",
-      "rule": "If logical key K already exists, treat any later request carrying K as the same duplicate effect, even when payload or generation differs.",
+    "weak_supersession_rule": {
+      "id": "W5_higher_generation_wins",
+      "rule": "For a logical effect family, accept any request carrying a numerically higher generation than the currently stored one and treat that as sufficient authorization to replace it.",
       "falsification": [
-        "R_exact and R_payload_drift share K but request different payload identities; collapsing both to duplicate success loses the fact that P2 was never the committed effect.",
-        "R_exact and R_generation_drift share K but represent different generations; collapsing them aliases distinct intended generations and can return R1 as if G2 had executed.",
-        "Allowing overwrite instead is also unsafe because it destroys the stable replay meaning of K and can turn a retry into a second or mutated logical effect.",
-        "Therefore K alone is insufficient: exact payload/generation binding must be checked before duplicate-success; mismatches are hard conflicts unless an explicit supersession/new-identity protocol authorizes new work."
+        "A stale or competing worker can manufacture G3 after S1 without proving that K/P1/G1 or the accepted G2 successor is its authorized predecessor.",
+        "Generation ordering alone cannot distinguish a legitimate successor from a retry bug, payload mutation, or concurrent competing successor.",
+        "Both tested safe protocols require predecessor identity plus transition authority and an atomic no-other-successor precondition; W5 contains none of these fields.",
+        "Therefore higher-generation-wins can convert replay or concurrency drift into a second/mutated logical effect and fails the minimum C5-C7 supersession contract."
       ],
       "passes_minimum_contract": false,
       "failed_requirements": [
@@ -112,27 +134,29 @@
       ]
     },
     "result": {
-      "key_only_deduplication_sufficient": false,
-      "payload_binding_required": true,
-      "generation_binding_required": true,
-      "mismatched_payload_or_generation_is_conflict": true,
-      "attempt_id_change_may_authorize_identity_drift": false,
+      "protocol_A_safe_under_exact_fixture": true,
+      "protocol_B_safe_under_exact_fixture": true,
+      "protocol_B_has_simpler_immutable_identity_lineage": true,
+      "generation_number_alone_sufficient_authority": false,
+      "predecessor_binding_required": true,
+      "transition_authority_binding_required": true,
+      "atomic_no_competing_successor_precondition_required": true,
       "same_run_waiting_or_polling_required": false,
       "concrete_chat_exposed_provider_verified": false
     }
   },
   "observations": [
-    "Within the exact abstract fixture, the same logical key K can denote safe duplicate-success only when payload and generation match the committed bound identity K/P1/G1.",
-    "A key-only dedupe rule cannot distinguish exact replay from payload drift or generation drift, so it either falsely reports unexecuted work as successful or permits mutation/duplication under a supposedly stable key.",
-    "The minimum replay-safe checkpoint must preserve K together with payload identity and generation; a later retry may change attempt metadata but not the bound logical identity unless a separately authorized supersession/new-identity protocol exists."
+    "Both compared protocols prevent retry/supersession confusion in the exact fixture only when the accepted transition binds predecessor, successor, transition identity and current authority under one atomic no-competing-successor condition.",
+    "Reusing K can be replay-safe but requires generation/transition interpretation on every lookup; allocating K2 keeps each idempotency identity immutable and moves generation advance into an explicit lineage edge.",
+    "A numerically larger generation cannot safely authorize mutation by itself because it carries no proof of which predecessor was current, who authorized the change, or whether another successor already won."
   ],
-  "inference": "For the exact abstract C5-C7 replay tested, idempotent claim/effect identity must bind logical key, payload identity and generation under the accepting authority. Exact K/P/G equality can be reconstructed as duplicate-success; any payload or generation mismatch under the same K is a hard conflict absent an explicit supersession/new-identity protocol. This does not establish that any concrete Chat-exposed provider implements the required contract.",
+  "inference": "For the exact abstract C5-C7 supersession replay tested, legitimate generation advance requires an explicit atomic transition contract, not merely a monotonic generation counter. The minimum evidence is predecessor identity, successor identity, unique transition id, current authority/fence binding, and an atomic no-other-successor precondition with durable predecessor->transition->successor readback. New-key lineage is structurally simpler to audit than same-key generation reuse in this fixture, but neither protocol is claimed to be implemented by any concrete Chat-exposed provider.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive against C1-C7, including exact K/P/G binding and authoritative reconstruction after acknowledgement loss or rate-limit interruption; no concrete provider is accepted by this slice.",
-    "Derive and test a minimal explicit supersession protocol for legitimate generation advance so a new generation cannot be confused with retry of the prior logical effect."
+    "Verify a concrete allowed zero-cost quota-independent Chat-exposed primitive against C1-C7, including exact K/P/G binding, atomic supersession evidence and authoritative reconstruction after acknowledgement loss or rate-limit interruption; no concrete provider is accepted by this slice.",
+    "Test crash-boundary ordering for the supersession record itself: predecessor marked superseded before successor evidence is durable versus successor durable before predecessor link, and derive the minimum recoverable write ordering without external arbitration."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -155,5 +179,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local supersession replay extending C5-C7: model a legitimate generation advance from K/P1/G1 to a newly authorized generation and compare at least two protocols (reusing K with explicit predecessor binding versus allocating a new logical key linked to K), derive the minimum atomic authorization/evidence fields that prevent retry/supersession confusion, and falsify one weak supersession rule. Do not claim a concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local crash-boundary replay extending the new supersession contract: compare at least two partial-write orderings (predecessor superseded marker durable before successor/transition evidence versus successor/transition evidence durable before predecessor link), derive which authoritative reconstruction fields make each interruption recoverable without duplicate or lost logical effects, and falsify one weak recovery rule. Do not claim a concrete provider satisfies the contract and do not use public/O/downstream/other-worker semantics. Persist/read back one compact checkpoint with exact tested scope, zero-cost/zero-finite-quota assessment, unresolved concrete-provider child and nonempty continuation, then return recurring-open without a second leaf."
 }
