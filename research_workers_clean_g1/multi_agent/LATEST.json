@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T11:28:34+09:00",
+  "updated_at": "2026-09-19T12:30:04+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,9 +10,10 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "f09977018e101c6b25a231cd9a109b6f8fc0c8d4",
+  "previous_latest_blob": "596c08f6a2beed7d3cfb1cb9a7aaa7771fa7560f",
   "semantic_config_snapshot": {
     "manifest_control_revision": 129,
+    "manifest_blob": "41c4ec3a5368bd226e765a657d60265aae483928",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
@@ -21,21 +22,21 @@
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
     "transport_mode": "sha_only_exact_authority",
-    "frozen_main_sha": "7d5b3c553e015bebeb1c659bcfb79f82092a2f25"
+    "frozen_main_sha": "206e843a817f1a7641f9587bb393ab50cdb140b2"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_20260919T112834JST_run1.json",
-    "blob": "e71427f9df7c6c008aaa4a49ce9a9cf720497469",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260919T033004Z.json",
+    "blob": "1441123093ff0b8cb2854377482debd80de97dfe",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "f09977018e101c6b25a231cd9a109b6f8fc0c8d4"
+    "latest_input_blob": "596c08f6a2beed7d3cfb1cb9a7aaa7771fa7560f"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "idempotency-alias-domain-seal-boundary-c25",
-  "tested_scope": "Exactly one deterministic self-local claim/idempotency fixture continuing c24. Logical operation O5 and payload digest D5 retain old provider identity I5 and new identity I6. Provider-side evidence M56 authoritatively and immutably maps I5 and I6 to one execution-domain key K5. The fixture tests the minimum additional invariants under which the prior terminal no-effect proof P_I5 may be reused for the I6 claim, while repository finalization still uses fresh fence F7 CAS plus exact readback. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
+  "semantic_leaf": "idempotency-repository-fence-reacquire-boundary-c26",
+  "tested_scope": "Exactly one deterministic self-local claim/idempotency fixture continuing c25. Provider execution domain K5, identities I5/I6, mapping evidence M56, shared attempt set, permanent domain seal, and provider terminal no-effect proof P_I5 are held unchanged. The only changed variable is repository claim freshness after an interrupted pre-finalization attempt: prior fence F7 is treated as stale and a new fence F8 must be reacquired before finalization. The fixture tests whether provider-side terminal evidence may be retained while repository-side claim authority alone is reacquired. No concrete provider, public source, O/downstream/other-worker state, shared ledger, scheduler state, hosted compute, richer-mode arbitration, finite quota, or second semantic leaf is tested.",
   "fixture": {
     "identity": {
       "logical_operation_id": "O5",
@@ -44,37 +45,41 @@
       "new_idempotency_identity": "I6",
       "execution_domain_key": "K5",
       "mapping_evidence": "M56",
-      "old_terminal_proof": "P_I5",
-      "current_authoritative_fence": "F7"
+      "provider_terminal_proof": "P_I5",
+      "stale_repository_fence": "F7",
+      "fresh_repository_fence": "F8"
     },
-    "minimum_provider_side_invariants": [
-      "M56 immutably binds O5,D5,I5 and I6 to the same provider execution-domain key K5.",
-      "All identities bound to K5 are aliases over one shared attempt set A(K5); no identity-local subnamespace can create an attempt outside A(K5).",
-      "P_I5 resolves to K5-domain evidence: it proves A(K5) is complete, contains no irreversible effect, and K5 is permanently sealed/quiescent rather than merely sealing the I5 spelling.",
-      "Alias creation or identity rotation cannot reopen K5, allocate a replacement execution domain, or append attempts after the permanent K5 seal."
+    "premises": [
+      "K5 remains permanently sealed and quiescent; no alias or identity rotation can append attempts, reopen K5, or allocate a replacement execution domain.",
+      "M56 still binds I5 and I6 to the same immutable K5 execution domain and P_I5 remains domain-scoped over the complete shared attempt set.",
+      "The prior repository finalize did not complete and repository claim authority advanced after interruption, so F7 is no longer current.",
+      "Provider-domain evidence and repository claim freshness are independent dimensions: unchanged provider evidence does not make a stale repository fence current."
     ],
-    "repository_freshness_invariant": "Final negative closure of the current I6 claim still requires current F7 compare-and-swap and exact repository readback; provider-domain equivalence does not replace repository claim freshness.",
-    "candidate_action": "Reuse P_I5 as provider-side terminal no-effect evidence for the I6 claim only when all four provider-side invariants are evidenced, then finalize only through current F7 CAS/readback.",
-    "result": "conditionally_safe_in_exact_fixture",
-    "reason": "Under the stated invariants, I5 and I6 are two names for the same immutable sealed attempt domain K5. P_I5 therefore covers the entire shared attempt set A(K5), and I6 cannot introduce an unseen provider attempt or reopen execution. F7 CAS/readback independently preserves current repository-claim authority. Removing either the domain-wide proof/seal scope or the no-reopen/no-subnamespace invariant reintroduces an execution path not covered by P_I5.",
-    "weak_rule_falsified": {
-      "id": "W23_same_domain_mapping_alone_makes_identity_local_terminal_proof_replayable",
-      "rule": "An authoritative mapping that says I5 and I6 share one execution-domain key is by itself sufficient to reuse an I5 terminal no-effect proof for I6.",
-      "falsification": "The mapping alone does not establish that P_I5 sealed the domain rather than only an identity-local attempt subset, nor that a new alias cannot append or reopen attempts. Cross-identity reuse therefore additionally requires domain-wide attempt-set/proof scope and monotonic no-reopen semantics."
+    "candidate_action": "Retain M56 and P_I5 as provider-side no-effect evidence because their covered execution domain is unchanged and permanently sealed, but reacquire current repository claim authority F8 before finalization and require CAS plus exact readback under F8. Treat F7 only as historical provenance.",
+    "repository_freshness_probe": {
+      "prewrite_current_latest_blob": "596c08f6a2beed7d3cfb1cb9a7aaa7771fa7560f",
+      "f8_evidence_definition": "This checkpoint counts as the F8 reacquisition probe only if the LATEST update succeeds using the exact current prewrite blob as CAS authority and the resulting file is exact-read back. The resulting blob is the durable readback identity; no stale-F7 authority is reused."
     },
-    "minimum_safe_rule": "Cross-identity terminal-proof reuse is safe only if exact evidence binds both identities to one immutable execution domain, all aliases share one complete attempt set, the terminal proof and permanent seal are scoped to that domain, alias rotation cannot create/reopen execution, and current repository claim finalization independently passes fresh-fence CAS/readback."
+    "result": "conditionally_safe_with_repository_freshness_reacquired",
+    "reason": "The provider-side proof target did not change, so M56 and P_I5 remain valid for the sealed K5 attempt domain. Repository ownership did change, so finalization authority cannot be inherited from F7. Safety requires reacquiring F8 independently and finalizing only through fresh CAS/readback. Thus provider evidence can survive the interruption while repository freshness must be renewed.",
+    "weak_rule_falsified": {
+      "id": "W24_provider_terminal_proof_stability_makes_prior_repository_cas_replayable",
+      "rule": "If the provider terminal proof and execution domain are unchanged, a previously valid repository fence/CAS result may be replayed after a claim-epoch change.",
+      "falsification": "A claim-epoch change can transfer or invalidate repository-side authority without changing the provider attempt domain. Reusing stale F7 would therefore bypass current ownership/conflict checks even though P_I5 is still sound. Provider-proof stability does not imply repository-fence freshness."
+    },
+    "minimum_safe_rule": "Across an interrupted finalize with unchanged sealed provider domain, retain provider evidence only for the exact unchanged domain, but reacquire current repository claim authority and require fresh CAS plus exact readback before finalization. Historical fence/CAS evidence is provenance only and never substitutes for the current claim epoch."
   },
   "observations": [
-    "Provider identity equivalence is not a single predicate: domain-key equality, attempt-set equality, proof scope, and seal monotonicity are distinct requirements.",
-    "A provider-domain proof can survive idempotency-identity rotation only when the proof target and sealing semantics are domain-wide rather than identity-local.",
-    "Repository fence freshness remains orthogonal to provider execution-domain equivalence."
+    "Provider execution-domain closure and repository claim freshness are orthogonal safety dimensions.",
+    "An interruption may leave provider terminal evidence reusable while invalidating only repository-side ownership/fence evidence.",
+    "A stale repository CAS result cannot be promoted to current authority merely because the external no-effect proof remains valid."
   ],
-  "inference": "Within this exact fixture, the minimum safe reuse contract is the conjunction of immutable same-domain mapping, one shared attempt set, domain-scoped complete no-effect plus permanent seal, no alias-triggered reopen/new-domain semantics, and fresh F7 repository CAS/readback. Same-domain mapping alone is insufficient.",
+  "inference": "Within this exact deterministic fixture, the safe recovery rule is asymmetric: retain domain-scoped provider terminal evidence when the sealed execution domain is unchanged, but reacquire repository claim freshness after any claim-epoch transition and require fresh CAS/readback. This narrows the unresolved concurrency rule without claiming a concrete provider implementation.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Next test claim-epoch rotation after a safe I5-to-I6 alias-domain reuse: keep provider domain K5 sealed and identities equivalent, but advance repository fence from F7 to F8 after an interrupted finalize; determine whether provider proof P_I5 plus M56 can be retained while only repository-side claim freshness is reacquired, and falsify any rule that treats stale F7 CAS evidence as replayable.",
+    "Next test the converse boundary: keep repository fence F8 current while provider execution-domain evidence changes or becomes ambiguous after an identity remap; determine which provider proofs must be discarded even though repository claim ownership remains fresh.",
     "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full success-route predicate when persistence-recovery mode no longer forbids public-source research.",
     "Verify one concrete allowed primitive whose documented terminal cancellation/no-execution semantics bind the exact idempotency execution domain and remain usable with optional monthly quotas at zero."
   ],
@@ -99,5 +104,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture that keeps provider domain K5, M56 and P_I5 unchanged but advances the repository claim fence from F7 to F8 after an interrupted pre-finalization attempt. Test whether provider proof/equivalence evidence can be retained while repository freshness alone must be reacquired; falsify any rule that reuses stale F7 CAS evidence, persist/read back one compact checkpoint, and return recurring-open without public research or a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local fixture for the converse boundary: keep repository fence F8 current while changing or making ambiguous the provider execution-domain mapping after identity remap, and determine which provider-side proofs must be discarded despite fresh repository claim ownership. Persist/read back one compact checkpoint and return recurring-open without public research or a second leaf."
 }
