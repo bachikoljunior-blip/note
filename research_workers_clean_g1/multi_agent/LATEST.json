@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T18:28:25+09:00",
+  "updated_at": "2026-09-19T19:29:00+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,10 +10,9 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "17cdb3b0754feb74d1a09d493c6f404a4600c4d3",
+  "previous_latest_blob": "6cb0dab8144fb14f3a1f02dca2be3c608282b314",
   "semantic_config_snapshot": {
     "manifest_control_revision": 129,
-    "manifest_blob": "41c4ec3a5368bd226e765a657d60265aae483928",
     "run_lifecycle_revision": 3,
     "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
     "root_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
@@ -21,79 +20,69 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_only_exact_commit",
-    "frozen_main_sha": "c82ce6b190fb502203779ba0bb566b94207b66d0",
-    "latest_manifest_scheduler_override_acknowledged_mechanically": true
+    "transport_mode": "sha_pinned_main_ref",
+    "frozen_main_sha": "cc647fad8ca2db9514b2c8705ea238b62b43107c"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/20260919T092825Z-presemantic-liveness-witness.json",
-    "blob": "4e05797422bb9b150af77ec1f98bb9f40ef197c4",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260919T102900Z.json",
+    "blob": "4dc2f4baddc913314e3ac5d3beb7da85932c3da6",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "17cdb3b0754feb74d1a09d493c6f404a4600c4d3"
+    "latest_input_blob": "6cb0dab8144fb14f3a1f02dca2be3c608282b314"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "same-fence-finalization-retry-cas-minimum-c31",
-  "tested_scope": "Exactly one deterministic self-local continuation of the prior F10/R10 checkpoint. Provider state remains fixed at O5/D5/I7 with mapping I7->K5@g8 and provider proof P_I7_g8. Repository claim authority is current at F10; R10 is already committed once and historical R9 remains available only as stale evidence. The fixture tests repository finalization retry/idempotency and the minimum atomic compare-and-set predicate needed to avoid a duplicate repository finalization transition. It does not test a concrete provider, external side-effect exactly-once behavior, public sources, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, shared ledgers, scheduler state, or a second semantic leaf.",
+  "semantic_leaf": "same-fence-two-writer-atomic-cas-race-c32",
+  "tested_scope": "One deterministic self-local model/replay of the open continuation from the prior checkpoint. Current authority remains F10 and the finalization slot keyed by {O5,D5,I7} starts ABSENT. Two same-F10 writers are interleaved through one atomic predicate. Variant A uses identical full records; Variant B uses conflicting full records. This tests only repository-finalization claim/idempotency semantics and the minimum atomic compare set. It does not execute real concurrent GitHub writes, test an external side effect, a concrete provider, public sources, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, scheduler state, or a second semantic leaf.",
   "fixture": {
-    "identity": {
-      "operation": "O5",
-      "payload": "D5",
-      "idempotency_identity": "I7",
-      "provider_mapping": "I7->K5@g8",
-      "provider_proof": "P_I7_g8",
-      "current_fence": "F10",
-      "committed_record": "R10={O5,D5,I7,K5,g8,P_I7_g8,F10,effect_digest}",
-      "historical_record": "R9={O5,D5,I7,K5,g8,P_I7_g8,F9,effect_digest}"
+    "initial_state": {
+      "current_claim_fence": "F10",
+      "finalization_slot_key": "{O5,D5,I7}",
+      "finalization_slot": "ABSENT"
     },
-    "cases": [
-      {
-        "case": "identical_same_fence_retry",
-        "candidate": "R10",
-        "observation": "Current claim fence is F10 and the finalization slot already contains an exact digest match for R10.",
-        "required_action": "Return idempotent replay/no-op; do not perform a second finalization effect and do not rewrite the slot merely to acknowledge the retry.",
-        "result": "pass_with_exact_record_replay_guard"
-      },
-      {
-        "case": "historical_prior_fence_replay",
-        "candidate": "R9",
-        "observation": "Candidate fence F9 differs from current claim fence F10.",
-        "required_action": "Reject before any finalization effect even though provider mapping/proof/effect digest remain unchanged.",
-        "result": "rejected_stale_authority"
-      },
-      {
-        "case": "same_fence_conflicting_candidate",
-        "candidate": "R10_prime_same_O_D_I_F10_but_different_mapping_proof_or_effect_digest",
-        "observation": "The finalization slot already contains R10, not the exact candidate digest.",
-        "required_action": "Return conflict/no effect; never treat shared operation identity and fence alone as sufficient for replay equivalence.",
-        "result": "rejected_conflicting_replay"
-      }
-    ],
-    "minimum_safe_cas_rule": "Scope the finalization slot by exact {operation,payload,idempotency_identity}. First acceptance may transition only when current_claim_fence == candidate_fence and finalization_slot == ABSENT, atomically writing the full fence-bound record. Retry classification must also require current_claim_fence == candidate_fence: if finalization_slot == digest(candidate_full_record), return idempotent no-op; if the slot is nonempty but differs, return conflict/no effect. Therefore the minimum mutable compare set is {current_claim_fence, finalization_slot_state_or_exact_record_digest} with the slot key carrying {operation,payload,idempotency_identity}; the committed value must bind provider mapping generation, provider proof identity, effect digest and fence. Fence equality alone is insufficient, and finalization-record equality without a current-fence check becomes stale after a later fence advance.",
-    "weak_rule_falsified": {
-      "id": "W29_same_operation_and_current_fence_is_enough_for_retry_equivalence",
-      "rule": "Any finalization candidate with the same operation/idempotency identity and current fence can be treated as a harmless retry.",
-      "falsification": "A same-F10 candidate with different mapping/proof/effect digest would be collapsed into R10 and could authorize a distinct effect. Exact committed-record equivalence is required for no-op replay; otherwise the attempt is a conflict."
-    }
+    "atomic_predicate": "Commit candidate C only if current_claim_fence == C.fence AND finalization_slot == ABSENT in the same atomic compare-and-set; write digest(C.full_record) as the slot value. On retry, require current_claim_fence == C.fence; exact slot digest equality => idempotent no-op, nonempty unequal digest => conflict/no effect.",
+    "variant_identical_writers": {
+      "writer_A": "R10={O5,D5,I7,K5,g8,P_I7_g8,F10,E10}",
+      "writer_B": "R10={O5,D5,I7,K5,g8,P_I7_g8,F10,E10}",
+      "interleaving_result": "Exactly one writer may perform ABSENT->digest(R10). The loser cannot also satisfy ABSENT; after reread under still-current F10 it sees exact digest equality and is classified as idempotent no-op.",
+      "duplicate_finalization_effects": 0,
+      "accepted_transitions": 1,
+      "result": "pass_in_model"
+    },
+    "variant_conflicting_writers": {
+      "writer_A": "R10a={O5,D5,I7,K5,g8,P_I7_g8,F10,E10a}",
+      "writer_B": "R10b={O5,D5,I7,K6,g9,P_I7_g9,F10,E10b}",
+      "interleaving_result": "Exactly one candidate may win the initial ABSENT transition. The losing candidate sees a nonempty unequal slot digest and must fail closed as conflict/no effect; same operation/idempotency identity and same fence do not establish replay equivalence.",
+      "accepted_transitions": 1,
+      "losing_effects": 0,
+      "result": "pass_in_model"
+    },
+    "minimum_atomic_fields": {
+      "must_be_compared_atomically": ["current_claim_fence", "finalization_slot_state_or_exact_record_digest"],
+      "slot_key_must_bind": ["operation", "payload", "idempotency_identity"],
+      "committed_record_must_bind": ["provider_mapping_generation", "provider_proof_identity", "effect_digest", "fence"],
+      "why": "If the fence is read outside the atomic mutation, a fence advance can race the slot write and admit a stale finalization. If the slot only records occupancy or operation/fence identity, a conflicting same-F10 candidate can be misclassified as a harmless retry."
+    },
+    "weak_rules_falsified": [
+      "W30: fence equality plus an initially observed ABSENT slot is sufficient even when those checks are not atomic.",
+      "W31: after one writer commits, any loser with the same operation/idempotency identity and F10 can be treated as a no-op regardless of full-record digest."
+    ]
   },
   "observations": [
-    "Exact R10 replay under still-current F10 is safely classifiable as a no-op only when the stored finalization record matches the candidate exactly.",
-    "R9 remains rejected before effect because repository authority is stale even though provider evidence is unchanged.",
-    "A conflicting candidate under the same F10 cannot be deduplicated by operation/fence alone; record-level equivalence is necessary.",
-    "The first-write atomic guard can be expressed as current fence equality plus an ABSENT finalization slot scoped by operation/payload/idempotency identity; replay requires current fence equality plus exact stored-record digest equality."
+    "In the deterministic identical-writer interleaving, the atomic ABSENT transition admits one winner and converts the loser to exact-record replay/no-op.",
+    "In the deterministic conflicting-writer interleaving, the same atomic transition admits one winner and forces the unequal loser to conflict/no effect.",
+    "The fence and slot state/digest must participate in one atomic repository predicate; checking either one separately leaves a race window."
   ],
-  "inference": "Within the tested repository-finalization scope, a recurring-Chat pool can obtain duplicate-safe finalization without hosted arbitration by combining a monotonic claim fence with a per-operation finalization slot and exact-record replay semantics. The fixture narrows the minimal state needed for the repository transition, but does not prove exactly-once behavior for an external side effect occurring outside that atomic repository mutation.",
+  "inference": "Within this modeled repository-finalization scope, monotonic fencing plus a per-operation exact-record slot is sufficient to make same-fence retry classification duplicate-safe under two-writer contention, provided fence and slot are compared atomically. This remains a model/replay result and does not prove exactly-once behavior for external effects outside the repository mutation.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Test a two-writer same-F10 race against an initially ABSENT finalization slot: one candidate should win the atomic transition, an identical loser should reduce to exact-record no-op, and a conflicting loser should fail closed; verify which fields must be read and compared in one atomic repository primitive.",
-    "Test behavior after a later fence F11: exact historical R10 must cease to be retry-authorizing despite record equality, while provider evidence may remain provenance.",
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against this full CAS/replay predicate when persistence-recovery mode no longer forbids public-source research.",
-    "Verify one concrete allowed primitive whose documented terminal cancellation/no-execution semantics bind the exact idempotency execution domain and remain usable with optional monthly quotas at zero."
+    "Test the same two-writer fixture after a fence advance to F11: an exact historical R10 digest must no longer authorize replay despite record equality.",
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full joint {fence,slot} atomic predicate when persistence-recovery mode permits public-source research.",
+    "Verify crash ordering around an external side effect versus repository finalization; an effect outside the atomic repository mutation remains an unresolved exactly-once child."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -102,7 +91,7 @@
     "richer_mode_protected_manual_execution_dependency": "none",
     "repository_api_role": "lightweight role-local state/evidence transport only; not external compute"
   },
-  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and this invocation's readback-valid own presemantic witness. Manifest scheduler-allocation metadata was acknowledged only mechanically and did not steer the scientific leaf. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
+  "conflict_check": "Semantic inputs were limited to the frozen sanitized controls, current multi_agent LATEST, and this invocation's readback-valid own presemantic witness. No O, downstream, other-worker state, shared aggregate ledger, public-source semantics, protected authority, or scheduler state was consumed or mutated.",
   "recovery_epoch": "2026-09-04T22:59:28+09:00",
   "termination": "persistence_recovery_micro_slice_recurring_open",
   "termination_class": "scheduled_invocation_boundary_with_open_frontier",
@@ -116,5 +105,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local two-writer race fixture with F10 current and the finalization slot initially ABSENT: race two candidates through the same atomic predicate, require one winner only, classify an identical loser as exact-record no-op and a conflicting loser as conflict/no effect, and record the minimum fields that must participate in one atomic repository compare-and-set. Persist/read back one compact checkpoint and return recurring-open without public research or a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local F11 fence-advance replay fixture: advance current_claim_fence from F10 to F11 while retaining historical slot digest(R10), prove that exact historical record equality no longer authorizes retry under F11, test the minimum safe transition/reclamation rule without erasing provenance, persist/read back one compact checkpoint, and return recurring-open without public research or a second leaf."
 }
