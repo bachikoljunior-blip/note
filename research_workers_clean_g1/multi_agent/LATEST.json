@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T21:28:59+09:00",
+  "updated_at": "2026-09-19T23:29:14+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "023a431dcf67a3069efd34c63ebaf081a1ff51f7",
+  "previous_latest_blob": "06f957516fc6039315df2636e0a7a4b3dcbfa9db",
   "semantic_config_snapshot": {
     "manifest_control_revision": 129,
     "run_lifecycle_revision": 3,
@@ -20,72 +20,67 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "sha_pinned_main_ref",
-    "frozen_main_sha": "ea3296ef4117d7ae091a0cfd661c420742cd81f2"
+    "transport_mode": "exact_blob_two_pass"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260919T212859+0900.json",
-    "blob": "5e544a079f28c4357ffb1e8cc91ce8868b3e5392",
+    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260919T232914+0900.json",
+    "blob": "1143d37ccaaca097c6c94731fe1c68d2aa02e41e",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "023a431dcf67a3069efd34c63ebaf081a1ff51f7"
+    "latest_input_blob": "06f957516fc6039315df2636e0a7a4b3dcbfa9db"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "fence-advance-stale-exact-replay-rejection-f11",
-  "tested_scope": "One deterministic self-local replay of the exact continuation from the prior multi_agent checkpoint. Start from a completed repository finalization slot for key {O5,D5,I7} containing digest(R10), where R10 was committed under fence F10. Advance only the current claim fence to F11 while retaining the historical finalized slot unchanged. Test whether exact historical record equality can authorize retry after the fence advance, and derive the minimum safe reclamation rule for this finalized-key scope. This does not execute real concurrent GitHub writes, external side effects, public-source checks, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, scheduler state, or a second semantic leaf.",
+  "semantic_leaf": "orphan-claim-successor-generation-reclamation-f11",
+  "tested_scope": "One deterministic self-local replay of the exact prior continuation. Begin with one unfinalized claim C10 for a single operation/payload/idempotency key under fence F10, with finalization_slot=ABSENT. Advance current_claim_fence to F11. Test an atomic successor-generation transition to C11 that preserves C10 as immutable predecessor history, requires current fence F11 plus claim_head==digest(C10) plus finalization_slot==ABSENT, replaces only the active claim head with digest(C11), and defines effect authorization as current fence equality plus current claim-head equality. No real concurrent GitHub writers, external side effects, public-source checks, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, scheduler state, or second semantic leaf were used.",
   "fixture": {
-    "initial_history": {
-      "finalization_slot_key": "{O5,D5,I7}",
-      "finalization_slot": "digest(R10)",
-      "R10": "{O5,D5,I7,K5,g8,P_I7_g8,F10,E10}",
-      "committed_fence": "F10"
+    "initial": {
+      "claim_head": "digest(C10)",
+      "C10": "{key,K5,g8,owner_A,F10,predecessor=none}",
+      "current_claim_fence": "F10",
+      "finalization_slot": "ABSENT"
     },
     "fence_advance": {
       "before": "F10",
       "after": "F11",
-      "historical_finalization_slot_preserved": true
+      "C10_preserved": true,
+      "finalization_slot": "ABSENT"
     },
-    "replay_candidate": {
-      "candidate_record": "R10",
-      "candidate_digest_equals_slot": true,
-      "candidate_fence": "F10",
-      "current_claim_fence": "F11"
+    "successor_transition": {
+      "C11": "{key,K5,g9,owner_B,F11,predecessor=digest(C10)}",
+      "atomic_precondition": "current_claim_fence==F11 AND claim_head==digest(C10) AND finalization_slot==ABSENT",
+      "atomic_effect": "claim_head:=digest(C11); preserve C10 immutable; leave finalization_slot ABSENT",
+      "effect_authorization_predicate": "candidate.fence==current_claim_fence AND digest(candidate)==claim_head AND finalization_slot==ABSENT"
     },
-    "safe_retry_predicate": "Treat an existing digest as idempotent replay only if current_claim_fence == candidate.fence AND finalization_slot == digest(candidate.full_record). Digest equality alone is insufficient after a fence advance.",
     "result": {
-      "fence_equality": false,
-      "digest_equality": true,
-      "historical_R10_retry_authorized": false,
-      "classification": "stale_historical_record_reject_no_effect",
+      "C10_effect_authorized_after_transition": false,
+      "C11_effect_authorized_after_transition": true,
+      "simultaneous_effect_authorized_owner_count": 1,
+      "predecessor_provenance_preserved": true,
       "duplicate_effects": 0,
+      "classification": "single_successor_owner_after_fence_reclamation",
       "result": "pass_in_model"
     },
-    "minimum_safe_transition_reclamation_rule": {
-      "finalized_key_rule": "A fence advance never clears or overwrites a completed finalization slot. For the same operation/payload/idempotency key, a nonempty finalized slot remains immutable provenance and bars reclamation/re-execution even after the active claim fence advances.",
-      "claim_reclamation_boundary": "Only an unfinalized claim may be reclaimed under a newer fence, and that must use a distinct successor claim generation that atomically proves the newer current fence and records the predecessor claim/fence as immutable history. This fixture does not prove that orphan-claim rule; it only proves that completed finalization history must not be erased to regain liveness.",
-      "provenance_preservation": "Retain digest(R10), F10, effect digest E10, and predecessor generation g8 as immutable historical evidence; never convert the completed slot back to ABSENT."
-    },
     "weak_rules_falsified": [
-      "W32: exact historical record/digest equality is sufficient to authorize idempotent retry even when the current claim fence advanced beyond the record fence.",
-      "W33: advancing the claim fence permits clearing a completed finalization slot to recover liveness for the same operation/payload/idempotency key."
+      "W34: after a fence advance with no finalization record, the stale F10 owner may remain effect-authorized while an F11 successor is installed.",
+      "W35: reclaiming an unfinalized claim may erase or overwrite the predecessor claim record instead of linking it as immutable history."
     ]
   },
   "observations": [
-    "After advancing current_claim_fence from F10 to F11, historical digest(R10) equality remains true but the joint retry predicate fails because R10 carries F10.",
-    "The modeled stale retry therefore produces no repository transition and no duplicate finalization effect.",
-    "For a completed finalization key, liveness recovery cannot safely be implemented by clearing the historical slot; provenance and completion identity must remain immutable."
+    "Under the modeled joint predicate, the F11 successor becomes the only effect-authorized owner once claim_head moves atomically from C10 to C11.",
+    "The F10 predecessor remains durable provenance but fails both fence equality and active-head equality after the transition.",
+    "Keeping finalization_slot ABSENT is necessary but not sufficient by itself; ownership uniqueness comes from the atomic {current fence, predecessor head, absent finalization} compare-and-set plus the authorization predicate."
   ],
-  "inference": "Within this modeled repository-finalization scope, fencing must participate in replay authorization even when the full historical record digest matches exactly. A newer fence invalidates replay authority of a completed older-fence record, while the completed record itself remains immutable history. Safe reclamation, if needed, belongs only to a separate unfinalized-claim path and requires a successor-generation protocol; that orphan-claim case remains untested.",
+  "inference": "For this modeled unfinalized-claim scope, safe fence reclamation requires a successor generation linked to immutable predecessor provenance and a single atomic head transition guarded by the newer fence and absence of finalization. This prevents both the stale and successor owners from remaining effect-authorized simultaneously in the model. The fixture does not yet prove behavior under two competing F11 successors or a real Chat-exposed repository primitive.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Test the orphan/unfinalized-claim case: F10 claim exists but no finalization slot; after F11, verify a successor claim generation can be reclaimed atomically without deleting F10 provenance or admitting both owners.",
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full joint {fence,slot} atomic predicate when persistence-recovery mode permits public-source research.",
-    "Verify crash ordering around an external side effect versus repository finalization; an effect outside the atomic repository mutation remains an unresolved exactly-once child."
+    "Race-test two competing F11 successor generations starting from the same C10 predecessor; verify at most one can win the atomic claim-head transition and the loser becomes non-authorized without deleting provenance.",
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full atomic {fence, predecessor-head, finalization-slot} predicate when persistence-recovery mode permits public-source research.",
+    "Verify crash ordering around an external side effect versus finalization; an effect outside the atomic repository mutation remains an unresolved exactly-once child."
   ],
   "zero_dependency_zero_quota_assessment": {
     "incremental_monetary_cost": 0,
@@ -108,5 +103,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local orphan-claim reclamation fixture: begin with an F10 claim whose finalization slot is ABSENT, advance current_claim_fence to F11, test an atomic successor-generation claim transition that preserves F10 provenance and prevents both F10 and F11 owners from remaining effect-authorized, persist/read back one compact checkpoint, and return recurring-open without public research or a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local competing-successor fixture from C10 with finalization_slot ABSENT and current fence F11: construct two distinct F11 successors that both target predecessor digest(C10), model atomic compare-and-set ordering, verify exactly one can become claim_head/effect-authorized and the loser cannot retry as authorized, preserve both attempted records as provenance, persist/read back one compact checkpoint, and return recurring-open without public research or a second leaf."
 }
