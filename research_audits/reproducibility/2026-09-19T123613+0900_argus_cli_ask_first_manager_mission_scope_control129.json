@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-19T03:36:13Z",
+  "source_role": "reproducibility_auditor",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-repro-feasibility",
+  "result_classification": "EXACT_PINNED_CLI_ASK_FIRST_MANAGER_BACKEND_EXECUTION_MISSION_UNBOUND",
+  "outcome_classification": "partially_reproduced_counterexample",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "41c4ec3a5368bd226e765a657d60265aae483928",
+    "manifest_revision": 129,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_revision": 3,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_state_revision": 27,
+    "downstream_state_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "downstream_state_revision": 37,
+    "reproducibility_auditor_config_revision": 7,
+    "transport_mode": "exact_pinned_file_read"
+  },
+  "predecessor": {
+    "latest_pointer_path": "research_audits/reproducibility/LATEST.json",
+    "latest_pointer_blob": "44b8ea1e643a1323de9ee7885a9bc3a5c0eb0d17",
+    "latest_record": "research_audits/reproducibility/2026-09-19T113857+0900_argus_runner_constructor_usage_context_control129.json",
+    "latest_record_blob": "097a77dea89a7560df02b6968e96446091591e4f",
+    "latest_receipt": "automation_control/receipts/reproducibility_auditor/2026-09-19T113857+0900_argus_runner_constructor_usage_context_control129.json",
+    "latest_receipt_blob": "e30a279ffa0108106dc8020fbe86eccbbec4a218"
+  },
+  "bounded_slice": {
+    "claim_id": "repro-argus-cli-ask-first-manager-mission-scope:2894b434:2026-09-19T123613+0900",
+    "tested_scope": "Exact pinned source-path reproduction for lbx154/Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236, limited to the CLI --ask call site in argus_skill/apps/cli/_core.py, manager.config_intent._front_door_classify, Manager._task_usage_scope in argus_skill/manager/_core.py, and Manager.classify_front_door in argus_skill/manager/_front_door_ops.py. The question is only whether a non-null mission_id is bound before the first Manager backend execution on this exact CLI --ask path.",
+    "upstream": {
+      "repository": "lbx154/Argus",
+      "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
+      "files": [
+        "argus_skill/apps/cli/_core.py",
+        "argus_skill/manager/config_intent.py",
+        "argus_skill/manager/_core.py",
+        "argus_skill/manager/_front_door_ops.py"
+      ]
+    },
+    "observations": [
+      "The exact CLI --ask path calls _front_door_classify(bundle, question, chat_state) without a root_task_id argument.",
+      "_front_door_classify defaults root_task_id to None and only forwards root_task_id into mgr.classify_front_door when root_task_id is non-null and the method accepts that parameter.",
+      "Therefore the exact CLI --ask call invokes Manager.classify_front_door without root_task_id.",
+      "Manager.classify_front_door performs the classifier backend call inside `with self._task_usage_scope(root_task_id)`.",
+      "Manager._task_usage_scope returns nullcontext() when root_task_id is falsey, so the supplied usage_context factory is not entered for this call.",
+      "The runner constructor previously established project/global usage context with mission_id=None; this exact first CLI --ask Manager backend execution does not rebind it to a non-null mission_id before the backend call."
+    ],
+    "reproduced": {
+      "cli_ask_callsite_omits_root_task_id": true,
+      "front_door_classify_default_root_task_id_none": true,
+      "front_door_forwards_root_task_id_only_when_nonnull": true,
+      "manager_task_usage_scope_nullcontext_for_none": true,
+      "manager_backend_execution_wrapped_by_task_usage_scope": true,
+      "nonnull_mission_id_bound_before_first_cli_ask_manager_backend_execution": false,
+      "other_callers_resolved": false,
+      "memory_backend_branch_resolved": false,
+      "gateway_internal_context_behavior_resolved": false,
+      "provider_execution_context_behavior_resolved": false,
+      "repository_wide_caller_exhaustiveness": false
+    },
+    "acceptance_effect": "For the exact pinned CLI --ask path, the first Manager classification backend execution is not mission-scoped: the call chain omits root_task_id, causing Manager._task_usage_scope(None) to use nullcontext while the constructor-level usage context remains mission_id=None. This is an exact-scope counterexample to any claim that every first Manager backend execution is non-null mission-bound. It does not establish behavior for other callers that do supply root_task_id.",
+    "exclusions": [
+      "No claim is made about Web/API, life-chat, or other callers of _front_door_classify.",
+      "No claim is made about later Manager calls after a mission identifier exists.",
+      "No claim is made about gateway_run_exec internals or provider execution.",
+      "No claim is made about the memory backend branch or repository-wide caller exhaustiveness."
+    ],
+    "work_protected_primary_user_execution_dependency": false,
+    "work_calls": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "finite_quota_calls": 0,
+    "incremental_monetary_cost": 0,
+    "repository_transport_only": true,
+    "scheduler_mutation_by_worker": false,
+    "protected_o_mutation": false,
+    "clean_exploration_steering": false,
+    "semantic_completion": false
+  },
+  "continuation": "Continue from exact Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236 only: inspect one distinct production caller of _front_door_classify that explicitly supplies a non-null root_task_id, then trace only through Manager.classify_front_door -> _task_usage_scope to determine whether that caller binds the same non-null mission_id before its first Manager backend execution. Do not inspect gateway_run_exec internals, providers, unrelated Manager methods, the memory backend branch, or repository-wide callers in that slice. Preserve exact scope, zero Work/protected-primary/user execution dependency, zero finite monthly/trial/paid quota, zero incremental cost, no CLEAN/O mutation, and no scheduler mutation.",
+  "termination": "bounded_slice_complete_recurring_open"
+}
