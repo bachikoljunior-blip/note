@@ -2,7 +2,7 @@
   "schema_version": 1,
   "role": "multi_agent",
   "generation": "clean_g1",
-  "updated_at": "2026-09-19T23:29:14+09:00",
+  "updated_at": "2026-09-20T00:30:33+09:00",
   "control_revision": 27,
   "role_control_revision": 13,
   "config_revision": 10,
@@ -10,7 +10,7 @@
   "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
   "assignment_task_id": "phase1-clean-multi-agent-concurrency-claims",
   "checkpoint_mode": "persistence_recovery_micro_slice",
-  "previous_latest_blob": "06f957516fc6039315df2636e0a7a4b3dcbfa9db",
+  "previous_latest_blob": "b99f9b25809cebecb8760457068ce38dd7fc24c0",
   "semantic_config_snapshot": {
     "manifest_control_revision": 129,
     "run_lifecycle_revision": 3,
@@ -20,66 +20,79 @@
     "role_control_revision": 13,
     "config_revision": 10,
     "role_config_blob": "37a44cd0a2556a782247210bdd2c557ee58fe133",
-    "transport_mode": "exact_blob_two_pass"
+    "transport_mode": "main_sha_pinned_exact_read",
+    "frozen_main_sha": "97a004af5875492f68da4ac1e1de672801aad35a"
   },
   "bootstrap_valid": true,
   "presemantic_liveness_witness": {
-    "path": "research_workers_clean_g1/multi_agent/presemantic_witness_20260919T232914+0900.json",
-    "blob": "1143d37ccaaca097c6c94731fe1c68d2aa02e41e",
+    "path": "research_workers_clean_g1/multi_agent/PRESEMANTIC_WITNESS_20260920T003033JST_97a004af.json",
+    "blob": "ea97c2f7c84263a3d88712a077b4f77cb5980ae5",
     "durable_readback": true
   },
   "own_state_resolution": {
     "latest_json_used": true,
-    "latest_input_blob": "06f957516fc6039315df2636e0a7a4b3dcbfa9db"
+    "latest_input_blob": "b99f9b25809cebecb8760457068ce38dd7fc24c0"
   },
   "selected_leaf_id": "phase1-multi-agent-scheduler-persistence-probe",
-  "semantic_leaf": "orphan-claim-successor-generation-reclamation-f11",
-  "tested_scope": "One deterministic self-local replay of the exact prior continuation. Begin with one unfinalized claim C10 for a single operation/payload/idempotency key under fence F10, with finalization_slot=ABSENT. Advance current_claim_fence to F11. Test an atomic successor-generation transition to C11 that preserves C10 as immutable predecessor history, requires current fence F11 plus claim_head==digest(C10) plus finalization_slot==ABSENT, replaces only the active claim head with digest(C11), and defines effect authorization as current fence equality plus current claim-head equality. No real concurrent GitHub writers, external side effects, public-source checks, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, scheduler state, or second semantic leaf were used.",
+  "semantic_leaf": "competing-successor-cas-race-f11",
+  "tested_scope": "One deterministic self-local replay of the exact prior continuation. Initial state: immutable predecessor claim C10 for key K5/g8/owner_A/F10, current_claim_fence=F11, claim_head=digest(C10), finalization_slot=ABSENT. Construct two distinct successor attempts C11A and C11B, both at fence F11 and both naming predecessor=digest(C10). Each may install only through one atomic compare-and-set requiring current_claim_fence==F11 AND claim_head==digest(C10) AND finalization_slot==ABSENT. Evaluate both serializable CAS orderings, preserve C10 and both attempted successor records as provenance, and authorize an effect only when candidate.fence==current_claim_fence AND digest(candidate)==claim_head AND finalization_slot==ABSENT. No real concurrent GitHub writers, public-source checks, external side effects, hosted coordination, richer-mode arbitration, O/downstream/other-worker state, scheduler state, or second semantic leaf were used.",
   "fixture": {
     "initial": {
       "claim_head": "digest(C10)",
-      "C10": "{key,K5,g8,owner_A,F10,predecessor=none}",
-      "current_claim_fence": "F10",
+      "C10": "{key=K5,g=8,owner=owner_A,fence=F10,predecessor=none}",
+      "current_claim_fence": "F11",
       "finalization_slot": "ABSENT"
     },
-    "fence_advance": {
-      "before": "F10",
-      "after": "F11",
-      "C10_preserved": true,
-      "finalization_slot": "ABSENT"
-    },
-    "successor_transition": {
-      "C11": "{key,K5,g9,owner_B,F11,predecessor=digest(C10)}",
-      "atomic_precondition": "current_claim_fence==F11 AND claim_head==digest(C10) AND finalization_slot==ABSENT",
-      "atomic_effect": "claim_head:=digest(C11); preserve C10 immutable; leave finalization_slot ABSENT",
+    "attempts": {
+      "C11A": "{key=K5,g=9,owner=owner_B,fence=F11,predecessor=digest(C10)}",
+      "C11B": "{key=K5,g=9,owner=owner_C,fence=F11,predecessor=digest(C10)}",
+      "shared_atomic_precondition": "current_claim_fence==F11 AND claim_head==digest(C10) AND finalization_slot==ABSENT",
+      "success_effect": "claim_head:=digest(candidate); preserve C10 and both attempt records; leave finalization_slot ABSENT",
       "effect_authorization_predicate": "candidate.fence==current_claim_fence AND digest(candidate)==claim_head AND finalization_slot==ABSENT"
     },
+    "order_A_then_B": {
+      "A_cas": "success",
+      "B_cas": "fails_claim_head_mismatch",
+      "winner": "C11A",
+      "authorized_after_order": ["C11A"],
+      "loser_retry_with_same_predecessor": "fails_claim_head_mismatch"
+    },
+    "order_B_then_A": {
+      "B_cas": "success",
+      "A_cas": "fails_claim_head_mismatch",
+      "winner": "C11B",
+      "authorized_after_order": ["C11B"],
+      "loser_retry_with_same_predecessor": "fails_claim_head_mismatch"
+    },
     "result": {
-      "C10_effect_authorized_after_transition": false,
-      "C11_effect_authorized_after_transition": true,
+      "successful_successor_count_per_order": 1,
       "simultaneous_effect_authorized_owner_count": 1,
-      "predecessor_provenance_preserved": true,
-      "duplicate_effects": 0,
-      "classification": "single_successor_owner_after_fence_reclamation",
+      "loser_can_retry_as_authorized_without_new_generation": false,
+      "C10_preserved": true,
+      "C11A_attempt_preserved": true,
+      "C11B_attempt_preserved": true,
+      "duplicate_effects_in_model": 0,
+      "classification": "single_winner_competing_successor_cas",
       "result": "pass_in_model"
     },
     "weak_rules_falsified": [
-      "W34: after a fence advance with no finalization record, the stale F10 owner may remain effect-authorized while an F11 successor is installed.",
-      "W35: reclaiming an unfinalized claim may erase or overwrite the predecessor claim record instead of linking it as immutable history."
+      "W36: two F11 successors targeting the same C10 predecessor may both successfully install if each observed C10 before attempting mutation.",
+      "W37: the losing successor may retry against the stale C10 predecessor and become effect-authorized without a new generation/head precondition.",
+      "W38: a failed competing successor attempt must be erased rather than retained as provenance."
     ]
   },
   "observations": [
-    "Under the modeled joint predicate, the F11 successor becomes the only effect-authorized owner once claim_head moves atomically from C10 to C11.",
-    "The F10 predecessor remains durable provenance but fails both fence equality and active-head equality after the transition.",
-    "Keeping finalization_slot ABSENT is necessary but not sufficient by itself; ownership uniqueness comes from the atomic {current fence, predecessor head, absent finalization} compare-and-set plus the authorization predicate."
+    "In either modeled CAS ordering, the first successor changes claim_head away from digest(C10), so the second successor's identical predecessor-head precondition fails.",
+    "The losing attempt remains provenance but is not effect-authorized because its digest is not the active claim_head.",
+    "A same-generation retry against predecessor digest(C10) remains non-authorized after a winner installs; safe retry would require a newly validated generation/predecessor relation rather than reusing the stale precondition."
   ],
-  "inference": "For this modeled unfinalized-claim scope, safe fence reclamation requires a successor generation linked to immutable predecessor provenance and a single atomic head transition guarded by the newer fence and absence of finalization. This prevents both the stale and successor owners from remaining effect-authorized simultaneously in the model. The fixture does not yet prove behavior under two competing F11 successors or a real Chat-exposed repository primitive.",
+  "inference": "Within this deterministic model, an atomic CAS over {current fence, exact predecessor head, absent finalization} plus head-bound effect authorization is sufficient to serialize two competing same-fence successor attempts to one authorized winner while preserving all attempted records. This does not prove that a concrete Chat-exposed repository primitive can atomically enforce the full predicate, nor does it solve crash ordering between an external effect and finalization.",
   "semantic_progress_credit": true,
   "scientific_progress_credit": true,
   "phase1_acceptance_credit": false,
   "unresolved_children": [
-    "Race-test two competing F11 successor generations starting from the same C10 predecessor; verify at most one can win the atomic claim-head transition and the loser becomes non-authorized without deleting provenance.",
-    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive against the full atomic {fence, predecessor-head, finalization-slot} predicate when persistence-recovery mode permits public-source research.",
+    "Verify one concrete allowed zero-cost quota-independent Chat-exposed repository/API primitive can enforce the full atomic {current fence, predecessor head, finalization slot} predicate without a hosted coordinator.",
+    "Model a winner crash after claim-head installation but before any external effect/finalization, then test safe successor recovery without duplicate effect authorization.",
     "Verify crash ordering around an external side effect versus finalization; an effect outside the atomic repository mutation remains an unresolved exactly-once child."
   ],
   "zero_dependency_zero_quota_assessment": {
@@ -103,5 +116,5 @@
   "zero_incremental_cost": true,
   "hard_runtime_boundary_reached": false,
   "continuation_nonempty": true,
-  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local competing-successor fixture from C10 with finalization_slot ABSENT and current fence F11: construct two distinct F11 successors that both target predecessor digest(C10), model atomic compare-and-set ordering, verify exactly one can become claim_head/effect-authorized and the loser cannot retry as authorized, preserve both attempted records as provenance, persist/read back one compact checkpoint, and return recurring-open without public research or a second leaf."
+  "continuation": "Next invocation: fresh-bootstrap and freeze current multi_agent authority, persist/read back the required role-local presemantic witness, then resolve only current multi_agent LATEST. If persistence_recovery_micro_slice remains active, execute exactly one bounded self-local winner-crash fixture: start from the installed F11 winner with finalization_slot ABSENT, model a crash immediately after claim_head installation but before external effect/finalization, advance to F12, construct one successor linked to the F11 winner, and test whether stale F11 effect authorization is revoked before F12 can become authorized while preserving provenance. Persist/read back one compact checkpoint and return recurring-open without public research or a second leaf."
 }
