@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-19T07:37:47Z",
+  "source_role": "reproducibility_auditor",
+  "phase_id": "phase_1_chat_parity",
+  "root_problem_id": "o-chat-parity-root-v4-zero-work-dependency-zero-quota",
+  "task_id": "p1-repro-feasibility",
+  "result_classification": "PINNED_HTTP_TASK_ROUTE_CANNOT_ENTER_BOUNDED_NAME_SESSION_BRANCH",
+  "outcome_classification": "unresolved_exact_scope",
+  "bootstrap_valid": true,
+  "enabled_desired": true,
+  "global_completion": false,
+  "phase1_completion_claimed": false,
+  "authority": {
+    "manifest_path": "automation_control/INSTRUCTION_CONTROL_MANIFEST.json",
+    "manifest_blob": "41c4ec3a5368bd226e765a657d60265aae483928",
+    "manifest_revision": 129,
+    "run_lifecycle_path": "automation_control/RUN_LIFECYCLE.json",
+    "run_lifecycle_blob": "560024d46b6c26ea63ab58137be9d48863cab941",
+    "run_lifecycle_revision": 3,
+    "desired_state_path": "automation_control/DESIRED_STATE.json",
+    "desired_state_blob": "0eee15a94c23400653d84506da1f795081a6ef24",
+    "desired_state_revision": 27,
+    "downstream_state_path": "automation_control/DOWNSTREAM_STATE.json",
+    "downstream_state_blob": "6c5450060df173bb3d292e2b1f11f3328dbd01e3",
+    "downstream_state_revision": 37,
+    "reproducibility_auditor_config_revision": 7,
+    "transport_mode": "exact_pinned_file_read"
+  },
+  "predecessor": {
+    "latest_pointer_path": "research_audits/reproducibility/LATEST.json",
+    "latest_pointer_blob": "dbce33b6ce48053d214fdf3d5c5981fba56997c7",
+    "latest_record": "research_audits/reproducibility/2026-09-19T143801+0900_argus_bounded_handoff_name_session_gate_control129.json",
+    "latest_record_blob": "d166b5dda55e620c927b877776dd62c7318f8a29"
+  },
+  "bounded_slice": {
+    "claim_id": "repro-argus-http-task-name-session-route:2894b434:2026-09-19T163747+0900",
+    "tested_scope": "Exact pinned lbx154/Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236, limited to the production HTTP POST /api/projects/{sid}/tasks route in argus_skill/webapi/routes/workitems.py and its exact alias/delegation chain through argus_skill/webapi/server.py and argus_skill/webapi/mission_items.py into argus_skill/webapi/manager_dispatch.py manager_bounded_handoff. Tested only whether this HTTP task route can reach the bounded handoff with both a generated non-null root_task_id and name_session=true.",
+    "upstream": {
+      "repository": "lbx154/Argus",
+      "commit": "2894b434affaff3a28c1fbbcd5c39f2e7a832236",
+      "files": [
+        {"path": "argus_skill/webapi/routes/workitems.py", "blob": "acd4b21b8f79a55156dbfc071793e82f82b28c34", "route": "POST /api/projects/{sid}/tasks -> server_mod.enqueue_task_command"},
+        {"path": "argus_skill/webapi/server.py", "blob": "1de2ab69cfc9b867f07918e3d76ca7c5e2ac46ed", "route": "enqueue_task_command = mission_items.enqueue_task_command"},
+        {"path": "argus_skill/webapi/mission_items.py", "blob": "9481ea2ddec9ae15178c8438c2710abc4a3638a0", "route": "enqueue_task_command -> _enqueue_task_unlocked -> manager_bounded_handoff"},
+        {"path": "argus_skill/webapi/manager_dispatch.py", "blob": "0a14ced38c119b42e1315a8d3cc463bdfa7a2c3b", "route": "manager_bounded_handoff name_session conditional"}
+      ]
+    },
+    "observations": [
+      "The pinned HTTP task endpoint delegates to server_mod.enqueue_task_command with the project/session id and task text.",
+      "The pinned server module aliases enqueue_task_command directly to mission_items.enqueue_task_command.",
+      "mission_items.enqueue_task_command enters _enqueue_task_unlocked, which generates item_id = BacklogItem.new_id() and passes root_task_id=item_id to manager_bounded_handoff.",
+      "The same pinned _enqueue_task_unlocked invocation explicitly passes name_session=False.",
+      "manager_dispatch.manager_bounded_handoff enters its naming classifier only when name_session is true; therefore this exact HTTP task route cannot activate that branch even though it supplies a generated non-null root_task_id."
+    ],
+    "reproduced": {
+      "production_http_route_inspected": true,
+      "generated_nonnull_root_task_id_reaches_bounded_handoff": true,
+      "same_invocation_passes_name_session_true": false,
+      "same_invocation_enters_name_session_front_door_classify": false,
+      "name_session_mission_binding_reproduced_for_this_http_route": false,
+      "repository_wide_caller_exhaustiveness": false,
+      "function_level_conditional_binding_path_disproved": false,
+      "other_production_surfaces_exhaustively_checked": false
+    },
+    "acceptance_effect": "Exact-route negative evidence only. The pinned production HTTP task route preserves a generated mission/root id but hard-disables the bounded wrapper's name_session branch. This does not prove that no other production surface can call manager_bounded_handoff with name_session=true, and it does not negate unrelated reproduced Manager classification paths.",
+    "work_protected_primary_user_execution_dependency": false,
+    "work_calls": 0,
+    "finite_monthly_trial_paid_quota_dependency": false,
+    "finite_quota_calls": 0,
+    "incremental_monetary_cost": 0,
+    "repository_transport_only": true,
+    "scheduler_mutation_by_worker": false,
+    "protected_o_mutation": false,
+    "clean_exploration_steering": false,
+    "semantic_completion": false
+  },
+  "continuation": "Continue from exact Argus commit 2894b434affaff3a28c1fbbcd5c39f2e7a832236 only: inspect exactly one additional pinned production surface, argus_skill/webapi/routes/manager.py, and determine whether any route there directly or indirectly invokes argus_skill.webapi.manager_dispatch.manager_bounded_handoff with name_session=true while the same invocation supplies a generated non-null root_task_id. If the selected surface does not establish that trigger, record only its exact negative scope and do not claim repository-wide exhaustiveness. Do not broaden to gateway internals, providers, memory backend behavior, failure injection, or a second production surface in that invocation. Preserve zero Work/protected-primary/user execution dependency, zero finite monthly/trial/paid quota, zero incremental cost, no CLEAN/O mutation, and no scheduler mutation.",
+  "termination": "bounded_slice_complete_recurring_open"
+}
